@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <title>B-Fit Studio</title>
   
-  <!-- FIX CRITIC PENTRU FIT THE SCREEN PE MOBIL -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -696,7 +695,7 @@
   </nav>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
+    const API_URL = "LIPESTE_AICI_LINKUL_DEPLOY_APPS_SCRIPT";
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -1075,6 +1074,7 @@
       tbody.innerHTML = html;
     }
 
+    // --- PROGRAMĂRI ---
     function getPillClass(val) {
       if (val === "Confirmata") return "pill-confirmata";
       if (val === "In asteptare") return "pill-asteptare";
@@ -1306,7 +1306,7 @@
       });
     }
 
-    // --- ÎNCASĂRI ---
+    // --- ÎNCASĂRI (AUTO-SELECTARE SUMĂ + PLACEHOLDERE FADE) ---
     function autoSelecteazaSuma() {
       let tip = document.getElementById('incasareTip').value;
       let selPreset = document.getElementById('selectSumaPreset');
