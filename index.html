@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>B-Fit Studio</title>
+  
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="B-Fit">
+  <meta name="theme-color" content="#5c4d7d">
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%235c4d7d'/%3E%3Cpath d='M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z' fill='%23ffffff'/%3E%3Ccircle cx='370' cy='360' r='32' fill='%2322c55e'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%235c4d7d'/%3E%3Cpath d='M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z' fill='%23ffffff'/%3E%3Ccircle cx='370' cy='360' r='32' fill='%2322c55e'/%3E%3C/svg%3E">
+  <link rel="manifest" href='data:application/manifest+json,{"name":"B-Fit Studio","short_name":"B-Fit","start_url":".","display":"standalone","background_color":"#5c4d7d","theme_color":"#5c4d7d","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Crect width=%27512%27 height=%27512%27 rx=%27128%27 fill=%27%235c4d7d%27/%3E%3Cpath d=%27M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z%27 fill=%27%23ffffff%27/%3E%3Ccircle cx=%27370%27 cy=%27360%27 r=%2732%27 fill=%27%2322c55e%27/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
+
+  <style>
+    :root {
+      --primary: #5c4d7d;
+      --primary-dark: #43355d;
+      --primary-light: #ece7f4;
+      --bg: #f4f6f8;
+      --card-bg: #ffffff;
+      --text: #2c3e50;
+      --text-muted: #7f8c8d;
+      --border: #d0d7de;
+      --radius: 12px;
+      --color-confirmata: #2e7d32;
+      --color-asteptare: #e67e22;
+      --color-absenta: #c62828;
+      --color-empty: #e0e0e0;
+      --color-hold: #f5b041;
+      --placeholder-fade: #94a3b8;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); padding-bottom: 75px;
+    }
+    header {
+      background: var(--primary); color: #fff; padding: 12px 14px;
+      font-weight: 700; font-size: 1.1rem; position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center;
+    }
+    .header-title-wrapper {
+      display: flex; align-items: center; gap: 8px; font-weight: 700;
+    }
+    .header-btn-sync {
+      background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
+      color: #fff; padding: 5px 9px; border-radius: 8px; font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; display: flex; align-items: center; gap: 4px;
+    }
+    .header-btn-sync:active { background: rgba(255, 255, 255, 0.4); }
+
+    .container { max-width: 650px; margin: 0 auto; padding: 10px; }
+    
+    nav {
+      position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex;
+      border-top: 1px solid var(--border); z-index: 100; max-width: 650px; margin: 0 auto;
+      height: 64px; box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+    }
+    nav button {
+      flex: 1; padding: 6px 2px; border: none; background: transparent; font-size: 0.74rem;
+      color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      transition: color 0.15s ease;
+    }
+    nav button .nav-icon {
+      width: 25px; height: 25px; display: flex; align-items: center; justify-content: center;
+    }
+    nav button svg {
+      width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+    }
+    nav button.active {
+      color: var(--primary); font-weight: 700;
+    }
+    nav button.active svg {
+      stroke: var(--primary);
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .day-selector {
+      display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 8px; margin-bottom: 8px;
+      position: sticky; top: 48px; z-index: 90; background: var(--bg);
+    }
+    .day-btn {
+      flex: 1; min-width: 64px; padding: 8px 4px; border-radius: 20px; border: 1px solid var(--border);
+      background: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-align: center;
+    }
+    .day-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    
+    .card {
+      background: var(--card-bg); border-radius: var(--radius); padding: 14px; margin-bottom: 12px;
+      border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .hour-block {
+      background: #fff; border: 1px solid #d5dbe1; border-radius: 12px; margin-bottom: 14px;
+      overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+    .hour-header {
+      background: #ede9f4; padding: 8px 12px; display: flex; justify-content: space-between;
+      align-items: center; border-bottom: 1px solid #ddd6e8;
+    }
+    .hour-title { font-weight: 800; font-size: 1.05rem; color: var(--primary-dark); }
+    .hour-badge { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+    .hour-badge-free { background: #e2e8f0; color: #475569; }
+    .hour-badge-busy { background: #dcfce7; color: #166534; }
+
+    .slot-row {
+      display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+      border-bottom: 1px solid #eef2f6;
+    }
+    .slot-row:last-child { border-bottom: none; }
+    .slot-occupied {
+      background: #f0fdf4 !important; border-left: 4px solid #22c55e !important;
+    }
+    .slot-occupied .slot-input, .slot-occupied .slot-select-type {
+      background: #fff; font-weight: 600; border-color: #86efac;
+    }
+    .slot-free { background: #fafafa; }
+    .slot-num { font-size: 0.8rem; font-weight: 700; color: #64748b; min-width: 16px; text-align: center; }
+    .slot-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .slot-input {
+      width: 100%; border: 1px solid #cbd5e1; padding: 6px 8px; border-radius: 6px;
+      font-size: 0.92rem; background: #fff; outline: none;
+    }
+    .slot-input:focus { border-color: var(--primary); }
+    
+    input::placeholder, textarea::placeholder {
+      color: var(--placeholder-fade) !important;
+      opacity: 0.65 !important;
+    }
+    .select-faded {
+      color: var(--placeholder-fade) !important;
+    }
+    .select-active {
+      color: var(--text) !important;
+    }
+
+    .slot-select-type {
+      width: 100%; border: 1px solid #cbd5e1; padding: 5px 6px; border-radius: 6px;
+      font-size: 0.8rem; background: #fff; outline: none;
+    }
+
+    .btn {
+      background: var(--primary); color: #fff; border: none; padding: 8px 12px; border-radius: 8px;
+      font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-save-check {
+      background: #16a34a; color: white; padding: 7px 10px; font-size: 0.82rem; font-weight: 700; border-radius: 8px;
+    }
+    .btn-clear { background: #e2e8f0; color: #475569; padding: 7px 9px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; }
+    .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
+
+    .prog-table-container {
+      background: #fff; border: 1px solid #b0bec5; border-radius: 8px; overflow-x: auto; margin-bottom: 16px;
+    }
+    .prog-header {
+      background: #90a4ae; color: #000; font-weight: 700; display: grid;
+      grid-template-columns: minmax(85px, 1fr) 124px minmax(110px, 1.4fr) 22px; padding: 8px 6px; font-size: 0.82rem; border-bottom: 1px solid #78909c; gap: 4px;
+    }
+    .prog-row {
+      display: grid; grid-template-columns: minmax(85px, 1fr) 124px minmax(110px, 1.4fr) 22px; padding: 6px 6px;
+      align-items: center; border-bottom: 1px solid #e0e0e0; gap: 4px; font-size: 0.82rem;
+    }
+    .prog-row:nth-child(even) { background: #fafafa; }
+    .prog-name { font-weight: 600; color: #212121; font-size: 0.82rem; word-break: break-word; }
+
+    .pill-select {
+      border: none; border-radius: 14px; padding: 5px 4px; font-weight: 700; font-size: 0.74rem;
+      cursor: pointer; text-align: center; text-align-last: center; width: 100%; outline: none;
+    }
+    .pill-confirmata { background: var(--color-confirmata) !important; color: #fff !important; }
+    .pill-asteptare { background: var(--color-asteptare) !important; color: #fff !important; }
+    .pill-absenta { background: var(--color-absenta) !important; color: #fff !important; }
+    .pill-empty { background: var(--color-empty) !important; color: #555 !important; }
+
+    .prog-mentiuni-textarea {
+      width: 100%; border: 1px solid #e0e0e0; background: #fafafa; padding: 4px 6px;
+      font-size: 0.78rem; color: #333; outline: none; border-radius: 6px; resize: vertical; min-height: 28px;
+      font-family: inherit; line-height: 1.25; word-break: break-word; white-space: pre-wrap;
+    }
+
+    .hold-header {
+      background: var(--color-hold); color: #000; font-weight: 800; font-size: 1rem;
+      text-align: center; padding: 8px; border-radius: 8px 8px 0 0; margin-top: 14px;
+      letter-spacing: 1px; border: 1px solid #e0a030; border-bottom: none;
+    }
+    .hold-row { background: #fff3e0 !important; }
+    .hold-row:nth-child(even) { background: #ffe0b2 !important; }
+
+    .incasari-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
+    .incasari-table th { background: var(--primary-light); color: var(--primary-dark); padding: 8px; text-align: left; font-weight: 700; }
+    .incasari-table td { padding: 8px; border-bottom: 1px solid #eee; }
+
+    .progress-wrapper {
+      background: #e2e8f0; border-radius: 10px; height: 16px; width: 100%; overflow: hidden; margin: 8px 0 4px;
+    }
+    .progress-fill {
+      background: linear-gradient(90deg, #5c4d7d, #27ae60); height: 100%; width: 0%;
+      border-radius: 10px; transition: width 0.4s ease;
+    }
+
+    .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .metric-box { background: var(--primary-light); padding: 12px; border-radius: 10px; text-align: center; }
+    .metric-val { font-size: 1.4rem; font-weight: 800; color: var(--primary-dark); margin-top: 4px; }
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+    .badge-activ { background: #d4edda; color: #155724; }
+    .badge-expirat { background: #f8d7da; color: #721c24; }
+    .badge-arhivat { background: #e2e8f0; color: #475569; }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; color: var(--text-muted); }
+    .form-control { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; background: #fff; }
+    .loader { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
+
+    /* ICONIȚĂ SPECIFICĂ DE ISTORIC PESTE TOT */
+    .icon-history-title {
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .icon-history-svg {
+      width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+      display: inline-block; vertical-align: middle;
+    }
+
+    #customToast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-100px);
+      background: #1e293b; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 0.9rem;
+      font-weight: 700; z-index: 9999; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+      transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.3s;
+      opacity: 0; pointer-events: none;
+    }
+    #customToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    #customToast.success { background: #15803d; }
+    #customToast.error { background: #b91c1c; }
+
+    #customModalBackdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+      z-index: 10000; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .custom-modal-card {
+      background: #fff; width: 100%; max-width: 360px; border-radius: 16px; padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center;
+    }
+    .custom-modal-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 8px; }
+    .custom-modal-text { font-size: 0.9rem; color: #475569; margin-bottom: 18px; line-height: 1.4; }
+    .custom-modal-actions { display: flex; gap: 8px; justify-content: center; }
+  </style>
+</head>
+<body>
+
+  <div id="customToast">✓ Mesaj</div>
+
+  <div id="customModalBackdrop">
+    <div class="custom-modal-card">
+      <div class="custom-modal-title" id="modalTitle">Confirmare</div>
+      <div class="custom-modal-text" id="modalText">Ești sigură că vrei să continui?</div>
+      <div class="custom-modal-actions">
+        <button class="btn btn-clear" style="flex:1;" onclick="closeCustomModal(false)">Renunță</button>
+        <button class="btn" style="flex:1;" id="modalBtnConfirm" onclick="closeCustomModal(true)">Confirmă</button>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="header-title-wrapper" id="pageTitleWrapper">
+      <!-- Iconiță Calendar 21 DEC -->
+      <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="9" x2="21" y2="9"></line>
+        <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+        <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+      </svg>
+      <span id="pageTitle">Orar Săptămânal</span>
+    </div>
+
+    <button class="header-btn-sync" onclick="sincronizeazaDinCeleTrei()" title="Sincronizează datele din cele 3 documente">
+      🔄 Sincronizează
+    </button>
+  </header>
+
+  <div class="container">
+    
+    <!-- 1. ORAR -->
+    <div id="tabOrar" class="tab-content active">
+      <div class="day-selector">
+        <button class="day-btn active" onclick="schimbaZiInstant('Luni')">Luni</button>
+        <button class="day-btn" onclick="schimbaZiInstant('Marti')">Marți</button>
+        <button class="day-btn" onclick="schimbaZiInstant('Miercuri')">Miercuri</button>
+        <button class="day-btn" onclick="schimbaZiInstant('Joi')">Joi</button>
+        <button class="day-btn" onclick="schimbaZiInstant('Vineri')">Vineri</button>
+      </div>
+
+      <div id="sloturiContainer" class="loader">Se încarcă orarul...</div>
+
+      <!-- Componentă subtilă pentru adăugarea unei ore suplimentare / custom (ex: 07:30) -->
+      <div style="margin: 10px 0 14px; padding: 8px 12px; background: #fff; border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px;">
+          <span>➕</span><span>Adaugă oră suplimentară (ex: 07:30)</span>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <input type="text" id="inputOraCustom" placeholder="ex: 07:30" style="width: 82px; padding: 4px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.8rem; text-align: center;">
+          <button class="btn" style="padding: 4px 10px; font-size: 0.78rem;" onclick="adaugaOraCustom()">+ Adaugă</button>
+        </div>
+      </div>
+
+      <!-- Istoric Orar Expandabil la subsolul paginii cu iconiță dedicată de istoric -->
+      <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+        <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.95rem;">
+          <span class="icon-history-title">
+            <svg class="icon-history-svg" viewBox="0 0 24 24">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M12 7v5l4 2"></path>
+            </svg>
+            <span>Istoric Prezențe Orar (Click pentru extindere)</span>
+          </span>
+        </summary>
+        <div style="margin-top: 10px;">
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label>Filtrează după clientă:</label>
+            <select id="filtruClientaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
+              <option value="">Toate clientele</option>
+            </select>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="incasari-table">
+              <thead>
+                <tr>
+                  <th>Dată</th>
+                  <th>Zi</th>
+                  <th>Ora</th>
+                  <th>Clientă</th>
+                  <th>Antrenament</th>
+                </tr>
+              </thead>
+              <tbody id="istoricOrarTbody">
+                <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă istoricul...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <!-- 2. PROGRAMĂRI -->
+    <div id="tabProgramari" class="tab-content">
+      <div class="card" style="padding: 10px 12px; margin-bottom: 10px;">
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem;" placeholder="+ Adaugă clientă" list="listaClienteVizibile">
+          <select id="progNouSectiune" class="form-control" style="width:100px; padding:6px 4px; font-size:0.8rem;">
+            <option value="Activ">Activ</option>
+            <option value="Hold">Hold</option>
+          </select>
+          <button class="btn" style="padding:6px 12px; font-size:0.8rem;" onclick="adaugaClientaInProgramari()">Adaugă</button>
+        </div>
+      </div>
+
+      <div class="prog-table-container">
+        <div class="prog-header">
+          <div>Nume</div>
+          <div>Prezenta</div>
+          <div>Mentiuni</div>
+          <div></div>
+        </div>
+        <div id="progActiveList" class="loader">Se preiau programările...</div>
+      </div>
+
+      <div class="hold-header">Hold</div>
+      <div class="prog-table-container" style="border-radius: 0 0 8px 8px; border-top: none;">
+        <div id="progHoldList" class="loader">Se preiau clientele din Hold...</div>
+      </div>
+    </div>
+
+    <!-- 3. FIȘĂ CLIENTĂ -->
+    <div id="tabFisa" class="tab-content">
+      <details style="margin-bottom: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
+        <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+          <span>➕</span><span>Adaugă o Clientă Nouă în Aplicație</span>
+        </summary>
+        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și Prenume clientă">
+          <select id="nouTipAbonament" class="form-control">
+            <option value="8 sedinte">8 sedinte</option>
+            <option value="10 sedinte">10 sedinte</option>
+            <option value="12 sedinte">12 sedinte</option>
+            <option value="16 sedinte">16 sedinte</option>
+            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
+            <option value="Sedinta Individuala">Sedinta Individuala</option>
+          </select>
+          <button class="btn" onclick="creeazaClientaNouaDirect()">Salvează Clienta</button>
+        </div>
+      </details>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted);">SELECTEAZĂ CLIENTA</label>
+          <label style="font-size:0.75rem; color:#64748b; cursor:pointer;">
+            <input type="checkbox" id="checkArataArhivate" onchange="populeazaSelectoriCliente()"> Arată și arhivate
+          </label>
+        </div>
+        <select id="selectClientaFisa" class="form-control select-faded" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
+          <option value="">Alege o clientă...</option>
+        </select>
+
+        <div id="detaliiFisa" style="display: none;">
+          <div style="margin: 14px 0 10px; background: #fff; padding: 12px; border: 1px solid var(--border); border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
+              <span id="graficProgresText">Progres: 0 din 0 ședințe</span>
+              <span id="graficProcent" style="color: var(--primary);">0%</span>
+            </div>
+            <div class="progress-wrapper">
+              <div id="graficBara" class="progress-fill"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+              <span id="fisaTipAbonamentAfisat">8 sedinte</span>
+              <span id="fisaZileRamaseText">-</span>
+            </div>
+          </div>
+
+          <div class="metric-grid">
+            <div class="metric-box">
+              <div style="font-size:0.75rem; color:var(--text-muted)">ȘEDINȚE RĂMASE</div>
+              <div class="metric-val" id="fisaSedinteRamase">-</div>
+            </div>
+            <div class="metric-box">
+              <div style="font-size:0.75rem; color:var(--text-muted)">STATUS</div>
+              <div style="margin-top:4px;" id="fisaStatusBadge"><span class="badge badge-activ">Activ</span></div>
+            </div>
+            <div class="metric-box">
+              <div style="font-size:0.75rem; color:var(--text-muted)">VALABILITATE PÂNĂ LA</div>
+              <div style="font-weight:700; margin-top:4px;" id="fisaValabilitate">-</div>
+            </div>
+            <div class="metric-box">
+              <div style="font-size:0.75rem; color:var(--text-muted)">ȘEDINȚE EFECTUATE</div>
+              <div style="font-weight:700; margin-top:4px;" id="fisaProgres">-</div>
+            </div>
+          </div>
+
+          <details style="margin-top: 16px; padding: 10px; background: #fdfdfd; border: 1px solid var(--border); border-radius: 10px;">
+            <summary style="font-weight:700; font-size:0.85rem; color:var(--primary); cursor:pointer;">
+              ✏️️ Editează / Ajustează Datele Clientei
+            </summary>
+            <div style="margin-top: 10px;">
+              <div class="form-group">
+                <label>Nume Clientă (Redenumește peste tot)</label>
+                <input type="text" id="editNume" class="form-control" placeholder="Nume și Prenume">
+              </div>
+
+              <div class="form-group">
+                <label>Tip Abonament</label>
+                <select id="editTip" class="form-control">
+                  <option value="8 sedinte">8 sedinte</option>
+                  <option value="10 sedinte">10 sedinte</option>
+                  <option value="12 sedinte">12 sedinte</option>
+                  <option value="16 sedinte">16 sedinte</option>
+                  <option value="16 sedinte 1:1">16 sedinte 1:1</option>
+                  <option value="Sedinta Individuala">Sedinta Individuala</option>
+                </select>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div class="form-group">
+                  <label>Dată Start (zi.lună.an)</label>
+                  <input type="text" id="editDataStart" class="form-control" placeholder="dd.MM.yyyy">
+                </div>
+                <div class="form-group">
+                  <label>Dată Expirare (zi.lună.an)</label>
+                  <input type="text" id="editDataExpirare" class="form-control" placeholder="dd.MM.yyyy">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
+                <div class="form-group">
+                  <label>Incluse</label>
+                  <input type="number" id="editIncluse" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label>Efectuate</label>
+                  <input type="number" id="editEfectuate" class="form-control">
+                </div>
+                <div class="form-group">
+                  <label>Rămase</label>
+                  <input type="number" id="editRamase" class="form-control">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Status</label>
+                <select id="editStatus" class="form-control">
+                  <option value="Activ">Activ</option>
+                  <option value="Finalizat">Finalizat</option>
+                  <option value="Expirat">Expirat</option>
+                  <option value="Arhivat">Arhivat</option>
+                </select>
+              </div>
+
+              <button class="btn" style="width: 100%; font-size: 0.85rem;" onclick="salveazaEditareClienta()">
+                Salvează Modificările
+              </button>
+            </div>
+          </details>
+
+          <div style="margin-top: 12px; padding: 12px; background: #fff; border: 1px dashed var(--primary); border-radius: 10px;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">
+              ⏱️ Prelungește Valabilitatea (Concediu / Boală)
+            </div>
+            <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+              <button class="btn" style="flex: 1; padding: 6px; font-size: 0.8rem;" onclick="adaugaZile(7)">+7 zile</button>
+              <button class="btn" style="flex: 1; padding: 6px; font-size: 0.8rem;" onclick="adaugaZile(14)">+14 zile</button>
+              <button class="btn" style="flex: 1; padding: 6px; font-size: 0.8rem;" onclick="adaugaZile(30)">+30 zile</button>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="date" id="dataPrelungireManuala" class="form-control" style="padding: 6px; font-size: 0.85rem;">
+              <button class="btn" style="padding: 6px 10px; font-size: 0.8rem; background: #27ae60;" onclick="seteazaDataManuala()">Setează</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 14px; text-align: center;">
+            <button class="btn btn-archive" id="btnArhivareToggle" onclick="comutaArhivareClienta()">
+              📦 Arhivează / Ascunde din Liste
+            </button>
+          </div>
+
+          <!-- Titlu Istoric cu aceeași iconiță dedicată -->
+          <div style="margin-top: 18px; font-weight: 700; font-size: 0.9rem; color: var(--primary);">
+            <span class="icon-history-title">
+              <svg class="icon-history-svg" viewBox="0 0 24 24">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+                <path d="M12 7v5l4 2"></path>
+              </svg>
+              <span>Istoric Prezențe Recente</span>
+            </span>
+          </div>
+          <div id="istoricPrezenteList" style="margin-top: 8px; font-size: 0.85rem;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. ÎNCASĂRI -->
+    <div id="tabIncasari" class="tab-content">
+      <div class="card">
+        <h3 style="margin-top: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--primary); fill:none; stroke-width:2;">
+            <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+            <circle cx="14" cy="15" r="1.8" fill="var(--primary)" stroke="none"></circle>
+            <circle cx="17" cy="15" r="1.8" fill="var(--primary)" stroke="none" opacity="0.6"></circle>
+          </svg>
+          <span>Înregistrare Plată Nouă</span>
+        </h3>
+        
+        <div class="form-group">
+          <label>Nume Clientă (Existentă sau Nouă)</label>
+          <input type="text" id="incasareNume" class="form-control" placeholder="Alege din listă sau scrie nume nou" list="listaClienteVizibile">
+          <datalist id="listaClienteVizibile"></datalist>
+        </div>
+
+        <div class="form-group">
+          <label>Tip Abonament</label>
+          <select id="incasareTip" class="form-control select-faded" onchange="actualizeazaStilSelect(this); autoSelecteazaSuma()">
+            <option value="">Alege tip abonament</option>
+            <option value="8 sedinte">8 sedinte</option>
+            <option value="10 sedinte">10 sedinte</option>
+            <option value="12 sedinte">12 sedinte</option>
+            <option value="16 sedinte">16 sedinte</option>
+            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
+            <option value="Sedinta Individuala">Sedinta Individuala</option>
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Sumă (RON)</label>
+            <select id="selectSumaPreset" class="form-control select-faded" onchange="actualizeazaStilSelect(this); gestioneazaSchimbareSumaPreset()">
+              <option value="">Suma</option>
+              <option value="450">450 lei</option>
+              <option value="520">520 lei</option>
+              <option value="600">600 lei</option>
+              <option value="750">750 lei</option>
+              <option value="900">900 lei</option>
+              <option value="70">70 lei</option>
+              <option value="custom">Altă sumă...</option>
+            </select>
+            <input type="number" id="incasareSumaCustom" class="form-control" placeholder="Suma" style="margin-top:6px; display:none;">
+          </div>
+          <div class="form-group">
+            <label>Metodă Plată</label>
+            <select id="incasareMetoda" class="form-control select-faded" onchange="actualizeazaStilSelect(this)">
+              <option value="">Metoda Plata</option>
+              <option value="Revolut">Revolut</option>
+              <option value="Cash">Cash</option>
+              <option value="ING / Card">ING / Card</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label>Dată Plată</label>
+            <input type="date" id="incasareDataPlata" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Dată Start (Început)</label>
+            <input type="date" id="incasareDataStart" class="form-control">
+          </div>
+        </div>
+
+        <button class="btn" style="width: 100%; margin-top: 4px;" onclick="salveazaIncasare()">
+          Încasează & Salvează Abonamentul
+        </button>
+      </div>
+
+      <!-- Istoric Încasări cu aceeași iconiță dedicată -->
+      <div class="card" style="padding: 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <h4 style="margin: 0; color: var(--primary);">
+            <span class="icon-history-title">
+              <svg class="icon-history-svg" viewBox="0 0 24 24">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+                <path d="M12 7v5l4 2"></path>
+              </svg>
+              <span>Istoric Încasări</span>
+            </span>
+          </h4>
+        </div>
+        <div class="form-group" style="margin-bottom:8px;">
+          <label>Filtrează încasările după clientă:</label>
+          <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
+            <option value="">Toate clientele</option>
+          </select>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="incasari-table">
+            <thead>
+              <tr>
+                <th>Dată (zi.lună.an)</th>
+                <th>Clientă</th>
+                <th>Sumă</th>
+                <th>Metodă</th>
+                <th>Abonament</th>
+              </tr>
+            </thead>
+            <tbody id="incasariIstoricTbody">
+              <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BARA DE NAVIGARE CU ICONIȚE MARI ȘI 21 DEC PE CALENDAR -->
+  <nav>
+    <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">DEC</text>
+        </svg>
+      </div>
+      <span>Orar</span>
+    </button>
+
+    <button onclick="comutaTab('tabProgramari', 'Programări', this, 'prog')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </div>
+      <span>Programări</span>
+    </button>
+
+    <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <circle cx="12" cy="10" r="3"></circle>
+          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+        </svg>
+      </div>
+      <span>Fișă</span>
+    </button>
+
+    <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari')">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+          <circle cx="14" cy="15" r="1.8" fill="currentColor" stroke="none"></circle>
+          <circle cx="17" cy="15" r="1.8" fill="currentColor" stroke="none" opacity="0.6"></circle>
+        </svg>
+      </div>
+      <span>Încasări</span>
+    </button>
+  </nav>
+
+  <script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
+
+    let DB = {
+      clienti: [],
+      orarPeZile: { "Luni": [], "Marti": [], "Miercuri": [], "Joi": [], "Vineri": [] },
+      progActive: [],
+      progHold: [],
+      incasari: [],
+      prezente: []
+    };
+
+    let ziCurenta = "Luni";
+    let modalCallback = null;
+
+    const optiuniAntrenamentMiercuri = [
+      "Spate + Brate", "Picioare", "Fesieri + Abdomen", "Fesieri",
+      "Umeri + piept", "Spate + Abdomen", "Fitband full body",
+      "Firband picioare", "Firband Spate", "Firband spate + brate",
+      "Cardio", "Full body"
+    ];
+
+    const preturiAbonament = {
+      "8 sedinte": "450", "10 sedinte": "520", "12 sedinte": "600",
+      "16 sedinte": "750", "16 sedinte 1:1": "900", "Sedinta Individuala": "70"
+    };
+
+    function actualizeazaStilSelect(sel) {
+      if (!sel.value || sel.value === "") {
+        sel.classList.add('select-faded');
+        sel.classList.remove('select-active');
+      } else {
+        sel.classList.remove('select-faded');
+        sel.classList.add('select-active');
+      }
+    }
+
+    function callBackend(actionName, payload, callback) {
+      if (window.google && google.script && google.script.run) {
+        if (actionName === "getTotBazaDeDate") {
+          google.script.run.withSuccessHandler(callback).getTotBazaDeDate();
+        } else if (actionName === "salveazaSiBifeaza") {
+          google.script.run.withSuccessHandler(callback).salveazaSiBifeazaSlot(payload.row, payload.zi, payload.ora, payload.clienta, payload.antrenament);
+        } else if (actionName === "anuleazaSlot") {
+          google.script.run.withSuccessHandler(callback).anuleazaSlotSiPrezenta(payload.row, payload.zi, payload.ora);
+        } else if (actionName === "inregistreazaAbonament") {
+          google.script.run.withSuccessHandler(callback).inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
+        } else if (actionName === "actualizeazaCampProgramare") {
+          google.script.run.withSuccessHandler(callback).actualizeazaCampProgramare(payload.row, payload.col, payload.val);
+        } else if (actionName === "adaugaRandProgramare") {
+          google.script.run.withSuccessHandler(callback).adaugaRandNouProgramare(payload.nume, payload.prezenta, payload.mentiuni, payload.esteHold);
+        } else if (actionName === "stergeRandProgramare") {
+          google.script.run.withSuccessHandler(callback).stergeRandProgramare(payload.row);
+        } else if (actionName === "actualizeazaDateClienta") {
+          google.script.run.withSuccessHandler(callback).actualizeazaDateClienta(payload.numeVechi, payload.numeNou, payload.tip, payload.dataStart, payload.dataExp, payload.inc, payload.ef, payload.ram, payload.status);
+        } else if (actionName === "adaugaClientaDirect") {
+          google.script.run.withSuccessHandler(callback).adaugaClientaNouaDirect(payload.nume, payload.tip);
+        } else if (actionName === "seteazaStatusClienta") {
+          google.script.run.withSuccessHandler(callback).seteazaStatusClienta(payload.nume, payload.statusNou);
+        } else if (actionName === "prelungesteValabilitate") {
+          google.script.run.withSuccessHandler(callback).prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
+        } else if (actionName === "sincronizeazaDinCeleTrei") {
+          google.script.run.withSuccessHandler(callback).sincronizeazaDinCeleTreiDocumente();
+        } else if (actionName === "adaugaOraCustom") {
+          google.script.run.withSuccessHandler(callback).adaugaOraCustomOrar(payload.zi, payload.ora);
+        }
+      } else {
+        if (actionName === "getTotBazaDeDate") {
+          fetch(API_URL + "?action=getTotBazaDeDate")
+            .then(r => r.json())
+            .then(callback)
+            .catch(err => showToast("Eroare conexiune: " + err.message, "error"));
+        } else {
+          payload.action = actionName;
+          fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify(payload)
+          })
+          .then(r => r.json())
+          .then(callback)
+          .catch(err => showToast("Eroare salvare: " + err.message, "error"));
+        }
+      }
+    }
+
+    function showToast(mesaj, tip = 'success') {
+      let t = document.getElementById('customToast');
+      t.innerText = mesaj;
+      t.className = 'show ' + (tip === 'error' ? 'error' : 'success');
+      setTimeout(() => { t.className = ''; }, 2600);
+    }
+
+    function customConfirm(titlu, text, onConfirm) {
+      document.getElementById('modalTitle').innerText = titlu;
+      document.getElementById('modalText').innerText = text;
+      document.getElementById('customModalBackdrop').style.display = 'flex';
+      modalCallback = onConfirm;
+    }
+
+    function closeCustomModal(confirmed) {
+      document.getElementById('customModalBackdrop').style.display = 'none';
+      if (confirmed && modalCallback) modalCallback();
+      modalCallback = null;
+    }
+
+    window.onload = function() {
+      let azi = new Date().toISOString().substring(0, 10);
+      document.getElementById('incasareDataPlata').value = azi;
+      document.getElementById('incasareDataStart').value = azi;
+
+      let cached = localStorage.getItem('BFIT_APP_CACHE');
+      if (cached) {
+        try {
+          DB = JSON.parse(cached);
+          populeazaSelectoriCliente();
+          randeazaOrarInstant(ziCurenta);
+          randeazaProgramariInstant();
+          filtreazaIstoricIncasariInstant();
+          filtreazaIstoricOrarInstant();
+        } catch(e) {}
+      }
+
+      incarcaBazaDateSilencios();
+    };
+
+    function incarcaBazaDateSilencios() {
+      callBackend("getTotBazaDeDate", {}, function(data) {
+        DB = data;
+        localStorage.setItem('BFIT_APP_CACHE', JSON.stringify(DB));
+        populeazaSelectoriCliente();
+        randeazaOrarInstant(ziCurenta);
+        randeazaProgramariInstant();
+        filtreazaIstoricIncasariInstant();
+        filtreazaIstoricOrarInstant();
+      });
+    }
+
+    function populeazaSelectoriCliente() {
+      let arataArhivate = document.getElementById('checkArataArhivate').checked;
+      let select = document.getElementById('selectClientaFisa');
+      let datalist = document.getElementById('listaClienteVizibile');
+      let filtruIncasari = document.getElementById('filtruClientaIncasari');
+      let filtruOrar = document.getElementById('filtruClientaOrar');
+
+      select.innerHTML = '<option value="">Alege o clientă...</option>';
+      datalist.innerHTML = '';
+      filtruIncasari.innerHTML = '<option value="">Toate clientele</option>';
+      filtruOrar.innerHTML = '<option value="">Toate clientele</option>';
+
+      DB.clienti.forEach(c => {
+        let esteArhivat = (c.status || '').toLowerCase() === 'arhivat';
+
+        if (!esteArhivat) {
+          let optL = document.createElement('option');
+          optL.value = c.nume;
+          datalist.appendChild(optL);
+
+          let optF = document.createElement('option');
+          optF.value = c.nume;
+          optF.innerText = c.nume;
+          filtruIncasari.appendChild(optF);
+
+          let optO = document.createElement('option');
+          optO.value = c.nume;
+          optO.innerText = c.nume;
+          filtruOrar.appendChild(optO);
+        }
+
+        if (!esteArhivat || arataArhivate) {
+          let opt = document.createElement('option');
+          opt.value = c.nume;
+          opt.innerText = c.nume + (esteArhivat ? ' (Arhivat)' : '');
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function comutaTab(tabId, titlu, btn, tipTab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      btn.classList.add('active');
+      
+      let wrapper = document.getElementById('pageTitleWrapper');
+      let iconHtml = '';
+      
+      if (tipTab === 'orar') {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="9" x2="21" y2="9"></line>
+            <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+            <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+          </svg>
+        `;
+      } else if (tipTab === 'prog') {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+            <path d="M9 11l3 3L22 4"></path>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          </svg>
+        `;
+      } else if (tipTab === 'fisa') {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+            <circle cx="12" cy="10" r="3"></circle>
+            <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+          </svg>
+        `;
+      } else if (tipTab === 'incasari') {
+        iconHtml = `
+          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2;">
+            <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+            <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
+            <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
+          </svg>
+        `;
+      }
+
+      wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
+    }
+
+    // --- ORAR ---
+    function schimbaZiInstant(zi) {
+      ziCurenta = zi;
+      document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText.includes(zi.substring(0, 3)));
+      });
+      randeazaOrarInstant(zi);
+    }
+
+    function randeazaOrarInstant(zi) {
+      let sloturi = DB.orarPeZile[zi] || [];
+      let container = document.getElementById('sloturiContainer');
+
+      if (sloturi.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); padding:10px;">Nu există date.</div>';
+        return;
+      }
+
+      let grupuriOre = {};
+      sloturi.forEach(slot => {
+        if (!grupuriOre[slot.ora]) grupuriOre[slot.ora] = [];
+        grupuriOre[slot.ora].push(slot);
+      });
+
+      let html = '';
+      for (let ora in grupuriOre) {
+        let sloturiOra = grupuriOre[ora];
+        let ocupate = sloturiOra.filter(s => s.clienta && s.clienta.trim() !== "").length;
+        let total = sloturiOra.length;
+
+        html += `
+          <div class="hour-block">
+            <div class="hour-header">
+              <div class="hour-title">🕒 ${ora}</div>
+              <div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">
+                ${ocupate} / ${total} ocupate
+              </div>
+            </div>
+            <div class="hour-slots-wrapper">
+        `;
+
+        sloturiOra.forEach((slot, idx) => {
+          let isOccupied = slot.clienta && slot.clienta.trim() !== "";
+          let hasAntrenament = slot.antrenament && slot.antrenament.trim() !== "";
+          
+          let selectAntHtml = `<select id="ant_${slot.row}" class="slot-select-type ${hasAntrenament ? 'select-active' : 'select-faded'}" onchange="actualizeazaStilSelect(this)">`;
+          selectAntHtml += `<option value="" ${!slot.antrenament ? 'selected' : ''}>Tip antrenament</option>`;
+          optiuniAntrenamentMiercuri.forEach(opt => {
+            let selected = (slot.antrenament === opt) ? 'selected' : '';
+            selectAntHtml += `<option value="${opt}" ${selected}>${opt}</option>`;
+          });
+          selectAntHtml += `</select>`;
+
+          html += `
+            <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
+              <div class="slot-num">${idx + 1}</div>
+              <div class="slot-info">
+                <input type="text" id="cli_${slot.row}" class="slot-input" value="${slot.clienta}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile">
+                ${selectAntHtml}
+              </div>
+              <div style="display:flex; gap:4px;">
+                <button class="btn btn-save-check" title="Salvează & Bifează Prezența" onclick="salveazaSiBifeaza(${slot.row}, '${zi}', '${slot.ora}')">✓</button>
+                <button class="btn btn-clear" title="Eliberează / Anulează acțiunea" onclick="anuleazaSlot(${slot.row}, '${zi}', '${slot.ora}')">✕</button>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div></div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    // ADĂUGARE ORĂ SUPLIMENTARĂ / CUSTOM
+    function adaugaOraCustom() {
+      let inp = document.getElementById('inputOraCustom');
+      let ora = inp.value.trim();
+      if (!ora) {
+        showToast("Introdu ora suplimentară (ex: 07:30)!", "error");
+        return;
+      }
+
+      callBackend("adaugaOraCustom", { zi: ziCurenta, ora: ora }, function(res) {
+        showToast("✓ Oră suplimentară adăugată: " + res.ora);
+        inp.value = '';
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function salveazaSiBifeaza(row, zi, ora) {
+      let clienta = document.getElementById('cli_' + row).value.trim();
+      let antrenament = document.getElementById('ant_' + row).value;
+
+      if (!clienta) {
+        showToast("Introdu numele clientei!", "error");
+        return;
+      }
+
+      let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
+      if (slot) {
+        slot.clienta = clienta;
+        slot.antrenament = antrenament;
+      }
+      randeazaOrarInstant(zi);
+      localStorage.setItem('BFIT_APP_CACHE', JSON.stringify(DB));
+      showToast("✓ Salvat & Prezență marcată!");
+
+      callBackend("salveazaSiBifeaza", { row: row, zi: zi, ora: ora, clienta: clienta, antrenament: antrenament }, function() {});
+    }
+
+    function anuleazaSlot(row, zi, ora) {
+      customConfirm("Eliberare slot", "Eliberezi acest slot? Ședința va fi restituită în fișa clientei dacă a fost marcată prezența.", function() {
+        let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
+        if (slot) {
+          slot.clienta = "";
+          slot.antrenament = "";
+        }
+        randeazaOrarInstant(zi);
+        localStorage.setItem('BFIT_APP_CACHE', JSON.stringify(DB));
+        showToast("✓ Slot eliberat!");
+
+        callBackend("anuleazaSlot", { row: row, zi: zi, ora: ora }, function() {});
+      });
+    }
+
+    function filtreazaIstoricOrarInstant() {
+      let filtru = document.getElementById('filtruClientaOrar').value.toLowerCase();
+      let tbody = document.getElementById('istoricOrarTbody');
+      let filtrate = DB.prezente.filter(p => !filtru || p.clienta.toLowerCase() === filtru);
+
+      if (filtrate.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nicio prezență găsită.</td></tr>';
+        return;
+      }
+      let html = '';
+      filtrate.forEach(item => {
+        html += `
+          <tr>
+            <td><b>${item.data}</b></td>
+            <td>${item.zi}</td>
+            <td>${item.ora}</td>
+            <td style="font-weight:600; color:var(--primary);">${item.clienta}</td>
+            <td>${item.antrenament}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    // --- PROGRAMĂRI ---
+    function getPillClass(val) {
+      if (val === "Confirmata") return "pill-confirmata";
+      if (val === "In asteptare") return "pill-asteptare";
+      if (val === "Absenta") return "pill-absenta";
+      return "pill-empty";
+    }
+
+    function randeazaProgramariInstant() {
+      let actHtml = '';
+      DB.progActive.forEach(item => {
+        let pCls = getPillClass(item.prezenta);
+        actHtml += `
+          <div class="prog-row">
+            <div class="prog-name">${item.nume}</div>
+            <div>
+              <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+                <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+                <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+                <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+                <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+              </select>
+            </div>
+            <div>
+              <textarea class="prog-mentiuni-textarea" placeholder="Mențiune..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni}</textarea>
+            </div>
+            <div>
+              <span style="color:#aaa; cursor:pointer; font-size:12px;" onclick="stergeProgramare(${item.row})">✕</span>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('progActiveList').innerHTML = actHtml || '<div style="padding:10px; color:#888;">Nicio înregistrare</div>';
+
+      let holdHtml = '';
+      DB.progHold.forEach(item => {
+        let pCls = getPillClass(item.prezenta);
+        holdHtml += `
+          <div class="prog-row hold-row">
+            <div class="prog-name">${item.nume}</div>
+            <div>
+              <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+                <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+                <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+                <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+                <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+              </select>
+            </div>
+            <div>
+              <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni}</textarea>
+            </div>
+            <div>
+              <span style="color:#aaa; cursor:pointer; font-size:12px;" onclick="stergeProgramare(${item.row})">✕</span>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('progHoldList').innerHTML = holdHtml || '<div style="padding:10px; color:#888;">Nicio clientă în Hold</div>';
+    }
+
+    function schimbaPrezenta(row, selectEl) {
+      let val = selectEl.value;
+      selectEl.className = "pill-select " + getPillClass(val);
+      callBackend("actualizeazaCampProgramare", { row: row, col: 3, val: val }, function() {
+        showToast("✓ Status actualizat!");
+      });
+    }
+
+    function schimbaMentiune(row, val) {
+      callBackend("actualizeazaCampProgramare", { row: row, col: 4, val: val }, function() {});
+    }
+
+    function adaugaClientaInProgramari() {
+      let nume = document.getElementById('progNouNume').value.trim();
+      let sectiune = document.getElementById('progNouSectiune').value;
+      if (!nume) return;
+
+      callBackend("adaugaRandProgramare", { nume: nume, prezenta: "", mentiuni: "", esteHold: sectiune === "Hold" }, function() {
+        showToast("✓ Adăugată în programări!");
+        document.getElementById('progNouNume').value = '';
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function stergeProgramare(row) {
+      customConfirm("Eliminare", "Elimini din lista de programări? (Fișa și încasările rămân neatinse)", function() {
+        callBackend("stergeRandProgramare", { row: row }, function() {
+          showToast("✓ Eliminat din listă!");
+          incarcaBazaDateSilencios();
+        });
+      });
+    }
+
+    // --- FIȘĂ CLIENTĂ ---
+    function afiseazaFisaClientaInstant() {
+      let nume = document.getElementById('selectClientaFisa').value;
+      let container = document.getElementById('detaliiFisa');
+      if (!nume) { container.style.display = 'none'; return; }
+
+      let client = DB.clienti.find(c => c.nume.toLowerCase() === nume.toLowerCase());
+      if (!client) return;
+
+      container.style.display = 'block';
+      document.getElementById('fisaSedinteRamase').innerText = client.ramase;
+      document.getElementById('fisaValabilitate').innerText = client.dataExpirare;
+      document.getElementById('fisaProgres').innerText = client.efectuate + ' din ' + client.incluse;
+
+      let procent = client.incluse > 0 ? Math.round((client.efectuate / client.incluse) * 100) : 0;
+      if (procent > 100) procent = 100;
+      document.getElementById('graficBara').style.width = procent + '%';
+      document.getElementById('graficProcent').innerText = procent + '%';
+      document.getElementById('graficProgresText').innerText = 'Progres: ' + client.efectuate + ' din ' + client.incluse + ' ședințe';
+      document.getElementById('fisaTipAbonamentAfisat').innerText = client.tipAbonament;
+
+      if (client.dataExpirare && client.dataExpirare !== '-') {
+        var p = client.dataExpirare.split(".");
+        if (p.length === 3) {
+          var dExpObj = new Date(p[2], p[1] - 1, p[0]);
+          var azi = new Date();
+          var difZile = Math.ceil((dExpObj - azi) / (1000 * 60 * 60 * 24));
+          document.getElementById('fisaZileRamaseText').innerText = difZile > 0 ? difZile + ' zile rămase' : 'Expirat de ' + Math.abs(difZile) + ' zile';
+        }
+      } else {
+        document.getElementById('fisaZileRamaseText').innerText = '-';
+      }
+
+      let badge = document.getElementById('fisaStatusBadge');
+      let stLower = (client.status || '').toLowerCase();
+      if (stLower === 'activ') badge.innerHTML = '<span class="badge badge-activ">Activ</span>';
+      else if (stLower === 'arhivat') badge.innerHTML = '<span class="badge badge-arhivat">Arhivat</span>';
+      else badge.innerHTML = '<span class="badge badge-expirat">' + client.status + '</span>';
+
+      let btnArch = document.getElementById('btnArhivareToggle');
+      if (stLower === 'arhivat') {
+        btnArch.innerText = '♻️ Reactivează Clienta (Arată în Liste)';
+        btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
+      } else {
+        btnArch.innerText = '📦 Arhivează / Ascunde din Liste';
+        btnArch.style.color = '#b91c1c'; btnArch.style.borderColor = '#fecaca'; btnArch.style.background = '#fef2f2';
+      }
+
+      document.getElementById('editNume').value = client.nume;
+      document.getElementById('editTip').value = client.tipAbonament;
+      document.getElementById('editDataStart').value = client.dataStart;
+      document.getElementById('editDataExpirare').value = client.dataExpirare;
+      document.getElementById('editIncluse').value = client.incluse;
+      document.getElementById('editEfectuate').value = client.efectuate;
+      document.getElementById('editRamase').value = client.ramase;
+      document.getElementById('editStatus').value = client.status;
+
+      let istoricDiv = document.getElementById('istoricPrezenteList');
+      let prezenteClienta = DB.prezente.filter(p => p.clienta.toLowerCase() === nume.toLowerCase());
+      if (prezenteClienta.length === 0) {
+        istoricDiv.innerHTML = '<div style="color:var(--text-muted);">Nicio prezență înregistrată încă.</div>';
+      } else {
+        let h = '';
+        prezenteClienta.forEach(p => {
+          h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.zi}, ${p.ora}) - ${p.antrenament}</div>`;
+        });
+        istoricDiv.innerHTML = h;
+      }
+    }
+
+    function salveazaEditareClienta() {
+      let numeVechi = document.getElementById('selectClientaFisa').value;
+      let numeNou = document.getElementById('editNume').value.trim();
+      let tip = document.getElementById('editTip').value;
+      let dStart = document.getElementById('editDataStart').value;
+      let dExp = document.getElementById('editDataExpirare').value;
+      let inc = document.getElementById('editIncluse').value;
+      let ef = document.getElementById('editEfectuate').value;
+      let ram = document.getElementById('editRamase').value;
+      let st = document.getElementById('editStatus').value;
+
+      callBackend("actualizeazaDateClienta", {
+        numeVechi: numeVechi, numeNou: numeNou, tip: tip, dataStart: dStart, dataExp: dExp,
+        inc: inc, ef: ef, ram: ram, status: st
+      }, function() {
+        showToast("✓ Date actualizate!");
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function creeazaClientaNouaDirect() {
+      let nume = document.getElementById('nouNumeClienta').value.trim();
+      let tip = document.getElementById('nouTipAbonament').value;
+      if (!nume) { showToast("Introdu numele!", "error"); return; }
+
+      callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
+        showToast("✓ Clientă adăugată!");
+        document.getElementById('nouNumeClienta').value = '';
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function comutaArhivareClienta() {
+      let nume = document.getElementById('selectClientaFisa').value;
+      if (!nume) return;
+      let client = DB.clienti.find(c => c.nume.toLowerCase() === nume.toLowerCase());
+      if (!client) return;
+
+      let esteArhivat = (client.status || '').toLowerCase() === 'arhivat';
+      let nouStatus = esteArhivat ? "Activ" : "Arhivat";
+
+      customConfirm(esteArhivat ? "Reactivare" : "Arhivare", 
+        esteArhivat ? "Reactivezi clienta " + nume + "?" : "Arhivezi clienta " + nume + " din liste?", function() {
+        callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
+          showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă archivată!");
+          incarcaBazaDateSilencios();
+        });
+      });
+    }
+
+    function adaugaZile(nrZile) {
+      let nume = document.getElementById('selectClientaFisa').value;
+      if (!nume) return;
+      callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
+        showToast("✓ Prelungit până la " + res.nouaData);
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function seteazaDataManuala() {
+      let nume = document.getElementById('selectClientaFisa').value;
+      let d = document.getElementById('dataPrelungireManuala').value;
+      if (!nume || !d) return;
+      callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
+        showToast("✓ Valabilitate setată la " + res.nouaData);
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    // --- ÎNCASĂRI (AUTO-SELECTARE SUMĂ + PLACEHOLDERE FADE) ---
+    function autoSelecteazaSuma() {
+      let tip = document.getElementById('incasareTip').value;
+      let selPreset = document.getElementById('selectSumaPreset');
+      let customInp = document.getElementById('incasareSumaCustom');
+
+      if (!tip || tip === "") {
+        selPreset.value = "";
+        customInp.style.display = 'none';
+        actualizeazaStilSelect(selPreset);
+        return;
+      }
+
+      if (preturiAbonament[tip]) {
+        selPreset.value = preturiAbonament[tip];
+        customInp.style.display = 'none';
+      }
+      actualizeazaStilSelect(selPreset);
+    }
+
+    function gestioneazaSchimbareSumaPreset() {
+      let selPreset = document.getElementById('selectSumaPreset');
+      let customInp = document.getElementById('incasareSumaCustom');
+      if (selPreset.value === 'custom') {
+        customInp.style.display = 'block';
+        customInp.focus();
+      } else {
+        customInp.style.display = 'none';
+      }
+    }
+
+    function getSumaSelectata() {
+      let selPreset = document.getElementById('selectSumaPreset');
+      if (selPreset.value === 'custom') {
+        return document.getElementById('incasareSumaCustom').value.trim();
+      }
+      return selPreset.value;
+    }
+
+    function filtreazaIstoricIncasariInstant() {
+      let filtru = document.getElementById('filtruClientaIncasari').value.toLowerCase();
+      let tbody = document.getElementById('incasariIstoricTbody');
+      let filtrate = DB.incasari.filter(i => !filtru || i.clienta.toLowerCase() === filtru);
+
+      if (filtrate.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nicio încasare găsită.</td></tr>';
+        return;
+      }
+      let html = '';
+      filtrate.forEach(item => {
+        html += `
+          <tr>
+            <td><b>${item.data}</b></td>
+            <td>${item.clienta}</td>
+            <td style="color:#27ae60; font-weight:700;">${item.suma} RON</td>
+            <td>${item.metoda || '-'}</td>
+            <td>${item.tip}</td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    }
+
+    function salveazaIncasare() {
+      let nume = document.getElementById('incasareNume').value.trim();
+      let tip = document.getElementById('incasareTip').value;
+      let suma = getSumaSelectata();
+      let metoda = document.getElementById('incasareMetoda').value;
+      let dataPlata = document.getElementById('incasareDataPlata').value;
+      let dataStart = document.getElementById('incasareDataStart').value;
+
+      if (!nume) { showToast("Introdu numele clientei!", "error"); return; }
+      if (!tip) { showToast("Alege tipul de abonament!", "error"); return; }
+
+      callBackend("inregistreazaAbonament", {
+        nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
+      }, function() {
+        showToast("✓ Abonament & Încasare salvate!");
+        document.getElementById('incasareNume').value = '';
+        
+        let selPreset = document.getElementById('selectSumaPreset');
+        selPreset.value = '';
+        actualizeazaStilSelect(selPreset);
+        
+        document.getElementById('incasareSumaCustom').value = '';
+        document.getElementById('incasareSumaCustom').style.display = 'none';
+        
+        let selMetoda = document.getElementById('incasareMetoda');
+        selMetoda.value = '';
+        actualizeazaStilSelect(selMetoda);
+        
+        let selTip = document.getElementById('incasareTip');
+        selTip.value = '';
+        actualizeazaStilSelect(selTip);
+        
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    function sincronizeazaDinCeleTrei() {
+      customConfirm("Sincronizare completă", "Vrei să aduci modificările recente din cele 3 documente vechi?", function() {
+        let btn = document.querySelector('.header-btn-sync');
+        btn.innerText = "⏳ Se sincronizează...";
+        btn.style.opacity = "0.7";
+
+        callBackend("sincronizeazaDinCeleTrei", {}, function(res) {
+          btn.innerText = "🔄 Sincronizează";
+          btn.style.opacity = "1";
+          showToast(res.message || "✓ Sincronizare finalizată!");
+          incarcaBazaDateSilencios();
+        });
+      });
+    }
+  </script>
+</body>
+</html>
