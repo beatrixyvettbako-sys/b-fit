@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>B-Fit Studio</title>
   
-  <!-- FIX SCALARE MOBIL (FIT THE SCREEN) -->
+  <!-- FIX CRITIC PENTRU FIT THE SCREEN PE MOBIL -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,9 +12,9 @@
   <meta name="apple-mobile-web-app-title" content="B-Fit">
   <meta name="theme-color" content="#5c4d7d">
   
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%235c4d7d'/%3E%3Cpath d='M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z' fill='%23ffffff'/%3E%3Ccircle cx='370' cy='360' r='32' fill='%2322c55e'/%3E%3C/svg%3E">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%235c4d7d'/%3E%3Cpath d='M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z' fill='%23ffffff'/%3E%3Ccircle cx='370' cy='360' r='32' fill='%2322c55e'/%3E%3C/svg%3E">
-  <link rel="manifest" href='data:application/manifest+json,{"name":"B-Fit Studio","short_name":"B-Fit","start_url":".","display":"standalone","background_color":"#5c4d7d","theme_color":"#5c4d7d","icons":[{"src":"data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 512 512%27%3E%3Crect width=%27512%27 height=%27512%27 rx=%27128%27 fill=%27%235c4d7d%27/%3E%3Cpath d=%27M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z%27 fill=%27%23ffffff%27/%3E%3Ccircle cx=%27370%27 cy=%27360%27 r=%2732%27 fill=%27%2322c55e%27/%3E%3C/svg%3E","sizes":"512x512","type":"image/svg+xml"}]}'>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
 
   <style>
     :root {
@@ -56,7 +56,6 @@
 
     .container { max-width: 650px; margin: 0 auto; padding: 10px; width: 100%; }
     
-    /* BARA DE NAVIGARE CU ICONIȚE MARI ȘI AERISITE */
     nav {
       position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex;
       border-top: 1px solid var(--border); z-index: 100; max-width: 650px; margin: 0 auto;
@@ -83,7 +82,6 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
-    /* ZILELE FREEZED LA SCROLL */
     .day-selector {
       display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 8px; margin-bottom: 8px;
       position: sticky; top: 48px; z-index: 90; background: var(--bg);
@@ -135,12 +133,8 @@
       color: var(--placeholder-fade) !important;
       opacity: 0.65 !important;
     }
-    .select-faded {
-      color: var(--placeholder-fade) !important;
-    }
-    .select-active {
-      color: var(--text) !important;
-    }
+    .select-faded { color: var(--placeholder-fade) !important; }
+    .select-active { color: var(--text) !important; }
 
     .slot-select-type {
       width: 100%; border: 1px solid #cbd5e1; padding: 5px 6px; border-radius: 6px;
@@ -652,7 +646,6 @@
 
   </div>
 
-  <!-- BARA DE NAVIGARE CU ICONIȚE MARI ȘI 21 DEC PE CALENDAR -->
   <nav>
     <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar')">
       <div class="nav-icon">
@@ -703,10 +696,8 @@
   </nav>
 
   <script>
-    // Înlocuiește cu link-ul tău de Deploy din Apps Script:
-    const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
+    const API_URL = "LIPESTE_AICI_LINKUL_DEPLOY_APPS_SCRIPT";
 
-    // ÎNREGISTRARE SERVICE WORKER (Activează oficial butonul de INSTALL în Chrome Android)
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -1084,7 +1075,6 @@
       tbody.innerHTML = html;
     }
 
-    // --- PROGRAMĂRI ---
     function getPillClass(val) {
       if (val === "Confirmata") return "pill-confirmata";
       if (val === "In asteptare") return "pill-asteptare";
@@ -1316,7 +1306,7 @@
       });
     }
 
-    // --- ÎNCASĂRI (AUTO-SELECTARE SUMĂ + PLACEHOLDERE FADE) ---
+    // --- ÎNCASĂRI ---
     function autoSelecteazaSuma() {
       let tip = document.getElementById('incasareTip').value;
       let selPreset = document.getElementById('selectSumaPreset');
@@ -1431,4 +1421,4 @@
     }
   </script>
 </body>
-</html> 
+</html>
