@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>B-Fit Studio</title>
   
+  <!-- FIX SCALARE MOBIL (FIT THE SCREEN) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -52,8 +54,9 @@
     }
     .header-btn-sync:active { background: rgba(255, 255, 255, 0.4); }
 
-    .container { max-width: 650px; margin: 0 auto; padding: 10px; }
+    .container { max-width: 650px; margin: 0 auto; padding: 10px; width: 100%; }
     
+    /* BARA DE NAVIGARE CU ICONIȚE MARI ȘI AERISITE */
     nav {
       position: fixed; bottom: 0; left: 0; right: 0; background: #fff; display: flex;
       border-top: 1px solid var(--border); z-index: 100; max-width: 650px; margin: 0 auto;
@@ -80,6 +83,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block; }
     
+    /* ZILELE FREEZED LA SCROLL */
     .day-selector {
       display: flex; gap: 6px; overflow-x: auto; padding: 6px 0 8px; margin-bottom: 8px;
       position: sticky; top: 48px; z-index: 90; background: var(--bg);
@@ -215,10 +219,7 @@
     .form-control { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; background: #fff; }
     .loader { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
 
-    /* ICONIȚĂ SPECIFICĂ DE ISTORIC PESTE TOT */
-    .icon-history-title {
-      display: inline-flex; align-items: center; gap: 6px;
-    }
+    .icon-history-title { display: inline-flex; align-items: center; gap: 6px; }
     .icon-history-svg {
       width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
       display: inline-block; vertical-align: middle;
@@ -265,7 +266,6 @@
 
   <header>
     <div class="header-title-wrapper" id="pageTitleWrapper">
-      <!-- Iconiță Calendar 21 DEC -->
       <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
         <rect x="3" y="4" width="18" height="18" rx="2"></rect>
         <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -296,7 +296,6 @@
 
       <div id="sloturiContainer" class="loader">Se încarcă orarul...</div>
 
-      <!-- Componentă subtilă pentru adăugarea unei ore suplimentare / custom (ex: 07:30) -->
       <div style="margin: 10px 0 14px; padding: 8px 12px; background: #fff; border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
         <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px;">
           <span>➕</span><span>Adaugă oră suplimentară (ex: 07:30)</span>
@@ -307,7 +306,6 @@
         </div>
       </div>
 
-      <!-- Istoric Orar Expandabil la subsolul paginii cu iconiță dedicată de istoric -->
       <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
         <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.95rem;">
           <span class="icon-history-title">
@@ -442,7 +440,7 @@
 
           <details style="margin-top: 16px; padding: 10px; background: #fdfdfd; border: 1px solid var(--border); border-radius: 10px;">
             <summary style="font-weight:700; font-size:0.85rem; color:var(--primary); cursor:pointer;">
-              ✏️️ Editează / Ajustează Datele Clientei
+              ✏️ Editează / Ajustează Datele Clientei
             </summary>
             <div style="margin-top: 10px;">
               <div class="form-group">
@@ -525,7 +523,6 @@
             </button>
           </div>
 
-          <!-- Titlu Istoric cu aceeași iconiță dedicată -->
           <div style="margin-top: 18px; font-weight: 700; font-size: 0.9rem; color: var(--primary);">
             <span class="icon-history-title">
               <svg class="icon-history-svg" viewBox="0 0 24 24">
@@ -615,7 +612,6 @@
         </button>
       </div>
 
-      <!-- Istoric Încasări cu aceeași iconiță dedicată -->
       <div class="card" style="padding: 12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
           <h4 style="margin: 0; color: var(--primary);">
@@ -707,7 +703,15 @@
   </nav>
 
   <script>
+    // Înlocuiește cu link-ul tău de Deploy din Apps Script:
     const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
+
+    // ÎNREGISTRARE SERVICE WORKER (Activează oficial butonul de INSTALL în Chrome Android)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
 
     let DB = {
       clienti: [],
@@ -1005,7 +1009,6 @@
       container.innerHTML = html;
     }
 
-    // ADĂUGARE ORĂ SUPLIMENTARĂ / CUSTOM
     function adaugaOraCustom() {
       let inp = document.getElementById('inputOraCustom');
       let ora = inp.value.trim();
@@ -1260,7 +1263,7 @@
         inc: inc, ef: ef, ram: ram, status: st
       }, function() {
         showToast("✓ Date actualizate!");
-        incarcaBazaDateSilencios();
+        descarcaToataBaza();
       });
     }
 
@@ -1272,7 +1275,7 @@
       callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
         showToast("✓ Clientă adăugată!");
         document.getElementById('nouNumeClienta').value = '';
-        incarcaBazaDateSilencios();
+        descarcaToataBaza();
       });
     }
 
@@ -1289,7 +1292,7 @@
         esteArhivat ? "Reactivezi clienta " + nume + "?" : "Arhivezi clienta " + nume + " din liste?", function() {
         callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
           showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă archivată!");
-          incarcaBazaDateSilencios();
+          descarcaToataBaza();
         });
       });
     }
@@ -1299,7 +1302,7 @@
       if (!nume) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
         showToast("✓ Prelungit până la " + res.nouaData);
-        incarcaBazaDateSilencios();
+        descarcaToataBaza();
       });
     }
 
@@ -1309,7 +1312,7 @@
       if (!nume || !d) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
         showToast("✓ Valabilitate setată la " + res.nouaData);
-        incarcaBazaDateSilencios();
+        descarcaToataBaza();
       });
     }
 
@@ -1428,4 +1431,4 @@
     }
   </script>
 </body>
-</html>
+</html> 
