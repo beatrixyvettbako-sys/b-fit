@@ -1,0 +1,19 @@
+{
+  "name": "B-Fit Studio",
+  "short_name": "B-Fit",
+  "description": "Orar & Gestiune Antrenamente",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5c4d7d",
+  "theme_color": "#5c4d7d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
