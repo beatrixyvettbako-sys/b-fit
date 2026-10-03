@@ -1,5 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" rx="128" fill="#5c4d7d"/>
-  <path d="M160 140h100c50 0 80 25 80 65 0 25-15 45-38 55 30 10 48 35 48 68 0 45-35 72-90 72H160V140zm60 48v44h36c20 0 32-10 32-22s-12-22-32-22h-36zm0 92v48h42c22 0 36-11 36-24s-14-24-36-24h-42z" fill="#ffffff"/>
-  <circle cx="370" cy="360" r="32" fill="#22c55e"/>
+  <!-- Gantera moderna centrata -->
+  <g fill="#ffffff">
+    <!-- Bara centrala -->
+    <rect x="206" y="238" width="100" height="36" rx="10"/>
+    <!-- Discuri interioare stanga/dreapta -->
+    <rect x="174" y="200" width="32" height="112" rx="12"/>
+    <rect x="306" y="200" width="32" height="112" rx="12"/>
+    <!-- Discuri exterioare mari stanga/dreapta -->
+    <rect x="126" y="170" width="38" height="172" rx="16"/>
+    <rect x="348" y="170" width="38" height="172" rx="16"/>
+    <!-- Capete bara rotunjite -->
+    <rect x="102" y="226" width="24" height="60" rx="10"/>
+    <rect x="386" y="226" width="24" height="60" rx="10"/>
+  </g>
 </svg>
