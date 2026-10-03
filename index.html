@@ -189,7 +189,7 @@
 
     .incasari-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
     .incasari-table th { background: var(--primary-light); color: var(--primary-dark); padding: 8px; text-align: left; font-weight: 700; }
-    .incasari-table td { padding: 8px; border-bottom: 1px solid #eee; }
+    .incasari-table td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
 
     .progress-wrapper {
       background: #e2e8f0; border-radius: 10px; height: 16px; width: 100%; overflow: hidden; margin: 8px 0 4px;
@@ -212,10 +212,17 @@
     .form-control { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border); font-size: 0.95rem; background: #fff; }
     .loader { text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.9rem; }
 
+    /* Summary dropdown aliniat perfect */
+    .summary-toggle-clean {
+      display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--primary);
+      cursor: pointer; font-size: 0.92rem; outline: none; user-select: none; list-style-position: inside;
+    }
+    .summary-toggle-clean span { display: inline-flex; align-items: center; gap: 6px; }
+
     .icon-history-title { display: inline-flex; align-items: center; gap: 6px; }
     .icon-history-svg {
       width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-      display: inline-block; vertical-align: middle;
+      display: inline-block; vertical-align: middle; flex-shrink: 0;
     }
 
     #customToast {
@@ -300,14 +307,14 @@
       </div>
 
       <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
-        <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.95rem;">
-          <span class="icon-history-title">
+        <summary class="summary-toggle-clean">
+          <span>
             <svg class="icon-history-svg" viewBox="0 0 24 24">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
               <path d="M3 3v5h5"></path>
               <path d="M12 7v5l4 2"></path>
             </svg>
-            <span>Istoric Prezențe Orar (Click pentru extindere)</span>
+            Istoric Prezențe Orar (Click pentru extindere)
           </span>
         </summary>
         <div style="margin-top: 10px;">
@@ -322,14 +329,13 @@
               <thead>
                 <tr>
                   <th>Dată</th>
-                  <th>Zi</th>
                   <th>Ora</th>
                   <th>Clientă</th>
                   <th>Antrenament</th>
                 </tr>
               </thead>
               <tbody id="istoricOrarTbody">
-                <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă istoricul...</td></tr>
+                <tr><td colspan="4" style="text-align:center; color:#888;">Se încarcă istoricul...</td></tr>
               </tbody>
             </table>
           </div>
@@ -369,8 +375,8 @@
     <!-- 3. FIȘĂ CLIENTĂ -->
     <div id="tabFisa" class="tab-content">
       <details style="margin-bottom: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
-        <summary style="font-weight: 700; color: var(--primary); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
-          <span>➕</span><span>Adaugă o Clientă Nouă în Aplicație</span>
+        <summary class="summary-toggle-clean">
+          <span>➕ Adaugă o Clientă Nouă în Aplicație</span>
         </summary>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
           <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și Prenume clientă">
@@ -432,8 +438,8 @@
           </div>
 
           <details style="margin-top: 16px; padding: 10px; background: #fdfdfd; border: 1px solid var(--border); border-radius: 10px;">
-            <summary style="font-weight:700; font-size:0.85rem; color:var(--primary); cursor:pointer;">
-              ✏️ Editează / Ajustează Datele Clientei
+            <summary class="summary-toggle-clean">
+              <span>✏️ Editează / Ajustează Datele Clientei</span>
             </summary>
             <div style="margin-top: 10px;">
               <div class="form-group">
@@ -695,7 +701,7 @@
   </nav>
 
   <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
+    const API_URL = "LIPESTE_AICI_LINKUL_DEPLOY_APPS_SCRIPT";
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -825,7 +831,7 @@
       incarcaBazaDateSilencios();
     };
 
-    function incarcaBazaDateSilencios() {
+    function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
       callBackend("getTotBazaDeDate", {}, function(data) {
         DB = data;
         localStorage.setItem('BFIT_APP_CACHE', JSON.stringify(DB));
@@ -834,12 +840,20 @@
         randeazaProgramariInstant();
         filtreazaIstoricIncasariInstant();
         filtreazaIstoricOrarInstant();
+
+        if (clientaSelectataDupaActualizare) {
+          let sel = document.getElementById('selectClientaFisa');
+          sel.value = clientaSelectataDupaActualizare;
+          actualizeazaStilSelect(sel);
+          afiseazaFisaClientaInstant();
+        }
       });
     }
 
     function populeazaSelectoriCliente() {
       let arataArhivate = document.getElementById('checkArataArhivate').checked;
       let select = document.getElementById('selectClientaFisa');
+      let valoareAnterioara = select.value;
       let datalist = document.getElementById('listaClienteVizibile');
       let filtruIncasari = document.getElementById('filtruClientaIncasari');
       let filtruOrar = document.getElementById('filtruClientaOrar');
@@ -875,6 +889,11 @@
           select.appendChild(opt);
         }
       });
+
+      if (valoareAnterioara) {
+        select.value = valoareAnterioara;
+        actualizeazaStilSelect(select);
+      }
     }
 
     function comutaTab(tabId, titlu, btn, tipTab) {
@@ -1056,7 +1075,7 @@
       let filtrate = DB.prezente.filter(p => !filtru || p.clienta.toLowerCase() === filtru);
 
       if (filtrate.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nicio prezență găsită.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Nicio prezență găsită.</td></tr>';
         return;
       }
       let html = '';
@@ -1064,10 +1083,9 @@
         html += `
           <tr>
             <td><b>${item.data}</b></td>
-            <td>${item.zi}</td>
-            <td>${item.ora}</td>
+            <td style="font-weight:600; color:#475569;">${item.ora || '-'}</td>
             <td style="font-weight:600; color:var(--primary);">${item.clienta}</td>
-            <td>${item.antrenament}</td>
+            <td>${item.antrenament || '-'}</td>
           </tr>
         `;
       });
@@ -1208,7 +1226,7 @@
 
       let btnArch = document.getElementById('btnArhivareToggle');
       if (stLower === 'arhivat') {
-        btnArch.innerText = '♻️ Reactivează Clienta (Arată în Liste)';
+        btnArch.innerText = '♻ Reactivează Clienta (Arată în Liste)';
         btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
       } else {
         btnArch.innerText = '📦 Arhivează / Ascunde din Liste';
@@ -1231,7 +1249,7 @@
       } else {
         let h = '';
         prezenteClienta.forEach(p => {
-          h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.zi}, ${p.ora}) - ${p.antrenament}</div>`;
+          h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.ora}) - ${p.antrenament}</div>`;
         });
         istoricDiv.innerHTML = h;
       }
@@ -1251,9 +1269,9 @@
       callBackend("actualizeazaDateClienta", {
         numeVechi: numeVechi, numeNou: numeNou, tip: tip, dataStart: dStart, dataExp: dExp,
         inc: inc, ef: ef, ram: ram, status: st
-      }, function() {
+      }, function(res) {
         showToast("✓ Date actualizate!");
-        descarcaToataBaza();
+        incarcaBazaDateSilencios(res && res.numeNou ? res.numeNou : numeNou);
       });
     }
 
@@ -1265,7 +1283,7 @@
       callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
         showToast("✓ Clientă adăugată!");
         document.getElementById('nouNumeClienta').value = '';
-        descarcaToataBaza();
+        incarcaBazaDateSilencios();
       });
     }
 
@@ -1282,7 +1300,7 @@
         esteArhivat ? "Reactivezi clienta " + nume + "?" : "Arhivezi clienta " + nume + " din liste?", function() {
         callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
           showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă archivată!");
-          descarcaToataBaza();
+          incarcaBazaDateSilencios();
         });
       });
     }
@@ -1292,7 +1310,7 @@
       if (!nume) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
         showToast("✓ Prelungit până la " + res.nouaData);
-        descarcaToataBaza();
+        incarcaBazaDateSilencios(nume);
       });
     }
 
@@ -1302,11 +1320,10 @@
       if (!nume || !d) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
         showToast("✓ Valabilitate setată la " + res.nouaData);
-        descarcaToataBaza();
+        incarcaBazaDateSilencios(nume);
       });
     }
 
-    // --- ÎNCASĂRI (AUTO-SELECTARE SUMĂ + PLACEHOLDERE FADE) ---
     function autoSelecteazaSuma() {
       let tip = document.getElementById('incasareTip').value;
       let selPreset = document.getElementById('selectSumaPreset');
