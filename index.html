@@ -78,7 +78,7 @@
     /* Header saptamana cu o singura iconita 21 DEC */
     .calendar-top-bar {
       display: flex; align-items: center; justify-content: flex-start; gap: 10px;
-      background: #fff; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: #fff; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
       margin-bottom: 8px;
     }
     .calendar-icon-btn {
@@ -87,7 +87,7 @@
     }
     .calendar-title-centered {
       flex: 1; text-align: center; font-size: 0.88rem; font-weight: 800; color: var(--primary-dark);
-      margin-right: 26px; /* Echilibreaza vizual iconita din stanga */
+      margin-right: 26px;
     }
 
     .week-bar-container {
@@ -139,7 +139,7 @@
     .hour-badge-busy { background: #dcfce7; color: #166534; }
     .hour-badge-blocked { background: #fee2e2; color: #b91c1c; font-weight: 800; }
 
-    /* Stil Ora Blocata: Rosu integral pe sloturi */
+    /* Stil Ora Blocata: Rosu pe sloturi si inputuri dezactivate */
     .hour-block-blocked {
       border: 2px solid #ef4444 !important;
     }
@@ -176,7 +176,6 @@
     }
     .slot-input:focus { border-color: var(--primary); }
     
-    /* Placeholdere Fade Unitare */
     input::placeholder, textarea::placeholder {
       color: var(--placeholder-fade) !important;
       opacity: 0.65 !important;
@@ -184,7 +183,6 @@
       font-family: inherit;
     }
 
-    /* Selectori cu sageata pozitionata discret */
     select.form-control, select.slot-select-type, select.pill-select {
       appearance: none;
       -webkit-appearance: none;
@@ -360,7 +358,7 @@
       
       <!-- Antet saptamana cu o singura iconita 21 DEC -->
       <div class="calendar-top-bar">
-        <button class="calendar-icon-btn" onclick="comutaBaraSaptamana()" title="Deschide calendarul săptămânilor">
+        <button class="calendar-icon-btn" onclick="comutaBaraSaptamana()" title="Deschide comutatorul săptămânilor">
           <svg viewBox="0 0 24 24" style="width:26px; height:26px; stroke:var(--primary); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
             <rect x="3" y="4" width="18" height="18" rx="2"></rect>
             <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -803,6 +801,9 @@
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
 
+    // Detecteaza daca rulam direct in Apps Script (Web App) sau pe GitHub Pages
+    const ESTE_APPS_SCRIPT = (typeof google !== 'undefined' && google.script && google.script.run);
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -811,17 +812,13 @@
 
     let DB = {
       clienti: [],
-      orarPeZile: { "Luni": [], "Marti": [], "Miercuri": [], "Joi": [], "Vineri": [] },
+      orarSloturi: [],
       progActive: [],
       progHold: [],
       incasari: [],
       prezente: []
     };
 
-    // Stocare stare ore blocate (key: "Luni_07:00")
-    let oreBlocateSet = new Set(JSON.parse(localStorage.getItem('BFIT_BLOCKED_HOURS') || '[]'));
-
-    // Saptamana curenta intotdeauna ca referinta
     let dataReferintaLuni = getLuniOfWeek(new Date());
     let ziCurentaCheie = "Luni";
     let modalCallback = null;
@@ -875,44 +872,34 @@
     }
 
     function callBackend(actionName, payload, callback) {
-      if (window.google && google.script && google.script.run) {
-        if (actionName === "getTotBazaDeDate") {
-          google.script.run.withSuccessHandler(callback).getTotBazaDeDate();
-        } else if (actionName === "salveazaSlotAuto") {
-          google.script.run.withSuccessHandler(callback).salveazaSlotAuto(payload.row, payload.clienta, payload.antrenament);
-        } else if (actionName === "bifeazaPrezenta") {
-          google.script.run.withSuccessHandler(callback).bifeazaPrezentaSlot(payload.row, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament);
-        } else if (actionName === "anuleazaSlot") {
-          google.script.run.withSuccessHandler(callback).anuleazaSlotSiPrezenta(payload.row, payload.zi, payload.ora);
-        } else if (actionName === "adaugaOraCustom") {
-          google.script.run.withSuccessHandler(callback).adaugaOraCustomOrar(payload.zi, payload.ora);
-        } else if (actionName === "inregistreazaAbonament") {
-          google.script.run.withSuccessHandler(callback).inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
-        } else if (actionName === "actualizeazaCampProgramare") {
-          google.script.run.withSuccessHandler(callback).actualizeazaCampProgramare(payload.row, payload.col, payload.val);
-        } else if (actionName === "adaugaRandProgramare") {
-          google.script.run.withSuccessHandler(callback).adaugaRandNouProgramare(payload.nume, payload.prezenta, payload.mentiuni, payload.esteHold);
-        } else if (actionName === "mutaInHold") {
-          google.script.run.withSuccessHandler(callback).mutaInHold(payload.row);
-        } else if (actionName === "stergeRandProgramare") {
-          google.script.run.withSuccessHandler(callback).stergeRandProgramare(payload.row);
-        } else if (actionName === "actualizeazaDateClienta") {
-          google.script.run.withSuccessHandler(callback).actualizeazaDateClienta(payload.numeVechi, payload.numeNou, payload.tip, payload.dataStart, payload.dataExp, payload.incluse, payload.efectuate, payload.ramase, payload.status);
-        } else if (actionName === "adaugaClientaDirect") {
-          google.script.run.withSuccessHandler(callback).adaugaClientaNouaDirect(payload.nume, payload.tip);
-        } else if (actionName === "seteazaStatusClienta") {
-          google.script.run.withSuccessHandler(callback).seteazaStatusClienta(payload.nume, payload.statusNou);
-        } else if (actionName === "prelungesteValabilitate") {
-          google.script.run.withSuccessHandler(callback).prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
-        }
+      if (ESTE_APPS_SCRIPT) {
+        let runner = google.script.run
+          .withSuccessHandler(function(res) { if (callback) callback(res); })
+          .withFailureHandler(function(err) { showToast("Eroare Apps Script: " + err.message, "error"); });
+
+        if (actionName === "getTotBazaDeDate") runner.getTotBazaDeDate();
+        else if (actionName === "salveazaSlotAuto") runner.salveazaSlotAuto(payload.dataCalendar, payload.zi, payload.ora, payload.slotIdx, payload.clienta, payload.antrenament);
+        else if (actionName === "bifeazaPrezenta") runner.bifeazaPrezentaSlot(payload.dataCalendar, payload.zi, payload.ora, payload.slotIdx, payload.clienta, payload.antrenament);
+        else if (actionName === "anuleazaSlot") runner.anuleazaSlotSiPrezenta(payload.dataCalendar, payload.zi, payload.ora, payload.slotIdx);
+        else if (actionName === "comutaBlocareOra") runner.comutaBlocareOra(payload.dataCalendar, payload.zi, payload.ora, payload.blocat);
+        else if (actionName === "adaugaOraCustom") runner.adaugaOraCustomOrar(payload.dataCalendar, payload.zi, payload.ora);
+        else if (actionName === "inregistreazaAbonament") runner.inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
+        else if (actionName === "actualizeazaCampProgramare") runner.actualizeazaCampProgramare(payload.row, payload.col, payload.val);
+        else if (actionName === "adaugaRandProgramare") runner.adaugaRandNouProgramare(payload.nume, payload.prezenta, payload.mentiuni, payload.esteHold);
+        else if (actionName === "mutaInHold") runner.mutaInHold(payload.row);
+        else if (actionName === "stergeRandProgramare") runner.stergeRandProgramare(payload.row);
+        else if (actionName === "actualizeazaDateClienta") runner.actualizeazaDateClienta(payload.numeVechi, payload.numeNou, payload.tip, payload.dataStart, payload.dataExp, payload.incluse, payload.efectuate, payload.ramase, payload.status);
+        else if (actionName === "adaugaClientaDirect") runner.adaugaClientaNouaDirect(payload.nume, payload.tip);
+        else if (actionName === "seteazaStatusClienta") runner.seteazaStatusClienta(payload.nume, payload.statusNou);
+        else if (actionName === "prelungesteValabilitate") runner.prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
       } else {
         if (actionName === "getTotBazaDeDate") {
           fetch(API_URL + "?action=getTotBazaDeDate")
             .then(r => r.json())
-            .then(callback)
+            .then(data => { if (callback) callback(data); })
             .catch(err => {
-              showToast("Eroare conectare: " + err.message, "error");
-              document.getElementById('sloturiContainer').innerHTML = '<div style="color:#b91c1c; padding:12px;">Eroare la încărcarea datelor. Reîncearcă.</div>';
+              showToast("Eroare încărcare: " + err.message, "error");
+              document.getElementById('sloturiContainer').innerHTML = '<div style="color:#b91c1c; padding:12px;">Eroare la conectare. Reîmprospătează pagina.</div>';
             });
         } else {
           payload.action = actionName;
@@ -921,7 +908,7 @@
             body: JSON.stringify(payload)
           })
           .then(r => r.json())
-          .then(callback)
+          .then(data => { if (callback) callback(data); })
           .catch(err => showToast("Eroare salvare: " + err.message, "error"));
         }
       }
@@ -952,22 +939,19 @@
       document.getElementById('incasareDataPlata').value = azi;
       document.getElementById('incasareDataStart').value = azi;
 
-      // Selecteaza intotdeauna saptamana curenta
       dataReferintaLuni = getLuniOfWeek(new Date());
 
-      let aziIdx = new Date().getDay(); // 0 Dum, 1 Lun ... 5 Vin
+      let aziIdx = new Date().getDay();
       let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
-      if (aziIdx >= 1 && aziIdx <= 5) {
-        ziCurentaCheie = zileChei[aziIdx - 1];
-      } else {
-        ziCurentaCheie = "Luni";
-      }
+      ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
 
-      let cached = localStorage.getItem('BFIT_APP_CACHE_V4');
+      actualizeazaBaraZile();
+      randeazaOrarInstant(); // Randeaza imediat sloturile implicite
+
+      let cached = localStorage.getItem('BFIT_APP_CACHE_V6');
       if (cached) {
         try {
           DB = JSON.parse(cached);
-          actualizeazaBaraZile();
           populeazaSelectoriCliente();
           randeazaOrarInstant();
           randeazaProgramariInstant();
@@ -976,15 +960,14 @@
         } catch(e) {}
       }
 
-      actualizeazaBaraZile();
       incarcaBazaDateSilencios();
     };
 
     function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
       callBackend("getTotBazaDeDate", {}, function(data) {
-        if (!data || !data.orarPeZile) return;
+        if (!data) return;
         DB = data;
-        localStorage.setItem('BFIT_APP_CACHE_V4', JSON.stringify(DB));
+        localStorage.setItem('BFIT_APP_CACHE_V6', JSON.stringify(DB));
         populeazaSelectoriCliente();
         randeazaOrarInstant();
         randeazaProgramariInstant();
@@ -1166,44 +1149,53 @@
 
     // --- ORAR ---
     function randeazaOrarInstant() {
-      let sloturi = (DB.orarPeZile && DB.orarPeZile[ziCurentaCheie]) ? DB.orarPeZile[ziCurentaCheie] : [];
       let container = document.getElementById('sloturiContainer');
+      let dataCalendarCurenta = getDataCalendaristicaCurenta();
 
-      if (!sloturi || sloturi.length === 0) {
-        container.innerHTML = '<div style="color:var(--text-muted); padding:10px;">Nu există sloturi configurate pentru această zi.</div>';
-        return;
-      }
+      let oreStandard = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+      
+      let sloturiZi = (DB.orarSloturi || []).filter(s => s.dataCalendar === dataCalendarCurenta);
 
-      // Grupăm sloturile existente pe ore
-      let grupuriOre = {};
-      sloturi.forEach(slot => {
-        if (!grupuriOre[slot.ora]) grupuriOre[slot.ora] = [];
-        grupuriOre[slot.ora].push(slot);
-      });
-
-      // Sortare cronologica exacta a orelor
-      let oreSortate = Object.keys(grupuriOre).sort((a, b) => a.localeCompare(b));
+      let setOre = new Set(oreStandard);
+      sloturiZi.forEach(s => setOre.add(s.ora));
+      let oreSortate = Array.from(setOre).sort((a, b) => a.localeCompare(b));
 
       let html = '';
       oreSortate.forEach(ora => {
-        let sloturiOra = grupuriOre[ora];
-        let blocCheie = `${ziCurentaCheie}_${ora}`;
-        let esteBlocat = oreBlocateSet.has(blocCheie);
+        let sloturiOra = [];
+        for (let sIdx = 0; sIdx < 3; sIdx++) {
+          let gasit = sloturiZi.find(s => s.ora === ora && s.slotIdx === sIdx);
+          if (gasit) {
+            sloturiOra.push(gasit);
+          } else {
+            sloturiOra.push({
+              dataCalendar: dataCalendarCurenta,
+              zi: ziCurentaCheie,
+              ora: ora,
+              slotIdx: sIdx,
+              clienta: "",
+              antrenament: "",
+              blocat: false,
+              bifat: false
+            });
+          }
+        }
+
+        let esteBlocat = sloturiOra.some(s => s.blocat);
         let ocupate = sloturiOra.filter(s => s.clienta && s.clienta.trim() !== "").length;
-        let total = sloturiOra.length;
 
         let badgeHtml = '';
         if (esteBlocat) {
           badgeHtml = `<div class="hour-badge hour-badge-blocked">Ora Blocată!</div>`;
         } else {
-          badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / ${total} ocupate</div>`;
+          badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / 3 ocupate</div>`;
         }
 
         html += `
           <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}">
             <div class="hour-header">
               <div class="hour-title-wrap">
-                <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${ziCurentaCheie}', '${ora}')" title="${esteBlocat ? 'Deblochează ora' : 'Blochează ora'}">
+                <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${dataCalendarCurenta}', '${ziCurentaCheie}', '${ora}', ${!esteBlocat})" title="${esteBlocat ? 'Deblochează ora' : 'Blochează ora'}">
                   🕒
                 </button>
                 <span>${ora}</span>
@@ -1216,6 +1208,7 @@
         sloturiOra.forEach((slot, idx) => {
           let isOccupied = slot.clienta && slot.clienta.trim() !== "";
           let hasAntrenament = slot.antrenament && slot.antrenament.trim() !== "";
+          let slotElId = `slot_${dataCalendarCurenta.replace(/\./g, '')}_${ora.replace(':', '')}_${idx}`;
 
           let colorCls = "";
           if (hasAntrenament) {
@@ -1223,7 +1216,7 @@
             if (cfg) colorCls = cfg.cls;
           }
 
-          let selectAntHtml = `<select id="ant_${slot.row}" class="slot-select-type ${hasAntrenament ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament(${slot.row}, '${ziCurentaCheie}')">`;
+          let selectAntHtml = `<select id="ant_${slotElId}" class="slot-select-type ${hasAntrenament ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${slotElId}', '${dataCalendarCurenta}', '${ziCurentaCheie}', '${ora}', ${idx})">`;
           selectAntHtml += `<option value="" ${!slot.antrenament ? 'selected' : ''}>Tip antrenament</option>`;
           optiuniAntrenamentConfig.forEach(opt => {
             let selected = (slot.antrenament === opt.text) ? 'selected' : '';
@@ -1235,12 +1228,12 @@
             <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
               <div class="slot-num">${idx + 1}</div>
               <div class="slot-info">
-                <input type="text" id="cli_${slot.row}" class="slot-input" value="${slot.clienta}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile" oninput="peSchimbareNumeClienta(${slot.row}, '${ziCurentaCheie}')">
+                <input type="text" id="cli_${slotElId}" class="slot-input" value="${slot.clienta}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile" oninput="peSchimbareNumeClienta('${slotElId}', '${dataCalendarCurenta}', '${ziCurentaCheie}', '${ora}', ${idx})">
                 ${selectAntHtml}
               </div>
               <div style="display:flex; gap:4px;">
-                <button class="btn btn-save-check" title="Bifează Prezența" onclick="bifeazaPrezentaSlot(${slot.row}, '${ziCurentaCheie}', '${slot.ora}')">✓</button>
-                <button class="btn btn-clear" title="Eliberează Slot" onclick="anuleazaSlot(${slot.row}, '${ziCurentaCheie}', '${slot.ora}')">✕</button>
+                <button class="btn btn-save-check" title="Bifează Prezența" onclick="bifeazaPrezentaSlot('${slotElId}', '${dataCalendarCurenta}', '${ziCurentaCheie}', '${ora}', ${idx})">✓</button>
+                <button class="btn btn-clear" title="Eliberează Slot" onclick="anuleazaSlot('${slotElId}', '${dataCalendarCurenta}', '${ziCurentaCheie}', '${ora}', ${idx})">✕</button>
               </div>
             </div>
           `;
@@ -1252,101 +1245,109 @@
       container.innerHTML = html;
     }
 
-    function comutaBlocareOraInstant(zi, ora) {
-      let blocCheie = `${zi}_${ora}`;
-      let esteBlocat = oreBlocateSet.has(blocCheie);
-      let textConfirm = esteBlocat ? `Deblochezi intervalul orar ${ora}?` : `Blochezi intervalul orar ${ora}?`;
-
+    function comutaBlocareOraInstant(dataCalendar, zi, ora, blocatNou) {
+      let textConfirm = blocatNou ? `Blochezi intervalul orar ${ora}?` : `Deblochezi intervalul orar ${ora}?`;
       customConfirm("Blocare oră", textConfirm, function() {
-        if (esteBlocat) {
-          oreBlocateSet.delete(blocCheie);
-          showToast(`✓ Intervalul ${ora} a fost deblocat!`);
-        } else {
-          oreBlocateSet.add(blocCheie);
-          showToast(`✓ Intervalul ${ora} a fost blocat!`);
-        }
-        localStorage.setItem('BFIT_BLOCKED_HOURS', JSON.stringify(Array.from(oreBlocateSet)));
+        (DB.orarSloturi || []).forEach(s => {
+          if (s.dataCalendar === dataCalendar && s.ora === ora) {
+            s.blocat = blocatNou;
+          }
+        });
         randeazaOrarInstant();
+        callBackend("comutaBlocareOra", { dataCalendar: dataCalendar, zi: zi, ora: ora, blocat: blocatNou }, function() {
+          showToast(blocatNou ? `✓ Intervalul ${ora} a fost blocat!` : `✓ Intervalul ${ora} a fost deblocat!`);
+          incarcaBazaDateSilencios();
+        });
       });
     }
 
     let debounceTimerNume = null;
-    function peSchimbareNumeClienta(row, zi) {
+    function peSchimbareNumeClienta(slotElId, dataCalendar, zi, ora, slotIdx) {
       clearTimeout(debounceTimerNume);
       debounceTimerNume = setTimeout(() => {
-        let clienta = document.getElementById('cli_' + row).value.trim();
-        let antrenament = document.getElementById('ant_' + row).value;
+        let clienta = document.getElementById('cli_' + slotElId).value.trim();
+        let antrenament = document.getElementById('ant_' + slotElId).value;
 
-        let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
-        if (slot) {
-          slot.clienta = clienta;
-          slot.antrenament = antrenament;
+        let slotDb = (DB.orarSloturi || []).find(s => s.dataCalendar === dataCalendar && s.ora === ora && s.slotIdx === slotIdx);
+        if (slotDb) {
+          slotDb.clienta = clienta;
+          slotDb.antrenament = antrenament;
+        } else {
+          DB.orarSloturi.push({
+            dataCalendar: dataCalendar, zi: zi, ora: ora, slotIdx: slotIdx, clienta: clienta, antrenament: antrenament, blocat: false, bifat: false
+          });
         }
 
-        callBackend("salveazaSlotAuto", { row: row, clienta: clienta, antrenament: antrenament }, function() {});
+        callBackend("salveazaSlotAuto", {
+          dataCalendar: dataCalendar, zi: zi, ora: ora, slotIdx: slotIdx, clienta: clienta, antrenament: antrenament
+        }, function() {});
       }, 500);
     }
 
-    function peSchimbareAntrenament(row, zi) {
-      let clienta = document.getElementById('cli_' + row).value.trim();
-      let antrenament = document.getElementById('ant_' + row).value;
+    function peSchimbareAntrenament(slotElId, dataCalendar, zi, ora, slotIdx) {
+      let clienta = document.getElementById('cli_' + slotElId).value.trim();
+      let antrenament = document.getElementById('ant_' + slotElId).value;
 
       if (!clienta) {
         showToast("Adaugă mai întâi numele clientei!", "error");
         return;
       }
 
-      let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
-      if (slot) {
-        slot.clienta = clienta;
-        slot.antrenament = antrenament;
+      let slotDb = (DB.orarSloturi || []).find(s => s.dataCalendar === dataCalendar && s.ora === ora && s.slotIdx === slotIdx);
+      if (slotDb) {
+        slotDb.clienta = clienta;
+        slotDb.antrenament = antrenament;
       }
 
-      callBackend("salveazaSlotAuto", { row: row, clienta: clienta, antrenament: antrenament }, function() {
+      callBackend("salveazaSlotAuto", {
+        dataCalendar: dataCalendar, zi: zi, ora: ora, slotIdx: slotIdx, clienta: clienta, antrenament: antrenament
+      }, function() {
         showToast("✓ Antrenament salvat!");
       });
     }
 
-    function bifeazaPrezentaSlot(row, zi, ora) {
-      let clienta = document.getElementById('cli_' + row).value.trim();
-      let antrenament = document.getElementById('ant_' + row).value;
+    function bifeazaPrezentaSlot(slotElId, dataCalendar, zi, ora, slotIdx) {
+      let clienta = document.getElementById('cli_' + slotElId).value.trim();
+      let antrenament = document.getElementById('ant_' + slotElId).value;
 
       if (!clienta) {
         showToast("Introdu numele clientei!", "error");
         return;
       }
 
-      let dataCalendar = getDataCalendaristicaCurenta();
-
-      let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
-      if (slot) {
-        slot.clienta = clienta;
-        slot.antrenament = antrenament;
+      let slotDb = (DB.orarSloturi || []).find(s => s.dataCalendar === dataCalendar && s.ora === ora && s.slotIdx === slotIdx);
+      if (slotDb) {
+        slotDb.clienta = clienta;
+        slotDb.antrenament = antrenament;
+        slotDb.bifat = true;
       }
 
       showToast("✓ Prezență marcată & ședință salvată!");
       callBackend("bifeazaPrezenta", {
-        row: row, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: clienta, antrenament: antrenament
+        dataCalendar: dataCalendar, zi: zi, ora: ora, slotIdx: slotIdx, clienta: clienta, antrenament: antrenament
       }, function() {
         incarcaBazaDateSilencios();
       });
     }
 
-    function anuleazaSlot(row, zi, ora) {
-      customConfirm("Eliberare slot", "Eliberezi acest slot? Ședința va fi restituită în fișa clientei dacă a fost marcată prezența.", function() {
-        document.getElementById('cli_' + row).value = "";
-        let selAnt = document.getElementById('ant_' + row);
+    function anuleazaSlot(slotElId, dataCalendar, zi, ora, slotIdx) {
+      customConfirm("Eliberare slot", "Eliberezi acest slot? Ședința va fi restituită în fișă, iar înregistrarea va fi ștearsă din istoric.", function() {
+        document.getElementById('cli_' + slotElId).value = "";
+        let selAnt = document.getElementById('ant_' + slotElId);
         selAnt.value = "";
         aplicaCuloareAntrenament(selAnt);
 
-        let slot = (DB.orarPeZile[zi] || []).find(s => s.row === row);
-        if (slot) {
-          slot.clienta = "";
-          slot.antrenament = "";
+        let slotDb = (DB.orarSloturi || []).find(s => s.dataCalendar === dataCalendar && s.ora === ora && s.slotIdx === slotIdx);
+        if (slotDb) {
+          slotDb.clienta = "";
+          slotDb.antrenament = "";
+          slotDb.bifat = false;
         }
 
         showToast("✓ Slot eliberat!");
-        callBackend("anuleazaSlot", { row: row, zi: zi, ora: ora }, function() {
+        callBackend("anuleazaSlot", {
+          dataCalendar: dataCalendar, zi: zi, ora: ora, slotIdx: slotIdx
+        }, function() {
           incarcaBazaDateSilencios();
         });
       });
@@ -1360,7 +1361,8 @@
         return;
       }
 
-      callBackend("adaugaOraCustom", { zi: ziCurentaCheie, ora: ora }, function(res) {
+      let dataCalendar = getDataCalendaristicaCurenta();
+      callBackend("adaugaOraCustom", { dataCalendar: dataCalendar, zi: ziCurentaCheie, ora: ora }, function(res) {
         showToast("✓ Oră adăugată: " + res.ora);
         inp.value = '';
         incarcaBazaDateSilencios();
