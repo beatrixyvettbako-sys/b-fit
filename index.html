@@ -828,7 +828,6 @@
       let day = d.getDay();
       let hour = d.getHours();
 
-      // Daca e Vineri dupa ora 22:00, Sambata sau Duminica, deschide saptamana urmatoare (5 oct)
       let treceLaUrmatoarea = (day === 5 && hour >= 22) || (day === 6) || (day === 0);
 
       let diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -920,16 +919,25 @@
         else if (actionName === "prelungesteValabilitate") runner.prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
       } else {
         if (actionName === "getTotBazaDeDate") {
-          fetch(API_URL + "?action=getTotBazaDeDate")
-            .then(r => r.json())
-            .then(data => { if (callback) callback(data); })
-            .catch(err => {
-              showToast("Eroare încărcare: " + err.message, "error");
-            });
+          fetch(API_URL + "?action=getTotBazaDeDate", {
+            method: "GET",
+            redirect: "follow"
+          })
+          .then(r => r.json())
+          .then(data => {
+            if (callback) callback(data);
+          })
+          .catch(err => {
+            console.error("Eroare incarcare:", err);
+            showToast("Eroare incarcare date backend", "error");
+            randeazaOrarInstant();
+          });
         } else {
           payload.action = actionName;
           fetch(API_URL, {
             method: "POST",
+            redirect: "follow",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload)
           })
           .then(r => r.json())
