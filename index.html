@@ -249,7 +249,6 @@
       display: inline-block;
     }
 
-    /* Selectorul orizontal de zile */
     .day-selector {
       display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px; margin-bottom: 8px;
       position: sticky; top: 48px; z-index: 90; background: var(--bg);
@@ -322,7 +321,6 @@
     }
     .slot-input:focus { border-color: var(--primary); }
     
-    /* STIL UNIFICAT PLACEHOLDER PESTE TOT ÎN APLICAȚIE */
     input::placeholder, textarea::placeholder {
       color: var(--placeholder-fade) !important;
       opacity: 0.85 !important;
@@ -370,41 +368,55 @@
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
     /* =========================================================
-       PROGRAMĂRI: TABEL, ALINIERI ȘI PILL SELECT
+       PROGRAMĂRI & HOLD (FĂRĂ SCROLL ORIZONTAL + ALINIERE CURATĂ)
        ========================================================= */
     .prog-table-container {
-      background: #fff; border: 1px solid #b0bec5; border-radius: 8px; overflow-x: auto; margin-bottom: 16px;
+      background: #fff;
+      border: 1px solid #b0bec5;
+      border-radius: 8px;
+      width: 100%;
+      overflow-x: hidden;
+      margin-bottom: 16px;
     }
     .prog-grid-layout {
-      display: grid; grid-template-columns: 24px minmax(90px, 1fr) 130px minmax(110px, 1.4fr) 24px;
-      padding: 7px 6px; gap: 6px; align-items: center; font-size: 0.82rem;
+      display: grid;
+      grid-template-columns: 28px 1fr 108px 1.1fr 28px;
+      padding: 8px 6px;
+      gap: 6px;
+      align-items: center;
+      font-size: 0.82rem;
+      width: 100%;
     }
     .prog-header {
-      background: #90a4ae; color: #000; font-weight: 800; border-bottom: 1px solid #78909c;
+      background: #90a4ae;
+      color: #000;
+      font-weight: 800;
+      border-bottom: 1px solid #78909c;
     }
-    /* Centrare texte antet în Programări */
-    .prog-header > div {
-      text-align: center;
-    }
+    .prog-header > div:nth-child(1) { text-align: center; }
+    .prog-header > div:nth-child(2) { text-align: left; padding-left: 2px; }
+    .prog-header > div:nth-child(3) { text-align: center; }
+    .prog-header > div:nth-child(4) { text-align: center; }
+    .prog-header > div:nth-child(5) { text-align: center; }
+
     .prog-row {
       border-bottom: 1px solid #e0e0e0;
     }
     .prog-row:nth-child(even) { background: #fafafa; }
     .prog-idx { font-weight: 700; color: #64748b; text-align: center; }
-    .prog-name { font-weight: 600; color: #212121; word-break: break-word; }
+    .prog-name { font-weight: 600; color: #212121; word-break: break-word; text-align: left; padding-left: 2px; }
 
-    /* Pastilă prezență cu chevron consistent, vizibil, mutat spre stânga */
     .pill-select {
       appearance: none;
       -webkit-appearance: none;
       background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
       background-repeat: no-repeat;
-      background-position: right 14px center;
+      background-position: right 10px center;
       border: 2px solid #ffffff !important;
       border-radius: 14px;
-      padding: 5px 24px 5px 8px;
+      padding: 5px 20px 5px 6px;
       font-weight: 800;
-      font-size: 0.74rem;
+      font-size: 0.72rem;
       cursor: pointer;
       text-align: center;
       text-align-last: center;
@@ -431,6 +443,23 @@
     }
     .hold-row { background: #fff3e0 !important; }
     .hold-row:nth-child(even) { background: #ffe0b2 !important; }
+
+    .btn-trash-action {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.92rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      transition: color 0.15s ease, transform 0.1s ease;
+    }
+    .btn-trash-action:active {
+      transform: scale(0.9);
+      color: var(--color-absenta);
+    }
 
     /* =========================================================
        TABELE ÎNCASĂRI & ISTORIC (CENTRĂRI DEDICATE)
@@ -680,7 +709,7 @@
           </label>
         </div>
         <select id="selectClientaFisa" class="form-control select-faded" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
-          <option value="">Alege o clientă...</option>
+          <option value="">Alege o clientă</option>
         </select>
 
         <div id="detaliiFisa" style="display: none;">
@@ -884,7 +913,7 @@
             <input type="date" id="incasareDataPlata" class="form-control">
           </div>
           <div class="form-group">
-            <label>Dată Start (Început)</label>
+            <label>Dată Start</label>
             <input type="date" id="incasareDataStart" class="form-control">
           </div>
         </div>
@@ -995,6 +1024,22 @@
       incasari: [],
       prezente: []
     };
+
+    function getAziFormatIso() {
+      let d = new Date();
+      let an = d.getFullYear();
+      let luna = String(d.getMonth() + 1).padStart(2, '0');
+      let zi = String(d.getDate()).padStart(2, '0');
+      return `${an}-${luna}-${zi}`;
+    }
+
+    function reseteazaDateIncasariAzi() {
+      let aziStr = getAziFormatIso();
+      let elPlata = document.getElementById('incasareDataPlata');
+      let elStart = document.getElementById('incasareDataStart');
+      if (elPlata) elPlata.value = aziStr;
+      if (elStart) elStart.value = aziStr;
+    }
 
     function calculeazaLuniInitial() {
       let d = new Date();
@@ -1133,11 +1178,7 @@
     }
 
     window.onload = function() {
-      let azi = new Date().toISOString().substring(0, 10);
-      let elPlata = document.getElementById('incasareDataPlata');
-      let elStart = document.getElementById('incasareDataStart');
-      if (elPlata) elPlata.value = azi;
-      if (elStart) elStart.value = azi;
+      reseteazaDateIncasariAzi();
 
       let aziIdx = new Date().getDay();
       let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
@@ -1319,7 +1360,7 @@
       let filtruIncasari = document.getElementById('filtruClientaIncasari');
       let filtruOrar = document.getElementById('filtruClientaOrar');
 
-      select.innerHTML = '<option value="">Alege o clientă...</option>';
+      select.innerHTML = '<option value="">Alege o clientă</option>';
       if (datalist) datalist.innerHTML = '';
       if (filtruIncasari) filtruIncasari.innerHTML = '<option value="">Toate clientele</option>';
       if (filtruOrar) filtruOrar.innerHTML = '<option value="">Toate clientele</option>';
@@ -1399,6 +1440,7 @@
           </svg>
         `;
       } else if (tipTab === 'incasari') {
+        reseteazaDateIncasariAzi();
         iconHtml = `
           <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2;">
             <rect x="2" y="5" width="20" height="14" rx="3"></rect>
@@ -1742,7 +1784,7 @@
       tbody.innerHTML = html;
     }
 
-    // --- PROGRAMĂRI ---
+    // --- PROGRAMĂRI & HOLD ---
     function getPillClass(val) {
       if (val === "Confirmata") return "pill-confirmata";
       if (val === "In asteptare") return "pill-asteptare";
@@ -1774,12 +1816,12 @@
                 <textarea class="prog-mentiuni-textarea" placeholder="Mențiune..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
               </div>
               <div style="text-align:center;">
-                <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="mutaInHold(${item.row})" title="Mută în Hold">✕</span>
+                <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="Mută în Hold">🗑</button>
               </div>
             </div>
           `;
         });
-        actContainer.innerHTML = actHtml || '<div style="padding:10px; color:#888;">Nicio înregistrare</div>';
+        actContainer.innerHTML = actHtml || '<div style="padding:10px; color:#888; text-align:center;">Nicio înregistrare</div>';
       }
 
       if (holdContainer) {
@@ -1802,12 +1844,12 @@
                 <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
               </div>
               <div style="text-align:center;">
-                <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</span>
+                <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</button>
               </div>
             </div>
           `;
         });
-        holdContainer.innerHTML = holdHtml || '<div style="padding:10px; color:#888;">Nicio clientă în Hold</div>';
+        holdContainer.innerHTML = holdHtml || '<div style="padding:10px; color:#888; text-align:center;">Nicio clientă în Hold</div>';
       }
     }
 
@@ -2118,6 +2160,7 @@
           actualizeazaStilSelect(selTip);
         }
         
+        reseteazaDateIncasariAzi();
         incarcaBazaDateSilencios();
       });
     }
