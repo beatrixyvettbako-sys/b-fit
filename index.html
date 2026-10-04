@@ -387,7 +387,7 @@
 
       <div class="day-selector" id="dayButtonsContainer"></div>
 
-      <div id="sloturiContainer" class="loader">Se încarcă orarul...</div>
+      <div id="sloturiContainer"></div>
 
       <div style="margin: 10px 0 14px; padding: 8px 12px; background: #fff; border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
         <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
@@ -828,6 +828,7 @@
       let day = d.getDay();
       let hour = d.getHours();
 
+      // Daca e Vineri dupa ora 22:00, Sambata sau Duminica, deschide saptamana urmatoare (5 oct)
       let treceLaUrmatoarea = (day === 5 && hour >= 22) || (day === 6) || (day === 0);
 
       let diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -978,20 +979,37 @@
 
       actualizeazaBaraZile();
 
+      // Incarcare instantanee din memoria locala (daca exista)
+      try {
+        let cached = localStorage.getItem("BFIT_DB_CACHE");
+        if (cached) {
+          let parsed = JSON.parse(cached);
+          if (parsed && parsed.orarSloturi) {
+            DB = parsed;
+            populeazaSelectoriCliente();
+            randeazaProgramariInstant();
+            filtreazaIstoricIncasariInstant();
+            filtreazaIstoricOrarInstant();
+          }
+        }
+      } catch(e) {}
+
+      // Randeaza grila imediat
+      randeazaOrarInstant();
+
       try {
         <? if (typeof dateInitiale !== 'undefined' && dateInitiale && dateInitiale !== 'null') { ?>
           var injectat = JSON.parse(<?= dateInitiale ?>);
           if (injectat && injectat.orarSloturi) {
             DB = injectat;
+            populeazaSelectoriCliente();
+            randeazaOrarInstant();
+            randeazaProgramariInstant();
+            filtreazaIstoricIncasariInstant();
+            filtreazaIstoricOrarInstant();
           }
         <? } ?>
       } catch(e) {}
-
-      populeazaSelectoriCliente();
-      randeazaOrarInstant();
-      randeazaProgramariInstant();
-      filtreazaIstoricIncasariInstant();
-      filtreazaIstoricOrarInstant();
 
       incarcaBazaDateSilencios();
     };
@@ -1000,6 +1018,10 @@
       callBackend("getTotBazaDeDate", {}, function(data) {
         if (!data || !data.orarSloturi) return;
         DB = data;
+        try {
+          localStorage.setItem("BFIT_DB_CACHE", JSON.stringify(data));
+        } catch(e) {}
+
         populeazaSelectoriCliente();
         randeazaOrarInstant();
         randeazaProgramariInstant();
