@@ -559,11 +559,11 @@
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                 <div class="form-group">
                   <label>Dată Start</label>
-                  <input type="text" id="editDataStart" class="form-control" placeholder="Joi, 24 Septembrie 2026">
+                  <input type="text" id="editDataStart" class="form-control" placeholder="01.10.2026">
                 </div>
                 <div class="form-group">
                   <label>Dată Expirare</label>
-                  <input type="text" id="editDataExpirare" class="form-control" placeholder="Joi, 24 Septembrie 2026">
+                  <input type="text" id="editDataExpirare" class="form-control" placeholder="31.10.2026">
                 </div>
               </div>
 
@@ -828,7 +828,7 @@
       let day = d.getDay();
       let hour = d.getHours();
 
-      // Daca e Vineri dupa 22:00, Sambata sau Duminica, deschide direct saptamana viitoare
+      // Daca e Vineri dupa ora 22:00, Sambata sau Duminica, deschide saptamana urmatoare (5 oct)
       let treceLaUrmatoarea = (day === 5 && hour >= 22) || (day === 6) || (day === 0);
 
       let diff = d.getDate() - day + (day === 0 ? -6 : 1);
@@ -1182,7 +1182,6 @@
       let sloturi = [];
 
       if (eTrecuta) {
-        // Pentru saptamanile din trecut, citim direct din jurnalul Istoric Prezențe
         let prezenteZi = (DB.prezente || []).filter(p => p.data === dataCalendarCurenta);
         let grupuriOreTrecute = {};
         prezenteZi.forEach(p => {
@@ -1233,7 +1232,6 @@
         return;
       }
 
-      // Pentru saptamana activa sau viitoare, citim din Orar
       sloturi = (DB.orarSloturi || []).filter(s => {
         let z = s.ziRaw;
         if (saptamanaCheie === "") {
