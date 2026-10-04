@@ -139,7 +139,6 @@
       flex-shrink: 0;
     }
 
-    /* Stare EXPANDATĂ */
     .calendar-expandable-card.is-expanded {
       background: #faf8fc;
       border-color: #d6cae8;
@@ -171,7 +170,6 @@
       transform: rotate(180deg);
     }
 
-    /* Panoul cu butoane care se deschide animat */
     .calendar-drawer-content {
       max-height: 0;
       opacity: 0;
@@ -324,11 +322,13 @@
     }
     .slot-input:focus { border-color: var(--primary); }
     
+    /* STIL UNIFICAT PLACEHOLDER PESTE TOT ÎN APLICAȚIE */
     input::placeholder, textarea::placeholder {
       color: var(--placeholder-fade) !important;
-      opacity: 0.65 !important;
-      font-size: 0.82rem;
-      font-family: inherit;
+      opacity: 0.85 !important;
+      font-size: 0.84rem !important;
+      font-family: inherit !important;
+      font-weight: 400 !important;
     }
 
     select.form-control, select.slot-select-type {
@@ -369,6 +369,9 @@
     .btn-clear { background: #e2e8f0; color: #475569; padding: 7px 9px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; }
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
+    /* =========================================================
+       PROGRAMĂRI: TABEL, ALINIERI ȘI PILL SELECT
+       ========================================================= */
     .prog-table-container {
       background: #fff; border: 1px solid #b0bec5; border-radius: 8px; overflow-x: auto; margin-bottom: 16px;
     }
@@ -377,10 +380,12 @@
       padding: 7px 6px; gap: 6px; align-items: center; font-size: 0.82rem;
     }
     .prog-header {
-      background: #90a4ae; color: #000; font-weight: 800; border-bottom: 1px solid #78909c; text-align: left;
+      background: #90a4ae; color: #000; font-weight: 800; border-bottom: 1px solid #78909c;
     }
-    .prog-header > div:first-child { text-align: center; }
-    .prog-header > div:nth-child(3) { text-align: center; }
+    /* Centrare texte antet în Programări */
+    .prog-header > div {
+      text-align: center;
+    }
     .prog-row {
       border-bottom: 1px solid #e0e0e0;
     }
@@ -388,10 +393,16 @@
     .prog-idx { font-weight: 700; color: #64748b; text-align: center; }
     .prog-name { font-weight: 600; color: #212121; word-break: break-word; }
 
+    /* Pastilă prezență cu chevron consistent, vizibil, mutat spre stânga */
     .pill-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 14px center;
       border: 2px solid #ffffff !important;
       border-radius: 14px;
-      padding: 5px 6px;
+      padding: 5px 24px 5px 8px;
       font-weight: 800;
       font-size: 0.74rem;
       cursor: pointer;
@@ -400,6 +411,7 @@
       width: 100%;
       outline: none;
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      font-family: inherit;
     }
     .pill-confirmata { background-color: var(--color-confirmata) !important; color: #ffffff !important; }
     .pill-asteptare { background-color: var(--color-asteptare) !important; color: #ffffff !important; }
@@ -420,9 +432,14 @@
     .hold-row { background: #fff3e0 !important; }
     .hold-row:nth-child(even) { background: #ffe0b2 !important; }
 
+    /* =========================================================
+       TABELE ÎNCASĂRI & ISTORIC (CENTRĂRI DEDICATE)
+       ========================================================= */
     .incasari-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
     .incasari-table th { background: var(--primary-light); color: var(--primary-dark); padding: 8px; text-align: left; font-weight: 700; }
     .incasari-table td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: middle; }
+    .table-cell-center { text-align: center !important; }
+    .dash-placeholder { display: block; text-align: center; color: #94a3b8; font-weight: 700; }
 
     .progress-wrapper {
       background: #e2e8f0; border-radius: 10px; height: 16px; width: 100%; overflow: hidden; margin: 8px 0 4px;
@@ -900,10 +917,10 @@
           <table class="incasari-table">
             <thead>
               <tr>
-                <th>Dată</th>
+                <th>Data</th>
                 <th>Clientă</th>
                 <th>Sumă</th>
-                <th>Metodă</th>
+                <th class="table-cell-center">Metodă</th>
                 <th>Abonament</th>
               </tr>
             </thead>
@@ -2037,13 +2054,22 @@
       filtrate.forEach(item => {
         let esteGol = !item.suma || item.suma === "-" || item.suma.trim() === "";
         let sumaStil = esteGol ? 'color:#94a3b8; font-weight:700;' : 'color:#27ae60; font-weight:700;';
+        
+        let metodaContinut = (item.metoda && item.metoda.trim() !== "-" && item.metoda.trim() !== "") 
+          ? item.metoda 
+          : '<span class="dash-placeholder">-</span>';
+          
+        let tipContinut = (item.tip && item.tip.trim() !== "-" && item.tip.trim() !== "") 
+          ? item.tip 
+          : '<span class="dash-placeholder">-</span>';
+
         html += `
           <tr>
             <td><b>${item.data}</b></td>
             <td>${item.clienta}</td>
             <td style="${sumaStil}">${item.suma}</td>
-            <td>${item.metoda || '-'}</td>
-            <td>${item.tip}</td>
+            <td class="table-cell-center">${metodaContinut}</td>
+            <td>${tipContinut}</td>
           </tr>
         `;
       });
