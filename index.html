@@ -803,12 +803,6 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
     const ESTE_APPS_SCRIPT = (typeof google !== 'undefined' && google.script && typeof google.script.run !== 'undefined');
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-      });
-    }
-
     let DB = {
       clienti: [],
       orarSloturi: [],
@@ -818,27 +812,17 @@
       prezente: []
     };
 
+    function calculeazaLuniInitial() {
+      let d = new Date();
+      let day = d.getDay(); // 0 Duminica, 1 Luni, ..., 6 Sambata
+      let diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(d.getFullYear(), d.getMonth(), diff, 0, 0, 0);
+    }
+
     let dataReferintaLuni = calculeazaLuniInitial();
     let dataReferintaLuniBaza = new Date(dataReferintaLuni.getTime());
     let ziCurentaCheie = "Luni";
     let modalCallback = null;
-
-    function calculeazaLuniInitial() {
-      let d = new Date();
-      let day = d.getDay();
-      let hour = d.getHours();
-
-      // Daca e Vineri dupa ora 22:00, Sambata sau Duminica, deschide saptamana urmatoare (5 oct)
-      let treceLaUrmatoarea = (day === 5 && hour >= 22) || (day === 6) || (day === 0);
-
-      let diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      let luni = new Date(d.getFullYear(), d.getMonth(), diff, 0, 0, 0);
-
-      if (treceLaUrmatoarea) {
-        luni.setDate(luni.getDate() + 7);
-      }
-      return luni;
-    }
 
     const optiuniAntrenamentConfig = [
       { text: "Fesieri", cls: "ant-orange" },
@@ -879,6 +863,7 @@
     }
 
     function actualizeazaStilSelect(sel) {
+      if (!sel || !sel.classList) return;
       if (!sel.value || sel.value === "") {
         sel.classList.add('select-faded');
         sel.classList.remove('select-active');
@@ -889,6 +874,7 @@
     }
 
     function aplicaCuloareAntrenament(sel) {
+      if (!sel || !sel.classList) return;
       actualizeazaStilSelect(sel);
       optiuniAntrenamentConfig.forEach(item => sel.classList.remove(item.cls));
       let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === (sel.value || "").toLowerCase());
@@ -920,36 +906,30 @@
         else if (actionName === "prelungesteValabilitate") runner.prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
       } else {
         if (actionName === "getTotBazaDeDate") {
-          fetch(API_URL + "?action=getTotBazaDeDate", {
-            method: "GET",
-            redirect: "follow"
-          })
-          .then(r => r.json())
-          .then(data => {
-            if (callback) callback(data);
-          })
-          .catch(err => {
-            console.error("Eroare incarcare:", err);
-            showToast("Eroare incarcare date backend", "error");
-            randeazaOrarInstant();
-          });
+          fetch(API_URL + "?action=getTotBazaDeDate")
+            .then(r => r.json())
+            .then(data => {
+              if (callback) callback(data);
+            })
+            .catch(err => {
+              console.error("Eroare incarcare:", err);
+            });
         } else {
           payload.action = actionName;
           fetch(API_URL, {
             method: "POST",
-            redirect: "follow",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
             body: JSON.stringify(payload)
           })
           .then(r => r.json())
           .then(data => { if (callback) callback(data); })
-          .catch(err => showToast("Eroare salvare: " + err.message, "error"));
+          .catch(err => showToast("Eroare sincronizare", "error"));
         }
       }
     }
 
     function showToast(mesaj, tip = 'success') {
       let t = document.getElementById('customToast');
+      if (!t) return;
       t.innerText = mesaj;
       t.className = 'show ' + (tip === 'error' ? 'error' : 'success');
       setTimeout(() => { t.className = ''; }, 2600);
@@ -970,8 +950,10 @@
 
     window.onload = function() {
       let azi = new Date().toISOString().substring(0, 10);
-      document.getElementById('incasareDataPlata').value = azi;
-      document.getElementById('incasareDataStart').value = azi;
+      let elPlata = document.getElementById('incasareDataPlata');
+      let elStart = document.getElementById('incasareDataStart');
+      if (elPlata) elPlata.value = azi;
+      if (elStart) elStart.value = azi;
 
       let aziIdx = new Date().getDay();
       let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
@@ -979,47 +961,34 @@
 
       actualizeazaBaraZile();
 
-      // Incarcare instantanee din memoria locala (daca exista)
+      // Citim cache local daca exista pentru randare instant
       try {
-        let cached = localStorage.getItem("BFIT_DB_CACHE");
+        let cached = localStorage.getItem("BFIT_DB_LOCAL");
         if (cached) {
           let parsed = JSON.parse(cached);
-          if (parsed && parsed.orarSloturi) {
+          if (parsed && Array.isArray(parsed.orarSloturi)) {
             DB = parsed;
-            populeazaSelectoriCliente();
-            randeazaProgramariInstant();
-            filtreazaIstoricIncasariInstant();
-            filtreazaIstoricOrarInstant();
           }
         }
       } catch(e) {}
 
-      // Randeaza grila imediat
+      // Randam interfata garantat fara blocaj
+      populeazaSelectoriCliente();
       randeazaOrarInstant();
+      randeazaProgramariInstant();
+      filtreazaIstoricIncasariInstant();
+      filtreazaIstoricOrarInstant();
 
-      try {
-        <? if (typeof dateInitiale !== 'undefined' && dateInitiale && dateInitiale !== 'null') { ?>
-          var injectat = JSON.parse(<?= dateInitiale ?>);
-          if (injectat && injectat.orarSloturi) {
-            DB = injectat;
-            populeazaSelectoriCliente();
-            randeazaOrarInstant();
-            randeazaProgramariInstant();
-            filtreazaIstoricIncasariInstant();
-            filtreazaIstoricOrarInstant();
-          }
-        <? } ?>
-      } catch(e) {}
-
+      // Sincronizam cu serverul
       incarcaBazaDateSilencios();
     };
 
     function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
       callBackend("getTotBazaDeDate", {}, function(data) {
-        if (!data || !data.orarSloturi) return;
+        if (!data || !Array.isArray(data.orarSloturi)) return;
         DB = data;
         try {
-          localStorage.setItem("BFIT_DB_CACHE", JSON.stringify(data));
+          localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(data));
         } catch(e) {}
 
         populeazaSelectoriCliente();
@@ -1030,16 +999,18 @@
 
         if (clientaSelectataDupaActualizare) {
           let sel = document.getElementById('selectClientaFisa');
-          sel.value = clientaSelectataDupaActualizare;
-          actualizeazaStilSelect(sel);
-          afiseazaFisaClientaInstant();
+          if (sel) {
+            sel.value = clientaSelectataDupaActualizare;
+            actualizeazaStilSelect(sel);
+            afiseazaFisaClientaInstant();
+          }
         }
       });
     }
 
     function comutaBaraSaptamana() {
       let el = document.getElementById('weekBarExpandable');
-      el.classList.toggle('show');
+      if (el) el.classList.toggle('show');
     }
 
     function schimbaSaptamana(directie) {
@@ -1083,10 +1054,13 @@
       let vineriStr = `${zile[4].dataDate.getDate()} ${zile[4].dataDate.toLocaleString('ro', { month: 'short' })} ${zile[4].dataDate.getFullYear()}`;
       let textInterval = `${luniStr} - ${vineriStr}`;
 
-      document.getElementById('labelIntervalSaptamana').innerText = textInterval;
-      document.getElementById('labelMiniInterval').innerText = textInterval;
+      let lbl1 = document.getElementById('labelIntervalSaptamana');
+      let lbl2 = document.getElementById('labelMiniInterval');
+      if (lbl1) lbl1.innerText = textInterval;
+      if (lbl2) lbl2.innerText = textInterval;
 
       let container = document.getElementById('dayButtonsContainer');
+      if (!container) return;
       let html = '';
       zile.forEach(z => {
         let activeCls = (z.cheie === ziCurentaCheie) ? 'active' : '';
@@ -1107,35 +1081,42 @@
     }
 
     function populeazaSelectoriCliente() {
-      let arataArhivate = document.getElementById('checkArataArhivate').checked;
+      let checkArch = document.getElementById('checkArataArhivate');
+      let arataArhivate = checkArch ? checkArch.checked : false;
       let select = document.getElementById('selectClientaFisa');
+      if (!select) return;
+
       let valoareAnterioara = select.value;
       let datalist = document.getElementById('listaClienteVizibile');
       let filtruIncasari = document.getElementById('filtruClientaIncasari');
       let filtruOrar = document.getElementById('filtruClientaOrar');
 
       select.innerHTML = '<option value="">Alege o clientă...</option>';
-      datalist.innerHTML = '';
-      filtruIncasari.innerHTML = '<option value="">Toate clientele</option>';
-      filtruOrar.innerHTML = '<option value="">Toate clientele</option>';
+      if (datalist) datalist.innerHTML = '';
+      if (filtruIncasari) filtruIncasari.innerHTML = '<option value="">Toate clientele</option>';
+      if (filtruOrar) filtruOrar.innerHTML = '<option value="">Toate clientele</option>';
 
       (DB.clienti || []).forEach(c => {
         let esteArhivat = (c.status || '').toLowerCase() === 'arhivat';
 
         if (!esteArhivat) {
-          let optL = document.createElement('option');
-          optL.value = c.nume;
-          datalist.appendChild(optL);
-
-          let optF = document.createElement('option');
-          optF.value = c.nume;
-          optF.innerText = c.nume;
-          filtruIncasari.appendChild(optF);
-
-          let optO = document.createElement('option');
-          optO.value = c.nume;
-          optO.innerText = c.nume;
-          filtruOrar.appendChild(optO);
+          if (datalist) {
+            let optL = document.createElement('option');
+            optL.value = c.nume;
+            datalist.appendChild(optL);
+          }
+          if (filtruIncasari) {
+            let optF = document.createElement('option');
+            optF.value = c.nume;
+            optF.innerText = c.nume;
+            filtruIncasari.appendChild(optF);
+          }
+          if (filtruOrar) {
+            let optO = document.createElement('option');
+            optO.value = c.nume;
+            optO.innerText = c.nume;
+            filtruOrar.appendChild(optO);
+          }
         }
 
         if (!esteArhivat || arataArhivate) {
@@ -1155,10 +1136,12 @@
     function comutaTab(tabId, titlu, btn, tipTab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      btn.classList.add('active');
+      let target = document.getElementById(tabId);
+      if (target) target.classList.add('active');
+      if (btn) btn.classList.add('active');
       
       let wrapper = document.getElementById('pageTitleWrapper');
+      if (!wrapper) return;
       let iconHtml = '';
       
       if (tipTab === 'orar') {
@@ -1204,6 +1187,7 @@
     // --- ORAR ---
     function randeazaOrarInstant() {
       let container = document.getElementById('sloturiContainer');
+      if (!container) return;
       let dataCalendarCurenta = getDataCalendaristicaCurenta();
       let saptamanaCheie = getSaptamanaCheie();
       let tagZiCautat = saptamanaCheie ? (saptamanaCheie + "_" + ziCurentaCheie) : ziCurentaCheie;
@@ -1212,9 +1196,10 @@
       let sloturi = [];
 
       if (eTrecuta) {
-        let prezenteZi = (DB.prezente || []).filter(p => p.data === dataCalendarCurenta);
+        let prezenteZi = (DB.prezente || []).filter(p => p && p.data === dataCalendarCurenta);
         let grupuriOreTrecute = {};
         prezenteZi.forEach(p => {
+          if (!p.ora) return;
           if (!grupuriOreTrecute[p.ora]) grupuriOreTrecute[p.ora] = [];
           grupuriOreTrecute[p.ora].push({
             row: null,
@@ -1222,14 +1207,13 @@
             clienta: p.clienta,
             antrenament: p.antrenament,
             blocat: false,
-            bifat: true,
-            readonly: true
+            bifat: true
           });
         });
 
         let oreSet = Object.keys(grupuriOreTrecute).sort((a, b) => a.localeCompare(b));
         if (oreSet.length === 0) {
-          container.innerHTML = '<div style="color:var(--text-muted); padding:20px; text-align:center;">Nicio prezență înregistrată în această zi din trecut.</div>';
+          container.innerHTML = '<div style="color:var(--text-muted); padding:24px; text-align:center;">Nicio prezență înregistrată în această zi din trecut.</div>';
           return;
         }
 
@@ -1263,6 +1247,7 @@
       }
 
       sloturi = (DB.orarSloturi || []).filter(s => {
+        if (!s || !s.ziRaw) return false;
         let z = s.ziRaw;
         if (saptamanaCheie === "") {
           return z === ziCurentaCheie || (ziCurentaCheie === "Marti" && z === "Marți");
@@ -1275,6 +1260,7 @@
 
       let grupuriOre = {};
       sloturi.forEach(slot => {
+        if (!slot || !slot.ora) return;
         if (!grupuriOre[slot.ora]) grupuriOre[slot.ora] = [];
         grupuriOre[slot.ora].push(slot);
       });
@@ -1290,9 +1276,9 @@
 
       let html = '';
       oreSortate.forEach(ora => {
-        let sloturiOra = grupuriOre[ora];
-        let esteBlocat = sloturiOra.some(s => s.blocat);
-        let ocupate = sloturiOra.filter(s => s.clienta && s.clienta.trim() !== "").length;
+        let sloturiOra = grupuriOre[ora] || [];
+        let esteBlocat = sloturiOra.some(s => s && s.blocat);
+        let ocupate = sloturiOra.filter(s => s && s.clienta && s.clienta.trim() !== "").length;
         let total = sloturiOra.length;
 
         let badgeHtml = '';
@@ -1317,20 +1303,20 @@
         `;
 
         sloturiOra.forEach((slot, idx) => {
-          let isOccupied = slot.clienta && slot.clienta.trim() !== "";
-          let hasAntrenament = slot.antrenament && slot.antrenament.trim() !== "";
-          let slotRowKey = slot.row ? slot.row : `new_${ora.replace(':', '')}_${idx}`;
+          let isOccupied = slot && slot.clienta && slot.clienta.trim() !== "";
+          let antVal = (slot && slot.antrenament) ? slot.antrenament : "";
+          let slotRowKey = (slot && slot.row) ? slot.row : `new_${ora.replace(':', '')}_${idx}`;
 
           let colorCls = "";
-          if (hasAntrenament) {
-            let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === slot.antrenament.toLowerCase());
+          if (antVal) {
+            let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === antVal.toLowerCase());
             if (cfg) colorCls = cfg.cls;
           }
 
-          let selectAntHtml = `<select id="ant_${slotRowKey}" class="slot-select-type ${hasAntrenament ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">`;
-          selectAntHtml += `<option value="" ${!slot.antrenament ? 'selected' : ''}>Tip antrenament</option>`;
+          let selectAntHtml = `<select id="ant_${slotRowKey}" class="slot-select-type ${antVal ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">`;
+          selectAntHtml += `<option value="" ${!antVal ? 'selected' : ''}>Tip antrenament</option>`;
           optiuniAntrenamentConfig.forEach(opt => {
-            let selected = (slot.antrenament === opt.text) ? 'selected' : '';
+            let selected = (antVal === opt.text) ? 'selected' : '';
             selectAntHtml += `<option value="${opt.text}" ${selected}>${opt.text}</option>`;
           });
           selectAntHtml += `</select>`;
@@ -1339,7 +1325,7 @@
             <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
               <div class="slot-num">${idx + 1}</div>
               <div class="slot-info">
-                <input type="text" id="cli_${slotRowKey}" class="slot-input" value="${slot.clienta}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile" oninput="peSchimbareNumeClienta('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">
+                <input type="text" id="cli_${slotRowKey}" class="slot-input" value="${slot.clienta || ''}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile" oninput="peSchimbareNumeClienta('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">
                 ${selectAntHtml}
               </div>
               <div style="display:flex; gap:4px;">
@@ -1376,8 +1362,10 @@
     function peSchimbareNumeClienta(slotRowKey, zi, ora, slotIdx) {
       clearTimeout(debounceTimerNume);
       debounceTimerNume = setTimeout(() => {
-        let clienta = document.getElementById('cli_' + slotRowKey).value.trim();
-        let antrenament = document.getElementById('ant_' + slotRowKey).value;
+        let elCli = document.getElementById('cli_' + slotRowKey);
+        let elAnt = document.getElementById('ant_' + slotRowKey);
+        let clienta = elCli ? elCli.value.trim() : "";
+        let antrenament = elAnt ? elAnt.value : "";
         let saptamanaCheie = getSaptamanaCheie();
         let dataCalendar = getDataCalendaristicaCurenta();
 
@@ -1399,8 +1387,10 @@
     }
 
     function peSchimbareAntrenament(slotRowKey, zi, ora, slotIdx) {
-      let clienta = document.getElementById('cli_' + slotRowKey).value.trim();
-      let antrenament = document.getElementById('ant_' + slotRowKey).value;
+      let elCli = document.getElementById('cli_' + slotRowKey);
+      let elAnt = document.getElementById('ant_' + slotRowKey);
+      let clienta = elCli ? elCli.value.trim() : "";
+      let antrenament = elAnt ? elAnt.value : "";
 
       if (!clienta) {
         showToast("Adaugă mai întâi numele clientei!", "error");
@@ -1424,8 +1414,10 @@
     }
 
     function bifeazaPrezentaSlot(slotRowKey, zi, ora, slotIdx) {
-      let clienta = document.getElementById('cli_' + slotRowKey).value.trim();
-      let antrenament = document.getElementById('ant_' + slotRowKey).value;
+      let elCli = document.getElementById('cli_' + slotRowKey);
+      let elAnt = document.getElementById('ant_' + slotRowKey);
+      let clienta = elCli ? elCli.value.trim() : "";
+      let antrenament = elAnt ? elAnt.value : "";
 
       if (!clienta) {
         showToast("Introdu numele clientei!", "error");
@@ -1457,10 +1449,13 @@
         let saptamanaCheie = getSaptamanaCheie();
         let rowNum = (typeof slotRowKey === 'number' || !isNaN(slotRowKey)) ? Number(slotRowKey) : null;
 
-        document.getElementById('cli_' + slotRowKey).value = "";
-        let selAnt = document.getElementById('ant_' + slotRowKey);
-        selAnt.value = "";
-        aplicaCuloareAntrenament(selAnt);
+        let elCli = document.getElementById('cli_' + slotRowKey);
+        let elAnt = document.getElementById('ant_' + slotRowKey);
+        if (elCli) elCli.value = "";
+        if (elAnt) {
+          elAnt.value = "";
+          aplicaCuloareAntrenament(elAnt);
+        }
 
         let slot = (DB.orarSloturi || []).find(s => s.row === rowNum);
         if (slot) {
@@ -1480,7 +1475,7 @@
 
     function adaugaOraCustom() {
       let inp = document.getElementById('inputOraCustom');
-      let ora = inp.value.trim();
+      let ora = inp ? inp.value.trim() : "";
       if (!ora) {
         showToast("Introdu ora suplimentară!", "error");
         return;
@@ -1488,15 +1483,18 @@
 
       callBackend("adaugaOraCustom", { zi: ziCurentaCheie, ora: ora }, function(res) {
         showToast("✓ Oră adăugată: " + res.ora);
-        inp.value = '';
+        if (inp) inp.value = '';
         incarcaBazaDateSilencios();
       });
     }
 
     function filtreazaIstoricOrarInstant() {
-      let filtru = document.getElementById('filtruClientaOrar').value.toLowerCase();
+      let fEl = document.getElementById('filtruClientaOrar');
+      let filtru = fEl ? fEl.value.toLowerCase() : "";
       let tbody = document.getElementById('istoricOrarTbody');
-      let filtrate = (DB.prezente || []).filter(p => !filtru || p.clienta.toLowerCase() === filtru);
+      if (!tbody) return;
+
+      let filtrate = (DB.prezente || []).filter(p => p && (!filtru || (p.clienta && p.clienta.toLowerCase() === filtru)));
 
       if (filtrate.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Nicio prezență găsită.</td></tr>';
@@ -1525,57 +1523,64 @@
     }
 
     function randeazaProgramariInstant() {
-      let actHtml = '';
-      (DB.progActive || []).forEach((item, index) => {
-        let pCls = getPillClass(item.prezenta);
-        actHtml += `
-          <div class="prog-grid-layout prog-row">
-            <div class="prog-idx">${index + 1}</div>
-            <div class="prog-name">${item.nume}</div>
-            <div>
-              <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
-                <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
-                <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
-                <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
-                <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
-              </select>
-            </div>
-            <div>
-              <textarea class="prog-mentiuni-textarea" placeholder="Mențiune..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni}</textarea>
-            </div>
-            <div style="text-align:center;">
-              <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="mutaInHold(${item.row})" title="Mută în Hold">✕</span>
-            </div>
-          </div>
-        `;
-      });
-      document.getElementById('progActiveList').innerHTML = actHtml || '<div style="padding:10px; color:#888;">Nicio înregistrare</div>';
+      let actContainer = document.getElementById('progActiveList');
+      let holdContainer = document.getElementById('progHoldList');
 
-      let holdHtml = '';
-      (DB.progHold || []).forEach((item, index) => {
-        let pCls = getPillClass(item.prezenta);
-        holdHtml += `
-          <div class="prog-grid-layout prog-row hold-row">
-            <div class="prog-idx">${index + 1}</div>
-            <div class="prog-name">${item.nume}</div>
-            <div>
-              <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
-                <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
-                <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
-                <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
-                <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
-              </select>
+      if (actContainer) {
+        let actHtml = '';
+        (DB.progActive || []).forEach((item, index) => {
+          let pCls = getPillClass(item.prezenta);
+          actHtml += `
+            <div class="prog-grid-layout prog-row">
+              <div class="prog-idx">${index + 1}</div>
+              <div class="prog-name">${item.nume}</div>
+              <div>
+                <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+                  <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+                  <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+                  <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+                  <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+                </select>
+              </div>
+              <div>
+                <textarea class="prog-mentiuni-textarea" placeholder="Mențiune..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+              </div>
+              <div style="text-align:center;">
+                <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="mutaInHold(${item.row})" title="Mută în Hold">✕</span>
+              </div>
             </div>
-            <div>
-              <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni}</textarea>
+          `;
+        });
+        actContainer.innerHTML = actHtml || '<div style="padding:10px; color:#888;">Nicio înregistrare</div>';
+      }
+
+      if (holdContainer) {
+        let holdHtml = '';
+        (DB.progHold || []).forEach((item, index) => {
+          let pCls = getPillClass(item.prezenta);
+          holdHtml += `
+            <div class="prog-grid-layout prog-row hold-row">
+              <div class="prog-idx">${index + 1}</div>
+              <div class="prog-name">${item.nume}</div>
+              <div>
+                <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+                  <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+                  <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+                  <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+                  <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+                </select>
+              </div>
+              <div>
+                <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+              </div>
+              <div style="text-align:center;">
+                <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</span>
+              </div>
             </div>
-            <div style="text-align:center;">
-              <span style="color:#aaa; cursor:pointer; font-size:14px; font-weight:bold;" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</span>
-            </div>
-          </div>
-        `;
-      });
-      document.getElementById('progHoldList').innerHTML = holdHtml || '<div style="padding:10px; color:#888;">Nicio clientă în Hold</div>';
+          `;
+        });
+        holdContainer.innerHTML = holdHtml || '<div style="padding:10px; color:#888;">Nicio clientă în Hold</div>';
+      }
     }
 
     function schimbaPrezenta(row, selectEl) {
@@ -1591,13 +1596,15 @@
     }
 
     function adaugaClientaInProgramari() {
-      let nume = document.getElementById('progNouNume').value.trim();
-      let sectiune = document.getElementById('progNouSectiune').value;
+      let inp = document.getElementById('progNouNume');
+      let sec = document.getElementById('progNouSectiune');
+      let nume = inp ? inp.value.trim() : "";
+      let sectiune = sec ? sec.value : "Activ";
       if (!nume) return;
 
       callBackend("adaugaRandProgramare", { nume: nume, prezenta: "", mentiuni: "", esteHold: sectiune === "Hold" }, function() {
         showToast("✓ Adăugată în programări!");
-        document.getElementById('progNouNume').value = '';
+        if (inp) inp.value = '';
         incarcaBazaDateSilencios();
       });
     }
@@ -1622,11 +1629,13 @@
 
     // --- FIȘĂ CLIENTĂ ---
     function afiseazaFisaClientaInstant() {
-      let nume = document.getElementById('selectClientaFisa').value;
+      let sel = document.getElementById('selectClientaFisa');
       let container = document.getElementById('detaliiFisa');
+      if (!sel || !container) return;
+      let nume = sel.value;
       if (!nume) { container.style.display = 'none'; return; }
 
-      let client = (DB.clienti || []).find(c => c.nume.toLowerCase() === nume.toLowerCase());
+      let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
       if (!client) return;
 
       container.style.display = 'block';
@@ -1648,12 +1657,14 @@
       else badge.innerHTML = '<span class="badge badge-expirat">' + client.status + '</span>';
 
       let btnArch = document.getElementById('btnArhivareToggle');
-      if (stLower === 'arhivat') {
-        btnArch.innerText = '♻ Reactivează Clienta (Arată în Liste)';
-        btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
-      } else {
-        btnArch.innerText = '📦 Arhivează / Ascunde din Liste';
-        btnArch.style.color = '#b91c1c'; btnArch.style.borderColor = '#fecaca'; btnArch.style.background = '#fef2f2';
+      if (btnArch) {
+        if (stLower === 'arhivat') {
+          btnArch.innerText = '♻ Reactivează Clienta (Arată în Liste)';
+          btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
+        } else {
+          btnArch.innerText = '📦 Arhivează / Ascunde din Liste';
+          btnArch.style.color = '#b91c1c'; btnArch.style.borderColor = '#fecaca'; btnArch.style.background = '#fef2f2';
+        }
       }
 
       document.getElementById('editNume').value = client.nume;
@@ -1666,15 +1677,17 @@
       document.getElementById('editStatus').value = client.status;
 
       let istoricDiv = document.getElementById('istoricPrezenteList');
-      let prezenteClienta = (DB.prezente || []).filter(p => p.clienta.toLowerCase() === nume.toLowerCase());
-      if (prezenteClienta.length === 0) {
-        istoricDiv.innerHTML = '<div style="color:var(--text-muted);">Nicio prezență înregistrată încă.</div>';
-      } else {
-        let h = '';
-        prezenteClienta.forEach(p => {
-          h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.ora}) - ${p.antrenament}</div>`;
-        });
-        istoricDiv.innerHTML = h;
+      if (istoricDiv) {
+        let prezenteClienta = (DB.prezente || []).filter(p => p && p.clienta && p.clienta.toLowerCase() === nume.toLowerCase());
+        if (prezenteClienta.length === 0) {
+          istoricDiv.innerHTML = '<div style="color:var(--text-muted);">Nicio prezență înregistrată încă.</div>';
+        } else {
+          let h = '';
+          prezenteClienta.forEach(p => {
+            h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.ora}) - ${p.antrenament}</div>`;
+          });
+          istoricDiv.innerHTML = h;
+        }
       }
     }
 
@@ -1699,21 +1712,24 @@
     }
 
     function creeazaClientaNouaDirect() {
-      let nume = document.getElementById('nouNumeClienta').value.trim();
+      let inp = document.getElementById('nouNumeClienta');
+      let nume = inp ? inp.value.trim() : "";
       let tip = document.getElementById('nouTipAbonament').value;
       if (!nume) { showToast("Introdu numele!", "error"); return; }
 
       callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
         showToast("✓ Clientă adăugată!");
-        document.getElementById('nouNumeClienta').value = '';
+        if (inp) inp.value = '';
         incarcaBazaDateSilencios();
       });
     }
 
     function comutaArhivareClienta() {
-      let nume = document.getElementById('selectClientaFisa').value;
+      let sel = document.getElementById('selectClientaFisa');
+      if (!sel) return;
+      let nume = sel.value;
       if (!nume) return;
-      let client = (DB.clienti || []).find(c => c.nume.toLowerCase() === nume.toLowerCase());
+      let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
       if (!client) return;
 
       let esteArhivat = (client.status || '').toLowerCase() === 'arhivat';
@@ -1729,7 +1745,9 @@
     }
 
     function adaugaZile(nrZile) {
-      let nume = document.getElementById('selectClientaFisa').value;
+      let sel = document.getElementById('selectClientaFisa');
+      if (!sel) return;
+      let nume = sel.value;
       if (!nume) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
         showToast("✓ Prelungit până la " + res.nouaData);
@@ -1738,8 +1756,11 @@
     }
 
     function seteazaDataManuala() {
-      let nume = document.getElementById('selectClientaFisa').value;
-      let d = document.getElementById('dataPrelungireManuala').value;
+      let sel = document.getElementById('selectClientaFisa');
+      let inp = document.getElementById('dataPrelungireManuala');
+      if (!sel || !inp) return;
+      let nume = sel.value;
+      let d = inp.value;
       if (!nume || !d) return;
       callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
         showToast("✓ Valabilitate setată la " + res.nouaData);
@@ -1751,17 +1772,18 @@
       let tip = document.getElementById('incasareTip').value;
       let selPreset = document.getElementById('selectSumaPreset');
       let customInp = document.getElementById('incasareSumaCustom');
+      if (!selPreset) return;
 
       if (!tip || tip === "") {
         selPreset.value = "";
-        customInp.style.display = 'none';
+        if (customInp) customInp.style.display = 'none';
         actualizeazaStilSelect(selPreset);
         return;
       }
 
       if (preturiAbonament[tip] !== undefined) {
         selPreset.value = preturiAbonament[tip];
-        customInp.style.display = 'none';
+        if (customInp) customInp.style.display = 'none';
       }
       actualizeazaStilSelect(selPreset);
     }
@@ -1769,6 +1791,7 @@
     function gestioneazaSchimbareSumaPreset() {
       let selPreset = document.getElementById('selectSumaPreset');
       let customInp = document.getElementById('incasareSumaCustom');
+      if (!selPreset || !customInp) return;
       if (selPreset.value === 'custom') {
         customInp.style.display = 'block';
         customInp.focus();
@@ -1779,16 +1802,21 @@
 
     function getSumaSelectata() {
       let selPreset = document.getElementById('selectSumaPreset');
+      if (!selPreset) return "";
       if (selPreset.value === 'custom') {
-        return document.getElementById('incasareSumaCustom').value.trim();
+        let cInp = document.getElementById('incasareSumaCustom');
+        return cInp ? cInp.value.trim() : "";
       }
       return selPreset.value;
     }
 
     function filtreazaIstoricIncasariInstant() {
-      let filtru = document.getElementById('filtruClientaIncasari').value.toLowerCase();
+      let fEl = document.getElementById('filtruClientaIncasari');
+      let filtru = fEl ? fEl.value.toLowerCase() : "";
       let tbody = document.getElementById('incasariIstoricTbody');
-      let filtrate = (DB.incasari || []).filter(i => !filtru || i.clienta.toLowerCase() === filtru);
+      if (!tbody) return;
+
+      let filtrate = (DB.incasari || []).filter(i => i && (!filtru || (i.clienta && i.clienta.toLowerCase() === filtru)));
 
       if (filtrate.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nicio încasare găsită.</td></tr>';
@@ -1812,7 +1840,8 @@
     }
 
     function salveazaIncasare() {
-      let nume = document.getElementById('incasareNume').value.trim();
+      let inp = document.getElementById('incasareNume');
+      let nume = inp ? inp.value.trim() : "";
       let tip = document.getElementById('incasareTip').value;
       let suma = getSumaSelectata();
       let metoda = document.getElementById('incasareMetoda').value;
@@ -1826,22 +1855,31 @@
         nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
       }, function() {
         showToast("✓ Abonament & Încasare salvate!");
-        document.getElementById('incasareNume').value = '';
+        if (inp) inp.value = '';
         
         let selPreset = document.getElementById('selectSumaPreset');
-        selPreset.value = '';
-        actualizeazaStilSelect(selPreset);
+        if (selPreset) {
+          selPreset.value = '';
+          actualizeazaStilSelect(selPreset);
+        }
         
-        document.getElementById('incasareSumaCustom').value = '';
-        document.getElementById('incasareSumaCustom').style.display = 'none';
+        let cInp = document.getElementById('incasareSumaCustom');
+        if (cInp) {
+          cInp.value = '';
+          cInp.style.display = 'none';
+        }
         
         let selMetoda = document.getElementById('incasareMetoda');
-        selMetoda.value = '';
-        actualizeazaStilSelect(selMetoda);
+        if (selMetoda) {
+          selMetoda.value = '';
+          actualizeazaStilSelect(selMetoda);
+        }
         
         let selTip = document.getElementById('incasareTip');
-        selTip.value = '';
-        actualizeazaStilSelect(selTip);
+        if (selTip) {
+          selTip.value = '';
+          actualizeazaStilSelect(selTip);
+        }
         
         incarcaBazaDateSilencios();
       });
