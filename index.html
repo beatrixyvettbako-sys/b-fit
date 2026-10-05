@@ -73,8 +73,27 @@
       stroke: var(--primary);
     }
 
+    /* Animație de tranziție lină la schimbarea tab-urilor */
+    @keyframes tabFadeInSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .tab-content.active { 
+      display: block; 
+      animation: tabFadeInSlide 0.24s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .scroll-target-details {
+      scroll-margin-top: 60px;
+    }
 
     /* =========================================================
        BARĂ UNICĂ EXPANDABILĂ CU ANIMAȚIE DE GLISARE
@@ -396,7 +415,7 @@
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
     /* =========================================================
-       PROGRAMĂRI & HOLD (GRID ALINIAT STRICT & CENTRAT)
+       PROGRAMĂRI & HOLD (GRID EXACT ALINIAT & CENTRAT)
        ========================================================= */
     .prog-table-container {
       background: #fff;
@@ -408,7 +427,7 @@
     }
     .prog-grid-layout {
       display: grid;
-      grid-template-columns: 28px 1.25fr 98px 1.2fr 28px;
+      grid-template-columns: 32px 1.25fr 98px 1.2fr 28px;
       padding: 8px 6px;
       gap: 6px;
       align-items: center;
@@ -422,17 +441,17 @@
       font-weight: 800;
       border-bottom: 1px solid #78909c;
     }
-    .prog-header > div:nth-child(1) { text-align: center; } /* # centrat deasupra cifrelor */
+    .prog-header > div:nth-child(1) { text-align: center; padding-left: 2px; } /* # centrat deasupra cifrelor */
     .prog-header > div:nth-child(2) { text-align: center; } /* Nume centrat */
     .prog-header > div:nth-child(3) { text-align: center; }
-    .prog-header > div:nth-child(4) { text-align: center; } /* Mențiuni centrat deasupra casetelor */
+    .prog-header > div:nth-child(4) { text-align: center; } /* Mențiuni centrat deasupra căsuțelor */
     .prog-header > div:nth-child(5) { text-align: center; }
 
     .prog-row {
       border-bottom: 1px solid #e0e0e0;
     }
     .prog-row:nth-child(even) { background: #fafafa; }
-    .prog-idx { font-weight: 700; color: #64748b; text-align: center; width: 28px; }
+    .prog-idx { font-weight: 700; color: #64748b; text-align: center; width: 32px; padding-left: 2px; }
     .prog-name { font-weight: 600; color: #212121; word-break: break-word; text-align: left; padding: 0 4px; }
 
     .pill-select {
@@ -491,19 +510,59 @@
     }
 
     /* =========================================================
-       TABELE ÎNCASĂRI (FIT TO SCREEN - FIX PE ECRAN)
+       FIȘĂ CLIENTĂ - EMPTY STATE STILIZAT
+       ========================================================= */
+    .fisa-empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 36px 16px;
+      color: var(--text-muted);
+    }
+    .fisa-empty-icon {
+      width: 68px;
+      height: 68px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .fisa-empty-icon svg {
+      width: 34px;
+      height: 34px;
+      stroke: var(--primary);
+    }
+    .fisa-empty-title {
+      font-weight: 800;
+      font-size: 0.98rem;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+    .fisa-empty-sub {
+      font-size: 0.82rem;
+      max-width: 280px;
+      line-height: 1.4;
+      color: #64748b;
+    }
+
+    /* =========================================================
+       TABELE ÎNCASĂRI (FIT TO SCREEN OPTIMIZAT CU 2 RÂNDURI)
        ========================================================= */
     .incasari-table-fit {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.75rem;
+      font-size: 0.74rem;
       margin-top: 10px;
       table-layout: fixed;
     }
     .incasari-table-fit th {
       background: var(--primary-light);
       color: var(--primary-dark);
-      padding: 6px 3px;
+      padding: 7px 3px;
       font-weight: 700;
       text-align: left;
       white-space: nowrap;
@@ -511,10 +570,9 @@
       text-overflow: ellipsis;
     }
     .incasari-table-fit td {
-      padding: 6px 3px;
+      padding: 7px 3px;
       border-bottom: 1px solid #eee;
       vertical-align: middle;
-      word-break: break-word;
       overflow: hidden;
       line-height: 1.2;
     }
@@ -530,6 +588,15 @@
     }
     .incasare-row-clickable:active {
       background: #f3e8ff;
+    }
+
+    .incasare-clienta-wrap {
+      font-weight: 700;
+      color: var(--primary);
+      white-space: normal;
+      word-break: normal;
+      overflow-wrap: break-word;
+      line-height: 1.15;
     }
 
     /* Card sumar total încasări */
@@ -772,7 +839,7 @@
         </div>
       </div>
 
-      <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+      <details id="detailsIstoricOrar" class="scroll-target-details" ontoggle="gestioneazaAutoScrollDetails(this)" style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
         <summary class="summary-toggle-clean">
           <span>
             <svg class="icon-history-svg" viewBox="0 0 24 24">
@@ -870,6 +937,19 @@
           <option value="">Alege o clientă</option>
         </select>
 
+        <!-- Empty State Grafic (vizibil când nu e nimeni selectat) -->
+        <div id="fisaEmptyState" class="fisa-empty-state">
+          <div class="fisa-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
+          <div class="fisa-empty-title">Nicio clientă selectată</div>
+          <div class="fisa-empty-sub">Alege o clientă din listă pentru a-i vedea abonamentul activ, ședințele și istoricul.</div>
+        </div>
+
+        <!-- Detalii Fișă (ascunse implicit până la selecție) -->
         <div id="detaliiFisa" style="display: none;">
           <div style="margin: 14px 0 10px; background: #fff; padding: 12px; border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
@@ -1081,8 +1161,8 @@
         </button>
       </div>
 
-      <!-- ISTORIC ÎNCASĂRI (FIT TO SCREEN) -->
-      <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+      <!-- ISTORIC ÎNCASĂRI (FIT TO SCREEN OPTIMIZAT) -->
+      <details id="detailsIstoricIncasari" class="scroll-target-details" ontoggle="gestioneazaAutoScrollDetails(this)" style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
         <summary class="summary-toggle-clean">
           <span>
             <svg class="icon-history-svg" viewBox="0 0 24 24">
@@ -1119,15 +1199,15 @@
             <div class="total-incasari-val" id="totalIncasariVal">0 RON</div>
           </div>
 
-          <!-- Tabel fără scroll orizontal (Fit to Screen) -->
+          <!-- Tabel optimizat cu spațiu extins pentru abonament și 2 rânduri la nume -->
           <table class="incasari-table-fit">
             <thead>
               <tr>
-                <th style="width:19%;">Data</th>
-                <th style="width:27%;">Clientă</th>
-                <th style="width:17%;">Sumă</th>
-                <th style="width:16%; text-align:center;">Metodă</th>
-                <th style="width:15%;">Abonam.</th>
+                <th style="width:18%;">Data</th>
+                <th style="width:25%;">Clientă</th>
+                <th style="width:16%;">Sumă</th>
+                <th style="width:14%; text-align:center;">Metodă</th>
+                <th style="width:21%;">Abonament</th>
                 <th style="width:6%;"></th>
               </tr>
             </thead>
@@ -1205,7 +1285,6 @@
 
     let scrollEfectuatLaStart = false;
 
-    // Dacă utilizatorul a atins deja ecranul să deruleze, blocăm orice auto-scroll întârziat
     window.addEventListener('touchstart', () => { scrollEfectuatLaStart = true; }, { passive: true });
     window.addEventListener('wheel', () => { scrollEfectuatLaStart = true; }, { passive: true });
 
@@ -1408,11 +1487,19 @@
       modalCallback = null;
     }
 
+    /* Auto-scroll lin la deschiderea secțiunilor de istoric */
+    function gestioneazaAutoScrollDetails(el) {
+      if (el && el.open) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+      }
+    }
+
     /* =========================================================
-       SCROLL INSTANT (FĂRĂ DELAY) + HIGHLIGHT MOV 2s
+       SCROLL INSTANT LA START + HIGHLIGHT MOV 2s
        ========================================================= */
     function autoScrollLaOraCurenta(fortat = false) {
-      // Dacă scroll-ul s-a făcut deja la deschidere sau s-a atins ecranul, nu mai intervenim automat
       if (scrollEfectuatLaStart && !fortat) return;
 
       let now = new Date();
@@ -1447,9 +1534,7 @@
       });
 
       if (closestBlock) {
-        scrollEfectuatLaStart = true; // Marcat ca finalizat
-        
-        // Salt instantaneu (fără timp mort)
+        scrollEfectuatLaStart = true;
         closestBlock.scrollIntoView({ behavior: 'auto', block: 'center' });
         
         closestBlock.classList.remove('hour-block-current-highlight');
@@ -1495,10 +1580,7 @@
       filtreazaIstoricIncasariInstant();
       filtreazaIstoricOrarInstant();
 
-      // Salt INSTANTANEU executat chiar acum pe elementele randate din cache:
       autoScrollLaOraCurenta(true);
-
-      // Încărcare silențioasă de pe server (care nu va mai smuci ecranul)
       incarcaBazaDateSilencios(null, false);
     };
 
@@ -1535,6 +1617,7 @@
       }
     }
 
+    /* Schimbă săptămâna și resetează ziua pe LUNI */
     function schimbaSaptamanaAnimat(directie) {
       let lbl = document.getElementById('labelIntervalSaptamana');
       if (lbl) {
@@ -1544,6 +1627,10 @@
 
       setTimeout(() => {
         dataReferintaLuni.setDate(dataReferintaLuni.getDate() + (directie * 7));
+        
+        // Ziua selectată devine garantat LUNI la navigare
+        ziCurentaCheie = "Luni";
+
         actualizeazaBaraZile();
         randeazaOrarInstant();
         if (lbl) {
@@ -1706,6 +1793,7 @@
       }
     }
 
+    /* ORDONARE INVERS CRONOLOGICĂ A LUNILOR ÎN SELECTOR (DECEMBRIE -> IANUARIE) */
     function populeazaSelectorLuni() {
       let selLuna = document.getElementById('filtruLunaIncasari');
       if (!selLuna) return;
@@ -1719,8 +1807,23 @@
         }
       });
 
+      const ordineLuniCalendar = [
+        "ianuarie", "februarie", "martie", "aprilie", "mai", "iunie",
+        "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"
+      ];
+
+      let listaLuni = Array.from(luniSet);
+
+      listaLuni.sort((a, b) => {
+        let idxA = ordineLuniCalendar.findIndex(l => a.toLowerCase().startsWith(l.substring(0, 3)));
+        let idxB = ordineLuniCalendar.findIndex(l => b.toLowerCase().startsWith(l.substring(0, 3)));
+        if (idxA === -1) idxA = 0;
+        if (idxB === -1) idxB = 0;
+        return idxB - idxA;
+      });
+
       selLuna.innerHTML = '<option value="">Toate lunile</option>';
-      Array.from(luniSet).forEach(luna => {
+      listaLuni.forEach(luna => {
         let opt = document.createElement('option');
         opt.value = luna;
         opt.innerText = luna;
@@ -2242,9 +2345,17 @@
     function afiseazaFisaClientaInstant() {
       let sel = document.getElementById('selectClientaFisa');
       let container = document.getElementById('detaliiFisa');
+      let emptyState = document.getElementById('fisaEmptyState');
       if (!sel || !container) return;
       let nume = sel.value;
-      if (!nume) { container.style.display = 'none'; return; }
+
+      if (!nume) { 
+        container.style.display = 'none'; 
+        if (emptyState) emptyState.style.display = 'flex';
+        return; 
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
 
       let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
       if (!client) return;
@@ -2429,7 +2540,7 @@
       return selPreset.value;
     }
 
-    /* ISTORIC ÎNCASĂRI (FIT TO SCREEN) */
+    /* ISTORIC ÎNCASĂRI (FIT TO SCREEN CU NUME PE DOUĂ RÂNDURI) */
     function filtreazaIstoricIncasariInstant() {
       let fEl = document.getElementById('filtruClientaIncasari');
       let fLuna = document.getElementById('filtruLunaIncasari');
@@ -2486,10 +2597,10 @@
         html += `
           <tr class="incasare-row-clickable" onclick="deschideModalEditareIncasare('${itemJson}')" title="Apasă pentru a edita această plată">
             <td style="font-weight:700;">${item.data}</td>
-            <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
+            <td><div class="incasare-clienta-wrap">${item.clienta}</div></td>
             <td style="${sumaStil}">${item.suma}</td>
             <td class="table-cell-center">${metodaContinut}</td>
-            <td>${tipContinut}</td>
+            <td style="font-weight:600; color:#334155;">${tipContinut}</td>
             <td style="text-align:center; color:#94a3b8; font-size:0.8rem;">✏️</td>
           </tr>
         `;
