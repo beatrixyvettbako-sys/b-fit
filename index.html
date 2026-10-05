@@ -369,7 +369,7 @@
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
     /* =========================================================
-       PROGRAMĂRI & HOLD (FĂRĂ SCROLL ORIZONTAL + ALINIERE CURATĂ)
+       PROGRAMĂRI & HOLD
        ========================================================= */
     .prog-table-container {
       background: #fff;
@@ -463,7 +463,7 @@
     }
 
     /* =========================================================
-       TABELE ÎNCASĂRI & ISTORIC (CENTRĂRI DEDICATE)
+       TABELE ÎNCASĂRI & ISTORIC
        ========================================================= */
     .incasari-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 10px; }
     .incasari-table th { background: var(--primary-light); color: var(--primary-dark); padding: 8px; text-align: left; font-weight: 700; }
@@ -621,7 +621,7 @@
               <path d="M3 3v5h5"></path>
               <path d="M12 7v5l4 2"></path>
             </svg>
-            Istoric Prezențe Orar (Click pentru extindere)
+            Istoric Prezențe Orar
           </span>
         </summary>
         <div style="margin-top: 10px;">
@@ -924,42 +924,43 @@
         </button>
       </div>
 
-      <div class="card" style="padding: 12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <h4 style="margin: 0; color: var(--primary);">
-            <span class="icon-history-title">
-              <svg class="icon-history-svg" viewBox="0 0 24 24">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                <path d="M3 3v5h5"></path>
-                <path d="M12 7v5l4 2"></path>
-              </svg>
-              <span>Istoric Încasări</span>
-            </span>
-          </h4>
+      <!-- ISTORIC ÎNCASĂRI COLLAPSED IDENTIC CU ISTORIC ORAR -->
+      <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+        <summary class="summary-toggle-clean">
+          <span>
+            <svg class="icon-history-svg" viewBox="0 0 24 24">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M12 7v5l4 2"></path>
+            </svg>
+            Istoric Încasări
+          </span>
+        </summary>
+        <div style="margin-top: 10px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <label>Filtrează încasările după clientă:</label>
+            <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
+              <option value="">Toate clientele</option>
+            </select>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="incasari-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Clientă</th>
+                  <th>Sumă</th>
+                  <th class="table-cell-center">Metodă</th>
+                  <th>Abonament</th>
+                </tr>
+              </thead>
+              <tbody id="incasariIstoricTbody">
+                <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="form-group" style="margin-bottom:8px;">
-          <label>Filtrează încasările după clientă:</label>
-          <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
-            <option value="">Toate clientele</option>
-          </select>
-        </div>
-        <div style="overflow-x: auto;">
-          <table class="incasari-table">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Clientă</th>
-                <th>Sumă</th>
-                <th class="table-cell-center">Metodă</th>
-                <th>Abonament</th>
-              </tr>
-            </thead>
-            <tbody id="incasariIstoricTbody">
-              <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </details>
     </div>
 
   </div>
@@ -1026,7 +1027,6 @@
       prezente: []
     };
 
-    /* FUNCȚIE PARSARE DATĂ PENTRU SORTARE CRONOLOGICĂ EXACTĂ */
     function parseazaDataOraRo(dataStr, oraStr) {
       if (!dataStr || dataStr === "-" || typeof dataStr !== 'string') return 0;
       let s = dataStr.trim();
@@ -1083,6 +1083,15 @@
     function calculeazaLuniInitial() {
       let d = new Date();
       let day = d.getDay();
+      let ora = d.getHours();
+
+      let esteTrecutDeVineriSeara = (day === 5 && ora >= 22) || (day === 6) || (day === 0);
+
+      if (esteTrecutDeVineriSeara) {
+        let zilePanaLuniViitoare = (day === 5) ? 3 : (day === 6 ? 2 : 1);
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + zilePanaLuniViitoare, 0, 0, 0);
+      }
+
       let diff = d.getDate() - day + (day === 0 ? -6 : 1);
       return new Date(d.getFullYear(), d.getMonth(), diff, 0, 0, 0);
     }
@@ -1219,9 +1228,17 @@
     window.onload = function() {
       reseteazaDateIncasariAzi();
 
-      let aziIdx = new Date().getDay();
+      let d = new Date();
+      let aziIdx = d.getDay();
+      let ora = d.getHours();
+      let esteTrecutDeVineriSeara = (aziIdx === 5 && ora >= 22) || (aziIdx === 6) || (aziIdx === 0);
+
       let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
-      ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
+      if (esteTrecutDeVineriSeara) {
+        ziCurentaCheie = "Luni";
+      } else {
+        ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
+      }
 
       actualizeazaBaraZile();
 
@@ -1269,7 +1286,6 @@
       });
     }
 
-    /* GESTIUNE EXPANDARE BARA CALENDAR */
     function comutaExpandareBaraCalendar() {
       let card = document.getElementById('calendarExpandableCard');
       if (card) {
@@ -1992,7 +2008,6 @@
       document.getElementById('editRamase').value = client.ramase;
       document.getElementById('editStatus').value = client.status;
 
-      /* ISTORIC PREZENȚE ÎN FIȘĂ: SORTAT INVERS CRONOLOGIC (RECENT -> VECHI) */
       let istoricDiv = document.getElementById('istoricPrezenteList');
       if (istoricDiv) {
         let prezenteClienta = (DB.prezente || []).filter(p => p && p.clienta && p.clienta.toLowerCase() === nume.toLowerCase());
