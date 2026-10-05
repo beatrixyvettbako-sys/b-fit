@@ -396,7 +396,7 @@
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
     /* =========================================================
-       PROGRAMĂRI & HOLD (LĂȚIT & ALINIAT CENTRAL)
+       PROGRAMĂRI & HOLD (GRID ALINIAT STRICT & CENTRAT)
        ========================================================= */
     .prog-table-container {
       background: #fff;
@@ -408,7 +408,7 @@
     }
     .prog-grid-layout {
       display: grid;
-      grid-template-columns: 26px 1.25fr 100px 1.15fr 28px;
+      grid-template-columns: 28px 1.25fr 98px 1.2fr 28px;
       padding: 8px 6px;
       gap: 6px;
       align-items: center;
@@ -422,17 +422,17 @@
       font-weight: 800;
       border-bottom: 1px solid #78909c;
     }
-    .prog-header > div:nth-child(1) { text-align: center; }
+    .prog-header > div:nth-child(1) { text-align: center; } /* # centrat deasupra cifrelor */
     .prog-header > div:nth-child(2) { text-align: center; } /* Nume centrat */
     .prog-header > div:nth-child(3) { text-align: center; }
-    .prog-header > div:nth-child(4) { text-align: center; } /* Mențiuni centrat */
+    .prog-header > div:nth-child(4) { text-align: center; } /* Mențiuni centrat deasupra casetelor */
     .prog-header > div:nth-child(5) { text-align: center; }
 
     .prog-row {
       border-bottom: 1px solid #e0e0e0;
     }
     .prog-row:nth-child(even) { background: #fafafa; }
-    .prog-idx { font-weight: 700; color: #64748b; text-align: center; width: 100%; }
+    .prog-idx { font-weight: 700; color: #64748b; text-align: center; width: 28px; }
     .prog-name { font-weight: 600; color: #212121; word-break: break-word; text-align: left; padding: 0 4px; }
 
     .pill-select {
@@ -498,7 +498,7 @@
       border-collapse: collapse;
       font-size: 0.75rem;
       margin-top: 10px;
-      table-layout: fixed; /* Forțează tabelul să încapă fix pe lățimea ecranului */
+      table-layout: fixed;
     }
     .incasari-table-fit th {
       background: var(--primary-light);
@@ -1203,6 +1203,12 @@
       prezente: []
     };
 
+    let scrollEfectuatLaStart = false;
+
+    // Dacă utilizatorul a atins deja ecranul să deruleze, blocăm orice auto-scroll întârziat
+    window.addEventListener('touchstart', () => { scrollEfectuatLaStart = true; }, { passive: true });
+    window.addEventListener('wheel', () => { scrollEfectuatLaStart = true; }, { passive: true });
+
     function parseazaDataOraRo(dataStr, oraStr) {
       if (!dataStr || dataStr === "-" || typeof dataStr !== 'string') return 0;
       let s = dataStr.trim();
@@ -1403,19 +1409,22 @@
     }
 
     /* =========================================================
-       AUTO-SCROLL LA CEA MAI APROPIATĂ ORĂ + GLOW MOV 2s
+       SCROLL INSTANT (FĂRĂ DELAY) + HIGHLIGHT MOV 2s
        ========================================================= */
-    function autoScrollLaOraCurenta() {
+    function autoScrollLaOraCurenta(fortat = false) {
+      // Dacă scroll-ul s-a făcut deja la deschidere sau s-a atins ecranul, nu mai intervenim automat
+      if (scrollEfectuatLaStart && !fortat) return;
+
       let now = new Date();
       let day = now.getDay();
       let currentHour = now.getHours();
       let currentMinute = now.getMinutes();
 
       let esteInAfaraProgramuluiWeekend = (day === 5 && currentHour >= 22) || (day === 6) || (day === 0);
-      if (esteInAfaraProgramuluiWeekend) return;
+      if (esteInAfaraProgramuluiWeekend && !fortat) return;
 
       let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
-      if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) return;
+      if (!esteSaptamanaActiva() || (ziCurentaCheie !== zileChei[day] && !fortat)) return;
 
       let hourBlocks = document.querySelectorAll('.hour-block');
       if (!hourBlocks || hourBlocks.length === 0) return;
@@ -1438,15 +1447,17 @@
       });
 
       if (closestBlock) {
+        scrollEfectuatLaStart = true; // Marcat ca finalizat
+        
+        // Salt instantaneu (fără timp mort)
+        closestBlock.scrollIntoView({ behavior: 'auto', block: 'center' });
+        
+        closestBlock.classList.remove('hour-block-current-highlight');
+        void closestBlock.offsetWidth;
+        closestBlock.classList.add('hour-block-current-highlight');
         setTimeout(() => {
-          closestBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
           closestBlock.classList.remove('hour-block-current-highlight');
-          void closestBlock.offsetWidth;
-          closestBlock.classList.add('hour-block-current-highlight');
-          setTimeout(() => {
-            closestBlock.classList.remove('hour-block-current-highlight');
-          }, 2000);
-        }, 50);
+        }, 2000);
       }
     }
 
@@ -1484,7 +1495,11 @@
       filtreazaIstoricIncasariInstant();
       filtreazaIstoricOrarInstant();
 
-      incarcaBazaDateSilencios(null, true);
+      // Salt INSTANTANEU executat chiar acum pe elementele randate din cache:
+      autoScrollLaOraCurenta(true);
+
+      // Încărcare silențioasă de pe server (care nu va mai smuci ecranul)
+      incarcaBazaDateSilencios(null, false);
     };
 
     function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePrimaIncarcare = false) {
@@ -1509,10 +1524,6 @@
             actualizeazaStilSelect(sel);
             afiseazaFisaClientaInstant();
           }
-        }
-
-        if (estePrimaIncarcare) {
-          autoScrollLaOraCurenta();
         }
       });
     }
@@ -1556,7 +1567,7 @@
 
       actualizeazaBaraZile();
       randeazaOrarInstant();
-      autoScrollLaOraCurenta();
+      autoScrollLaOraCurenta(true);
       showToast("✓ Ai revenit la săptămâna curentă!");
     }
 
@@ -1773,7 +1784,7 @@
       wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
       
       if (tipTab === 'orar') {
-        autoScrollLaOraCurenta();
+        autoScrollLaOraCurenta(true);
       }
     }
 
