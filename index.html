@@ -265,10 +265,25 @@
       background: var(--card-bg); border-radius: var(--radius); padding: 14px; margin-bottom: 12px;
       border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
+    
+    /* Auto-scroll margin compensat pentru header sticky */
     .hour-block {
       background: #fff; border: 1px solid #d5dbe1; border-radius: 12px; margin-bottom: 14px;
-      overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); transition: all 0.2s ease;
+      overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); transition: all 0.3s ease;
+      scroll-margin-top: 110px;
     }
+
+    /* Animație Glow 1.5s pentru ora curentă */
+    @keyframes pulseOraCurenta {
+      0% { box-shadow: 0 0 0 0 rgba(92, 77, 125, 0.7); border-color: var(--primary); }
+      50% { box-shadow: 0 0 0 10px rgba(92, 77, 125, 0); border-color: var(--primary); }
+      100% { box-shadow: 0 0 0 0 rgba(92, 77, 125, 0); border-color: #d5dbe1; }
+    }
+    .hour-block-current-highlight {
+      animation: pulseOraCurenta 1.5s ease-out;
+      border-color: var(--primary) !important;
+    }
+
     .hour-header {
       background: #ede9f4; padding: 8px 12px; display: flex; justify-content: space-between;
       align-items: center; border-bottom: 1px solid #ddd6e8;
@@ -321,7 +336,6 @@
     }
     .slot-input:focus { border-color: var(--primary); }
     
-    /* STIL UNIFICAT PLACEHOLDER */
     input::placeholder, textarea::placeholder {
       color: var(--placeholder-fade) !important;
       opacity: 0.85 !important;
@@ -471,6 +485,48 @@
     .table-cell-center { text-align: center !important; }
     .dash-placeholder { display: block; text-align: center; color: #94a3b8; font-weight: 700; }
 
+    /* Stil rând editabil încasări */
+    .incasare-row-clickable {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .incasare-row-clickable:hover {
+      background: #faf5ff;
+    }
+    .incasare-row-clickable:active {
+      background: #f3e8ff;
+    }
+
+    /* Card sumar total încasări */
+    .total-incasari-card {
+      background: linear-gradient(135deg, #f4effa, #ffffff);
+      border: 1px solid #dfd5ed;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .total-incasari-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--primary-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .total-incasari-count {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .total-incasari-val {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #15803d;
+    }
+
     .progress-wrapper {
       background: #e2e8f0; border-radius: 10px; height: 16px; width: 100%; overflow: hidden; margin: 8px 0 4px;
     }
@@ -524,12 +580,23 @@
     .custom-modal-title { font-weight: 800; font-size: 1.1rem; color: var(--primary); margin-bottom: 8px; }
     .custom-modal-text { font-size: 0.9rem; color: #475569; margin-bottom: 18px; line-height: 1.4; }
     .custom-modal-actions { display: flex; gap: 8px; justify-content: center; }
+
+    /* Modal Editare Încasare */
+    #modalEditareIncasareBackdrop {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.55);
+      z-index: 10001; display: none; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-edit-card {
+      background: #fff; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25); text-align: left;
+    }
   </style>
 </head>
 <body>
 
   <div id="customToast">✓ Mesaj</div>
 
+  <!-- Modal Confirmare General -->
   <div id="customModalBackdrop">
     <div class="custom-modal-card">
       <div class="custom-modal-title" id="modalTitle">Confirmare</div>
@@ -537,6 +604,63 @@
       <div class="custom-modal-actions">
         <button class="btn btn-clear" style="flex:1;" onclick="closeCustomModal(false)">Renunță</button>
         <button class="btn" style="flex:1;" id="modalBtnConfirm" onclick="closeCustomModal(true)">Confirmă</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editare Încasare -->
+  <div id="modalEditareIncasareBackdrop">
+    <div class="modal-edit-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+        <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);">✏️ Editare Încasare</div>
+        <button onclick="inchideModalEditareIncasare()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+      
+      <input type="hidden" id="editIncRow">
+
+      <div class="form-group">
+        <label>Clientă</label>
+        <input type="text" id="editIncClienta" class="form-control" list="listaClienteVizibile">
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div class="form-group">
+          <label>Data Plată</label>
+          <input type="text" id="editIncData" class="form-control" placeholder="DD.MM.YYYY">
+        </div>
+        <div class="form-group">
+          <label>Sumă (RON)</label>
+          <input type="number" id="editIncSuma" class="form-control">
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div class="form-group">
+          <label>Metodă Plată</label>
+          <select id="editIncMetoda" class="form-control">
+            <option value="Revolut">Revolut</option>
+            <option value="Cash">Cash</option>
+            <option value="ING / Card">ING / Card</option>
+            <option value="-">-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tip Abonament</label>
+          <select id="editIncTip" class="form-control">
+            <option value="8 sedinte">8 sedinte</option>
+            <option value="10 sedinte">10 sedinte</option>
+            <option value="12 sedinte">12 sedinte</option>
+            <option value="16 sedinte">16 sedinte</option>
+            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
+            <option value="Sedinta Individuala">Sedinta Individuala</option>
+            <option value="Sedinta Gratuita">Sedinta Gratuita</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="btn btn-clear" style="flex:1;" onclick="inchideModalEditareIncasare()">Renunță</button>
+        <button class="btn" style="flex:1;" onclick="salveazaModificareIncasare()">Salvează</button>
       </div>
     </div>
   </div>
@@ -924,7 +1048,7 @@
         </button>
       </div>
 
-      <!-- ISTORIC ÎNCASĂRI COLLAPSED IDENTIC CU ISTORIC ORAR -->
+      <!-- ISTORIC ÎNCASĂRI COLLAPSED CU FILTRE DUPĂ CLIENTĂ & LUNĂ + TOTAL DINAMIC -->
       <details style="margin-top: 10px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
         <summary class="summary-toggle-clean">
           <span>
@@ -937,12 +1061,31 @@
           </span>
         </summary>
         <div style="margin-top: 10px;">
-          <div class="form-group" style="margin-bottom:8px;">
-            <label>Filtrează încasările după clientă:</label>
-            <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
-              <option value="">Toate clientele</option>
-            </select>
+          
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Filtrează clientă:</label>
+              <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
+                <option value="">Toate clientele</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Filtrează lună:</label>
+              <select id="filtruLunaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
+                <option value="">Toate lunile</option>
+              </select>
+            </div>
           </div>
+
+          <!-- Total Încasări dinamic -->
+          <div class="total-incasari-card">
+            <div>
+              <div class="total-incasari-label">Total Încasări</div>
+              <div class="total-incasari-count" id="totalIncasariCount">0 plăți găsite</div>
+            </div>
+            <div class="total-incasari-val" id="totalIncasariVal">0 RON</div>
+          </div>
+
           <div style="overflow-x: auto;">
             <table class="incasari-table">
               <thead>
@@ -952,10 +1095,11 @@
                   <th>Sumă</th>
                   <th class="table-cell-center">Metodă</th>
                   <th>Abonament</th>
+                  <th style="width:24px;"></th>
                 </tr>
               </thead>
               <tbody id="incasariIstoricTbody">
-                <tr><td colspan="5" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
+                <tr><td colspan="6" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1173,6 +1317,7 @@
         else if (actionName === "comutaBlocareOra") runner.comutaBlocareOra(payload.zi, payload.ora, payload.blocat);
         else if (actionName === "adaugaOraCustom") runner.adaugaOraCustomOrar(payload.zi, payload.ora);
         else if (actionName === "inregistreazaAbonament") runner.inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
+        else if (actionName === "actualizeazaIncasare") runner.actualizeazaRandIncasare(payload.row, payload.data, payload.clienta, payload.suma, payload.metoda, payload.tip);
         else if (actionName === "actualizeazaCampProgramare") runner.actualizeazaCampProgramare(payload.row, payload.col, payload.val);
         else if (actionName === "adaugaRandProgramare") runner.adaugaRandNouProgramare(payload.nume, payload.prezenta, payload.mentiuni, payload.esteHold);
         else if (actionName === "mutaInHold") runner.mutaInHold(payload.row);
@@ -1225,6 +1370,54 @@
       modalCallback = null;
     }
 
+    /* =========================================================
+       AUTO-SCROLL LA CEA MAI APROPIATĂ ORĂ + ANIMAȚIE GLOW 1.5s
+       ========================================================= */
+    function autoScrollLaOraCurenta() {
+      let now = new Date();
+      let day = now.getDay();
+      let currentHour = now.getHours();
+      let currentMinute = now.getMinutes();
+
+      // Regula de excepție: Vineri de la 22:00 până Duminică la 23:59 nu executăm scroll
+      let esteInAfaraProgramuluiWeekend = (day === 5 && currentHour >= 22) || (day === 6) || (day === 0);
+      if (esteInAfaraProgramuluiWeekend) return;
+
+      // Executăm scroll doar dacă ne aflăm în săptămâna curentă și în ziua curentă
+      let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+      if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) return;
+
+      let hourBlocks = document.querySelectorAll('.hour-block');
+      if (!hourBlocks || hourBlocks.length === 0) return;
+
+      let currentTimeInMinutes = currentHour * 60 + currentMinute;
+      let closestBlock = null;
+      let minDiff = Infinity;
+
+      hourBlocks.forEach(block => {
+        let oraText = block.getAttribute('data-ora');
+        if (!oraText || oraText.indexOf(':') === -1) return;
+        let parts = oraText.split(':');
+        let blockMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        let diff = Math.abs(currentTimeInMinutes - blockMinutes);
+
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestBlock = block;
+        }
+      });
+
+      if (closestBlock) {
+        setTimeout(() => {
+          closestBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          closestBlock.classList.add('hour-block-current-highlight');
+          setTimeout(() => {
+            closestBlock.classList.remove('hour-block-current-highlight');
+          }, 1500);
+        }, 220);
+      }
+    }
+
     window.onload = function() {
       reseteazaDateIncasariAzi();
 
@@ -1253,15 +1446,16 @@
       } catch(e) {}
 
       populeazaSelectoriCliente();
+      populeazaSelectorLuni();
       randeazaOrarInstant();
       randeazaProgramariInstant();
       filtreazaIstoricIncasariInstant();
       filtreazaIstoricOrarInstant();
 
-      incarcaBazaDateSilencios();
+      incarcaBazaDateSilencios(null, true);
     };
 
-    function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
+    function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePrimaIncarcare = false) {
       callBackend("getTotBazaDeDate", {}, function(data) {
         if (!data || !Array.isArray(data.orarSloturi)) return;
         DB = data;
@@ -1270,6 +1464,7 @@
         } catch(e) {}
 
         populeazaSelectoriCliente();
+        populeazaSelectorLuni();
         randeazaOrarInstant();
         randeazaProgramariInstant();
         filtreazaIstoricIncasariInstant();
@@ -1282,6 +1477,10 @@
             actualizeazaStilSelect(sel);
             afiseazaFisaClientaInstant();
           }
+        }
+
+        if (estePrimaIncarcare) {
+          autoScrollLaOraCurenta();
         }
       });
     }
@@ -1317,8 +1516,15 @@
         return;
       }
       dataReferintaLuni = new Date(dataReferintaLuniBaza.getTime());
+      
+      let d = new Date();
+      let aziIdx = d.getDay();
+      let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
+      ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
+
       actualizeazaBaraZile();
       randeazaOrarInstant();
+      autoScrollLaOraCurenta();
       showToast("✓ Ai revenit la săptămâna curentă!");
     }
 
@@ -1457,6 +1663,33 @@
       }
     }
 
+    /* Populează dropdown-ul de luni din baza de date a încasărilor */
+    function populeazaSelectorLuni() {
+      let selLuna = document.getElementById('filtruLunaIncasari');
+      if (!selLuna) return;
+
+      let valoareAnterioara = selLuna.value;
+      let luniSet = new Set();
+
+      (DB.incasari || []).forEach(i => {
+        if (i && i.luna && i.luna.trim() !== "-" && i.luna.trim() !== "") {
+          luniSet.add(i.luna.trim());
+        }
+      });
+
+      selLuna.innerHTML = '<option value="">Toate lunile</option>';
+      Array.from(luniSet).forEach(luna => {
+        let opt = document.createElement('option');
+        opt.value = luna;
+        opt.innerText = luna;
+        selLuna.appendChild(opt);
+      });
+
+      if (valoareAnterioara) {
+        selLuna.value = valoareAnterioara;
+      }
+    }
+
     function comutaTab(tabId, titlu, btn, tipTab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
@@ -1546,7 +1779,7 @@
         oreSet.forEach(ora => {
           let lista = grupuriOreTrecute[ora];
           htmlTrecut += `
-            <div class="hour-block">
+            <div class="hour-block" data-ora="${ora}">
               <div class="hour-header">
                 <div class="hour-title-wrap"><span>🕒 ${ora}</span></div>
                 <div class="hour-badge hour-badge-busy">${lista.length} efectuate</div>
@@ -1614,7 +1847,7 @@
         }
 
         html += `
-          <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}">
+          <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}" data-ora="${ora}">
             <div class="hour-header">
               <div class="hour-title-wrap">
                 <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${ziCurentaCheie}', '${ora}', ${!esteBlocat})" title="${esteBlocat ? 'Deblochează ora' : 'Blochează ora'}">
@@ -2008,6 +2241,7 @@
       document.getElementById('editRamase').value = client.ramase;
       document.getElementById('editStatus').value = client.status;
 
+      /* ISTORIC PREZENȚE ÎN FIȘĂ: SORTAT INVERS CRONOLOGIC (RECENT -> VECHI) */
       let istoricDiv = document.getElementById('istoricPrezenteList');
       if (istoricDiv) {
         let prezenteClienta = (DB.prezente || []).filter(p => p && p.clienta && p.clienta.toLowerCase() === nume.toLowerCase());
@@ -2149,14 +2383,21 @@
       return selPreset.value;
     }
 
-    /* ISTORIC ÎNCASĂRI: SORTAT INVERS CRONOLOGIC (RECENT -> VECHI) */
+    /* ISTORIC ÎNCASĂRI: FILTRU DUPĂ CLIENTĂ + FILTRU DUPĂ LUNĂ + CALCUL TOTAL DINAMIC */
     function filtreazaIstoricIncasariInstant() {
       let fEl = document.getElementById('filtruClientaIncasari');
+      let fLuna = document.getElementById('filtruLunaIncasari');
       let filtru = fEl ? fEl.value.toLowerCase() : "";
+      let filtruLuna = fLuna ? fLuna.value.trim() : "";
       let tbody = document.getElementById('incasariIstoricTbody');
       if (!tbody) return;
 
-      let filtrate = (DB.incasari || []).filter(i => i && (!filtru || (i.clienta && i.clienta.toLowerCase() === filtru)));
+      let filtrate = (DB.incasari || []).filter(i => {
+        if (!i) return false;
+        let potrivesteClienta = !filtru || (i.clienta && i.clienta.toLowerCase() === filtru);
+        let potrivesteLuna = !filtruLuna || (i.luna && i.luna.trim() === filtruLuna);
+        return potrivesteClienta && potrivesteLuna;
+      });
 
       filtrate.sort((a, b) => {
         let tA = parseazaDataOraRo(a.data, null);
@@ -2164,10 +2405,24 @@
         return tB - tA;
       });
 
+      // Calcul total încasări dinamic
+      let totalSuma = 0;
+      filtrate.forEach(i => {
+        let s = (i.suma || "").toString().replace(/RON/i, "").replace(/\./g, "").replace(/,/g, ".").trim();
+        let val = parseFloat(s);
+        if (!isNaN(val)) totalSuma += val;
+      });
+
+      let elTotalVal = document.getElementById('totalIncasariVal');
+      let elTotalCount = document.getElementById('totalIncasariCount');
+      if (elTotalVal) elTotalVal.innerText = totalSuma.toLocaleString('ro-RO') + ' RON';
+      if (elTotalCount) elTotalCount.innerText = `${filtrate.length} ${filtrate.length === 1 ? 'plată găsită' : 'plăți găsite'}`;
+
       if (filtrate.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Nicio încasare găsită.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">Nicio încasare găsită conform filtrelor.</td></tr>';
         return;
       }
+
       let html = '';
       filtrate.forEach(item => {
         let esteGol = !item.suma || item.suma === "-" || item.suma.trim() === "";
@@ -2181,13 +2436,16 @@
           ? item.tip 
           : '<span class="dash-placeholder">-</span>';
 
+        let itemJson = encodeURIComponent(JSON.stringify(item));
+
         html += `
-          <tr>
+          <tr class="incasare-row-clickable" onclick="deschideModalEditareIncasare('${itemJson}')" title="Apasă pentru a edita această plată">
             <td><b>${item.data}</b></td>
-            <td>${item.clienta}</td>
+            <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
             <td style="${sumaStil}">${item.suma}</td>
             <td class="table-cell-center">${metodaContinut}</td>
             <td>${tipContinut}</td>
+            <td style="text-align:center; color:#94a3b8; font-size:0.85rem;">✏️</td>
           </tr>
         `;
       });
@@ -2237,6 +2495,54 @@
         }
         
         reseteazaDateIncasariAzi();
+        incarcaBazaDateSilencios();
+      });
+    }
+
+    /* Modal Editare Încasare */
+    function deschideModalEditareIncasare(itemEncoded) {
+      let item = JSON.parse(decodeURIComponent(itemEncoded));
+      if (!item || !item.row) return;
+
+      document.getElementById('editIncRow').value = item.row;
+      document.getElementById('editIncClienta').value = item.clienta || "";
+      document.getElementById('editIncData').value = item.data || "";
+      
+      let sCurata = (item.suma || "").replace(/RON/i, "").trim();
+      document.getElementById('editIncSuma').value = sCurata;
+      
+      let selMet = document.getElementById('editIncMetoda');
+      if (selMet) selMet.value = (item.metoda && item.metoda !== "-") ? item.metoda : "Revolut";
+
+      let selTip = document.getElementById('editIncTip');
+      if (selTip) selTip.value = (item.tip && item.tip !== "-") ? item.tip : "8 sedinte";
+
+      document.getElementById('modalEditareIncasareBackdrop').style.display = 'flex';
+    }
+
+    function inchideModalEditareIncasare() {
+      document.getElementById('modalEditareIncasareBackdrop').style.display = 'none';
+    }
+
+    function salveazaModificareIncasare() {
+      let row = document.getElementById('editIncRow').value;
+      let clienta = document.getElementById('editIncClienta').value.trim();
+      let dataStr = document.getElementById('editIncData').value.trim();
+      let suma = document.getElementById('editIncSuma').value.trim();
+      let metoda = document.getElementById('editIncMetoda').value;
+      let tip = document.getElementById('editIncTip').value;
+
+      if (!row) return;
+      if (!clienta) {
+        showToast("Introdu numele clientei!", "error");
+        return;
+      }
+
+      callBackend("actualizeazaIncasare", {
+        row: Number(row), clienta: clienta, data: dataStr, suma: suma, metoda: metoda, tip: tip
+      }, function() {
+        showToast("✓ Încasare actualizată!");
+        inchideModalEditareIncasare();
         incarcaBazaDateSilencios();
       });
     }
