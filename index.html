@@ -289,7 +289,6 @@
     .hour-block {
       background: #fff; border: 1px solid #d5dbe1; border-radius: 12px; margin-bottom: 14px;
       overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); transition: all 0.3s ease;
-      scroll-margin-top: 155px;
     }
 
     /* Animație Glow Mov de 2 secunde */
@@ -413,6 +412,39 @@
     }
     .btn-clear { background: #e2e8f0; color: #475569; padding: 7px 9px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; }
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
+
+    /* EMPTY STATE PERSONALIZAT PENTRU FIȘĂ CLIENTĂ */
+    .empty-state-card {
+      padding: 34px 16px;
+      text-align: center;
+      background: #faf8fc;
+      border: 1px dashed #d6cae8;
+      border-radius: var(--radius);
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .empty-state-icon-wrap {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--primary-light);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .empty-state-svg {
+      width: 30px;
+      height: 30px;
+      stroke: var(--primary);
+      fill: none;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
     /* PROGRAMĂRI & HOLD */
     .prog-table-container {
@@ -887,6 +919,20 @@
           <option value="">Alege o clientă</option>
         </select>
 
+        <!-- EMPTY STATE PENTRU FIȘĂ -->
+        <div id="fisaEmptyState" class="empty-state-card">
+          <div class="empty-state-icon-wrap">
+            <svg class="empty-state-svg" viewBox="0 0 24 24">
+              <circle cx="12" cy="8" r="4"></circle>
+              <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
+            </svg>
+          </div>
+          <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);">Nici o clientă selectată</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; max-width: 290px; line-height: 1.35;">
+            Alege o clientă din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.
+          </div>
+        </div>
+
         <div id="detaliiFisa" style="display: none;">
           <div style="margin: 14px 0 10px; background: #fff; padding: 12px; border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
@@ -1010,7 +1056,7 @@
           </div>
 
           <!-- Istoric Prezențe Recente (Expandable & Collapsed by Default) -->
-          <details style="margin-top: 18px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px;">
+          <details id="detailsIstoricFisa" style="margin-top: 18px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px;" ontoggle="peComutareIstoricFisa(this)">
             <summary class="summary-toggle-clean">
               <span class="icon-history-title">
                 <svg class="icon-history-svg" viewBox="0 0 24 24">
@@ -1227,10 +1273,6 @@
       prezente: []
     };
 
-    let utilizatorAInteractionatScroll = false;
-    window.addEventListener('touchstart', () => { utilizatorAInteractionatScroll = true; }, { passive: true });
-    window.addEventListener('wheel', () => { utilizatorAInteractionatScroll = true; }, { passive: true });
-
     function parseazaDataOraRo(dataStr, oraStr) {
       if (!dataStr || dataStr === "-" || typeof dataStr !== 'string') return 0;
       let s = dataStr.trim();
@@ -1430,10 +1472,8 @@
       modalCallback = null;
     }
 
-    /* AUTO-SCROLL LA CEA MAI APROPIATĂ ORĂ (FĂRĂ A TĂIA BARA DE SĂPTĂMÂNI) */
+    /* SCROLL INSTANTANEU ȘI EXACT LA ORA CURENTĂ (DIRECT ÎN SUS, SUB BARA DE ZILE) */
     function autoScrollLaOraCurenta() {
-      if (utilizatorAInteractionatScroll) return;
-
       let now = new Date();
       let day = now.getDay();
       let currentHour = now.getHours();
@@ -1443,7 +1483,13 @@
       if (esteInAfaraProgramuluiWeekend) return;
 
       let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
-      if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) return;
+      if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        return;
+      }
+
+      let tabOrar = document.getElementById('tabOrar');
+      if (!tabOrar || !tabOrar.classList.contains('active')) return;
 
       let hourBlocks = document.querySelectorAll('.hour-block');
       if (!hourBlocks || hourBlocks.length === 0) return;
@@ -1466,36 +1512,30 @@
       });
 
       if (closestBlock) {
-        setTimeout(() => {
-          if (utilizatorAInteractionatScroll) return;
-          
-          if (currentHour < 9 || (currentHour === 9 && currentMinute <= 30)) {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          } else {
-            let headerHeight = document.querySelector('header') ? document.querySelector('header').offsetHeight : 50;
-            let daySelectorHeight = document.getElementById('dayButtonsContainer') ? document.getElementById('dayButtonsContainer').offsetHeight : 45;
-            let totalOffset = headerHeight + daySelectorHeight + 10;
-            
-            let blockRect = closestBlock.getBoundingClientRect();
-            let targetPosition = window.pageYOffset + blockRect.top - totalOffset;
-            
-            window.scrollTo({
-              top: Math.max(0, targetPosition),
-              behavior: 'smooth'
-            });
-          }
+        let headerEl = document.querySelector('header');
+        let daySelector = document.getElementById('dayButtonsContainer');
+        let topOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45) + 6;
+        
+        let blockRect = closestBlock.getBoundingClientRect();
+        let targetY = blockRect.top + window.pageYOffset - topOffset;
 
+        if (targetY < 60) targetY = 0;
+
+        window.scrollTo({
+          top: Math.max(0, Math.round(targetY)),
+          behavior: 'auto'
+        });
+
+        closestBlock.classList.remove('hour-block-current-highlight');
+        void closestBlock.offsetWidth;
+        closestBlock.classList.add('hour-block-current-highlight');
+        setTimeout(() => {
           closestBlock.classList.remove('hour-block-current-highlight');
-          void closestBlock.offsetWidth;
-          closestBlock.classList.add('hour-block-current-highlight');
-          setTimeout(() => {
-            closestBlock.classList.remove('hour-block-current-highlight');
-          }, 2000);
-        }, 120);
+        }, 2000);
       }
     }
 
-    /* SCROLL AUTOMAT LA DESCHIDEREA CASETELOR DE ISTORIC */
+    /* SCROLL AUTOMAT LA DESCHIDEREA CASETELOR DE ISTORIC (CU MARJĂ DE SIGURANȚĂ 12px) */
     function peComutareIstoricIncasari(detailsEl) {
       if (detailsEl && detailsEl.open) {
         setTimeout(() => {
@@ -1503,7 +1543,7 @@
           let hOffset = headerEl ? headerEl.offsetHeight : 50;
           let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
           window.scrollTo({
-            top: Math.round(elTop - hOffset + 1),
+            top: Math.max(0, Math.round(elTop - hOffset - 12)),
             behavior: 'smooth'
           });
         }, 80);
@@ -1518,7 +1558,21 @@
           let hOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45);
           let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
           window.scrollTo({
-            top: Math.round(elTop - hOffset + 1),
+            top: Math.max(0, Math.round(elTop - hOffset - 12)),
+            behavior: 'smooth'
+          });
+        }, 80);
+      }
+    }
+
+    function peComutareIstoricFisa(detailsEl) {
+      if (detailsEl && detailsEl.open) {
+        setTimeout(() => {
+          let headerEl = document.querySelector('header');
+          let hOffset = headerEl ? headerEl.offsetHeight : 50;
+          let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: Math.max(0, Math.round(elTop - hOffset - 12)),
             behavior: 'smooth'
           });
         }, 80);
@@ -1559,6 +1613,10 @@
       filtreazaIstoricIncasariInstant();
       filtreazaIstoricOrarInstant();
 
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 50);
+
       incarcaBazaDateSilencios(null, true);
     };
 
@@ -1587,7 +1645,9 @@
         }
 
         if (estePrimaIncarcare) {
-          autoScrollLaOraCurenta();
+          setTimeout(() => {
+            autoScrollLaOraCurenta();
+          }, 50);
         }
       });
     }
@@ -1610,6 +1670,7 @@
         dataReferintaLuni.setDate(dataReferintaLuni.getDate() + (directie * 7));
         actualizeazaBaraZile();
         randeazaOrarInstant();
+        window.scrollTo({ top: 0, behavior: 'auto' });
         if (lbl) {
           lbl.style.opacity = '1';
           lbl.style.transform = 'translateX(0)';
@@ -1620,6 +1681,7 @@
     function revinoLaSaptamanaCurenta() {
       if (esteSaptamanaActiva()) {
         showToast("Ești deja în săptămâna curentă!");
+        autoScrollLaOraCurenta();
         return;
       }
       dataReferintaLuni = new Date(dataReferintaLuniBaza.getTime());
@@ -1631,7 +1693,9 @@
 
       actualizeazaBaraZile();
       randeazaOrarInstant();
-      autoScrollLaOraCurenta();
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 50);
       showToast("✓ Ai revenit la săptămâna curentă!");
     }
 
@@ -1715,6 +1779,16 @@
       ziCurentaCheie = ziCheie;
       actualizeazaBaraZile();
       randeazaOrarInstant();
+      
+      let d = new Date();
+      let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+      let esteAzi = esteSaptamanaActiva() && ziCurentaCheie === zileChei[d.getDay()];
+
+      if (esteAzi) {
+        autoScrollLaOraCurenta();
+      } else {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      }
     }
 
     function populeazaSelectoriCliente() {
@@ -1770,6 +1844,7 @@
       }
     }
 
+    /* SORTARE DESCRESCĂTOARE A LUNILOR (DECEMBRIE, NOIEMBRIE, OCTOMBRIE...) */
     function populeazaSelectorLuni() {
       let selLuna = document.getElementById('filtruLunaIncasari');
       if (!selLuna) return;
@@ -1783,8 +1858,38 @@
         }
       });
 
+      const luniRo = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
+
+      function calculeazaScorLuna(str) {
+        if (!str) return 0;
+        let s = str.toLowerCase().trim();
+        let anGasit = 0;
+        let anMatch = s.match(/\b(20\d\d)\b/);
+        if (anMatch) anGasit = parseInt(anMatch[1], 10);
+        
+        let lunaIdx = -1;
+        for (let idx = 0; idx < luniRo.length; idx++) {
+          if (s.indexOf(luniRo[idx]) !== -1) {
+            lunaIdx = idx;
+            break;
+          }
+        }
+        if (lunaIdx === -1) {
+          let p = s.split(/[\.\-\/]/);
+          if (p.length >= 2) {
+            let m = parseInt(p[0], 10);
+            if (m >= 1 && m <= 12) lunaIdx = m - 1;
+            if (p[1] && p[1].length === 4) anGasit = parseInt(p[1], 10);
+          }
+        }
+        return (anGasit || 2026) * 100 + (lunaIdx !== -1 ? lunaIdx : 0);
+      }
+
+      let luniArray = Array.from(luniSet);
+      luniArray.sort((a, b) => calculeazaScorLuna(b) - calculeazaScorLuna(a));
+
       selLuna.innerHTML = '<option value="">Toate lunile</option>';
-      Array.from(luniSet).forEach(luna => {
+      luniArray.forEach(luna => {
         let opt = document.createElement('option');
         opt.value = luna;
         opt.innerText = luna;
@@ -1848,7 +1953,9 @@
       wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
       
       if (tipTab === 'orar') {
-        autoScrollLaOraCurenta();
+        setTimeout(() => {
+          autoScrollLaOraCurenta();
+        }, 50);
       }
     }
 
@@ -2306,14 +2413,26 @@
     function afiseazaFisaClientaInstant() {
       let sel = document.getElementById('selectClientaFisa');
       let container = document.getElementById('detaliiFisa');
+      let emptyState = document.getElementById('fisaEmptyState');
       if (!sel || !container) return;
       let nume = sel.value;
-      if (!nume) { container.style.display = 'none'; return; }
+
+      if (!nume) {
+        container.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+        return;
+      }
 
       let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
-      if (!client) return;
+      if (!client) {
+        container.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+        return;
+      }
 
+      if (emptyState) emptyState.style.display = 'none';
       container.style.display = 'block';
+
       document.getElementById('fisaSedinteRamase').innerText = client.ramase;
       document.getElementById('fisaValabilitate').innerText = client.dataExpirare;
       document.getElementById('fisaProgres').innerText = client.efectuate + ' din ' + client.incluse;
@@ -2421,7 +2540,7 @@
       customConfirm(esteArhivat ? "Reactivare" : "Arhivare", 
         esteArhivat ? `Reactivezi clienta ${nume}?` : `Arhivezi clienta ${nume} din liste?`, function() {
         callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
-          showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă arhivatã!");
+          showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă archivată!");
           incarcaBazaDateSilencios();
         });
       });
@@ -2561,6 +2680,7 @@
       tbody.innerHTML = html;
     }
 
+    /* SALVARE ÎNCASARE NOUĂ CU VALIDARE COMPLETĂ PE TOATE CÂMPURILE */
     function salveazaIncasare() {
       let inp = document.getElementById('incasareNume');
       let nume = inp ? inp.value.trim() : "";
@@ -2570,8 +2690,42 @@
       let dataPlata = document.getElementById('incasareDataPlata').value;
       let dataStart = document.getElementById('incasareDataStart').value;
 
-      if (!nume) { showToast("Introdu numele clientei!", "error"); return; }
-      if (!tip) { showToast("Alege tipul de abonament!", "error"); return; }
+      if (!nume) {
+        showToast("Completează numele clientei!", "error");
+        if (inp) inp.focus();
+        return;
+      }
+      if (!tip) {
+        showToast("Selectează tipul abonamentului!", "error");
+        document.getElementById('incasareTip').focus();
+        return;
+      }
+      if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
+        showToast("Completează suma abonamentului!", "error");
+        let selPreset = document.getElementById('selectSumaPreset');
+        if (selPreset && selPreset.value === 'custom') {
+          let cInp = document.getElementById('incasareSumaCustom');
+          if (cInp) cInp.focus();
+        } else if (selPreset) {
+          selPreset.focus();
+        }
+        return;
+      }
+      if (!metoda || metoda === "") {
+        showToast("Selectează metoda de plată!", "error");
+        document.getElementById('incasareMetoda').focus();
+        return;
+      }
+      if (!dataPlata) {
+        showToast("Selectează data plății!", "error");
+        document.getElementById('incasareDataPlata').focus();
+        return;
+      }
+      if (!dataStart) {
+        showToast("Selectează data de start a abonamentului!", "error");
+        document.getElementById('incasareDataStart').focus();
+        return;
+      }
 
       callBackend("inregistreazaAbonament", {
         nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
@@ -2608,7 +2762,7 @@
       });
     }
 
-    /* Modal Editare Încasare */
+    /* MODAL EDITARE ÎNCASARE */
     function deschideModalEditareIncasare(itemEncoded) {
       let item = JSON.parse(decodeURIComponent(itemEncoded));
       if (!item || !item.row) return;
@@ -2633,6 +2787,7 @@
       document.getElementById('modalEditareIncasareBackdrop').style.display = 'none';
     }
 
+    /* SALVARE EDITARE ÎNCASARE CU VALIDARE COMPLETĂ */
     function salveazaModificareIncasare() {
       let row = document.getElementById('editIncRow').value;
       let clienta = document.getElementById('editIncClienta').value.trim();
@@ -2643,7 +2798,28 @@
 
       if (!row) return;
       if (!clienta) {
-        showToast("Introdu numele clientei!", "error");
+        showToast("Completează numele clientei!", "error");
+        document.getElementById('editIncClienta').focus();
+        return;
+      }
+      if (!dataStr) {
+        showToast("Completează data plății!", "error");
+        document.getElementById('editIncData').focus();
+        return;
+      }
+      if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
+        showToast("Completează suma încasării!", "error");
+        document.getElementById('editIncSuma').focus();
+        return;
+      }
+      if (!metoda || metoda === "-" || metoda === "") {
+        showToast("Selectează metoda de plată!", "error");
+        document.getElementById('editIncMetoda').focus();
+        return;
+      }
+      if (!tip || tip === "-" || tip === "") {
+        showToast("Selectează tipul abonamentului!", "error");
+        document.getElementById('editIncTip').focus();
         return;
       }
 
