@@ -1421,7 +1421,7 @@ function filtreazaIstoricIncasariInstant() {
   if (elTotalCount) elTotalCount.innerText = `${filtrate.length} ${filtrate.length === 1 ? 'plată găsită' : 'plăți găsite'}`;
 
   if (filtrate.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">Nici o încasare găsită conform filtrelor.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">Nici o înregistrare</td></tr>';
     return;
   }
 
