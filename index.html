@@ -50,23 +50,54 @@
 
     .container { max-width: 650px; margin: 0 auto; padding: 8px; width: 100%; }
     
-    /* NAVIGARE BOTTOM BAR CU EFECT LIQUID GLASS */
+    /* NAVIGARE BOTTOM BAR CU EFECT MERCUR / LIQUID GLASS GLISANT */
     nav {
       position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
       display: flex; border-top: 1px solid rgba(208, 215, 222, 0.7); z-index: 100;
       max-width: 650px; margin: 0 auto; height: 64px; box-shadow: 0 -3px 14px rgba(0,0,0,0.04);
     }
+    .nav-mercury-pill {
+      position: absolute;
+      top: 6px;
+      left: 0;
+      width: 25%;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 1;
+      transition: transform 0.38s cubic-bezier(0.34, 1.45, 0.64, 1);
+    }
+    .nav-mercury-drop {
+      width: 48px;
+      height: 32px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(230, 222, 245, 0.92) 50%, rgba(243, 238, 255, 0.98) 100%);
+      box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 1),
+                  inset 0 -1.5px 2px rgba(139, 92, 246, 0.2),
+                  0 4px 12px rgba(92, 77, 125, 0.18),
+                  0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid rgba(139, 92, 246, 0.28);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: transform 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .mercury-morph {
+      transform: scaleX(1.22) scaleY(0.85);
+    }
+
     nav button {
       flex: 1; padding: 4px 2px; border: none; background: transparent; font-size: 0.74rem;
       color: var(--text-muted); cursor: pointer; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 3px; position: relative;
-      transition: color 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 2;
+      transition: color 0.25s ease;
     }
     nav button .nav-icon {
       width: 40px; height: 32px; display: flex; align-items: center; justify-content: center;
-      border-radius: 16px; position: relative;
-      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      position: relative;
     }
     nav button svg {
       width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2;
@@ -75,15 +106,9 @@
     nav button.active {
       color: var(--primary); font-weight: 800;
     }
-    nav button.active .nav-icon {
-      background: linear-gradient(135deg, rgba(236, 231, 244, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
-      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.9), 0 3px 10px rgba(92, 77, 125, 0.16);
-      border: 1px solid rgba(139, 92, 246, 0.26);
-      transform: translateY(-2px) scale(1.08);
-    }
     nav button.active svg {
       stroke: var(--primary);
-      transform: scale(1.06);
+      transform: scale(1.08);
     }
 
     /* TRANZIȚIE FLUIDĂ ÎNTRE TAB-URI */
@@ -286,9 +311,10 @@
       border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
     
+    /* BLOCURI ORAR FIT PENTRU EXACT 2 ORE PE ECRAN */
     .hour-block {
-      background: #fff; border: 1px solid #d5dbe1; border-radius: 12px; margin-bottom: 14px;
-      overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); transition: all 0.3s ease;
+      background: #fff; border: 1px solid #d5dbe1; border-radius: 12px; margin-bottom: 10px;
+      overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.04); transition: all 0.25s ease;
     }
 
     /* Animație Glow Mov de 2 secunde */
@@ -316,17 +342,17 @@
     }
 
     .hour-header {
-      background: #ede9f4; padding: 8px 12px; display: flex; justify-content: space-between;
+      background: #ede9f4; padding: 6px 10px; display: flex; justify-content: space-between;
       align-items: center; border-bottom: 1px solid #ddd6e8;
     }
     .hour-title-wrap {
-      display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 1.05rem; color: var(--primary-dark);
+      display: flex; align-items: center; gap: 5px; font-weight: 800; font-size: 0.98rem; color: var(--primary-dark);
     }
     .btn-lock-hour {
       background: transparent; border: none; cursor: pointer; padding: 2px; border-radius: 6px;
-      display: flex; align-items: center; justify-content: center; font-size: 1.15rem;
+      display: flex; align-items: center; justify-content: center; font-size: 1.05rem;
     }
-    .hour-badge { font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 12px; }
+    .hour-badge { font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
     .hour-badge-free { background: #e2e8f0; color: #475569; }
     .hour-badge-busy { background: #dcfce7; color: #166534; }
     .hour-badge-blocked { background: #fee2e2; color: #b91c1c; font-weight: 800; }
@@ -347,7 +373,7 @@
     }
 
     .slot-row {
-      display: flex; align-items: center; gap: 6px; padding: 8px 10px;
+      display: flex; align-items: center; gap: 5px; padding: 5px 8px;
       border-bottom: 1px solid #eef2f6;
     }
     .slot-row:last-child { border-bottom: none; }
@@ -358,19 +384,19 @@
       background: #fff; font-weight: 600; border-color: #86efac;
     }
     .slot-free { background: #fafafa; }
-    .slot-num { font-size: 0.8rem; font-weight: 700; color: #64748b; min-width: 16px; text-align: center; }
-    .slot-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .slot-num { font-size: 0.78rem; font-weight: 700; color: #64748b; min-width: 14px; text-align: center; }
+    .slot-info { flex: 1; display: flex; flex-direction: column; gap: 3px; }
     
     .slot-input {
-      width: 100%; border: 1px solid #cbd5e1; padding: 6px 8px; border-radius: 6px;
-      font-size: 0.88rem; background: #fff; outline: none; font-family: inherit;
+      width: 100%; border: 1px solid #cbd5e1; padding: 4px 6px; border-radius: 6px;
+      font-size: 0.82rem; background: #fff; outline: none; font-family: inherit;
     }
     .slot-input:focus { border-color: var(--primary); }
     
     input::placeholder, textarea::placeholder {
       color: var(--placeholder-fade) !important;
       opacity: 0.85 !important;
-      font-size: 0.84rem !important;
+      font-size: 0.82rem !important;
       font-family: inherit !important;
       font-weight: 400 !important;
     }
@@ -386,8 +412,8 @@
     }
 
     .slot-select-type {
-      width: 100%; border: 1px solid #cbd5e1; padding: 5px 6px; border-radius: 6px;
-      font-size: 0.8rem; background-color: #fff; outline: none; font-weight: 600;
+      width: 100%; border: 1px solid #cbd5e1; padding: 4px 6px; border-radius: 6px;
+      font-size: 0.76rem; background-color: #fff; outline: none; font-weight: 600;
     }
     .select-faded { color: var(--placeholder-fade) !important; font-weight: normal !important; }
     .select-active { color: #1e293b !important; }
@@ -408,9 +434,9 @@
       font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
     }
     .btn-save-check {
-      background: #16a34a; color: white; padding: 7px 10px; font-size: 0.82rem; font-weight: 700; border-radius: 8px;
+      background: #16a34a; color: white; padding: 5px 8px; font-size: 0.78rem; font-weight: 700; border-radius: 6px;
     }
-    .btn-clear { background: #e2e8f0; color: #475569; padding: 7px 9px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; }
+    .btn-clear { background: #e2e8f0; color: #475569; padding: 5px 7px; font-size: 0.78rem; font-weight: 700; border-radius: 6px; }
     .btn-archive { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 6px 10px; font-size: 0.8rem; }
 
     /* EMPTY STATE PERSONALIZAT PENTRU FIȘĂ CLIENTĂ */
@@ -887,7 +913,7 @@
 
     <!-- 3. FIȘĂ CLIENTĂ -->
     <div id="tabFisa" class="tab-content">
-      <details style="margin-bottom: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
+      <details id="detailsAdaugareClienta" style="margin-bottom: 12px; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
         <summary class="summary-toggle-clean">
           <span>➕ Adaugă o Clientă Nouă în Aplicație</span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
@@ -967,7 +993,7 @@
             </div>
           </div>
 
-          <details style="margin-top: 16px; padding: 10px; background: #fdfdfd; border: 1px solid var(--border); border-radius: 10px;">
+          <details id="detailsEditareFisa" style="margin-top: 16px; padding: 10px; background: #fdfdfd; border: 1px solid var(--border); border-radius: 10px;">
             <summary class="summary-toggle-clean">
               <span>✏ Editează / Ajustează Datele Clientei</span>
               <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
@@ -1211,8 +1237,12 @@
 
   </div>
 
-  <nav>
-    <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar')">
+  <nav id="bottomNav">
+    <div class="nav-mercury-pill" id="navMercuryPill">
+      <div class="nav-mercury-drop"></div>
+    </div>
+
+    <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar', 0)">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
           <rect x="3" y="4" width="18" height="18" rx="2"></rect>
@@ -1226,7 +1256,7 @@
       <span>Orar</span>
     </button>
 
-    <button onclick="comutaTab('tabProgramari', 'Programări', this, 'prog')">
+    <button onclick="comutaTab('tabProgramari', 'Programări', this, 'prog', 1)">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
           <path d="M9 11l3 3L22 4"></path>
@@ -1236,7 +1266,7 @@
       <span>Programări</span>
     </button>
 
-    <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa')">
+    <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa', 2)">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
           <rect x="3" y="3" width="18" height="18" rx="3"></rect>
@@ -1247,7 +1277,7 @@
       <span>Fișă</span>
     </button>
 
-    <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari')">
+    <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari', 3)">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
           <rect x="2" y="5" width="20" height="14" rx="3"></rect>
@@ -1272,6 +1302,23 @@
       incasari: [],
       prezente: []
     };
+
+    let tabIndexCurent = 0;
+
+    function animaPilaMercur(nouIndex) {
+      const pill = document.getElementById('navMercuryPill');
+      if (!pill) return;
+      const drop = pill.querySelector('.nav-mercury-drop');
+      
+      if (drop && nouIndex !== tabIndexCurent) {
+        drop.classList.add('mercury-morph');
+        setTimeout(() => {
+          drop.classList.remove('mercury-morph');
+        }, 260);
+      }
+      tabIndexCurent = nouIndex;
+      pill.style.transform = `translateX(${nouIndex * 100}%)`;
+    }
 
     function parseazaDataOraRo(dataStr, oraStr) {
       if (!dataStr || dataStr === "-" || typeof dataStr !== 'string') return 0;
@@ -1472,7 +1519,7 @@
       modalCallback = null;
     }
 
-    /* SCROLL INSTANTANEU ȘI EXACT LA ORA CURENTĂ (DIRECT ÎN SUS, SUB BARA DE ZILE) */
+    /* SCROLL INSTANTANEU ȘI EXACT LA ORA CURENTĂ (FĂRĂ A TĂIA BARA DE SĂPTĂMÂNI) */
     function autoScrollLaOraCurenta() {
       let now = new Date();
       let day = now.getDay();
@@ -1512,19 +1559,23 @@
       });
 
       if (closestBlock) {
-        let headerEl = document.querySelector('header');
-        let daySelector = document.getElementById('dayButtonsContainer');
-        let topOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45) + 6;
-        
-        let blockRect = closestBlock.getBoundingClientRect();
-        let targetY = blockRect.top + window.pageYOffset - topOffset;
+        if (currentHour <= 8) {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        } else {
+          let headerEl = document.querySelector('header');
+          let daySelector = document.getElementById('dayButtonsContainer');
+          let topOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45) + 6;
+          
+          let blockRect = closestBlock.getBoundingClientRect();
+          let targetY = blockRect.top + window.pageYOffset - topOffset;
 
-        if (targetY < 60) targetY = 0;
+          if (targetY < 60) targetY = 0;
 
-        window.scrollTo({
-          top: Math.max(0, Math.round(targetY)),
-          behavior: 'auto'
-        });
+          window.scrollTo({
+            top: Math.max(0, Math.round(targetY)),
+            behavior: 'auto'
+          });
+        }
 
         closestBlock.classList.remove('hour-block-current-highlight');
         void closestBlock.offsetWidth;
@@ -1612,6 +1663,8 @@
       randeazaProgramariInstant();
       filtreazaIstoricIncasariInstant();
       filtreazaIstoricOrarInstant();
+
+      animaPilaMercur(0);
 
       setTimeout(() => {
         autoScrollLaOraCurenta();
@@ -1901,57 +1954,82 @@
       }
     }
 
-    function comutaTab(tabId, titlu, btn, tipTab) {
+    /* NAVIGARE ÎNTRE TAB-URI CU RESETARE STARE ȘI PILĂ DE MERCUR GLISANTĂ */
+    function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
       let target = document.getElementById(tabId);
       if (target) target.classList.add('active');
       if (btn) btn.classList.add('active');
+
+      if (typeof tabIdx === 'number') {
+        animaPilaMercur(tabIdx);
+      }
       
       let wrapper = document.getElementById('pageTitleWrapper');
-      if (!wrapper) return;
-      let iconHtml = '';
-      
-      if (tipTab === 'orar') {
-        iconHtml = `
-          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="9" x2="21" y2="9"></line>
-            <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-            <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-          </svg>
-        `;
-      } else if (tipTab === 'prog') {
-        iconHtml = `
-          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <path d="M9 11l3 3L22 4"></path>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-          </svg>
-        `;
-      } else if (tipTab === 'fisa') {
-        iconHtml = `
-          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-            <circle cx="12" cy="10" r="3"></circle>
-            <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
-          </svg>
-        `;
-      } else if (tipTab === 'incasari') {
-        reseteazaDateIncasariAzi();
-        iconHtml = `
-          <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2;">
-            <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-            <line x1="2" y1="10" x2="22" y2="10"></line>
-            <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
-            <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
-          </svg>
-        `;
+      if (wrapper) {
+        let iconHtml = '';
+        if (tipTab === 'orar') {
+          iconHtml = `
+            <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+              <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+            </svg>
+          `;
+        } else if (tipTab === 'prog') {
+          iconHtml = `
+            <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          `;
+        } else if (tipTab === 'fisa') {
+          iconHtml = `
+            <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+              <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+              <circle cx="12" cy="10" r="3"></circle>
+              <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+            </svg>
+          `;
+        } else if (tipTab === 'incasari') {
+          reseteazaDateIncasariAzi();
+          iconHtml = `
+            <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2;">
+              <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+              <line x1="2" y1="10" x2="22" y2="10"></line>
+              <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
+              <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
+            </svg>
+          `;
+        }
+        wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
       }
 
-      wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
-      
+      // RESETARE STARE LA NAVIGARE:
+      // Închidem secțiunile expandabile din pagini
+      let detOrar = document.getElementById('detailsIstoricOrar');
+      if (detOrar) detOrar.open = false;
+
+      let detInc = document.getElementById('detailsIstoricIncasari');
+      if (detInc) detInc.open = false;
+
+      let detAdaugFisa = document.getElementById('detailsAdaugareClienta');
+      if (detAdaugFisa) detAdaugFisa.open = false;
+
+      let detEditFisa = document.getElementById('detailsEditareFisa');
+      if (detEditFisa) detEditFisa.open = false;
+
+      let detIstFisa = document.getElementById('detailsIstoricFisa');
+      if (detIstFisa) detIstFisa.open = false;
+
+      // Derulăm instant la top: 0
+      window.scrollTo({ top: 0, behavior: 'auto' });
+
+      // Dacă este Orar și e ziua de azi, declanșăm auto-scroll-ul la ora curentă
       if (tipTab === 'orar') {
         setTimeout(() => {
           autoScrollLaOraCurenta();
@@ -2540,7 +2618,7 @@
       customConfirm(esteArhivat ? "Reactivare" : "Arhivare", 
         esteArhivat ? `Reactivezi clienta ${nume}?` : `Arhivezi clienta ${nume} din liste?`, function() {
         callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
-          showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă archivată!");
+          showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă arhivatã!");
           incarcaBazaDateSilencios();
         });
       });
@@ -2695,13 +2773,13 @@
         if (inp) inp.focus();
         return;
       }
-      if (!tip) {
+      if (!tip || tip === "-" || tip === "") {
         showToast("Selectează tipul abonamentului!", "error");
         document.getElementById('incasareTip').focus();
         return;
       }
       if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-        showToast("Completează suma abonamentului!", "error");
+        showToast("Completează suma plății!", "error");
         let selPreset = document.getElementById('selectSumaPreset');
         if (selPreset && selPreset.value === 'custom') {
           let cInp = document.getElementById('incasareSumaCustom');
@@ -2711,7 +2789,7 @@
         }
         return;
       }
-      if (!metoda || metoda === "") {
+      if (!metoda || metoda === "" || metoda === "-") {
         showToast("Selectează metoda de plată!", "error");
         document.getElementById('incasareMetoda').focus();
         return;
@@ -2808,7 +2886,7 @@
         return;
       }
       if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-        showToast("Completează suma încasării!", "error");
+        showToast("Completează suma plății!", "error");
         document.getElementById('editIncSuma').focus();
         return;
       }
