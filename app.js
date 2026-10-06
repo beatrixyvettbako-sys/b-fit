@@ -765,4 +765,840 @@ function randeazaOrarInstant() {
 
     let oreSet = Object.keys(grupuriOreTrecute).sort((a, b) => a.localeCompare(b));
     if (oreSet.length === 0) {
-      container.innerHTML = '<div style="color:var(--text-muted); padding:24px; text-align:center;">Nici o prezență înregistrată în această
+      container.innerHTML = '<div style="color:var(--text-muted); padding:24px; text-align:center;">Nici o prezență înregistrată în această zi din trecut.</div>';
+      return;
+    }
+
+    let htmlTrecut = '';
+    oreSet.forEach(ora => {
+      let lista = grupuriOreTrecute[ora];
+      htmlTrecut += `
+        <div class="hour-block" data-ora="${ora}">
+          <div class="hour-header">
+            <div class="hour-title-wrap"><span>🕒 ${ora}</span></div>
+            <div class="hour-badge hour-badge-busy">${lista.length} efectuate</div>
+          </div>
+          <div class="hour-slots-wrapper">
+      `;
+      lista.forEach((s, idx) => {
+        htmlTrecut += `
+          <div class="slot-row slot-occupied">
+            <div class="slot-num">${idx + 1}</div>
+            <div class="slot-info">
+              <input type="text" class="slot-input" value="${s.clienta}" readonly style="background:#f8fafc; font-weight:700;">
+              <input type="text" class="slot-input" value="${s.antrenament}" readonly style="background:#f8fafc; color:#64748b; font-size:0.8rem; margin-top:2px;">
+            </div>
+            <div style="font-size:0.85rem; font-weight:800; color:#15803d; padding:0 8px;">✓ Istoric</div>
+          </div>
+        `;
+      });
+      htmlTrecut += `</div></div>`;
+    });
+    container.innerHTML = htmlTrecut;
+    return;
+  }
+
+  sloturi = (DB.orarSloturi || []).filter(s => {
+    if (!s || !s.ziRaw) return false;
+    let z = s.ziRaw;
+    if (saptamanaCheie === "") {
+      return z === ziCurentaCheie || (ziCurentaCheie === "Marti" && z === "Marți");
+    } else {
+      return z === tagZiCautat;
+    }
+  });
+
+  let oreStandard = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+
+  let grupuriOre = {};
+  sloturi.forEach(slot => {
+    if (!slot || !slot.ora) return;
+    if (!grupuriOre[slot.ora]) grupuriOre[slot.ora] = [];
+    grupuriOre[slot.ora].push(slot);
+  });
+
+  oreStandard.forEach(ora => {
+    if (!grupuriOre[ora]) grupuriOre[ora] = [];
+    while (grupuriOre[ora].length < 3) {
+      grupuriOre[ora].push({ row: null, ora: ora, clienta: "", antrenament: "", blocat: false, bifat: false });
+    }
+  });
+
+  let oreSortate = Object.keys(grupuriOre).sort((a, b) => a.localeCompare(b));
+
+  let html = '';
+  oreSortate.forEach(ora => {
+    let sloturiOra = grupuriOre[ora] || [];
+    let esteBlocat = sloturiOra.some(s => s && s.blocat);
+    let ocupate = sloturiOra.filter(s => s && s.clienta && s.clienta.trim() !== "").length;
+    let total = sloturiOra.length;
+
+    let badgeHtml = '';
+    if (esteBlocat) {
+      badgeHtml = `<div class="hour-badge hour-badge-blocked">Ora Blocată!</div>`;
+    } else {
+      badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / ${total} ocupate</div>`;
+    }
+
+    html += `
+      <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}" data-ora="${ora}">
+        <div class="hour-header">
+          <div class="hour-title-wrap">
+            <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${ziCurentaCheie}', '${ora}', ${!esteBlocat})" title="${esteBlocat ? 'Deblochează ora' : 'Blochează ora'}">
+              🕒
+            </button>
+            <span>${ora}</span>
+          </div>
+          ${badgeHtml}
+        </div>
+        <div class="hour-slots-wrapper">
+    `;
+
+    sloturiOra.forEach((slot, idx) => {
+      let isOccupied = slot && slot.clienta && slot.clienta.trim() !== "";
+      let antVal = (slot && slot.antrenament) ? slot.antrenament : "";
+      let slotRowKey = (slot && slot.row) ? slot.row : `new_${ora.replace(':', '')}_${idx}`;
+
+      let colorCls = "";
+      if (antVal) {
+        let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === antVal.toLowerCase());
+        if (cfg) colorCls = cfg.cls;
+      }
+
+      let selectAntHtml = `<select id="ant_${slotRowKey}" class="slot-select-type ${antVal ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">`;
+      selectAntHtml += `<option value="" ${!antVal ? 'selected' : ''}>Tip antrenament</option>`;
+      optiuniAntrenamentConfig.forEach(opt => {
+        let selected = (antVal === opt.text) ? 'selected' : '';
+        selectAntHtml += `<option value="${opt.text}" ${selected}>${opt.text}</option>`;
+      });
+      selectAntHtml += `</select>`;
+
+      html += `
+        <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
+          <div class="slot-num">${idx + 1}</div>
+          <div class="slot-info">
+            <input type="text" id="cli_${slotRowKey}" class="slot-input" value="${slot.clienta || ''}" placeholder="Liber (adaugă clientă)" list="listaClienteVizibile" oninput="peSchimbareNumeClienta('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">
+            ${selectAntHtml}
+          </div>
+          <div style="display:flex; gap:4px;">
+            <button class="btn btn-save-check" title="Bifează Prezența & Scade Ședință" onclick="bifeazaPrezentaSlot('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">✓</button>
+            <button class="btn btn-clear" title="Eliberează Slot & Șterge din Istoric" onclick="anuleazaSlot('${slotRowKey}', '${ziCurentaCheie}', '${ora}', ${idx})">✕</button>
+          </div>
+        </div>
+      `;
+    });
+
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function comutaBlocareOraInstant(zi, ora, blocatNou) {
+  let textConfirm = blocatNou ? `Blochezi intervalul orar ${ora}?` : `Deblochezi intervalul orar ${ora}?`;
+  customConfirm("Blocare oră", textConfirm, function() {
+    (DB.orarSloturi || []).forEach(s => {
+      if ((s.ziRaw === zi || s.ziRaw.indexOf(zi) !== -1) && s.ora === ora) {
+        s.blocat = blocatNou;
+      }
+    });
+    randeazaOrarInstant();
+    callBackend("comutaBlocareOra", { zi: zi, ora: ora, blocat: blocatNou }, function() {
+      showToast(blocatNou ? `✓ Intervalul ${ora} a fost blocat!` : `✓ Intervalul ${ora} a fost deblocat!`);
+      incarcaBazaDateSilencios();
+    });
+  });
+}
+
+let debounceTimerNume = null;
+function peSchimbareNumeClienta(slotRowKey, zi, ora, slotIdx) {
+  clearTimeout(debounceTimerNume);
+  debounceTimerNume = setTimeout(() => {
+    let elCli = document.getElementById('cli_' + slotRowKey);
+    let elAnt = document.getElementById('ant_' + slotRowKey);
+    let clienta = elCli ? elCli.value.trim() : "";
+    let antrenament = elAnt ? elAnt.value : "";
+    let saptamanaCheie = getSaptamanaCheie();
+    let dataCalendar = getDataCalendaristicaCurenta();
+
+    let rowNum = (typeof slotRowKey === 'number' || !isNaN(slotRowKey)) ? Number(slotRowKey) : null;
+    let slot = (DB.orarSloturi || []).find(s => s.row === rowNum);
+    if (slot) {
+      slot.clienta = clienta;
+      slot.antrenament = antrenament;
+    }
+
+    callBackend("salveazaSlotAuto", {
+      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: clienta, antrenament: antrenament
+    }, function(res) {
+      if (res && res.row && !rowNum) {
+        incarcaBazaDateSilencios();
+      }
+    });
+  }, 500);
+}
+
+function peSchimbareAntrenament(slotRowKey, zi, ora, slotIdx) {
+  let elCli = document.getElementById('cli_' + slotRowKey);
+  let elAnt = document.getElementById('ant_' + slotRowKey);
+  let clienta = elCli ? elCli.value.trim() : "";
+  let antrenament = elAnt ? elAnt.value : "";
+
+  if (!clienta) {
+    showToast("Adaugă mai întâi numele clientei!", "error");
+    return;
+  }
+
+  let saptamanaCheie = getSaptamanaCheie();
+  let dataCalendar = getDataCalendaristicaCurenta();
+  let rowNum = (typeof slotRowKey === 'number' || !isNaN(slotRowKey)) ? Number(slotRowKey) : null;
+  let slot = (DB.orarSloturi || []).find(s => s.row === rowNum);
+  if (slot) {
+    slot.clienta = clienta;
+    slot.antrenament = antrenament;
+  }
+
+  callBackend("salveazaSlotAuto", {
+    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: clienta, antrenament: antrenament
+  }, function() {
+    showToast("✓ Antrenament salvat!");
+  });
+}
+
+function bifeazaPrezentaSlot(slotRowKey, zi, ora, slotIdx) {
+  let elCli = document.getElementById('cli_' + slotRowKey);
+  let elAnt = document.getElementById('ant_' + slotRowKey);
+  let clienta = elCli ? elCli.value.trim() : "";
+  let antrenament = elAnt ? elAnt.value : "";
+
+  if (!clienta) {
+    showToast("Introdu numele clientei!", "error");
+    return;
+  }
+
+  let dataCalendar = getDataCalendaristicaCurenta();
+  let saptamanaCheie = getSaptamanaCheie();
+  let rowNum = (typeof slotRowKey === 'number' || !isNaN(slotRowKey)) ? Number(slotRowKey) : null;
+
+  let slot = (DB.orarSloturi || []).find(s => s.row === rowNum);
+  if (slot) {
+    slot.clienta = clienta;
+    slot.antrenament = antrenament;
+    slot.bifat = true;
+  }
+
+  showToast("✓ Prezență marcată & ședință scăzută!");
+  callBackend("bifeazaPrezenta", {
+    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: clienta, antrenament: antrenament
+  }, function() {
+    incarcaBazaDateSilencios();
+  });
+}
+
+function anuleazaSlot(slotRowKey, zi, ora, slotIdx) {
+  customConfirm("Eliberare slot", "Eliberezi acest slot? Ședința va fi restituită în fișa clientei dacă a fost bifată, iar intrarea va fi ștearsă din istoric.", function() {
+    let dataCalendar = getDataCalendaristicaCurenta();
+    let saptamanaCheie = getSaptamanaCheie();
+    let rowNum = (typeof slotRowKey === 'number' || !isNaN(slotRowKey)) ? Number(slotRowKey) : null;
+
+    let elCli = document.getElementById('cli_' + slotRowKey);
+    let elAnt = document.getElementById('ant_' + slotRowKey);
+    if (elCli) elCli.value = "";
+    if (elAnt) {
+      elAnt.value = "";
+      aplicaCuloareAntrenament(elAnt);
+    }
+
+    let slot = (DB.orarSloturi || []).find(s => s.row === rowNum);
+    if (slot) {
+      slot.clienta = "";
+      slot.antrenament = "";
+      slot.bifat = false;
+    }
+
+    showToast("✓ Slot eliberat!");
+    callBackend("anuleazaSlot", {
+      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora
+    }, function() {
+      incarcaBazaDateSilencios();
+    });
+  });
+}
+
+function adaugaOraCustom() {
+  let inp = document.getElementById('inputOraCustom');
+  let ora = inp ? inp.value.trim() : "";
+  if (!ora) {
+    showToast("Introdu ora suplimentară!", "error");
+    return;
+  }
+
+  callBackend("adaugaOraCustom", { zi: ziCurentaCheie, ora: ora }, function(res) {
+    showToast("✓ Oră adăugată: " + res.ora);
+    if (inp) inp.value = '';
+    incarcaBazaDateSilencios();
+  });
+}
+
+function filtreazaIstoricOrarInstant() {
+  let fEl = document.getElementById('filtruClientaOrar');
+  let filtru = fEl ? fEl.value.toLowerCase() : "";
+  let tbody = document.getElementById('istoricOrarTbody');
+  if (!tbody) return;
+
+  let filtrate = (DB.prezente || []).filter(p => p && (!filtru || (p.clienta && p.clienta.toLowerCase() === filtru)));
+
+  filtrate.sort((a, b) => {
+    let tA = parseazaDataOraRo(a.data, a.ora);
+    let tB = parseazaDataOraRo(b.data, b.ora);
+    return tB - tA;
+  });
+
+  if (filtrate.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Nici o prezență găsită.</td></tr>';
+    return;
+  }
+  let html = '';
+  filtrate.forEach(item => {
+    html += `
+      <tr>
+        <td><b>${item.data}</b></td>
+        <td style="font-weight:700; color:#475569;">${item.ora || '-'}</td>
+        <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
+        <td>${item.antrenament || '-'}</td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+// --- PROGRAMĂRI & HOLD ---
+function getPillClass(val) {
+  if (val === "Confirmata") return "pill-confirmata";
+  if (val === "In asteptare") return "pill-asteptare";
+  if (val === "Absenta") return "pill-absenta";
+  return "pill-empty";
+}
+
+function randeazaProgramariInstant() {
+  let actContainer = document.getElementById('progActiveList');
+  let holdContainer = document.getElementById('progHoldList');
+
+  if (actContainer) {
+    let actHtml = '';
+    (DB.progActive || []).forEach((item, index) => {
+      let pCls = getPillClass(item.prezenta);
+      actHtml += `
+        <div class="prog-grid-layout prog-row">
+          <div class="prog-idx">${index + 1}</div>
+          <div class="prog-name">${item.nume}</div>
+          <div>
+            <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+              <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+              <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+              <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+              <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+            </select>
+          </div>
+          <div>
+            <textarea class="prog-mentiuni-textarea" placeholder="Mențiune..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+          </div>
+          <div style="text-align:center;">
+            <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="Mută în Hold">🗑</button>
+          </div>
+        </div>
+      `;
+    });
+    actContainer.innerHTML = actHtml || '<div style="padding:10px; color:#888; text-align:center;">Nici o înregistrare</div>';
+  }
+
+  if (holdContainer) {
+    let holdHtml = '';
+    (DB.progHold || []).forEach((item, index) => {
+      let pCls = getPillClass(item.prezenta);
+      holdHtml += `
+        <div class="prog-grid-layout prog-row hold-row">
+          <div class="prog-idx">${index + 1}</div>
+          <div class="prog-name">${item.nume}</div>
+          <div>
+            <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
+              <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
+              <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
+              <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
+              <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
+            </select>
+          </div>
+          <div>
+            <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+          </div>
+          <div style="text-align:center;">
+            <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</button>
+          </div>
+        </div>
+      `;
+    });
+    holdContainer.innerHTML = holdHtml || '<div style="padding:10px; color:#888; text-align:center;">Nici o clientă în Hold</div>';
+  }
+}
+
+function schimbaPrezenta(row, selectEl) {
+  let val = selectEl.value;
+  selectEl.className = "pill-select " + getPillClass(val);
+  callBackend("actualizeazaCampProgramare", { row: row, col: 3, val: val }, function() {
+    showToast("✓ Status actualizat!");
+  });
+}
+
+function schimbaMentiune(row, val) {
+  callBackend("actualizeazaCampProgramare", { row: row, col: 4, val: val }, function() {});
+}
+
+function adaugaClientaInProgramari() {
+  let inp = document.getElementById('progNouNume');
+  let sec = document.getElementById('progNouSectiune');
+  let nume = inp ? inp.value.trim() : "";
+  let sectiune = sec ? sec.value : "Activ";
+  if (!nume) return;
+
+  callBackend("adaugaRandProgramare", { nume: nume, prezenta: "", mentiuni: "", esteHold: sectiune === "Hold" }, function() {
+    showToast("✓ Adăugată în programări!");
+    if (inp) inp.value = '';
+    incarcaBazaDateSilencios();
+  });
+}
+
+function mutaInHold(row) {
+  customConfirm("Mutare în Hold", "Mut clienta în secțiunea Hold?", function() {
+    callBackend("mutaInHold", { row: row }, function() {
+      showToast("✓ Mutată în Hold!");
+      incarcaBazaDateSilencios();
+    });
+  });
+}
+
+function stergeProgramareDefinitiv(row) {
+  customConfirm("Ștergere definitivă", "Elimini această înregistrare din Hold?", function() {
+    callBackend("stergeRandProgramare", { row: row }, function() {
+      showToast("✓ Înregistrare ștearsă!");
+      incarcaBazaDateSilencios();
+    });
+  });
+}
+
+// --- FIȘĂ CLIENTĂ ---
+function afiseazaFisaClientaInstant() {
+  let sel = document.getElementById('selectClientaFisa');
+  let container = document.getElementById('detaliiFisa');
+  let emptyState = document.getElementById('fisaEmptyState');
+  if (!sel || !container) return;
+  let nume = sel.value;
+
+  if (!nume) {
+    container.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'flex';
+    return;
+  }
+
+  let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
+  if (!client) {
+    container.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'flex';
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+  container.style.display = 'block';
+
+  document.getElementById('fisaSedinteRamase').innerText = client.ramase;
+  document.getElementById('fisaValabilitate').innerText = client.dataExpirare;
+  document.getElementById('fisaProgres').innerText = client.efectuate + ' din ' + client.incluse;
+
+  let procent = client.incluse > 0 ? Math.round((client.efectuate / client.incluse) * 100) : 0;
+  if (procent > 100) procent = 100;
+  document.getElementById('graficBara').style.width = procent + '%';
+  document.getElementById('graficProcent').innerText = procent + '%';
+  document.getElementById('graficProgresText').innerText = 'Progres: ' + client.efectuate + ' din ' + client.incluse + ' ședințe';
+  document.getElementById('fisaTipAbonamentAfisat').innerText = client.tipAbonament;
+
+  let badge = document.getElementById('fisaStatusBadge');
+  let stLower = (client.status || '').toLowerCase();
+  if (stLower === 'activ') badge.innerHTML = '<span class="badge badge-activ">Activ</span>';
+  else if (stLower === 'arhivat') badge.innerHTML = '<span class="badge badge-arhivat">Arhivat</span>';
+  else badge.innerHTML = '<span class="badge badge-expirat">' + client.status + '</span>';
+
+  let btnArch = document.getElementById('btnArhivareToggle');
+  if (btnArch) {
+    if (stLower === 'arhivat') {
+      btnArch.innerText = '♻ Reactivează Clienta (Arată în Liste)';
+      btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
+    } else {
+      btnArch.innerText = '📦 Arhivează / Ascunde din Liste';
+      btnArch.style.color = '#b91c1c'; btnArch.style.borderColor = '#fecaca'; btnArch.style.background = '#fef2f2';
+    }
+  }
+
+  document.getElementById('editNume').value = client.nume;
+  document.getElementById('editTip').value = client.tipAbonament;
+  document.getElementById('editDataStart').value = client.dataStart;
+  document.getElementById('editDataExpirare').value = client.dataExpirare;
+  document.getElementById('editIncluse').value = client.incluse;
+  document.getElementById('editEfectuate').value = client.efectuate;
+  document.getElementById('editRamase').value = client.ramase;
+  document.getElementById('editStatus').value = client.status;
+
+  let istoricDiv = document.getElementById('istoricPrezenteList');
+  if (istoricDiv) {
+    let prezenteClienta = (DB.prezente || []).filter(p => p && p.clienta && p.clienta.toLowerCase() === nume.toLowerCase());
+    
+    prezenteClienta.sort((a, b) => {
+      let tA = parseazaDataOraRo(a.data, a.ora);
+      let tB = parseazaDataOraRo(b.data, b.ora);
+      return tB - tA;
+    });
+
+    if (prezenteClienta.length === 0) {
+      istoricDiv.innerHTML = '<div style="color:var(--text-muted);">Nici o prezență înregistrată încă.</div>';
+    } else {
+      let h = '';
+      prezenteClienta.forEach(p => {
+        h += `<div style="padding:5px 0; border-bottom:1px solid #f0f0f0;">• <b>${p.data}</b> (${p.ora}) - ${p.antrenament}</div>`;
+      });
+      istoricDiv.innerHTML = h;
+    }
+  }
+}
+
+function salveazaEditareClienta() {
+  let numeVechi = document.getElementById('selectClientaFisa').value;
+  let numeNou = document.getElementById('editNume').value.trim();
+  let tip = document.getElementById('editTip').value;
+  let dStart = document.getElementById('editDataStart').value;
+  let dExp = document.getElementById('editDataExpirare').value;
+  let inc = document.getElementById('editIncluse').value;
+  let ef = document.getElementById('editEfectuate').value;
+  let ram = document.getElementById('editRamase').value;
+  let st = document.getElementById('editStatus').value;
+
+  callBackend("actualizeazaDateClienta", {
+    numeVechi: numeVechi, numeNou: numeNou, tip: tip, dataStart: dStart, dataExp: dExp,
+    incluse: inc, efectuate: ef, ramase: ram, status: st
+  }, function(res) {
+    showToast("✓ Date actualizate!");
+    incarcaBazaDateSilencios(res && res.numeNou ? res.numeNou : numeNou);
+  });
+}
+
+function creeazaClientaNouaDirect() {
+  let inp = document.getElementById('nouNumeClienta');
+  let nume = inp ? inp.value.trim() : "";
+  let tip = document.getElementById('nouTipAbonament').value;
+  if (!nume) { showToast("Introdu numele!", "error"); return; }
+
+  callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
+    showToast("✓ Clientă adăugată!");
+    if (inp) inp.value = '';
+    incarcaBazaDateSilencios();
+  });
+}
+
+function comutaArhivareClienta() {
+  let sel = document.getElementById('selectClientaFisa');
+  if (!sel) return;
+  let nume = sel.value;
+  if (!nume) return;
+  let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
+  if (!client) return;
+
+  let esteArhivat = (client.status || '').toLowerCase() === 'arhivat';
+  let nouStatus = esteArhivat ? "Activ" : "Arhivat";
+
+  customConfirm(esteArhivat ? "Reactivare" : "Arhivare", 
+    esteArhivat ? `Reactivezi clienta ${nume}?` : `Arhivezi clienta ${nume} din liste?`, function() {
+    callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
+      showToast(esteArhivat ? "✓ Clientă reactivată!" : "✓ Clientă arhivatã!");
+      incarcaBazaDateSilencios();
+    });
+  });
+}
+
+function adaugaZile(nrZile) {
+  let sel = document.getElementById('selectClientaFisa');
+  if (!sel) return;
+  let nume = sel.value;
+  if (!nume) return;
+  callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
+    showToast("✓ Prelungit până la " + res.nouaData);
+    incarcaBazaDateSilencios(nume);
+  });
+}
+
+function seteazaDataManuala() {
+  let sel = document.getElementById('selectClientaFisa');
+  let inp = document.getElementById('dataPrelungireManuala');
+  if (!sel || !inp) return;
+  let nume = sel.value;
+  let d = inp.value;
+  if (!nume || !d) return;
+  callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
+    showToast("✓ Valabilitate setată la " + res.nouaData);
+    incarcaBazaDateSilencios(nume);
+  });
+}
+
+function autoSelecteazaSuma() {
+  let tip = document.getElementById('incasareTip').value;
+  let selPreset = document.getElementById('selectSumaPreset');
+  let customInp = document.getElementById('incasareSumaCustom');
+  if (!selPreset) return;
+
+  if (!tip || tip === "") {
+    selPreset.value = "";
+    if (customInp) customInp.style.display = 'none';
+    actualizeazaStilSelect(selPreset);
+    return;
+  }
+
+  if (preturiAbonament[tip] !== undefined) {
+    selPreset.value = preturiAbonament[tip];
+    if (customInp) customInp.style.display = 'none';
+  }
+  actualizeazaStilSelect(selPreset);
+}
+
+function gestioneazaSchimbareSumaPreset() {
+  let selPreset = document.getElementById('selectSumaPreset');
+  let customInp = document.getElementById('incasareSumaCustom');
+  if (!selPreset || !customInp) return;
+  if (selPreset.value === 'custom') {
+    customInp.style.display = 'block';
+    customInp.focus();
+  } else {
+    customInp.style.display = 'none';
+  }
+}
+
+function getSumaSelectata() {
+  let selPreset = document.getElementById('selectSumaPreset');
+  if (!selPreset) return "";
+  if (selPreset.value === 'custom') {
+    let cInp = document.getElementById('incasareSumaCustom');
+    return cInp ? cInp.value.trim() : "";
+  }
+  return selPreset.value;
+}
+
+function filtreazaIstoricIncasariInstant() {
+  let fEl = document.getElementById('filtruClientaIncasari');
+  let fLuna = document.getElementById('filtruLunaIncasari');
+  let filtru = fEl ? fEl.value.toLowerCase() : "";
+  let filtruLuna = fLuna ? fLuna.value.trim() : "";
+  let tbody = document.getElementById('incasariIstoricTbody');
+  if (!tbody) return;
+
+  let filtrate = (DB.incasari || []).filter(i => {
+    if (!i) return false;
+    let potrivesteClienta = !filtru || (i.clienta && i.clienta.toLowerCase() === filtru);
+    let potrivesteLuna = !filtruLuna || (i.luna && i.luna.trim() === filtruLuna);
+    return potrivesteClienta && potrivesteLuna;
+  });
+
+  filtrate.sort((a, b) => {
+    let tA = parseazaDataOraRo(a.data, null);
+    let tB = parseazaDataOraRo(b.data, null);
+    return tB - tA;
+  });
+
+  let totalSuma = 0;
+  filtrate.forEach(i => {
+    let s = (i.suma || "").toString().replace(/RON/i, "").replace(/\./g, "").replace(/,/g, ".").trim();
+    let val = parseFloat(s);
+    if (!isNaN(val)) totalSuma += val;
+  });
+
+  let elTotalVal = document.getElementById('totalIncasariVal');
+  let elTotalCount = document.getElementById('totalIncasariCount');
+  if (elTotalVal) elTotalVal.innerText = totalSuma.toLocaleString('ro-RO') + ' RON';
+  if (elTotalCount) elTotalCount.innerText = `${filtrate.length} ${filtrate.length === 1 ? 'plată găsită' : 'plăți găsite'}`;
+
+  if (filtrate.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888;">Nici o încasare găsită conform filtrelor.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  filtrate.forEach(item => {
+    let esteGol = !item.suma || item.suma === "-" || item.suma.trim() === "";
+    let sumaStil = esteGol ? 'color:#94a3b8; font-weight:700;' : 'color:#27ae60; font-weight:700;';
+    
+    let metodaContinut = (item.metoda && item.metoda.trim() !== "-" && item.metoda.trim() !== "") 
+      ? item.metoda 
+      : '<span class="dash-placeholder">-</span>';
+      
+    let tipContinut = (item.tip && item.tip.trim() !== "-" && item.tip.trim() !== "") 
+      ? item.tip 
+      : '<span class="dash-placeholder">-</span>';
+
+    let itemJson = encodeURIComponent(JSON.stringify(item));
+
+    html += `
+      <tr class="incasare-row-clickable" onclick="deschideModalEditareIncasare('${itemJson}')" title="Apasă pentru a edita această plată">
+        <td style="font-weight:700;">${item.data}</td>
+        <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
+        <td style="${sumaStil}">${item.suma}</td>
+        <td class="table-cell-center">${metodaContinut}</td>
+        <td>${tipContinut}</td>
+        <td style="text-align:center; color:#94a3b8; font-size:0.8rem;">✏️</td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+function salveazaIncasare() {
+  let inp = document.getElementById('incasareNume');
+  let nume = inp ? inp.value.trim() : "";
+  let tip = document.getElementById('incasareTip').value;
+  let suma = getSumaSelectata();
+  let metoda = document.getElementById('incasareMetoda').value;
+  let dataPlata = document.getElementById('incasareDataPlata').value;
+  let dataStart = document.getElementById('incasareDataStart').value;
+
+  if (!nume) {
+    showToast("Completează numele clientei!", "error");
+    if (inp) inp.focus();
+    return;
+  }
+  if (!tip || tip === "-" || tip === "") {
+    showToast("Selectează tipul abonamentului!", "error");
+    document.getElementById('incasareTip').focus();
+    return;
+  }
+  if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
+    showToast("Completează suma plății!", "error");
+    let selPreset = document.getElementById('selectSumaPreset');
+    if (selPreset && selPreset.value === 'custom') {
+      let cInp = document.getElementById('incasareSumaCustom');
+      if (cInp) cInp.focus();
+    } else if (selPreset) {
+      selPreset.focus();
+    }
+    return;
+  }
+  if (!metoda || metoda === "" || metoda === "-") {
+    showToast("Selectează metoda de plată!", "error");
+    document.getElementById('incasareMetoda').focus();
+    return;
+  }
+  if (!dataPlata) {
+    showToast("Selectează data plății!", "error");
+    document.getElementById('incasareDataPlata').focus();
+    return;
+  }
+  if (!dataStart) {
+    showToast("Selectează data de start a abonamentului!", "error");
+    document.getElementById('incasareDataStart').focus();
+    return;
+  }
+
+  callBackend("inregistreazaAbonament", {
+    nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
+  }, function() {
+    showToast("✓ Abonament & Încasare salvate!");
+    if (inp) inp.value = '';
+    
+    let selPreset = document.getElementById('selectSumaPreset');
+    if (selPreset) {
+      selPreset.value = '';
+      actualizeazaStilSelect(selPreset);
+    }
+    
+    let cInp = document.getElementById('incasareSumaCustom');
+    if (cInp) {
+      cInp.value = '';
+      cInp.style.display = 'none';
+    }
+    
+    let selMetoda = document.getElementById('incasareMetoda');
+    if (selMetoda) {
+      selMetoda.value = '';
+      actualizeazaStilSelect(selMetoda);
+    }
+    
+    let selTip = document.getElementById('incasareTip');
+    if (selTip) {
+      selTip.value = '';
+      actualizeazaStilSelect(selTip);
+    }
+    
+    reseteazaDateIncasariAzi();
+    incarcaBazaDateSilencios();
+  });
+}
+
+function deschideModalEditareIncasare(itemEncoded) {
+  let item = JSON.parse(decodeURIComponent(itemEncoded));
+  if (!item || !item.row) return;
+
+  document.getElementById('editIncRow').value = item.row;
+  document.getElementById('editIncClienta').value = item.clienta || "";
+  document.getElementById('editIncData').value = item.data || "";
+  
+  let sCurata = (item.suma || "").replace(/RON/i, "").trim();
+  document.getElementById('editIncSuma').value = sCurata;
+  
+  let selMet = document.getElementById('editIncMetoda');
+  if (selMet) selMet.value = (item.metoda && item.metoda !== "-") ? item.metoda : "Revolut";
+
+  let selTip = document.getElementById('editIncTip');
+  if (selTip) selTip.value = (item.tip && item.tip !== "-") ? item.tip : "8 sedinte";
+
+  document.getElementById('modalEditareIncasareBackdrop').style.display = 'flex';
+}
+
+function inchideModalEditareIncasare() {
+  document.getElementById('modalEditareIncasareBackdrop').style.display = 'none';
+}
+
+function salveazaModificareIncasare() {
+  let row = document.getElementById('editIncRow').value;
+  let clienta = document.getElementById('editIncClienta').value.trim();
+  let dataStr = document.getElementById('editIncData').value.trim();
+  let suma = document.getElementById('editIncSuma').value.trim();
+  let metoda = document.getElementById('editIncMetoda').value;
+  let tip = document.getElementById('editIncTip').value;
+
+  if (!row) return;
+  if (!clienta) {
+    showToast("Completează numele clientei!", "error");
+    document.getElementById('editIncClienta').focus();
+    return;
+  }
+  if (!dataStr) {
+    showToast("Completează data plății!", "error");
+    document.getElementById('editIncData').focus();
+    return;
+  }
+  if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
+    showToast("Completează suma plății!", "error");
+    document.getElementById('editIncSuma').focus();
+    return;
+  }
+  if (!metoda || metoda === "-" || metoda === "") {
+    showToast("Selectează metoda de plată!", "error");
+    document.getElementById('editIncMetoda').focus();
+    return;
+  }
+  if (!tip || tip === "-" || tip === "") {
+    showToast("Selectează tipul abonamentului!", "error");
+    document.getElementById('editIncTip').focus();
+    return;
+  }
+
+  callBackend("actualizeazaIncasare", {
+    row: Number(row), clienta: clienta, data: dataStr, suma: suma, metoda: metoda, tip: tip
+  }, function() {
+    showToast("✓ Încasare actualizată!");
+    inchideModalEditareIncasare();
+    incarcaBazaDateSilencios();
+  });
+}
