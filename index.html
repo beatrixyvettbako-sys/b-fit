@@ -190,7 +190,7 @@
               </tr>
             </thead>
             <tbody id="istoricOrarTbody">
-              <tr><td colspan="4" style="text-align:center; color:#888;">Se încarcă istoricul...</td></tr>
+              <tr><td colspan="4" style="text-align:center; color:#888;">Nici o prezență găsită.</td></tr>
             </tbody>
           </table>
         </div>
@@ -544,7 +544,7 @@
               </tr>
             </thead>
             <tbody id="incasariIstoricTbody">
-              <tr><td colspan="6" style="text-align:center; color:#888;">Se încarcă încasările...</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:#888;">Nici o înregistrare</td></tr>
             </tbody>
           </table>
         </div>
@@ -607,5 +607,10 @@
   </nav>
 
   <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
 </body>
 </html>
