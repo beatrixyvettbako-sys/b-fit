@@ -500,7 +500,7 @@ nav button.active svg {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 8px;
+  padding: 5px 8px 6px;
   border-bottom: 1px solid #eef2f6;
 }
 
