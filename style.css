@@ -32,7 +32,6 @@ body {
   padding-bottom: 75px;
 }
 
-/* HEADER COMPACT */
 header {
   background: var(--primary);
   color: #fff;
@@ -57,7 +56,6 @@ header {
   width: 100%;
 }
 
-/* ICOANELE DIN HEADER: DIMENSIUNE MARE ȘI IDENTICĂ DE 28px PE TOATE PAGINILE */
 .header-title-wrapper svg {
   width: 28px;
   height: 28px;
@@ -66,7 +64,6 @@ header {
   display: block;
 }
 
-/* BUTON CU BULĂ PENTRU ICOANA DE LA ORAR (INTERACTIVĂ ORICÂND) */
 .header-icon-bubble-btn {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.32);
@@ -98,7 +95,6 @@ header {
   pointer-events: none;
 }
 
-/* ICOANELE SIMPLE DE PE CELELALTE PAGINI (FĂRĂ BULĂ) */
 .header-static-icon {
   width: 28px;
   height: 28px;
@@ -121,7 +117,7 @@ header {
   width: 100%;
 }
 
-/* NAVIGARE BOTTOM BAR CU EFECT MERCUR */
+/* NAVIGARE BOTTOM BAR */
 nav {
   position: fixed;
   bottom: 0;
@@ -235,7 +231,7 @@ nav button.active svg {
   animation: tabFadeInSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* SELECTOR SĂPTĂMÂNĂ RETRACTAT COMPLET, APARE LA TAP */
+/* SELECTOR SĂPTĂMÂNĂ */
 .calendar-expandable-card {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -282,10 +278,6 @@ nav button.active svg {
   gap: 3px;
 }
 
-.calendar-icon-container {
-  display: none;
-}
-
 .calendar-title-container {
   display: flex;
   align-items: center;
@@ -298,10 +290,6 @@ nav button.active svg {
   font-weight: 800;
   color: var(--primary);
   letter-spacing: -0.2px;
-}
-
-.calendar-toggle-hint {
-  display: none;
 }
 
 .calendar-drawer-content {
@@ -420,7 +408,7 @@ nav button.active svg {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* CARDURI CU ORE CU DIMENSIUNE COMODĂ */
+/* CARDURI ORE */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
@@ -666,32 +654,34 @@ select.slot-select-type {
   font-size: 0.8rem;
 }
 
-/* VALIDARE CU CHENAR ROȘU */
+/* CHENAR ROȘU LA VALIDARE */
 .input-error {
   border-color: #b91c1c !important;
   outline: 1px solid #b91c1c !important;
 }
 
-/* CHENARUL CU CALENDAR DEDEBUSUT PENTRU ORELE TÂRZII (17:00 / 18:00) */
+/* CARDUL FINALUL PROGRAMULUI CU ICOANĂ MARE CENTRATĂ DEASUPRA TEXTULUI */
 .end-schedule-card {
   margin: 6px 0 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: #faf8fc;
   border: 1px dashed #d6cae8;
   border-radius: 10px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
   color: var(--primary);
-  min-height: 44px;
+  min-height: 52px;
   box-sizing: border-box;
+  text-align: center;
   transition: min-height 0.25s ease, padding 0.25s ease;
 }
 
 .end-schedule-card svg {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   stroke: var(--primary);
   fill: none;
   stroke-width: 2;
@@ -699,8 +689,9 @@ select.slot-select-type {
 }
 
 .end-schedule-text {
-  font-size: 0.82rem;
-  font-weight: 700;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 /* EMPTY STATE FIȘĂ CLIENTĂ */
