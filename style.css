@@ -231,7 +231,7 @@ nav button.active svg {
   animation: tabFadeInSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* SELECTOR SĂPTĂMÂNĂ */
+/* SELECTOR SĂPTĂMÂNĂ COMPACT */
 .calendar-expandable-card {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -241,41 +241,34 @@ nav button.active svg {
   max-height: 0;
   opacity: 0;
   margin: 0;
-  padding: 0 10px;
+  padding: 0 8px;
   pointer-events: none;
   transform: translateY(-8px);
-  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.25s ease,
-              transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
-              margin 0.32s ease,
-              padding 0.32s ease;
+  transition: max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease,
+              transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.28s ease,
+              padding 0.28s ease;
 }
 
 .calendar-expandable-card.is-expanded {
-  max-height: 140px;
+  max-height: 95px;
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
   margin-bottom: 6px;
-  padding: 6px 10px 8px;
+  padding: 6px 8px 7px;
   background: #faf8fc;
   border-color: #d6cae8;
-  box-shadow: 0 4px 12px rgba(92, 77, 125, 0.08);
+  box-shadow: 0 3px 10px rgba(92, 77, 125, 0.08);
 }
 
-.calendar-expand-trigger {
+.calendar-header-info {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 2px 8px 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  text-align: center;
-  gap: 3px;
+  padding: 0 0 4px;
 }
 
 .calendar-title-container {
@@ -286,7 +279,7 @@ nav button.active svg {
 }
 
 .calendar-title-text {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   font-weight: 800;
   color: var(--primary);
   letter-spacing: -0.2px;
@@ -294,12 +287,11 @@ nav button.active svg {
 
 .calendar-drawer-content {
   width: 100%;
-  margin-top: 4px;
 }
 
 .drawer-nav-actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   justify-content: space-between;
 }
@@ -308,16 +300,16 @@ nav button.active svg {
   flex: 1;
   background: #ffffff;
   border: 1px solid #dcd3eb;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.76rem;
+  border-radius: 7px;
+  padding: 5px 6px;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
   transition: all 0.15s ease;
 }
@@ -331,10 +323,10 @@ nav button.active svg {
   background: var(--primary-light);
   border: 1px solid #d4c7ea;
   color: var(--primary-dark);
-  padding: 6px 12px;
-  font-size: 0.76rem;
+  padding: 5px 10px;
+  font-size: 0.74rem;
   font-weight: 800;
-  border-radius: 8px;
+  border-radius: 7px;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
