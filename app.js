@@ -257,14 +257,13 @@ function comutaExpandareBaraCalendar(event) {
     let seDeschide = !card.classList.contains('is-expanded');
     card.classList.toggle('is-expanded');
     
-    // Când utilizatorul apasă pe icoana orarului, scrolăm lin sus de tot pentru a vedea selectorul
     if (seDeschide) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 }
 
-function autoScrollLaOraCurenta(esteInitial = false) {
+function autoScrollLaOraCurenta() {
   let now = new Date();
   let day = now.getDay();
   let currentHour = now.getHours();
@@ -303,36 +302,12 @@ function autoScrollLaOraCurenta(esteInitial = false) {
   });
 
   if (closestBlock) {
-    let oraText = closestBlock.getAttribute('data-ora') || "";
-    let hVal = parseInt(oraText.split(':')[0], 10) || 0;
-    let endCard = document.getElementById('endScheduleCard');
-
-    // Ajustare dinamică a cardului de final pentru orele 17:00 / 18:00 fără a scoate elementele din ecran
-    if (hVal >= 17 && endCard) {
-      let vpHeight = window.innerHeight || document.documentElement.clientHeight;
-      let headerEl = document.querySelector('header');
-      let daySelector = document.getElementById('dayButtonsContainer');
-      let hHeader = headerEl ? headerEl.offsetHeight : 54;
-      let hDay = daySelector ? daySelector.offsetHeight : 45;
-
-      let elementeSubEnd = 160; // înălțime combinată pentru 'Adaugă oră' și 'Istoric'
-      let spatiuDisponibil = vpHeight - (hHeader + hDay + closestBlock.offsetHeight + elementeSubEnd + 20);
-
-      if (hVal === 17) {
-        endCard.style.minHeight = Math.max(52, Math.min(110, spatiuDisponibil + 30)) + 'px';
-      } else {
-        endCard.style.minHeight = Math.max(52, Math.min(150, spatiuDisponibil + 50)) + 'px';
-      }
-    } else if (endCard) {
-      endCard.style.minHeight = '52px';
-    }
-
     if (currentHour <= 8) {
       window.scrollTo({ top: 0, behavior: 'auto' });
     } else {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let topOffset = (headerEl ? headerEl.offsetHeight : 54) + (daySelector ? daySelector.offsetHeight : 45) + 6;
+      let topOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45) + 6;
       
       let blockRect = closestBlock.getBoundingClientRect();
       let targetY = blockRect.top + window.pageYOffset - topOffset;
@@ -358,7 +333,7 @@ function peComutareIstoricIncasari(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 54;
+      let hOffset = headerEl ? headerEl.offsetHeight : 52;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -373,7 +348,7 @@ function peComutareIstoricOrar(detailsEl) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let hOffset = (headerEl ? headerEl.offsetHeight : 54) + (daySelector ? daySelector.offsetHeight : 45);
+      let hOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45);
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -387,7 +362,7 @@ function peComutareIstoricFisa(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 54;
+      let hOffset = headerEl ? headerEl.offsetHeight : 52;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -395,6 +370,58 @@ function peComutareIstoricFisa(detailsEl) {
       });
     }, 80);
   }
+}
+
+function actualizeazaHeaderVisual(tipTab, titlu) {
+  let wrapper = document.getElementById('pageTitleWrapper');
+  if (!wrapper) return;
+
+  let iconHtml = '';
+  if (tipTab === 'orar') {
+    iconHtml = `
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+        </svg>
+      </button>
+    `;
+  } else if (tipTab === 'prog') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </div>
+    `;
+  } else if (tipTab === 'fisa') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <circle cx="12" cy="10" r="3"></circle>
+          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+        </svg>
+      </div>
+    `;
+  } else if (tipTab === 'incasari') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+          <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
+          <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
+        </svg>
+      </div>
+    `;
+  }
+  wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
 }
 
 window.onload = function() {
@@ -435,8 +462,9 @@ window.onload = function() {
   animaPilaMercur(0);
   actualizeazaHeaderVisual(tipTabCurent, 'Orar Săptămânal');
 
-  // Poziționare instantanee la prima deschidere / refresh din datele locale
-  autoScrollLaOraCurenta(true);
+  setTimeout(() => {
+    autoScrollLaOraCurenta();
+  }, 50);
 
   incarcaBazaDateSilencios(null, true);
 };
@@ -466,7 +494,9 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePr
     }
 
     if (estePrimaIncarcare) {
-      autoScrollLaOraCurenta();
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 50);
     }
   });
 }
@@ -505,7 +535,9 @@ function revinoLaSaptamanaCurenta() {
 
   actualizeazaBaraZile();
   randeazaOrarInstant();
-  autoScrollLaOraCurenta();
+  setTimeout(() => {
+    autoScrollLaOraCurenta();
+  }, 50);
   showToast("✓ Ai revenit la săptămâna curentă!");
 }
 
@@ -597,8 +629,6 @@ function schimbaZiInstant(ziCheie) {
   if (esteAzi) {
     autoScrollLaOraCurenta();
   } else {
-    let endCard = document.getElementById('endScheduleCard');
-    if (endCard) endCard.style.minHeight = '52px';
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
@@ -656,64 +686,54 @@ function populeazaSelectoriCliente() {
   }
 }
 
-function normalizeazaNumeLuna(textLuna) {
-  if (!textLuna) return "";
-  let curatat = textLuna.toString().replace(/luna/gi, '').trim().toLowerCase();
-  
-  const mapEnRo = {
-    'january': 'ianuarie', 'february': 'februarie', 'march': 'martie',
-    'april': 'aprilie', 'may': 'mai', 'june': 'iunie',
-    'july': 'iulie', 'august': 'august', 'september': 'septembrie',
-    'october': 'octombrie', 'november': 'noiembrie', 'december': 'decembrie'
-  };
-
-  for (let en in mapEnRo) {
-    if (curatat.includes(en)) {
-      curatat = curatat.replace(en, mapEnRo[en]);
-    }
-  }
-
-  return curatat.charAt(0).toUpperCase() + curatat.slice(1);
-}
-
 function populeazaSelectorLuni() {
   let selLuna = document.getElementById('filtruLunaIncasari');
   if (!selLuna) return;
 
   let valoareAnterioara = selLuna.value;
-  let luniMapNorm = new Map();
+  let luniSet = new Set();
 
   (DB.incasari || []).forEach(i => {
     if (i && i.luna && i.luna.trim() !== "-" && i.luna.trim() !== "") {
-      let norm = normalizeazaNumeLuna(i.luna);
-      if (norm) {
-        if (!luniMapNorm.has(norm)) {
-          luniMapNorm.set(norm, i.luna.trim());
-        }
-      }
+      luniSet.add(i.luna.trim());
     }
   });
 
-  const luniRoOrdine = [
-    "decembrie", "noiembrie", "octombrie", "septembrie", "august", "iulie",
-    "iunie", "mai", "aprilie", "martie", "februarie", "ianuarie"
-  ];
+  const luniRo = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
 
-  function calculeazaScorDescrescator(numeFormatat) {
-    let s = numeFormatat.toLowerCase();
-    let idx = luniRoOrdine.findIndex(l => s.includes(l));
-    return idx !== -1 ? idx : 99;
+  function calculeazaScorLuna(str) {
+    if (!str) return 0;
+    let s = str.toLowerCase().trim();
+    let anGasit = 0;
+    let anMatch = s.match(/\b(20\d\d)\b/);
+    if (anMatch) anGasit = parseInt(anMatch[1], 10);
+    
+    let lunaIdx = -1;
+    for (let idx = 0; idx < luniRo.length; idx++) {
+      if (s.indexOf(luniRo[idx]) !== -1) {
+        lunaIdx = idx;
+        break;
+      }
+    }
+    if (lunaIdx === -1) {
+      let p = s.split(/[\.\-\/]/);
+      if (p.length >= 2) {
+        let m = parseInt(p[0], 10);
+        if (m >= 1 && m <= 12) lunaIdx = m - 1;
+        if (p[1] && p[1].length === 4) anGasit = parseInt(p[1], 10);
+      }
+    }
+    return (anGasit || 2026) * 100 + (lunaIdx !== -1 ? lunaIdx : 0);
   }
 
-  let luniSortate = Array.from(luniMapNorm.keys()).sort((a, b) => {
-    return calculeazaScorDescrescator(a) - calculeazaScorDescrescator(b);
-  });
+  let luniArray = Array.from(luniSet);
+  luniArray.sort((a, b) => calculeazaScorLuna(b) - calculeazaScorLuna(a));
 
   selLuna.innerHTML = '<option value="">Toate lunile</option>';
-  luniSortate.forEach(lunaAfisata => {
+  luniArray.forEach(luna => {
     let opt = document.createElement('option');
-    opt.value = lunaAfisata;
-    opt.innerText = lunaAfisata;
+    opt.value = luna;
+    opt.innerText = luna;
     selLuna.appendChild(opt);
   });
 
@@ -722,63 +742,10 @@ function populeazaSelectorLuni() {
   }
 }
 
-function actualizeazaHeaderVisual(tipTab, titlu) {
-  let wrapper = document.getElementById('pageTitleWrapper');
-  if (!wrapper) return;
-
-  let iconHtml = '';
-  if (tipTab === 'orar') {
-    iconHtml = `
-      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="9" x2="21" y2="9"></line>
-          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-        </svg>
-      </button>
-    `;
-  } else if (tipTab === 'prog') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"></path>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-        </svg>
-      </div>
-    `;
-  } else if (tipTab === 'fisa') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-          <circle cx="12" cy="10" r="3"></circle>
-          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
-        </svg>
-      </div>
-    `;
-  } else if (tipTab === 'incasari') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
-          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-          <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
-          <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
-        </svg>
-      </div>
-    `;
-  }
-  wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
-}
-
 function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
-  
   let target = document.getElementById(tabId);
   if (target) target.classList.add('active');
   if (btn) btn.classList.add('active');
@@ -1472,17 +1439,14 @@ function filtreazaIstoricIncasariInstant() {
   let fEl = document.getElementById('filtruClientaIncasari');
   let fLuna = document.getElementById('filtruLunaIncasari');
   let filtru = fEl ? fEl.value.toLowerCase() : "";
-  let filtruLuna = fLuna ? fLuna.value.trim().toLowerCase() : "";
+  let filtruLuna = fLuna ? fLuna.value.trim() : "";
   let tbody = document.getElementById('incasariIstoricTbody');
   if (!tbody) return;
 
   let filtrate = (DB.incasari || []).filter(i => {
     if (!i) return false;
     let potrivesteClienta = !filtru || (i.clienta && i.clienta.toLowerCase() === filtru);
-    
-    let lunaNormItem = normalizeazaNumeLuna(i.luna).toLowerCase();
-    let potrivesteLuna = !filtruLuna || lunaNormItem === filtruLuna;
-    
+    let potrivesteLuna = !filtruLuna || (i.luna && i.luna.trim() === filtruLuna);
     return potrivesteClienta && potrivesteLuna;
   });
 
@@ -1540,60 +1504,47 @@ function filtreazaIstoricIncasariInstant() {
 
 function salveazaIncasare() {
   let inp = document.getElementById('incasareNume');
-  let elTip = document.getElementById('incasareTip');
-  let elPreset = document.getElementById('selectSumaPreset');
-  let elCustom = document.getElementById('incasareSumaCustom');
-  let elMetoda = document.getElementById('incasareMetoda');
-  let elDataPlata = document.getElementById('incasareDataPlata');
-  let elDataStart = document.getElementById('incasareDataStart');
-
   let nume = inp ? inp.value.trim() : "";
-  let tip = elTip ? elTip.value : "";
+  let tip = document.getElementById('incasareTip').value;
   let suma = getSumaSelectata();
-  let metoda = elMetoda ? elMetoda.value : "";
-  let dataPlata = elDataPlata ? elDataPlata.value : "";
-  let dataStart = elDataStart ? elDataStart.value : "";
-
-  [inp, elTip, elPreset, elCustom, elMetoda, elDataPlata, elDataStart].forEach(curataEroareCamp);
-
-  let areErori = false;
-  let primulCamp = null;
+  let metoda = document.getElementById('incasareMetoda').value;
+  let dataPlata = document.getElementById('incasareDataPlata').value;
+  let dataStart = document.getElementById('incasareDataStart').value;
 
   if (!nume) {
-    if (inp) inp.classList.add('input-error');
-    if (!primulCamp) primulCamp = inp;
-    areErori = true;
+    showToast("Completează numele clientei!", "error");
+    if (inp) inp.focus();
+    return;
   }
   if (!tip || tip === "-" || tip === "") {
-    if (elTip) elTip.classList.add('input-error');
-    if (!primulCamp) primulCamp = elTip;
-    areErori = true;
+    showToast("Selectează tipul abonamentului!", "error");
+    document.getElementById('incasareTip').focus();
+    return;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-    let tSuma = (elPreset && elPreset.value === 'custom') ? elCustom : elPreset;
-    if (tSuma) tSuma.classList.add('input-error');
-    if (!primulCamp) primulCamp = tSuma;
-    areErori = true;
+    showToast("Completează suma plății!", "error");
+    let selPreset = document.getElementById('selectSumaPreset');
+    if (selPreset && selPreset.value === 'custom') {
+      let cInp = document.getElementById('incasareSumaCustom');
+      if (cInp) cInp.focus();
+    } else if (selPreset) {
+      selPreset.focus();
+    }
+    return;
   }
-  if (!metoda || metoda === "" || metoda === "-") {
-    if (elMetoda) elMetoda.classList.add('input-error');
-    if (!primulCamp) primulCamp = elMetoda;
-    areErori = true;
+  if (!metoda || metoda === "-" || metoda === "") {
+    showToast("Selectează metoda de plată!", "error");
+    document.getElementById('incasareMetoda').focus();
+    return;
   }
   if (!dataPlata) {
-    if (elDataPlata) elDataPlata.classList.add('input-error');
-    if (!primulCamp) primulCamp = elDataPlata;
-    areErori = true;
+    showToast("Selectează data plății!", "error");
+    document.getElementById('incasareDataPlata').focus();
+    return;
   }
   if (!dataStart) {
-    if (elDataStart) elDataStart.classList.add('input-error');
-    if (!primulCamp) primulCamp = elDataStart;
-    areErori = true;
-  }
-
-  if (areErori) {
-    showToast("Completează toate câmpurile obligatorii!", "error");
-    if (primulCamp) primulCamp.focus();
+    showToast("Selectează data de start a abonamentului!", "error");
+    document.getElementById('incasareDataStart').focus();
     return;
   }
 
@@ -1603,21 +1554,28 @@ function salveazaIncasare() {
     showToast("✓ Abonament & Încasare salvate!");
     if (inp) inp.value = '';
     
-    if (elPreset) {
-      elPreset.value = '';
-      actualizeazaStilSelect(elPreset);
+    let selPreset = document.getElementById('selectSumaPreset');
+    if (selPreset) {
+      selPreset.value = '';
+      actualizeazaStilSelect(selPreset);
     }
-    if (elCustom) {
-      elCustom.value = '';
-      elCustom.style.display = 'none';
+    
+    let cInp = document.getElementById('incasareSumaCustom');
+    if (cInp) {
+      cInp.value = '';
+      cInp.style.display = 'none';
     }
-    if (elMetoda) {
-      elMetoda.value = '';
-      actualizeazaStilSelect(elMetoda);
+    
+    let selMetoda = document.getElementById('incasareMetoda');
+    if (selMetoda) {
+      selMetoda.value = '';
+      actualizeazaStilSelect(selMetoda);
     }
-    if (elTip) {
-      elTip.value = '';
-      actualizeazaStilSelect(elTip);
+    
+    let selTip = document.getElementById('incasareTip');
+    if (selTip) {
+      selTip.value = '';
+      actualizeazaStilSelect(selTip);
     }
     
     reseteazaDateIncasariAzi();
@@ -1629,22 +1587,18 @@ function deschideModalEditareIncasare(itemEncoded) {
   let item = JSON.parse(decodeURIComponent(itemEncoded));
   if (!item || !item.row) return;
 
-  let elCli = document.getElementById('editIncClienta');
-  let elData = document.getElementById('editIncData');
-  let elSuma = document.getElementById('editIncSuma');
-  let elMet = document.getElementById('editIncMetoda');
-  let elTip = document.getElementById('editIncTip');
-
-  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
-
   document.getElementById('editIncRow').value = item.row;
-  if (elCli) elCli.value = item.clienta || "";
-  if (elData) elData.value = item.data || "";
+  document.getElementById('editIncClienta').value = item.clienta || "";
+  document.getElementById('editIncData').value = item.data || "";
   
   let sCurata = (item.suma || "").replace(/RON/i, "").trim();
-  if (elSuma) elSuma.value = sCurata;
-  if (elMet) elMet.value = (item.metoda && item.metoda !== "-") ? item.metoda : "Revolut";
-  if (elTip) elTip.value = (item.tip && item.tip !== "-") ? item.tip : "8 sedinte";
+  document.getElementById('editIncSuma').value = sCurata;
+  
+  let selMet = document.getElementById('editIncMetoda');
+  if (selMet) selMet.value = (item.metoda && item.metoda !== "-") ? item.metoda : "Revolut";
+
+  let selTip = document.getElementById('editIncTip');
+  if (selTip) selTip.value = (item.tip && item.tip !== "-") ? item.tip : "8 sedinte";
 
   document.getElementById('modalEditareIncasareBackdrop').style.display = 'flex';
 }
@@ -1661,46 +1615,30 @@ function salveazaModificareIncasare() {
   let metoda = document.getElementById('editIncMetoda').value;
   let tip = document.getElementById('editIncTip').value;
 
-  [document.getElementById('editIncClienta'), document.getElementById('editIncData'), document.getElementById('editIncSuma'), document.getElementById('editIncMetoda'), document.getElementById('editIncTip')].forEach(curataEroareCamp);
-
   if (!row) return;
-  let areErori = false;
-  let primulCamp = null;
-
   if (!clienta) {
-    let elCli = document.getElementById('editIncClienta');
-    if (elCli) elCli.classList.add('input-error');
-    if (!primulCamp) primulCamp = elCli;
-    areErori = true;
+    showToast("Completează numele clientei!", "error");
+    document.getElementById('editIncClienta').focus();
+    return;
   }
   if (!dataStr) {
-    let elData = document.getElementById('editIncData');
-    if (elData) elData.classList.add('input-error');
-    if (!primulCamp) primulCamp = elData;
-    areErori = true;
+    showToast("Completează data plății!", "error");
+    document.getElementById('editIncData').focus();
+    return;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-    let elSuma = document.getElementById('editIncSuma');
-    if (elSuma) elSuma.classList.add('input-error');
-    if (!primulCamp) primulCamp = elSuma;
-    areErori = true;
+    showToast("Completează suma plății!", "error");
+    document.getElementById('editIncSuma').focus();
+    return;
   }
   if (!metoda || metoda === "-" || metoda === "") {
-    let elMet = document.getElementById('editIncMetoda');
-    if (elMet) elMet.classList.add('input-error');
-    if (!primulCamp) primulCamp = elMet;
-    areErori = true;
+    showToast("Selectează metoda de plată!", "error");
+    document.getElementById('editIncMetoda').focus();
+    return;
   }
   if (!tip || tip === "-" || tip === "") {
-    let elTip = document.getElementById('editIncTip');
-    if (elTip) elTip.classList.add('input-error');
-    if (!primulCamp) primulCamp = elTip;
-    areErori = true;
-  }
-
-  if (areErori) {
-    showToast("Completează toate câmpurile obligatorii!", "error");
-    if (primulCamp) primulCamp.focus();
+    showToast("Selectează tipul abonamentului!", "error");
+    document.getElementById('editIncTip').focus();
     return;
   }
 
