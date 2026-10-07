@@ -251,13 +251,20 @@ function comutaExpandareBaraCalendar(event) {
     event.stopPropagation();
   }
   if (tipTabCurent !== 'orar') return;
+
   let card = document.getElementById('calendarExpandableCard');
   if (card) {
+    let seDeschide = !card.classList.contains('is-expanded');
     card.classList.toggle('is-expanded');
+    
+    // Când utilizatorul apasă pe icoana orarului, scrolăm lin sus de tot pentru a vedea selectorul
+    if (seDeschide) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 }
 
-function autoScrollLaOraCurenta() {
+function autoScrollLaOraCurenta(esteInitial = false) {
   let now = new Date();
   let day = now.getDay();
   let currentHour = now.getHours();
@@ -300,19 +307,24 @@ function autoScrollLaOraCurenta() {
     let hVal = parseInt(oraText.split(':')[0], 10) || 0;
     let endCard = document.getElementById('endScheduleCard');
 
+    // Ajustare dinamică a cardului de final pentru orele 17:00 / 18:00 fără a scoate elementele din ecran
     if (hVal >= 17 && endCard) {
       let vpHeight = window.innerHeight || document.documentElement.clientHeight;
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
       let hHeader = headerEl ? headerEl.offsetHeight : 54;
       let hDay = daySelector ? daySelector.offsetHeight : 45;
-      let availableSpace = vpHeight - (hHeader + hDay);
 
-      let bRect = closestBlock.getBoundingClientRect();
-      let diffExtra = Math.max(0, Math.round(availableSpace - bRect.height - 30));
-      endCard.style.minHeight = (diffExtra > 44 ? diffExtra : 44) + 'px';
+      let elementeSubEnd = 160; // înălțime combinată pentru 'Adaugă oră' și 'Istoric'
+      let spatiuDisponibil = vpHeight - (hHeader + hDay + closestBlock.offsetHeight + elementeSubEnd + 20);
+
+      if (hVal === 17) {
+        endCard.style.minHeight = Math.max(52, Math.min(110, spatiuDisponibil + 30)) + 'px';
+      } else {
+        endCard.style.minHeight = Math.max(52, Math.min(150, spatiuDisponibil + 50)) + 'px';
+      }
     } else if (endCard) {
-      endCard.style.minHeight = '44px';
+      endCard.style.minHeight = '52px';
     }
 
     if (currentHour <= 8) {
@@ -423,9 +435,8 @@ window.onload = function() {
   animaPilaMercur(0);
   actualizeazaHeaderVisual(tipTabCurent, 'Orar Săptămânal');
 
-  setTimeout(() => {
-    autoScrollLaOraCurenta();
-  }, 50);
+  // Poziționare instantanee la prima deschidere / refresh din datele locale
+  autoScrollLaOraCurenta(true);
 
   incarcaBazaDateSilencios(null, true);
 };
@@ -455,9 +466,7 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePr
     }
 
     if (estePrimaIncarcare) {
-      setTimeout(() => {
-        autoScrollLaOraCurenta();
-      }, 50);
+      autoScrollLaOraCurenta();
     }
   });
 }
@@ -496,9 +505,7 @@ function revinoLaSaptamanaCurenta() {
 
   actualizeazaBaraZile();
   randeazaOrarInstant();
-  setTimeout(() => {
-    autoScrollLaOraCurenta();
-  }, 50);
+  autoScrollLaOraCurenta();
   showToast("✓ Ai revenit la săptămâna curentă!");
 }
 
@@ -591,7 +598,7 @@ function schimbaZiInstant(ziCheie) {
     autoScrollLaOraCurenta();
   } else {
     let endCard = document.getElementById('endScheduleCard');
-    if (endCard) endCard.style.minHeight = '44px';
+    if (endCard) endCard.style.minHeight = '52px';
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
@@ -1648,45 +1655,44 @@ function inchideModalEditareIncasare() {
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
-  let elCli = document.getElementById('editIncClienta');
-  let elData = document.getElementById('editIncData');
-  let elSuma = document.getElementById('editIncSuma');
-  let elMet = document.getElementById('editIncMetoda');
-  let elTip = document.getElementById('editIncTip');
+  let clienta = document.getElementById('editIncClienta').value.trim();
+  let dataStr = document.getElementById('editIncData').value.trim();
+  let suma = document.getElementById('editIncSuma').value.trim();
+  let metoda = document.getElementById('editIncMetoda').value;
+  let tip = document.getElementById('editIncTip').value;
 
-  let clienta = elCli ? elCli.value.trim() : "";
-  let dataStr = elData ? elData.value.trim() : "";
-  let suma = elSuma ? elSuma.value.trim() : "";
-  let metoda = elMet ? elMet.value : "";
-  let tip = elTip ? elTip.value : "";
-
-  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
+  [document.getElementById('editIncClienta'), document.getElementById('editIncData'), document.getElementById('editIncSuma'), document.getElementById('editIncMetoda'), document.getElementById('editIncTip')].forEach(curataEroareCamp);
 
   if (!row) return;
   let areErori = false;
   let primulCamp = null;
 
   if (!clienta) {
+    let elCli = document.getElementById('editIncClienta');
     if (elCli) elCli.classList.add('input-error');
     if (!primulCamp) primulCamp = elCli;
     areErori = true;
   }
   if (!dataStr) {
+    let elData = document.getElementById('editIncData');
     if (elData) elData.classList.add('input-error');
     if (!primulCamp) primulCamp = elData;
     areErori = true;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
+    let elSuma = document.getElementById('editIncSuma');
     if (elSuma) elSuma.classList.add('input-error');
     if (!primulCamp) primulCamp = elSuma;
     areErori = true;
   }
   if (!metoda || metoda === "-" || metoda === "") {
+    let elMet = document.getElementById('editIncMetoda');
     if (elMet) elMet.classList.add('input-error');
     if (!primulCamp) primulCamp = elMet;
     areErori = true;
   }
   if (!tip || tip === "-" || tip === "") {
+    let elTip = document.getElementById('editIncTip');
     if (elTip) elTip.classList.add('input-error');
     if (!primulCamp) primulCamp = elTip;
     areErori = true;
