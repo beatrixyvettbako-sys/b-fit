@@ -965,20 +965,6 @@ function randeazaOrarInstant() {
     html += `</div></div>`;
   });
 
-  // Card plasat imediat după ora 18 cu calendar și text
-  html += `
-    <div class="end-schedule-card" id="endScheduleCard">
-      <svg viewBox="0 0 24 24">
-        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-        <line x1="16" y1="2" x2="16" y2="6"></line>
-        <line x1="8" y1="2" x2="8" y2="6"></line>
-        <line x1="3" y1="9" x2="21" y2="9"></line>
-        <circle cx="12" cy="14" r="1.5" fill="currentColor"></circle>
-      </svg>
-      <span class="end-schedule-text">Finalul Programului</span>
-    </div>
-  `;
-
   container.innerHTML = html;
 }
 
@@ -1545,9 +1531,8 @@ function filtreazaIstoricIncasariInstant() {
   tbody.innerHTML = html;
 }
 
-// VALIDARE CU CHENAR ROȘU LA ÎNREGISTRARE PLATĂ
 function salveazaIncasare() {
-  let elNume = document.getElementById('incasareNume');
+  let inp = document.getElementById('incasareNume');
   let elTip = document.getElementById('incasareTip');
   let elPreset = document.getElementById('selectSumaPreset');
   let elCustom = document.getElementById('incasareSumaCustom');
@@ -1555,55 +1540,53 @@ function salveazaIncasare() {
   let elDataPlata = document.getElementById('incasareDataPlata');
   let elDataStart = document.getElementById('incasareDataStart');
 
-  let nume = elNume ? elNume.value.trim() : "";
+  let nume = inp ? inp.value.trim() : "";
   let tip = elTip ? elTip.value : "";
   let suma = getSumaSelectata();
   let metoda = elMetoda ? elMetoda.value : "";
   let dataPlata = elDataPlata ? elDataPlata.value : "";
   let dataStart = elDataStart ? elDataStart.value : "";
 
-  [elNume, elTip, elPreset, elCustom, elMetoda, elDataPlata, elDataStart].forEach(curataEroareCamp);
+  [inp, elTip, elPreset, elCustom, elMetoda, elDataPlata, elDataStart].forEach(curataEroareCamp);
 
   let areErori = false;
-  let primulCampGresit = null;
+  let primulCamp = null;
 
   if (!nume) {
-    if (elNume) elNume.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elNume;
+    if (inp) inp.classList.add('input-error');
+    if (!primulCamp) primulCamp = inp;
     areErori = true;
   }
   if (!tip || tip === "-" || tip === "") {
     if (elTip) elTip.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elTip;
+    if (!primulCamp) primulCamp = elTip;
     areErori = true;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-    let tintaSuma = (elPreset && elPreset.value === 'custom') ? elCustom : elPreset;
-    if (tintaSuma) {
-      tintaSuma.classList.add('input-error');
-      if (!primulCampGresit) primulCampGresit = tintaSuma;
-    }
+    let tSuma = (elPreset && elPreset.value === 'custom') ? elCustom : elPreset;
+    if (tSuma) tSuma.classList.add('input-error');
+    if (!primulCamp) primulCamp = tSuma;
     areErori = true;
   }
   if (!metoda || metoda === "" || metoda === "-") {
     if (elMetoda) elMetoda.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elMetoda;
+    if (!primulCamp) primulCamp = elMetoda;
     areErori = true;
   }
   if (!dataPlata) {
     if (elDataPlata) elDataPlata.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elDataPlata;
+    if (!primulCamp) primulCamp = elDataPlata;
     areErori = true;
   }
   if (!dataStart) {
     if (elDataStart) elDataStart.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elDataStart;
+    if (!primulCamp) primulCamp = elDataStart;
     areErori = true;
   }
 
   if (areErori) {
     showToast("Completează toate câmpurile obligatorii!", "error");
-    if (primulCampGresit) primulCampGresit.focus();
+    if (primulCamp) primulCamp.focus();
     return;
   }
 
@@ -1611,23 +1594,20 @@ function salveazaIncasare() {
     nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
   }, function() {
     showToast("✓ Abonament & Încasare salvate!");
-    if (elNume) elNume.value = '';
+    if (inp) inp.value = '';
     
     if (elPreset) {
       elPreset.value = '';
       actualizeazaStilSelect(elPreset);
     }
-    
     if (elCustom) {
       elCustom.value = '';
       elCustom.style.display = 'none';
     }
-    
     if (elMetoda) {
       elMetoda.value = '';
       actualizeazaStilSelect(elMetoda);
     }
-    
     if (elTip) {
       elTip.value = '';
       actualizeazaStilSelect(elTip);
@@ -1642,7 +1622,6 @@ function deschideModalEditareIncasare(itemEncoded) {
   let item = JSON.parse(decodeURIComponent(itemEncoded));
   if (!item || !item.row) return;
 
-  let elRow = document.getElementById('editIncRow');
   let elCli = document.getElementById('editIncClienta');
   let elData = document.getElementById('editIncData');
   let elSuma = document.getElementById('editIncSuma');
@@ -1651,7 +1630,7 @@ function deschideModalEditareIncasare(itemEncoded) {
 
   [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
 
-  if (elRow) elRow.value = item.row;
+  document.getElementById('editIncRow').value = item.row;
   if (elCli) elCli.value = item.clienta || "";
   if (elData) elData.value = item.data || "";
   
@@ -1667,16 +1646,14 @@ function inchideModalEditareIncasare() {
   document.getElementById('modalEditareIncasareBackdrop').style.display = 'none';
 }
 
-// VALIDARE CU CHENAR ROȘU LA EDITARE ÎNCASARE
 function salveazaModificareIncasare() {
-  let elRow = document.getElementById('editIncRow');
+  let row = document.getElementById('editIncRow').value;
   let elCli = document.getElementById('editIncClienta');
   let elData = document.getElementById('editIncData');
   let elSuma = document.getElementById('editIncSuma');
   let elMet = document.getElementById('editIncMetoda');
   let elTip = document.getElementById('editIncTip');
 
-  let row = elRow ? elRow.value : "";
   let clienta = elCli ? elCli.value.trim() : "";
   let dataStr = elData ? elData.value.trim() : "";
   let suma = elSuma ? elSuma.value.trim() : "";
@@ -1686,39 +1663,38 @@ function salveazaModificareIncasare() {
   [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
 
   if (!row) return;
-
   let areErori = false;
-  let primulCampGresit = null;
+  let primulCamp = null;
 
   if (!clienta) {
     if (elCli) elCli.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elCli;
+    if (!primulCamp) primulCamp = elCli;
     areErori = true;
   }
   if (!dataStr) {
     if (elData) elData.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elData;
+    if (!primulCamp) primulCamp = elData;
     areErori = true;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
     if (elSuma) elSuma.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elSuma;
+    if (!primulCamp) primulCamp = elSuma;
     areErori = true;
   }
   if (!metoda || metoda === "-" || metoda === "") {
     if (elMet) elMet.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elMet;
+    if (!primulCamp) primulCamp = elMet;
     areErori = true;
   }
   if (!tip || tip === "-" || tip === "") {
     if (elTip) elTip.classList.add('input-error');
-    if (!primulCampGresit) primulCampGresit = elTip;
+    if (!primulCamp) primulCamp = elTip;
     areErori = true;
   }
 
   if (areErori) {
     showToast("Completează toate câmpurile obligatorii!", "error");
-    if (primulCampGresit) primulCampGresit.focus();
+    if (primulCamp) primulCamp.focus();
     return;
   }
 
