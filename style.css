@@ -15,7 +15,7 @@
   --color-hold: #f5b041;
   --placeholder-fade: #94a3b8;
   --accent-purple: #8b5cf6;
-  --header-height: 52px;
+  --header-height: 50px;
 }
 
 * {
@@ -29,13 +29,13 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  padding-bottom: 75px;
+  padding-bottom: 72px;
 }
 
 header {
   background: var(--primary);
   color: #fff;
-  padding: 6px 12px;
+  padding: 5px 12px;
   height: var(--header-height);
   font-weight: 700;
   font-size: 1.05rem;
@@ -113,7 +113,7 @@ header {
 .container {
   max-width: 650px;
   margin: 0 auto;
-  padding: 4px 8px;
+  padding: 5px 8px;
   width: 100%;
 }
 
@@ -362,7 +362,7 @@ nav button.active svg {
   gap: 5px;
   overflow-x: auto;
   padding: 2px 0 4px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
   position: sticky;
   top: var(--header-height);
   z-index: 900;
@@ -408,7 +408,7 @@ nav button.active svg {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* CARDURI ORE: EXACT 3 PE ECRAN (FIT TO SCREEN MATEMATIC) */
+/* CARDURI ORE: DIMENSIUNE MARE ȘI COMODĂ, CALIBRATĂ LA EXACT 3 PE ECRAN */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
@@ -417,18 +417,6 @@ nav button.active svg {
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   transition: all 0.22s ease;
-  height: calc((100dvh - 180px) / 3);
-  min-height: 165px;
-  max-height: 200px;
-  display: flex;
-  flex-direction: column;
-}
-
-.hour-slots-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
 }
 
 @keyframes pulseOraCurenta {
@@ -457,12 +445,11 @@ nav button.active svg {
 
 .hour-header {
   background: #ede9f4;
-  padding: 4px 8px;
+  padding: 5px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #ddd6e8;
-  flex-shrink: 0;
 }
 
 .hour-title-wrap {
@@ -470,7 +457,7 @@ nav button.active svg {
   align-items: center;
   gap: 4px;
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--primary-dark);
 }
 
@@ -487,7 +474,7 @@ nav button.active svg {
 }
 
 .hour-badge {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -522,9 +509,8 @@ nav button.active svg {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 7px;
+  padding: 4px 7px;
   border-bottom: 1px solid #eef2f6;
-  flex: 1;
 }
 
 .slot-row:last-child {
@@ -548,7 +534,7 @@ nav button.active svg {
 }
 
 .slot-num {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
   min-width: 14px;
@@ -559,15 +545,15 @@ nav button.active svg {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .slot-input {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 5px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   background: #fff;
   outline: none;
   font-family: inherit;
@@ -581,7 +567,7 @@ input::placeholder,
 textarea::placeholder {
   color: var(--placeholder-fade) !important;
   opacity: 0.85 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.8rem !important;
   font-family: inherit !important;
   font-weight: 400 !important;
 }
@@ -602,7 +588,7 @@ select.slot-select-type {
   border: 1px solid #cbd5e1;
   padding: 3px 6px;
   border-radius: 5px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   background-color: #fff;
   outline: none;
   font-weight: 600;
@@ -632,10 +618,10 @@ select.slot-select-type {
   background: var(--primary);
   color: #fff;
   border: none;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
