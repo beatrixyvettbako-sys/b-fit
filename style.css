@@ -15,7 +15,7 @@
   --color-hold: #f5b041;
   --placeholder-fade: #94a3b8;
   --accent-purple: #8b5cf6;
-  --header-height: 48px;
+  --header-height: 52px;
 }
 
 * {
@@ -35,10 +35,10 @@ body {
 header {
   background: var(--primary);
   color: #fff;
-  padding: 6px 12px;
+  padding: 8px 12px;
   height: var(--header-height);
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 1.08rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -55,21 +55,27 @@ header {
   font-weight: 700;
 }
 
-/* BULA SEMI-TRANSPARENTĂ PERMANENTĂ PENTRU ICOANA DIN HEADER */
+/* ICOANELE DIN HEADER MĂRITE PE TOATE PAGINILE */
 .header-title-wrapper svg {
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 9px;
-  padding: 3px;
-  width: 28px;
-  height: 28px;
-  cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  width: 29px;
+  height: 29px;
+  stroke: #fff;
   flex-shrink: 0;
+  display: block;
 }
 
-.header-title-wrapper svg:active {
+/* B切りĂ SEMI-TRANSPARENTĂ DOAR PE ICOANA DE LA ORAR (INTERACTIVĂ) */
+.header-title-wrapper.has-bubble svg {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9px;
+  padding: 3px;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.header-title-wrapper.has-bubble svg:active {
   transform: scale(0.92);
   background: rgba(255, 255, 255, 0.28);
 }
@@ -180,7 +186,7 @@ nav button.active svg {
   transform: scale(1.08);
 }
 
-/* TRANZIȚIE TAB-URI */
+/* TRANZIȚII TAB-URI */
 @keyframes tabFadeInSlide {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
@@ -195,7 +201,7 @@ nav button.active svg {
   animation: tabFadeInSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* SELECTOR SĂPTĂMÂNĂ: COMPLET ASCUNS INITIAL, APARE DIRECT EXPANDED LA TAP */
+/* SELECTOR SĂPTĂMÂNĂ: RETRACTAT COMPLET, COBOARĂ DIN HEADER DIRECT EXPANDAT */
 .calendar-expandable-card {
   background: #ffffff;
   border: 1px solid var(--border);
@@ -207,7 +213,7 @@ nav button.active svg {
   margin: 0;
   padding: 0 10px;
   pointer-events: none;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
   transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.25s ease,
               transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
@@ -380,7 +386,7 @@ nav button.active svg {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* CARDURI CU ORE ÎNCĂPĂTOARE (EXACT 3 ORE COMPLETE PE ECRAN) */
+/* CARDURI CU ORE CU DIMENSIUNE COMODĂ (3 PE ECRAN) */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
@@ -628,29 +634,36 @@ select.slot-select-type {
 
 /* CHENAR ROȘU LA VALIDARE ERONATĂ */
 .input-error {
-  border-color: #b91c1c;
-  outline: 1px solid #b91c1c;
+  border-color: #b91c1c !important;
+  outline: 1px solid #b91c1c !important;
 }
 
-/* PLACEHOLDER ELEGANT LA SCROLL SPRE ORELE 17/18 DACĂ RĂMÂNE LOC JOS */
-.end-schedule-spacer {
-  margin-top: 24px;
-  padding: 24px 16px;
-  text-align: center;
-  color: var(--text-muted);
+/* BLOC CU CALENDAR ȘI TEXT DUPĂ ORA 18 (PENTRU FLUX NATURAL LA ORELE TÂRZII) */
+.end-schedule-card {
+  margin: 6px 0 10px;
+  padding: 10px 12px;
+  background: #faf8fc;
+  border: 1px solid #dfd6eb;
+  border-radius: 10px;
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  opacity: 0.65;
+  color: var(--primary);
 }
 
-.end-schedule-spacer svg {
-  width: 32px;
-  height: 32px;
+.end-schedule-card svg {
+  width: 18px;
+  height: 18px;
   stroke: var(--primary);
   fill: none;
-  stroke-width: 1.8;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.end-schedule-text {
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 /* EMPTY STATE FIȘĂ CLIENTĂ */
