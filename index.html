@@ -91,14 +91,16 @@
 
   <header>
     <div class="header-title-wrapper" id="pageTitleWrapper">
-      <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-        <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-        <line x1="16" y1="2" x2="16" y2="6"></line>
-        <line x1="8" y1="2" x2="8" y2="6"></line>
-        <line x1="3" y1="9" x2="21" y2="9"></line>
-        <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-        <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-      </svg>
+      <button class="header-icon-trigger-btn" id="headerIconBtn" onclick="peApasareIconHeader()" title="Apasă pentru comutare săptămână">
+        <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+        </svg>
+      </button>
       <span id="pageTitle">Orar Săptămânal</span>
     </div>
   </header>
@@ -108,30 +110,14 @@
     <!-- 1. ORAR -->
     <div id="tabOrar" class="tab-content active">
       
-      <!-- BARA UNICĂ EXPANDABILĂ -->
-      <div class="calendar-expandable-card" id="calendarExpandableCard">
-        <button class="calendar-expand-trigger" onclick="comutaExpandareBaraCalendar()" title="Apasă pentru navigare săptămâni">
-          <div class="calendar-icon-container">
-            <svg viewBox="0 0 24 24" style="width:26px; height:26px; stroke:var(--primary); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-              <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="9" x2="21" y2="9"></line>
-              <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill:none; fill="var(--primary)" stroke="none">21</text>
-              <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="var(--primary)" stroke="none">DEC</text>
-            </svg>
-          </div>
+      <!-- SERTARUL EXPANDABIL AL SĂPTĂMÂNII (DEASUPRA ZILELOR) -->
+      <div class="calendar-expandable-card is-expanded" id="calendarExpandableCard">
+        <div class="calendar-compact-header">
           <div class="calendar-title-container">
-            <div class="calendar-title-text" id="labelIntervalSaptamana">Săptămâna curentă</div>
-            <div id="subLabelStareSaptamana" class="badge-sub-info" style="display:none;"></div>
+            <span class="calendar-title-text" id="labelIntervalSaptamana">Săptămâna curentă</span>
+            <span id="subLabelStareSaptamana" class="badge-sub-info" style="display:none;"></span>
           </div>
-          <div class="calendar-toggle-hint">
-            <svg viewBox="0 0 24 24" style="width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round;">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </div>
-        </button>
-
+        </div>
         <div class="calendar-drawer-content">
           <div class="drawer-nav-actions">
             <button class="drawer-nav-btn" onclick="schimbaSaptamanaAnimat(-1)">
@@ -147,7 +133,10 @@
         </div>
       </div>
 
-      <div class="day-selector" id="dayButtonsContainer"></div>
+      <!-- BARA CU ZILELE SĂPTĂMÂNII -->
+      <div class="day-selector-wrapper">
+        <div class="day-selector" id="dayButtonsContainer"></div>
+      </div>
 
       <div id="sloturiContainer"></div>
 
@@ -397,7 +386,7 @@
             </button>
           </div>
 
-          <!-- Istoric Prezențe Recente (Expandable & Collapsed by Default) -->
+          <!-- Istoric Prezențe Recente -->
           <details id="detailsIstoricFisa" style="margin-top: 18px; background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 10px;" ontoggle="peComutareIstoricFisa(this)">
             <summary class="summary-toggle-clean">
               <span class="icon-history-title">
