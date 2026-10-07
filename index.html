@@ -91,7 +91,7 @@
 
   <header>
     <div class="header-title-wrapper" id="pageTitleWrapper">
-      <svg id="headerIconCalendar" onclick="peApasareIconHeader()" viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; cursor:pointer;" title="Apasă pentru selectorul de săptămână">
+      <svg id="headerIconCalendar" onclick="comutaExpandareBaraCalendar()" viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; cursor:pointer;" title="Apasă pentru selectorul de săptămână">
         <rect x="3" y="4" width="18" height="18" rx="2"></rect>
         <line x1="16" y1="2" x2="16" y2="6"></line>
         <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -108,11 +108,11 @@
     <!-- 1. ORAR -->
     <div id="tabOrar" class="tab-content active">
       
-      <!-- BARA UNICĂ EXPANDABILĂ (EXACT CA ÎNAINTE) -->
+      <!-- BARA UNICĂ EXPANDABILĂ -->
       <div class="calendar-expandable-card" id="calendarExpandableCard">
         <button class="calendar-expand-trigger" onclick="comutaExpandareBaraCalendar()" title="Apasă pentru navigare săptămâni">
           <div class="calendar-icon-container">
-            <svg viewBox="0 0 24 24" style="width:24px; height:24px; stroke:var(--primary); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+            <svg viewBox="0 0 24 24" style="width:26px; height:26px; stroke:var(--primary); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
               <rect x="3" y="4" width="18" height="18" rx="2"></rect>
               <line x1="16" y1="2" x2="16" y2="6"></line>
               <line x1="8" y1="2" x2="8" y2="6"></line>
@@ -147,7 +147,7 @@
         </div>
       </div>
 
-      <!-- TABURILE CU ZILE - RĂMÂN AICI STICKY ȘI VIZIBILE DIRECT -->
+      <!-- TABURILE CU ZILE EXACT CA LA ÎNCEPUT -->
       <div class="day-selector" id="dayButtonsContainer"></div>
 
       <div id="sloturiContainer"></div>
