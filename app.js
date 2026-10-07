@@ -11,7 +11,6 @@ let DB = {
 };
 
 let tabIndexCurent = 0;
-let tipTabCurent = 'orar';
 
 function animaPilaMercur(nouIndex) {
   const pill = document.getElementById('navMercuryPill');
@@ -151,13 +150,11 @@ function actualizeazaStilSelect(sel) {
   }
 }
 
-function curataEroareInput(el) {
-  if (el && el.classList) {
-    el.classList.remove('input-error');
-  }
+function curataEroareCamp(el) {
+  if (el) el.classList.remove('input-error');
 }
 
-function ataseazaAscultatoriCuratareErori() {
+function leagaAscultatoriCuratareErori() {
   const ids = [
     'incasareNume', 'incasareTip', 'selectSumaPreset', 'incasareSumaCustom', 'incasareMetoda', 'incasareDataPlata', 'incasareDataStart',
     'editIncClienta', 'editIncData', 'editIncSuma', 'editIncMetoda', 'editIncTip'
@@ -165,8 +162,8 @@ function ataseazaAscultatoriCuratareErori() {
   ids.forEach(id => {
     let el = document.getElementById(id);
     if (el) {
-      el.addEventListener('input', () => curataEroareInput(el));
-      el.addEventListener('change', () => curataEroareInput(el));
+      el.addEventListener('input', () => curataEroareCamp(el));
+      el.addEventListener('change', () => curataEroareCamp(el));
     }
   });
 }
@@ -247,19 +244,6 @@ function closeCustomModal(confirmed) {
   modalCallback = null;
 }
 
-function peApasareIconHeader() {
-  if (tipTabCurent === 'orar') {
-    comutaExpandareBaraCalendar();
-  }
-}
-
-function comutaExpandareBaraCalendar() {
-  let card = document.getElementById('calendarExpandableCard');
-  if (card) {
-    card.classList.toggle('is-expanded');
-  }
-}
-
 function autoScrollLaOraCurenta() {
   let now = new Date();
   let day = now.getDay();
@@ -303,13 +287,9 @@ function autoScrollLaOraCurenta() {
       window.scrollTo({ top: 0, behavior: 'auto' });
     } else {
       let headerEl = document.querySelector('header');
-      let daySelectorWrap = document.querySelector('.day-selector-wrapper');
-      
-      let hHeader = headerEl ? headerEl.offsetHeight : 44;
-      let hDayWrap = daySelectorWrap ? daySelectorWrap.offsetHeight : 45;
-      
-      // Adăugat +18px marjă suplimentară de siguranță pentru a nu tăia partea de sus a slotului
-      let topOffset = hHeader + hDayWrap + 18;
+      let daySelector = document.getElementById('dayButtonsContainer');
+      // Adăugat + 18px marjă suplimentară pentru a nu tăia slotul sus
+      let topOffset = (headerEl ? headerEl.offsetHeight : 46) + (daySelector ? daySelector.offsetHeight : 45) + 18;
       
       let blockRect = closestBlock.getBoundingClientRect();
       let targetY = blockRect.top + window.pageYOffset - topOffset;
@@ -335,7 +315,7 @@ function peComutareIstoricIncasari(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 44;
+      let hOffset = headerEl ? headerEl.offsetHeight : 46;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -349,8 +329,8 @@ function peComutareIstoricOrar(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let daySelectorWrap = document.querySelector('.day-selector-wrapper');
-      let hOffset = (headerEl ? headerEl.offsetHeight : 44) + (daySelectorWrap ? daySelectorWrap.offsetHeight : 45);
+      let daySelector = document.getElementById('dayButtonsContainer');
+      let hOffset = (headerEl ? headerEl.offsetHeight : 46) + (daySelector ? daySelector.offsetHeight : 45);
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -364,7 +344,7 @@ function peComutareIstoricFisa(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 44;
+      let hOffset = headerEl ? headerEl.offsetHeight : 46;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -376,7 +356,7 @@ function peComutareIstoricFisa(detailsEl) {
 
 window.onload = function() {
   reseteazaDateIncasariAzi();
-  ataseazaAscultatoriCuratareErori();
+  leagaAscultatoriCuratareErori();
 
   let d = new Date();
   let aziIdx = d.getDay();
@@ -410,6 +390,12 @@ window.onload = function() {
   filtreazaIstoricOrarInstant();
 
   animaPilaMercur(0);
+
+  // Asigură funcționalitatea iconiței din header pe orar
+  let iconHeader = document.querySelector('#pageTitleWrapper svg');
+  if (iconHeader) {
+    iconHeader.onclick = comutaExpandareBaraCalendar;
+  }
 
   setTimeout(() => {
     autoScrollLaOraCurenta();
@@ -448,6 +434,13 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePr
       }, 50);
     }
   });
+}
+
+function comutaExpandareBaraCalendar() {
+  let card = document.getElementById('calendarExpandableCard');
+  if (card) {
+    card.classList.toggle('is-expanded');
+  }
 }
 
 function schimbaSaptamanaAnimat(directie) {
@@ -635,7 +628,6 @@ function populeazaSelectoriCliente() {
   }
 }
 
-// ARANJARE STRICT INVERS CALENDARISTICĂ: DECEMBRIE -> IANUARIE
 function populeazaSelectorLuni() {
   let selLuna = document.getElementById('filtruLunaIncasari');
   if (!selLuna) return;
@@ -649,10 +641,7 @@ function populeazaSelectorLuni() {
     }
   });
 
-  const luniRo = [
-    "ianuarie", "februarie", "martie", "aprilie", "mai", "iunie",
-    "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"
-  ];
+  const luniRo = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
 
   function calculeazaScorLuna(str) {
     if (!str) return 0;
@@ -680,7 +669,6 @@ function populeazaSelectorLuni() {
   }
 
   let luniArray = Array.from(luniSet);
-  // Sortare descrescătoare (an mai recent primul, iar luna de la Decembrie spre Ianuarie)
   luniArray.sort((a, b) => calculeazaScorLuna(b) - calculeazaScorLuna(a));
 
   selLuna.innerHTML = '<option value="">Toate lunile</option>';
@@ -697,7 +685,6 @@ function populeazaSelectorLuni() {
 }
 
 function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
-  tipTabCurent = tipTab;
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
   let target = document.getElementById(tabId);
@@ -713,47 +700,39 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
     let iconHtml = '';
     if (tipTab === 'orar') {
       iconHtml = `
-        <button class="header-icon-trigger-btn" id="headerIconBtn" onclick="peApasareIconHeader()" title="Apasă pentru comutare săptămână">
-          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="9" x2="21" y2="9"></line>
-            <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-            <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-          </svg>
-        </button>
+        <svg onclick="comutaExpandareBaraCalendar()" viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; cursor:pointer;" title="Apasă pentru selectorul de săptămână">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+        </svg>
       `;
     } else if (tipTab === 'prog') {
       iconHtml = `
-        <div style="display:inline-flex; align-items:center; padding:4px;">
-          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <path d="M9 11l3 3L22 4"></path>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-          </svg>
-        </div>
+        <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
       `;
     } else if (tipTab === 'fisa') {
       iconHtml = `
-        <div style="display:inline-flex; align-items:center; padding:4px;">
-          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-            <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-            <circle cx="12" cy="10" r="3"></circle>
-            <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
-          </svg>
-        </div>
+        <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <circle cx="12" cy="10" r="3"></circle>
+          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+        </svg>
       `;
     } else if (tipTab === 'incasari') {
       reseteazaDateIncasariAzi();
       iconHtml = `
-        <div style="display:inline-flex; align-items:center; padding:4px;">
-          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2;">
-            <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-            <line x1="2" y1="10" x2="22" y2="10"></line>
-            <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
-            <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
-          </svg>
-        </div>
+        <svg viewBox="0 0 24 24" style="width:22px; height:22px; stroke:#fff; fill:none; stroke-width:2;">
+          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+          <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
+          <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
+        </svg>
       `;
     }
     wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
@@ -1519,7 +1498,7 @@ function salveazaIncasare() {
   let dataStart = elDataStart ? elDataStart.value : "";
 
   // Resetare stiluri eroare anterioare
-  [elNume, elTip, elPreset, elCustom, elMetoda, elDataPlata, elDataStart].forEach(curataEroareInput);
+  [elNume, elTip, elPreset, elCustom, elMetoda, elDataPlata, elDataStart].forEach(curataEroareCamp);
 
   let areErori = false;
   let primulCampGresit = null;
@@ -1535,12 +1514,10 @@ function salveazaIncasare() {
     areErori = true;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
-    if (elPreset && elPreset.value === 'custom') {
-      if (elCustom) elCustom.classList.add('input-error');
-      if (!primulCampGresit) primulCampGresit = elCustom;
-    } else if (elPreset) {
-      elPreset.classList.add('input-error');
-      if (!primulCampGresit) primulCampGresit = elPreset;
+    let tintaSuma = (elPreset && elPreset.value === 'custom') ? elCustom : elPreset;
+    if (tintaSuma) {
+      tintaSuma.classList.add('input-error');
+      if (!primulCampGresit) primulCampGresit = tintaSuma;
     }
     areErori = true;
   }
@@ -1608,7 +1585,7 @@ function deschideModalEditareIncasare(itemEncoded) {
   let elMet = document.getElementById('editIncMetoda');
   let elTip = document.getElementById('editIncTip');
 
-  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareInput);
+  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
 
   if (elRow) elRow.value = item.row;
   if (elCli) elCli.value = item.clienta || "";
@@ -1642,42 +1619,42 @@ function salveazaModificareIncasare() {
   let metoda = elMet ? elMet.value : "";
   let tip = elTip ? elTip.value : "";
 
-  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareInput);
+  [elCli, elData, elSuma, elMet, elTip].forEach(curataEroareCamp);
 
   if (!row) return;
 
   let areErori = false;
-  let primulCamp = null;
+  let primulCampGresit = null;
 
   if (!clienta) {
     if (elCli) elCli.classList.add('input-error');
-    if (!primulCamp) primulCamp = elCli;
+    if (!primulCampGresit) primulCampGresit = elCli;
     areErori = true;
   }
   if (!dataStr) {
     if (elData) elData.classList.add('input-error');
-    if (!primulCamp) primulCamp = elData;
+    if (!primulCampGresit) primulCampGresit = elData;
     areErori = true;
   }
   if (suma === "" || suma === null || isNaN(Number(suma)) || Number(suma) < 0) {
     if (elSuma) elSuma.classList.add('input-error');
-    if (!primulCamp) primulCamp = elSuma;
+    if (!primulCampGresit) primulCampGresit = elSuma;
     areErori = true;
   }
   if (!metoda || metoda === "-" || metoda === "") {
     if (elMet) elMet.classList.add('input-error');
-    if (!primulCamp) primulCamp = elMet;
+    if (!primulCampGresit) primulCampGresit = elMet;
     areErori = true;
   }
   if (!tip || tip === "-" || tip === "") {
     if (elTip) elTip.classList.add('input-error');
-    if (!primulCamp) primulCamp = elTip;
+    if (!primulCampGresit) primulCampGresit = elTip;
     areErori = true;
   }
 
   if (areErori) {
-    showToast("Completează corect toate câmpurile!", "error");
-    if (primulCamp) primulCamp.focus();
+    showToast("Completează toate câmpurile obligatorii!", "error");
+    if (primulCampGresit) primulCampGresit.focus();
     return;
   }
 
