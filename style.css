@@ -15,6 +15,7 @@
   --color-hold: #f5b041;
   --placeholder-fade: #94a3b8;
   --accent-purple: #8b5cf6;
+  --header-height: 48px;
 }
 
 * {
@@ -28,18 +29,19 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  padding-bottom: 75px;
+  padding-bottom: 70px;
 }
 
 header {
   background: var(--primary);
   color: #fff;
-  padding: 12px 14px;
+  padding: 5px 12px;
+  height: var(--header-height);
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   justify-content: space-between;
@@ -49,8 +51,9 @@ header {
 .header-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 700;
+  width: 100%;
 }
 
 .header-title-wrapper svg {
@@ -110,11 +113,11 @@ header {
 .container {
   max-width: 650px;
   margin: 0 auto;
-  padding: 8px;
+  padding: 2px 8px 6px;
   width: 100%;
 }
 
-/* NAVIGARE BOTTOM BAR CU EFECT MERCUR / LIQUID GLASS GLISANT */
+/* NAVIGARE BOTTOM BAR */
 nav {
   position: fixed;
   bottom: 0;
@@ -125,7 +128,7 @@ nav {
   -webkit-backdrop-filter: blur(14px);
   display: flex;
   border-top: 1px solid rgba(208, 215, 222, 0.7);
-  z-index: 100;
+  z-index: 1000;
   max-width: 650px;
   margin: 0 auto;
   height: 64px;
@@ -213,7 +216,7 @@ nav button.active svg {
   transform: scale(1.08);
 }
 
-/* TRANZIȚIE FLUIDĂ ÎNTRE TAB-URI */
+/* TRANZIȚII TAB-URI */
 @keyframes tabFadeInSlide {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
@@ -233,19 +236,19 @@ nav button.active svg {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
-  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   max-height: 0;
   opacity: 0;
+  margin: 0;
   padding: 0 10px;
   pointer-events: none;
   transform: translateY(-8px);
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.25s ease,
-              transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-              margin 0.35s ease,
-              padding 0.35s ease;
+              transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.32s ease,
+              padding 0.32s ease;
 }
 
 .calendar-expandable-card.is-expanded {
@@ -253,8 +256,8 @@ nav button.active svg {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
-  margin-bottom: 8px;
-  padding: 8px 10px 10px;
+  margin-bottom: 6px;
+  padding: 6px 10px 8px;
   background: #faf8fc;
   border-color: #d6cae8;
   box-shadow: 0 4px 12px rgba(92, 77, 125, 0.08);
@@ -266,13 +269,13 @@ nav button.active svg {
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 8px 12px 4px;
+  padding: 2px 8px 4px;
   background: none;
   border: none;
   cursor: pointer;
   position: relative;
   text-align: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .calendar-title-container {
@@ -296,10 +299,9 @@ nav button.active svg {
 
 .drawer-nav-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
 }
 
 .drawer-nav-btn {
@@ -307,8 +309,8 @@ nav button.active svg {
   background: #ffffff;
   border: 1px solid #dcd3eb;
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.78rem;
+  padding: 6px 8px;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--primary);
   cursor: pointer;
@@ -329,8 +331,8 @@ nav button.active svg {
   background: var(--primary-light);
   border: 1px solid #d4c7ea;
   color: var(--primary-dark);
-  padding: 8px 12px;
-  font-size: 0.78rem;
+  padding: 6px 12px;
+  font-size: 0.76rem;
   font-weight: 800;
   border-radius: 8px;
   cursor: pointer;
@@ -345,47 +347,48 @@ nav button.active svg {
 }
 
 .badge-sub-info {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--primary);
   background: var(--primary-light);
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 8px;
   display: inline-block;
 }
 
+/* TABURILE CU ZILE STICKY - ÎNGHEȚATE EXACT SUB HEADER */
 .day-selector {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
-  padding: 4px 0 8px;
-  margin-bottom: 8px;
+  padding: 2px 0 4px;
+  margin-bottom: 4px;
   position: sticky;
-  top: 48px;
-  z-index: 90;
+  top: var(--header-height);
+  z-index: 950;
   background: var(--bg);
+  box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 }
 
 .day-btn {
   flex: 1;
-  min-width: 60px;
-  padding: 7px 4px;
-  border-radius: 20px;
+  min-width: 58px;
+  padding: 5px 3px;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: #fff;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
 }
 
 .day-btn .day-date-sub {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   opacity: 0.8;
   font-weight: 500;
 }
@@ -399,21 +402,21 @@ nav button.active svg {
 .card {
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
   border: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* BLOCURI ORAR CU DIMENSIUNEA ORIGINALĂ */
+/* CARDURI ORE: PĂSTRATE MARI ȘI AERISITE, COMPACTATE DOAR LA MARJE */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
-  border-radius: 12px;
-  margin-bottom: 10px;
+  border-radius: 11px;
+  margin-bottom: 5px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.22s ease;
 }
 
 @keyframes pulseOraCurenta {
@@ -423,7 +426,7 @@ nav button.active svg {
     background-color: rgba(139, 92, 246, 0.12);
   }
   50% { 
-    box-shadow: 0 0 0 12px rgba(139, 92, 246, 0); 
+    box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); 
     border-color: var(--accent-purple);
     background-color: rgba(139, 92, 246, 0.04);
   }
@@ -440,9 +443,10 @@ nav button.active svg {
   border-left: 4px solid var(--accent-purple) !important;
 }
 
+/* HEADER ORE MICȘORAT CU 1 PIXEL */
 .hour-header {
   background: #ede9f4;
-  padding: 6px 10px;
+  padding: 5px 9px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -452,9 +456,9 @@ nav button.active svg {
 .hour-title-wrap {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   font-weight: 800;
-  font-size: 0.98rem;
+  font-size: 0.94rem;
   color: var(--primary-dark);
 }
 
@@ -462,19 +466,19 @@ nav button.active svg {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 2px;
-  border-radius: 6px;
+  padding: 1px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
 }
 
 .hour-badge {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 10px;
+  padding: 2px 6px;
+  border-radius: 8px;
 }
 
 .hour-badge-free { background: #e2e8f0; color: #475569; }
@@ -505,8 +509,8 @@ nav button.active svg {
 .slot-row {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 8px;
+  gap: 4px;
+  padding: 4px 7px;
   border-bottom: 1px solid #eef2f6;
 }
 
@@ -531,7 +535,7 @@ nav button.active svg {
 }
 
 .slot-num {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
   min-width: 14px;
@@ -549,7 +553,7 @@ nav button.active svg {
   width: 100%;
   border: 1px solid #cbd5e1;
   padding: 4px 6px;
-  border-radius: 6px;
+  border-radius: 5px;
   font-size: 0.82rem;
   background: #fff;
   outline: none;
@@ -564,7 +568,7 @@ input::placeholder,
 textarea::placeholder {
   color: var(--placeholder-fade) !important;
   opacity: 0.85 !important;
-  font-size: 0.82rem !important;
+  font-size: 0.8rem !important;
   font-family: inherit !important;
   font-weight: 400 !important;
 }
@@ -575,17 +579,17 @@ select.slot-select-type {
   -webkit-appearance: none;
   background-image: url('data:image/svg+xml;utf8,<svg fill="%2364748b" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
   background-repeat: no-repeat;
-  background-position: right 14px center;
-  padding-right: 28px !important;
+  background-position: right 12px center;
+  padding-right: 24px !important;
   font-family: inherit;
 }
 
 .slot-select-type {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 0.76rem;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 0.75rem;
   background-color: #fff;
   outline: none;
   font-weight: 600;
@@ -615,10 +619,10 @@ select.slot-select-type {
   background: var(--primary);
   color: #fff;
   border: none;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -628,19 +632,19 @@ select.slot-select-type {
 .btn-save-check {
   background: #16a34a;
   color: white;
-  padding: 5px 8px;
-  font-size: 0.78rem;
+  padding: 4px 7px;
+  font-size: 0.76rem;
   font-weight: 700;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .btn-clear {
   background: #e2e8f0;
   color: #475569;
-  padding: 5px 7px;
-  font-size: 0.78rem;
+  padding: 4px 6px;
+  font-size: 0.76rem;
   font-weight: 700;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .btn-archive {
@@ -657,7 +661,7 @@ select.slot-select-type {
   outline: 1px solid #b91c1c !important;
 }
 
-/* CARDUL FINALUL PROGRAMULUI CU ICOANĂ MARE CENTRATĂ */
+/* CARDUL FINALUL PROGRAMULUI */
 .end-schedule-card {
   margin: 6px 0 10px;
   padding: 12px 14px;
@@ -691,9 +695,9 @@ select.slot-select-type {
   letter-spacing: -0.2px;
 }
 
-/* EMPTY STATE PENTRU FIȘĂ CLIENTĂ */
+/* EMPTY STATE FIȘĂ CLIENTĂ */
 .empty-state-card {
-  padding: 34px 16px;
+  padding: 30px 16px;
   text-align: center;
   background: #faf8fc;
   border: 1px dashed #d6cae8;
@@ -706,19 +710,19 @@ select.slot-select-type {
 }
 
 .empty-state-icon-wrap {
-  width: 58px;
-  height: 58px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: var(--primary-light);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .empty-state-svg {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   stroke: var(--primary);
   fill: none;
   stroke-width: 2;
@@ -733,16 +737,16 @@ select.slot-select-type {
   border-radius: 8px;
   width: 100%;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .prog-grid-layout {
   display: grid;
   grid-template-columns: 26px 1.25fr 100px 1.15fr 28px;
-  padding: 8px 6px;
-  gap: 6px;
+  padding: 6px 5px;
+  gap: 5px;
   align-items: center;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   width: 100%;
   box-sizing: border-box;
 }
@@ -793,9 +797,9 @@ select.slot-select-type {
   background-position: right 6px center;
   border: 2px solid #ffffff !important;
   border-radius: 14px;
-  padding: 5px 16px 5px 4px;
+  padding: 4px 14px 4px 4px;
   font-weight: 800;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   cursor: pointer;
   text-align: center;
   text-align-last: center;
@@ -815,12 +819,12 @@ select.slot-select-type {
   border: 1px solid #e0e0e0;
   background: #fafafa;
   padding: 4px 6px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: #333;
   outline: none;
   border-radius: 6px;
   resize: vertical;
-  min-height: 28px;
+  min-height: 26px;
   font-family: inherit;
   line-height: 1.25;
   word-break: break-word;
@@ -831,11 +835,11 @@ select.slot-select-type {
   background: var(--color-hold);
   color: #000;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.95rem;
   text-align: center;
-  padding: 8px;
+  padding: 7px;
   border-radius: 8px 8px 0 0;
-  margin-top: 14px;
+  margin-top: 12px;
   letter-spacing: 1px;
   border: 1px solid #e0a030;
   border-bottom: none;
@@ -854,7 +858,7 @@ select.slot-select-type {
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -871,15 +875,15 @@ select.slot-select-type {
 .incasari-table-fit {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.75rem;
-  margin-top: 10px;
+  font-size: 0.74rem;
+  margin-top: 8px;
   table-layout: fixed;
 }
 
 .incasari-table-fit th {
   background: var(--primary-light);
   color: var(--primary-dark);
-  padding: 6px 3px;
+  padding: 5px 3px;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
@@ -888,7 +892,7 @@ select.slot-select-type {
 }
 
 .incasari-table-fit td {
-  padding: 6px 3px;
+  padding: 5px 3px;
   border-bottom: 1px solid #eee;
   vertical-align: middle;
   word-break: break-word;
@@ -924,15 +928,15 @@ select.slot-select-type {
   background: linear-gradient(135deg, #f4effa, #ffffff);
   border: 1px solid #dfd5ed;
   border-radius: 10px;
-  padding: 10px 14px;
-  margin-bottom: 10px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .total-incasari-label {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--primary-dark);
   text-transform: uppercase;
@@ -940,14 +944,14 @@ select.slot-select-type {
 }
 
 .total-incasari-count {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 600;
   margin-top: 2px;
 }
 
 .total-incasari-val {
-  font-size: 1.25rem;
+  font-size: 1.18rem;
   font-weight: 900;
   color: #15803d;
 }
@@ -955,10 +959,10 @@ select.slot-select-type {
 .progress-wrapper {
   background: #e2e8f0;
   border-radius: 10px;
-  height: 16px;
+  height: 14px;
   width: 100%;
   overflow: hidden;
-  margin: 8px 0 4px;
+  margin: 6px 0 4px;
 }
 
 .progress-fill {
@@ -972,29 +976,29 @@ select.slot-select-type {
 .metric-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .metric-box {
   background: var(--primary-light);
-  padding: 12px;
+  padding: 10px;
   border-radius: 10px;
   text-align: center;
 }
 
 .metric-val {
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: var(--primary-dark);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .badge {
   display: inline-block;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
@@ -1003,31 +1007,32 @@ select.slot-select-type {
 .badge-arhivat { background: #e2e8f0; color: #475569; }
 
 .form-group {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: var(--text-muted);
 }
 
 .form-control {
   width: 100%;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 8px;
   border: 1px solid var(--border);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   background: #fff;
+  transition: border-color 0.2s ease;
 }
 
 .loader {
   text-align: center;
-  padding: 20px;
+  padding: 16px;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .summary-toggle-clean {
@@ -1037,7 +1042,7 @@ select.slot-select-type {
   font-weight: 700;
   color: var(--primary);
   cursor: pointer;
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   outline: none;
   user-select: none;
 }
@@ -1063,14 +1068,14 @@ select.slot-select-type {
 
 #customToast {
   position: fixed;
-  top: 20px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%) translateY(-100px);
   background: #1e293b;
   color: #fff;
-  padding: 10px 18px;
+  padding: 9px 16px;
   border-radius: 30px;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 700;
   z-index: 9999;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
@@ -1106,22 +1111,22 @@ select.slot-select-type {
   width: 100%;
   max-width: 360px;
   border-radius: 16px;
-  padding: 20px;
+  padding: 18px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   text-align: center;
 }
 
 .custom-modal-title {
   font-weight: 800;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   color: var(--primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .custom-modal-text {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: #475569;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   line-height: 1.4;
 }
 
@@ -1150,7 +1155,7 @@ select.slot-select-type {
   width: 100%;
   max-width: 400px;
   border-radius: 16px;
-  padding: 20px;
+  padding: 18px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
   text-align: left;
 }
