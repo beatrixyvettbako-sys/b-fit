@@ -245,30 +245,15 @@ function closeCustomModal(confirmed) {
   modalCallback = null;
 }
 
-function comutaExpandareBaraCalendar() {
+function comutaExpandareBaraCalendar(event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
   if (tipTabCurent !== 'orar') return;
   let card = document.getElementById('calendarExpandableCard');
   if (card) {
     card.classList.toggle('is-expanded');
-  }
-}
-
-function leagaEvenimentIconHeader() {
-  let wrapper = document.getElementById('pageTitleWrapper');
-  if (!wrapper) return;
-  
-  if (tipTabCurent === 'orar') {
-    wrapper.classList.add('has-bubble');
-    let iconHeader = wrapper.querySelector('svg');
-    if (iconHeader) {
-      iconHeader.onclick = comutaExpandareBaraCalendar;
-    }
-  } else {
-    wrapper.classList.remove('has-bubble');
-    let iconHeader = wrapper.querySelector('svg');
-    if (iconHeader) {
-      iconHeader.onclick = null;
-    }
   }
 }
 
@@ -311,12 +296,31 @@ function autoScrollLaOraCurenta() {
   });
 
   if (closestBlock) {
+    let oraText = closestBlock.getAttribute('data-ora') || "";
+    let hVal = parseInt(oraText.split(':')[0], 10) || 0;
+    let endCard = document.getElementById('endScheduleCard');
+
+    if (hVal >= 17 && endCard) {
+      let vpHeight = window.innerHeight || document.documentElement.clientHeight;
+      let headerEl = document.querySelector('header');
+      let daySelector = document.getElementById('dayButtonsContainer');
+      let hHeader = headerEl ? headerEl.offsetHeight : 54;
+      let hDay = daySelector ? daySelector.offsetHeight : 45;
+      let availableSpace = vpHeight - (hHeader + hDay);
+
+      let bRect = closestBlock.getBoundingClientRect();
+      let diffExtra = Math.max(0, Math.round(availableSpace - bRect.height - 30));
+      endCard.style.minHeight = (diffExtra > 44 ? diffExtra : 44) + 'px';
+    } else if (endCard) {
+      endCard.style.minHeight = '44px';
+    }
+
     if (currentHour <= 8) {
       window.scrollTo({ top: 0, behavior: 'auto' });
     } else {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let topOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45) + 6;
+      let topOffset = (headerEl ? headerEl.offsetHeight : 54) + (daySelector ? daySelector.offsetHeight : 45) + 6;
       
       let blockRect = closestBlock.getBoundingClientRect();
       let targetY = blockRect.top + window.pageYOffset - topOffset;
@@ -342,7 +346,7 @@ function peComutareIstoricIncasari(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 52;
+      let hOffset = headerEl ? headerEl.offsetHeight : 54;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -357,7 +361,7 @@ function peComutareIstoricOrar(detailsEl) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let hOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45);
+      let hOffset = (headerEl ? headerEl.offsetHeight : 54) + (daySelector ? daySelector.offsetHeight : 45);
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -371,7 +375,7 @@ function peComutareIstoricFisa(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 52;
+      let hOffset = headerEl ? headerEl.offsetHeight : 54;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -417,7 +421,7 @@ window.onload = function() {
   filtreazaIstoricOrarInstant();
 
   animaPilaMercur(0);
-  leagaEvenimentIconHeader();
+  actualizeazaHeaderVisual(tipTabCurent, 'Orar Săptămânal');
 
   setTimeout(() => {
     autoScrollLaOraCurenta();
@@ -586,6 +590,8 @@ function schimbaZiInstant(ziCheie) {
   if (esteAzi) {
     autoScrollLaOraCurenta();
   } else {
+    let endCard = document.getElementById('endScheduleCard');
+    if (endCard) endCard.style.minHeight = '44px';
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
@@ -709,6 +715,58 @@ function populeazaSelectorLuni() {
   }
 }
 
+function actualizeazaHeaderVisual(tipTab, titlu) {
+  let wrapper = document.getElementById('pageTitleWrapper');
+  if (!wrapper) return;
+
+  let iconHtml = '';
+  if (tipTab === 'orar') {
+    iconHtml = `
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="9" x2="21" y2="9"></line>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
+        </svg>
+      </button>
+    `;
+  } else if (tipTab === 'prog') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 11l3 3L22 4"></path>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </div>
+    `;
+  } else if (tipTab === 'fisa') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+          <circle cx="12" cy="10" r="3"></circle>
+          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+        </svg>
+      </div>
+    `;
+  } else if (tipTab === 'incasari') {
+    iconHtml = `
+      <div class="header-static-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+          <line x1="2" y1="10" x2="22" y2="10"></line>
+          <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
+          <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
+        </svg>
+      </div>
+    `;
+  }
+  wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
+}
+
 function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -721,50 +779,12 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (typeof tabIdx === 'number') {
     animaPilaMercur(tabIdx);
   }
-  
-  let wrapper = document.getElementById('pageTitleWrapper');
-  if (wrapper) {
-    let iconHtml = '';
-    if (tipTab === 'orar') {
-      iconHtml = `
-        <svg viewBox="0 0 24 24" style="stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="9" x2="21" y2="9"></line>
-          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-        </svg>
-      `;
-    } else if (tipTab === 'prog') {
-      iconHtml = `
-        <svg viewBox="0 0 24 24" style="stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-          <path d="M9 11l3 3L22 4"></path>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-        </svg>
-      `;
-    } else if (tipTab === 'fisa') {
-      iconHtml = `
-        <svg viewBox="0 0 24 24" style="stroke:#fff; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;">
-          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-          <circle cx="12" cy="10" r="3"></circle>
-          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
-        </svg>
-      `;
-    } else if (tipTab === 'incasari') {
-      reseteazaDateIncasariAzi();
-      iconHtml = `
-        <svg viewBox="0 0 24 24" style="stroke:#fff; fill:none; stroke-width:2;">
-          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-          <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
-          <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
-        </svg>
-      `;
-    }
-    wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
-    leagaEvenimentIconHeader();
+
+  if (tipTab === 'incasari') {
+    reseteazaDateIncasariAzi();
   }
+  
+  actualizeazaHeaderVisual(tipTab, titlu);
 
   let detOrar = document.getElementById('detailsIstoricOrar');
   if (detOrar) detOrar.open = false;
@@ -945,9 +965,9 @@ function randeazaOrarInstant() {
     html += `</div></div>`;
   });
 
-  // Card cu iconiță de calendar și text elegant plasat exact după ora 18
+  // Card plasat imediat după ora 18 cu calendar și text
   html += `
-    <div class="end-schedule-card">
+    <div class="end-schedule-card" id="endScheduleCard">
       <svg viewBox="0 0 24 24">
         <rect x="3" y="4" width="18" height="18" rx="2"></rect>
         <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -955,7 +975,7 @@ function randeazaOrarInstant() {
         <line x1="3" y1="9" x2="21" y2="9"></line>
         <circle cx="12" cy="14" r="1.5" fill="currentColor"></circle>
       </svg>
-      <span class="end-schedule-text">Finalul programului de antrenamente</span>
+      <span class="end-schedule-text">Finalul Programului</span>
     </div>
   `;
 
