@@ -15,7 +15,7 @@
   --color-hold: #f5b041;
   --placeholder-fade: #94a3b8;
   --accent-purple: #8b5cf6;
-  --header-height: 46px;
+  --header-height: 48px;
 }
 
 * {
@@ -32,14 +32,13 @@ body {
   padding-bottom: 75px;
 }
 
-/* HEADER COMPACT UNIFORM */
 header {
   background: var(--primary);
   color: #fff;
   padding: 6px 12px;
   height: var(--header-height);
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 1.05rem;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -52,17 +51,27 @@ header {
 .header-title-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 700;
 }
 
+/* BULA SEMI-TRANSPARENTĂ PERMANENTĂ PENTRU ICOANA DIN HEADER */
 .header-title-wrapper svg {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9px;
+  padding: 3px;
+  width: 28px;
+  height: 28px;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
 }
 
 .header-title-wrapper svg:active {
   transform: scale(0.92);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .container {
@@ -72,7 +81,7 @@ header {
   width: 100%;
 }
 
-/* NAVIGARE BOTTOM BAR CU EFECT MERCUR / LIQUID GLASS GLISANT */
+/* NAVIGARE BOTTOM BAR CU EFECT MERCUR */
 nav {
   position: fixed;
   bottom: 0;
@@ -171,7 +180,7 @@ nav button.active svg {
   transform: scale(1.08);
 }
 
-/* TRANZIȚIE FLUIDĂ ÎNTRE TAB-URI */
+/* TRANZIȚIE TAB-URI */
 @keyframes tabFadeInSlide {
   from { opacity: 0; transform: translateY(7px); }
   to { opacity: 1; transform: translateY(0); }
@@ -186,117 +195,78 @@ nav button.active svg {
   animation: tabFadeInSlide 0.38s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* BARĂ UNICĂ EXPANDABILĂ */
+/* SELECTOR SĂPTĂMÂNĂ: COMPLET ASCUNS INITIAL, APARE DIRECT EXPANDED LA TAP */
 .calendar-expandable-card {
   background: #ffffff;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  margin-bottom: 6px;
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0 10px;
+  pointer-events: none;
+  transform: translateY(-10px);
+  transition: max-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease,
+              transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+              margin 0.32s ease,
+              padding 0.32s ease;
+}
+
+.calendar-expandable-card.is-expanded {
+  max-height: 140px;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  margin-bottom: 8px;
+  padding: 8px 10px 10px;
+  background: #faf8fc;
+  border-color: #d6cae8;
+  box-shadow: 0 4px 12px rgba(92, 77, 125, 0.08);
 }
 
 .calendar-expand-trigger {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   width: 100%;
-  padding: 6px 10px;
+  padding: 2px 8px 6px;
   background: none;
   border: none;
   cursor: pointer;
   position: relative;
-  text-align: left;
+  text-align: center;
+  gap: 3px;
 }
 
 .calendar-icon-container {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: none;
 }
 
 .calendar-title-container {
-  flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: 0 4px;
+  gap: 6px;
 }
 
 .calendar-title-text {
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--primary-dark);
-  transition: transform 0.25s ease, color 0.2s ease;
+  color: var(--primary);
   letter-spacing: -0.2px;
 }
 
 .calendar-toggle-hint {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
-}
-
-.calendar-expandable-card.is-expanded {
-  background: #faf8fc;
-  border-color: #d6cae8;
-  box-shadow: 0 3px 8px rgba(92, 77, 125, 0.07);
-  padding-top: 2px;
-}
-
-.calendar-expandable-card.is-expanded .calendar-expand-trigger {
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px 3px;
-  gap: 3px;
-}
-
-.calendar-expandable-card.is-expanded .calendar-icon-container {
-  transform: translateY(1px) scale(1.1);
-}
-
-.calendar-expandable-card.is-expanded .calendar-title-text {
-  font-size: 0.9rem;
-  color: var(--primary);
-}
-
-.calendar-expandable-card.is-expanded .calendar-toggle-hint {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  transform: rotate(180deg);
+  display: none;
 }
 
 .calendar-drawer-content {
-  max-height: 0;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
-              opacity 0.22s ease, 
-              transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-              padding 0.3s ease;
-  padding: 0 10px;
-  pointer-events: none;
-}
-
-.calendar-expandable-card.is-expanded .calendar-drawer-content {
-  max-height: 110px;
-  opacity: 1;
-  transform: translateY(0);
-  padding: 4px 10px 8px;
-  pointer-events: auto;
+  width: 100%;
+  margin-top: 4px;
 }
 
 .drawer-nav-actions {
@@ -304,7 +274,6 @@ nav button.active svg {
   gap: 6px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 2px;
 }
 
 .drawer-nav-btn {
@@ -312,8 +281,8 @@ nav button.active svg {
   background: #ffffff;
   border: 1px solid #dcd3eb;
   border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 0.74rem;
+  padding: 7px 8px;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--primary);
   cursor: pointer;
@@ -334,8 +303,8 @@ nav button.active svg {
   background: var(--primary-light);
   border: 1px solid #d4c7ea;
   color: var(--primary-dark);
-  padding: 6px 10px;
-  font-size: 0.74rem;
+  padding: 7px 12px;
+  font-size: 0.76rem;
   font-weight: 800;
   border-radius: 8px;
   cursor: pointer;
@@ -359,25 +328,25 @@ nav button.active svg {
   display: inline-block;
 }
 
-/* TABURILE CU ZILE STICKY - FĂRĂ SPAȚIU REZIDUAL LA SCROLL */
+/* TABURILE CU ZILE STICKY DIRECT SUB HEADER */
 .day-selector {
   display: flex;
   gap: 5px;
   overflow-x: auto;
   padding: 4px 0 6px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   position: sticky;
   top: var(--header-height);
   z-index: 90;
   background: var(--bg);
-  box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 4px -2px rgba(0, 0, 0, 0.04);
 }
 
 .day-btn {
   flex: 1;
   min-width: 58px;
-  padding: 5px 3px;
-  border-radius: 16px;
+  padding: 6px 3px;
+  border-radius: 18px;
   border: 1px solid var(--border);
   background: #fff;
   font-size: 0.8rem;
@@ -411,11 +380,11 @@ nav button.active svg {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* BLOCURI ORAR OPTIMIZATE SĂ ÎNCAPĂ 3 ORE COMPLETE */
+/* CARDURI CU ORE ÎNCĂPĂTOARE (EXACT 3 ORE COMPLETE PE ECRAN) */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
-  border-radius: 10px;
+  border-radius: 11px;
   margin-bottom: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -442,13 +411,13 @@ nav button.active svg {
 
 .hour-block-current-highlight {
   animation: pulseOraCurenta 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  border-color: var(--accent-purple);
-  border-left: 4px solid var(--accent-purple);
+  border-color: var(--accent-purple) !important;
+  border-left: 4px solid var(--accent-purple) !important;
 }
 
 .hour-header {
   background: #ede9f4;
-  padding: 4px 8px;
+  padding: 5px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -460,7 +429,7 @@ nav button.active svg {
   align-items: center;
   gap: 4px;
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--primary-dark);
 }
 
@@ -477,9 +446,9 @@ nav button.active svg {
 }
 
 .hour-badge {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  padding: 1px 6px;
+  padding: 2px 6px;
   border-radius: 8px;
 }
 
@@ -488,17 +457,17 @@ nav button.active svg {
 .hour-badge-blocked { background: #fee2e2; color: #b91c1c; font-weight: 800; }
 
 .hour-block-blocked {
-  border: 2px solid #ef4444;
+  border: 2px solid #ef4444 !important;
 }
 
 .hour-block-blocked .hour-header {
-  background: #fee2e2;
-  border-bottom: 1px solid #fca5a5;
+  background: #fee2e2 !important;
+  border-bottom: 1px solid #fca5a5 !important;
 }
 
 .hour-block-blocked .slot-row {
-  background: #fee2e2;
-  border-left: 4px solid #ef4444;
+  background: #fee2e2 !important;
+  border-left: 4px solid #ef4444 !important;
 }
 
 .hour-block-blocked .slot-row .slot-input,
@@ -512,7 +481,7 @@ nav button.active svg {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 6px;
+  padding: 5px 7px;
   border-bottom: 1px solid #eef2f6;
 }
 
@@ -521,8 +490,8 @@ nav button.active svg {
 }
 
 .slot-occupied {
-  background: #f0fdf4;
-  border-left: 4px solid #22c55e;
+  background: #f0fdf4 !important;
+  border-left: 4px solid #22c55e !important;
 }
 
 .slot-occupied .slot-input,
@@ -537,10 +506,10 @@ nav button.active svg {
 }
 
 .slot-num {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
-  min-width: 12px;
+  min-width: 14px;
   text-align: center;
 }
 
@@ -548,15 +517,15 @@ nav button.active svg {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .slot-input {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 5px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   background: #fff;
   outline: none;
   font-family: inherit;
@@ -568,11 +537,11 @@ nav button.active svg {
 
 input::placeholder,
 textarea::placeholder {
-  color: var(--placeholder-fade);
-  opacity: 0.85;
-  font-size: 0.8rem;
-  font-family: inherit;
-  font-weight: 400;
+  color: var(--placeholder-fade) !important;
+  opacity: 0.85 !important;
+  font-size: 0.8rem !important;
+  font-family: inherit !important;
+  font-weight: 400 !important;
 }
 
 select.form-control,
@@ -582,40 +551,40 @@ select.slot-select-type {
   background-image: url('data:image/svg+xml;utf8,<svg fill="%2364748b" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
   background-repeat: no-repeat;
   background-position: right 14px center;
-  padding-right: 28px;
+  padding-right: 28px !important;
   font-family: inherit;
 }
 
 .slot-select-type {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 5px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   background-color: #fff;
   outline: none;
   font-weight: 600;
 }
 
 .select-faded {
-  color: var(--placeholder-fade);
-  font-weight: normal;
+  color: var(--placeholder-fade) !important;
+  font-weight: normal !important;
 }
 
 .select-active {
-  color: #1e293b;
+  color: #1e293b !important;
 }
 
-.slot-select-type.ant-orange { background-color: #ffedd5; color: #c2410c; border-color: #fdba74; }
-.slot-select-type.ant-darkblue { background-color: #e0e7ff; color: #3730a3; border-color: #a5b4fc; }
-.slot-select-type.ant-lightblue { background-color: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
-.slot-select-type.ant-purple { background-color: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
-.slot-select-type.ant-red { background-color: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
-.slot-select-type.ant-pink { background-color: #fce7f3; color: #be185d; border-color: #f9a8d4; }
-.slot-select-type.ant-lightgreen { background-color: #dcfce7; color: #15803d; border-color: #86efac; }
-.slot-select-type.ant-yellow { background-color: #fef9c3; color: #a16207; border-color: #fde047; }
-.slot-select-type.ant-turquoise { background-color: #ccfbf1; color: #0f766e; border-color: #5eead4; }
-.slot-select-type.ant-burgundy { background-color: #ffe4e6; color: #881337; border-color: #fda4af; }
+.slot-select-type.ant-orange { background-color: #ffedd5 !important; color: #c2410c !important; border-color: #fdba74 !important; }
+.slot-select-type.ant-darkblue { background-color: #e0e7ff !important; color: #3730a3 !important; border-color: #a5b4fc !important; }
+.slot-select-type.ant-lightblue { background-color: #e0f2fe !important; color: #0369a1 !important; border-color: #7dd3fc !important; }
+.slot-select-type.ant-purple { background-color: #f3e8ff !important; color: #6b21a8 !important; border-color: #d8b4fe !important; }
+.slot-select-type.ant-red { background-color: #fee2e2 !important; color: #b91c1c !important; border-color: #fca5a5 !important; }
+.slot-select-type.ant-pink { background-color: #fce7f3 !important; color: #be185d !important; border-color: #f9a8d4 !important; }
+.slot-select-type.ant-lightgreen { background-color: #dcfce7 !important; color: #15803d !important; border-color: #86efac !important; }
+.slot-select-type.ant-yellow { background-color: #fef9c3 !important; color: #a16207 !important; border-color: #fde047 !important; }
+.slot-select-type.ant-turquoise { background-color: #ccfbf1 !important; color: #0f766e !important; border-color: #5eead4 !important; }
+.slot-select-type.ant-burgundy { background-color: #ffe4e6 !important; color: #881337 !important; border-color: #fda4af !important; }
 
 .btn {
   background: var(--primary);
@@ -657,13 +626,34 @@ select.slot-select-type {
   font-size: 0.8rem;
 }
 
-/* CHENAR ROȘU LA VALIDARE (SIMPLU, FĂRĂ IMPORTANT) */
+/* CHENAR ROȘU LA VALIDARE ERONATĂ */
 .input-error {
   border-color: #b91c1c;
-  outline-color: #b91c1c;
+  outline: 1px solid #b91c1c;
 }
 
-/* EMPTY STATE PENTRU FIȘĂ CLIENTĂ */
+/* PLACEHOLDER ELEGANT LA SCROLL SPRE ORELE 17/18 DACĂ RĂMÂNE LOC JOS */
+.end-schedule-spacer {
+  margin-top: 24px;
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.65;
+}
+
+.end-schedule-spacer svg {
+  width: 32px;
+  height: 32px;
+  stroke: var(--primary);
+  fill: none;
+  stroke-width: 1.8;
+}
+
+/* EMPTY STATE FIȘĂ CLIENTĂ */
 .empty-state-card {
   padding: 30px 16px;
   text-align: center;
@@ -763,7 +753,7 @@ select.slot-select-type {
   background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
   background-repeat: no-repeat;
   background-position: right 6px center;
-  border: 2px solid #ffffff;
+  border: 2px solid #ffffff !important;
   border-radius: 14px;
   padding: 4px 14px 4px 4px;
   font-weight: 800;
@@ -777,10 +767,10 @@ select.slot-select-type {
   font-family: inherit;
 }
 
-.pill-confirmata { background-color: var(--color-confirmata); color: #ffffff; }
-.pill-asteptare { background-color: var(--color-asteptare); color: #ffffff; }
-.pill-absenta { background-color: var(--color-absenta); color: #ffffff; }
-.pill-empty { background-color: var(--color-empty); color: #ffffff; }
+.pill-confirmata { background-color: var(--color-confirmata) !important; color: #ffffff !important; }
+.pill-asteptare { background-color: var(--color-asteptare) !important; color: #ffffff !important; }
+.pill-absenta { background-color: var(--color-absenta) !important; color: #ffffff !important; }
+.pill-empty { background-color: var(--color-empty) !important; color: #ffffff !important; }
 
 .prog-mentiuni-textarea {
   width: 100%;
@@ -814,11 +804,11 @@ select.slot-select-type {
 }
 
 .hold-row {
-  background: #fff3e0;
+  background: #fff3e0 !important;
 }
 
 .hold-row:nth-child(even) {
-  background: #ffe0b2;
+  background: #ffe0b2 !important;
 }
 
 .btn-trash-action {
@@ -869,7 +859,7 @@ select.slot-select-type {
 }
 
 .table-cell-center {
-  text-align: center;
+  text-align: center !important;
 }
 
 .dash-placeholder {
@@ -892,7 +882,6 @@ select.slot-select-type {
   background: #f3e8ff;
 }
 
-/* Card sumar total încasări */
 .total-incasari-card {
   background: linear-gradient(135deg, #f4effa, #ffffff);
   border: 1px solid #dfd5ed;
@@ -1105,7 +1094,6 @@ select.slot-select-type {
   justify-content: center;
 }
 
-/* Modal Editare Încasare */
 #modalEditareIncasareBackdrop {
   position: fixed;
   top: 0;
