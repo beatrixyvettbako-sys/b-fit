@@ -29,7 +29,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
-  padding-bottom: 74px;
+  padding-bottom: 75px;
 }
 
 header {
@@ -113,7 +113,7 @@ header {
 .container {
   max-width: 650px;
   margin: 0 auto;
-  padding: 6px 8px;
+  padding: 5px 8px;
   width: 100%;
 }
 
@@ -361,7 +361,7 @@ nav button.active svg {
   display: flex;
   gap: 5px;
   overflow-x: auto;
-  padding: 3px 0 5px;
+  padding: 2px 0 5px;
   margin-bottom: 6px;
   position: sticky;
   top: var(--header-height);
@@ -372,12 +372,12 @@ nav button.active svg {
 
 .day-btn {
   flex: 1;
-  min-width: 56px;
-  padding: 5px 3px;
-  border-radius: 16px;
+  min-width: 58px;
+  padding: 6px 3px;
+  border-radius: 18px;
   border: 1px solid var(--border);
   background: #fff;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
@@ -408,7 +408,7 @@ nav button.active svg {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-/* CARDURI ORE: AJUSTATE FOARTE DISCRET PENTRU ÎNCADRARE PERFECTĂ */
+/* CARDURI ORE: DIMENSIUNE ORIGINALĂ COMODĂ, RIDICATE CU CÂȚIVA PIXELI */
 .hour-block {
   background: #fff;
   border: 1px solid #d5dbe1;
@@ -445,7 +445,7 @@ nav button.active svg {
 
 .hour-header {
   background: #ede9f4;
-  padding: 4px 8px;
+  padding: 5px 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -457,7 +457,7 @@ nav button.active svg {
   align-items: center;
   gap: 4px;
   font-weight: 800;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--primary-dark);
 }
 
@@ -474,7 +474,7 @@ nav button.active svg {
 }
 
 .hour-badge {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -534,7 +534,7 @@ nav button.active svg {
 }
 
 .slot-num {
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: #64748b;
   min-width: 14px;
@@ -545,15 +545,15 @@ nav button.active svg {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .slot-input {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 5px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   background: #fff;
   outline: none;
   font-family: inherit;
@@ -567,7 +567,7 @@ input::placeholder,
 textarea::placeholder {
   color: var(--placeholder-fade) !important;
   opacity: 0.85 !important;
-  font-size: 0.78rem !important;
+  font-size: 0.8rem !important;
   font-family: inherit !important;
   font-weight: 400 !important;
 }
@@ -578,17 +578,17 @@ select.slot-select-type {
   -webkit-appearance: none;
   background-image: url('data:image/svg+xml;utf8,<svg fill="%2364748b" height="18" viewBox="0 0 24 24" width="18" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 24px !important;
+  background-position: right 14px center;
+  padding-right: 28px !important;
   font-family: inherit;
 }
 
 .slot-select-type {
   width: 100%;
   border: 1px solid #cbd5e1;
-  padding: 3px 6px;
+  padding: 4px 6px;
   border-radius: 5px;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   background-color: #fff;
   outline: none;
   font-weight: 600;
@@ -660,10 +660,10 @@ select.slot-select-type {
   outline: 1px solid #b91c1c !important;
 }
 
-/* CARDUL FINALUL PROGRAMULUI */
+/* CARDUL FINALUL PROGRAMULUI CU ICOANĂ CENTRATĂ DEASUPRA TEXTULUI */
 .end-schedule-card {
   margin: 6px 0 10px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: #faf8fc;
   border: 1px dashed #d6cae8;
   border-radius: 10px;
@@ -671,7 +671,7 @@ select.slot-select-type {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 6px;
   color: var(--primary);
   min-height: 52px;
   box-sizing: border-box;
@@ -680,8 +680,8 @@ select.slot-select-type {
 }
 
 .end-schedule-card svg {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   stroke: var(--primary);
   fill: none;
   stroke-width: 2;
@@ -689,7 +689,7 @@ select.slot-select-type {
 }
 
 .end-schedule-text {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: -0.2px;
 }
