@@ -414,25 +414,23 @@ nav button.active svg {
 @keyframes pulseOraCurenta {
   0% { 
     box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.7); 
-    border-color: var(--accent-purple);
-    background-color: rgba(139, 92, 246, 0.12);
+    outline: 2px solid var(--accent-purple);
+    background-color: rgba(139, 92, 246, 0.10);
   }
   50% { 
     box-shadow: 0 0 0 10px rgba(139, 92, 246, 0); 
-    border-color: var(--accent-purple);
+    outline: 2px solid var(--accent-purple);
     background-color: rgba(139, 92, 246, 0.04);
   }
   100% { 
     box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); 
-    border-color: #d5dbe1;
+    outline: 1px solid transparent;
     background-color: #fff;
   }
 }
 
 .hour-block-current-highlight {
   animation: pulseOraCurenta 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  border-color: var(--accent-purple) !important;
-  border-left: 4px solid var(--accent-purple) !important;
 }
 
 .hour-header {
@@ -662,38 +660,99 @@ select.slot-select-type {
   outline: 1px solid #b91c1c !important;
 }
 
-/* CARDUL FINALUL PROGRAMULUI CU ICOANĂ CENTRATĂ DEASUPRA TEXTULUI */
+/* CARDUL FINALUL PROGRAMULUI CU GANTERĂ ȘI SCALARE DINAMICĂ */
 .end-schedule-card {
   margin: 6px 0 10px;
   padding: 12px 14px;
   background: #faf8fc;
   border: 1px dashed #d6cae8;
-  border-radius: 10px;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
   color: var(--primary);
-  min-height: 52px;
+  min-height: 58px;
   box-sizing: border-box;
   text-align: center;
-  transition: min-height 0.25s ease, padding 0.25s ease;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.end-schedule-card svg {
-  width: 28px;
-  height: 28px;
-  stroke: var(--primary);
-  fill: none;
-  stroke-width: 2;
-  flex-shrink: 0;
+.end-schedule-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.28s ease;
 }
 
-.end-schedule-text {
-  font-size: 0.84rem;
+.end-schedule-dumbbell-svg {
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+  display: block;
+  transition: width 0.28s ease, height 0.28s ease, transform 0.28s ease;
+}
+
+.end-schedule-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.end-schedule-title {
+  font-size: 0.86rem;
   font-weight: 800;
+  color: var(--primary-dark);
   letter-spacing: -0.2px;
+  transition: font-size 0.28s ease;
+}
+
+.end-schedule-subtitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  transition: font-size 0.28s ease;
+}
+
+/* STARE SPECIALĂ: ORA 17:00 */
+.end-schedule-card.state-ora-17 {
+  padding: 10px 14px;
+  min-height: 54px;
+  background: #fbf9fd;
+  border-color: #d1c4e9;
+}
+
+.end-schedule-card.state-ora-17 .end-schedule-dumbbell-svg {
+  width: 34px;
+  height: 34px;
+}
+
+/* STARE SPECIALĂ: ORA 18:00 (CARD EXTINS & GANTERĂ MĂRITĂ) */
+.end-schedule-card.state-ora-18 {
+  padding: 24px 14px;
+  min-height: 110px;
+  gap: 10px;
+  background: linear-gradient(180deg, #fbf9fd 0%, #f3edf9 100%);
+  border-color: #b39ddb;
+  box-shadow: 0 4px 14px rgba(92, 77, 125, 0.06);
+}
+
+.end-schedule-card.state-ora-18 .end-schedule-dumbbell-svg {
+  width: 50px;
+  height: 50px;
+  transform: scale(1.05);
+}
+
+.end-schedule-card.state-ora-18 .end-schedule-title {
+  font-size: 0.96rem;
+  color: var(--primary);
+}
+
+.end-schedule-card.state-ora-18 .end-schedule-subtitle {
+  font-size: 0.78rem;
+  color: #64748b;
 }
 
 /* EMPTY STATE FIȘĂ CLIENTĂ */
