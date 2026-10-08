@@ -291,6 +291,24 @@ function comutaExpandareBaraCalendar(event) {
   }
 }
 
+function actualizeazaStareCardFinal(oraCheie) {
+  let endCard = document.getElementById('endScheduleCard');
+  let container = document.getElementById('sloturiContainer');
+  if (!endCard) return;
+
+  endCard.classList.remove('state-ora-17', 'state-ora-18');
+
+  if (oraCheie === '17:00') {
+    endCard.classList.add('state-ora-17');
+    if (container) container.style.paddingBottom = '0px';
+  } else if (oraCheie === '18:00') {
+    endCard.classList.add('state-ora-18');
+    if (container) container.style.paddingBottom = '0px';
+  } else {
+    if (container) container.style.paddingBottom = '0px';
+  }
+}
+
 function autoScrollLaOraCurenta() {
   let now = new Date();
   let day = now.getDay();
@@ -302,6 +320,7 @@ function autoScrollLaOraCurenta() {
 
   let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
   if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) {
+    actualizeazaStareCardFinal("");
     window.scrollTo({ top: 0, behavior: 'auto' });
     return;
   }
@@ -315,6 +334,7 @@ function autoScrollLaOraCurenta() {
   let currentTimeInMinutes = currentHour * 60 + currentMinute;
   let closestBlock = null;
   let minDiff = Infinity;
+  let closestOraText = "";
 
   hourBlocks.forEach(block => {
     let oraText = block.getAttribute('data-ora');
@@ -326,8 +346,11 @@ function autoScrollLaOraCurenta() {
     if (diff < minDiff) {
       minDiff = diff;
       closestBlock = block;
+      closestOraText = oraText;
     }
   });
+
+  actualizeazaStareCardFinal(closestOraText);
 
   if (closestBlock) {
     if (currentHour <= 8) {
@@ -335,8 +358,19 @@ function autoScrollLaOraCurenta() {
     } else {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let topOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45) + 6;
+      let topOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45) + 10;
       
+      // Asigură că la 17:00 și 18:00 pagina are suficient spațiu pentru a aduce cardul fix sub tabul de zile
+      let tabOrarEl = document.getElementById('tabOrar');
+      if (tabOrarEl && (closestOraText === '17:00' || closestOraText === '18:00')) {
+        let blockHeight = closestBlock.offsetHeight || 130;
+        let vh = window.innerHeight;
+        let spatiuNecesar = Math.max(0, Math.round(vh - blockHeight - topOffset - 40));
+        tabOrarEl.style.minHeight = `calc(100vh + ${spatiuNecesar}px)`;
+      } else if (tabOrarEl) {
+        tabOrarEl.style.minHeight = 'auto';
+      }
+
       let blockRect = closestBlock.getBoundingClientRect();
       let targetY = blockRect.top + window.pageYOffset - topOffset;
 
@@ -492,12 +526,12 @@ window.onload = function() {
 
   setTimeout(() => {
     autoScrollLaOraCurenta();
-  }, 50);
+  }, 60);
 
-  incarcaBazaDateSilencios(null, true);
+  incarcaBazaDateSilencios(null);
 };
 
-function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePrimaIncarcare = false) {
+function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
   callBackend("getTotBazaDeDate", {}, function(data) {
     if (!data || !Array.isArray(data.orarSloturi)) return;
     DB = data;
@@ -519,12 +553,6 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, estePr
         actualizeazaStilSelect(sel);
         afiseazaFisaClientaInstant();
       }
-    }
-
-    if (estePrimaIncarcare) {
-      setTimeout(() => {
-        autoScrollLaOraCurenta();
-      }, 50);
     }
   });
 }
@@ -657,6 +685,9 @@ function schimbaZiInstant(ziCheie) {
   if (esteAzi) {
     autoScrollLaOraCurenta();
   } else {
+    actualizeazaStareCardFinal("");
+    let tabOrarEl = document.getElementById('tabOrar');
+    if (tabOrarEl) tabOrarEl.style.minHeight = 'auto';
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
@@ -803,6 +834,11 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   let detIstFisa = document.getElementById('detailsIstoricFisa');
   if (detIstFisa) detIstFisa.open = false;
 
+  let tabOrarEl = document.getElementById('tabOrar');
+  if (tabOrarEl && tipTab !== 'orar') {
+    tabOrarEl.style.minHeight = 'auto';
+  }
+
   window.scrollTo({ top: 0, behavior: 'auto' });
 
   if (tipTab === 'orar') {
@@ -898,7 +934,6 @@ function randeazaOrarInstant() {
     while (grupuriOre[ora].length < 3) {
       grupuriOre[ora].push({ row: null, ora: ora, clienta: "", antrenament: "", blocat: false, bifat: false });
     }
-    // Garanție strictă de capacitate: maxim 3 sloturi per oră
     if (grupuriOre[ora].length > 3) {
       grupuriOre[ora] = grupuriOre[ora].slice(0, 3);
     }
