@@ -627,6 +627,16 @@ select.slot-select-type {
   font-size: 0.76rem;
   font-weight: 700;
   border-radius: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-save-check-disabled {
+  background: #cbd5e1 !important;
+  color: #94a3b8 !important;
+  opacity: 0.65;
+  cursor: not-allowed !important;
+  pointer-events: none;
+  box-shadow: none !important;
 }
 
 .btn-clear {
