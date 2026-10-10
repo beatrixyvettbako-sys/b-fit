@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal3">
+  <link rel="stylesheet" href="style.css?v=fitFinal14">
 </head>
 <body>
 
@@ -180,11 +180,19 @@
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
         <div style="margin-top: 10px;">
-          <div class="form-group" style="margin-bottom: 8px;">
-            <label>Filtrează după clientă:</label>
-            <select id="filtruClientaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
-              <option value="">Toate clientele</option>
-            </select>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Filtrează după clientă:</label>
+              <select id="filtruClientaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
+                <option value="">Toate clientele</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label>Filtrează după lună:</label>
+              <select id="filtruLunaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
+                <option value="">Toate lunile</option>
+              </select>
+            </div>
           </div>
           <table class="incasari-table-fit">
             <thead>
@@ -302,6 +310,7 @@
               <div class="metric-val" id="fisaSedinteRamase">-</div>
             </div>
             <div class="metric-box">
+              <div style="font-size:0.75rem; color:var(--text-muted)">STATUS</div>
               <div style="margin-top:4px;" id="fisaStatusBadge"><span class="badge badge-activ">Activ</span></div>
             </div>
             <div class="metric-box">
@@ -609,6 +618,6 @@
     </button>
   </nav>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=fitFinal14"></script>
 </body>
 </html>
