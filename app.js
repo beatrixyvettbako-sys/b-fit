@@ -1,6 +1,11 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
 const ESTE_APPS_SCRIPT = (typeof google !== 'undefined' && google.script && typeof google.script.run !== 'undefined');
 
+// Dezactivăm restaurarea nativă automată a scroll-ului la refresh pentru a permite calibrarea exactă
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+
 let DB = {
   clienti: [],
   orarSloturi: [],
@@ -12,6 +17,12 @@ let DB = {
 
 let tabIndexCurent = 0;
 let tipTabCurent = 'orar';
+const tabsOrder = [
+  { id: 'tabOrar', title: 'Orar Săptămânal', tip: 'orar', idx: 0 },
+  { id: 'tabProgramari', title: 'Programări', tip: 'prog', idx: 1 },
+  { id: 'tabFisa', title: 'Fișă Clientă', tip: 'fisa', idx: 2 },
+  { id: 'tabIncasari', title: 'Încasări', tip: 'incasari', idx: 3 }
+];
 
 function normalizeazaTipAbonament(tip) {
   if (!tip || typeof tip !== 'string') return "";
@@ -160,8 +171,8 @@ function esteSaptamanaTrecuta() {
   return dataReferintaLuni.getTime() < dataReferintaLuniBaza.getTime();
 }
 
+// Cheia de săptămână este întotdeauna explicită și unică (ex. W_2026_10_05)
 function getSaptamanaCheie() {
-  if (esteSaptamanaActiva()) return "";
   let y = dataReferintaLuni.getFullYear();
   let m = String(dataReferintaLuni.getMonth() + 1).padStart(2, '0');
   let d = String(dataReferintaLuni.getDate()).padStart(2, '0');
@@ -214,11 +225,11 @@ function callBackend(actionName, payload, callback) {
       .withFailureHandler(function(err) { showToast("Eroare Apps Script: " + err.message, "error"); });
 
     if (actionName === "getTotBazaDeDate") runner.getTotBazaDeDate();
-    else if (actionName === "salveazaSlotAuto") runner.salveazaSlotAuto(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament);
-    else if (actionName === "bifeazaPrezenta") runner.bifeazaPrezentaSlot(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament);
-    else if (actionName === "anuleazaSlot") runner.anuleazaSlotSiPrezenta(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora);
-    else if (actionName === "comutaBlocareOra") runner.comutaBlocareOra(payload.zi, payload.ora, payload.blocat);
-    else if (actionName === "adaugaOraCustom") runner.adaugaOraCustomOrar(payload.zi, payload.ora);
+    else if (actionName === "salveazaSlotAuto") runner.salveazaSlotAuto(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament, payload.slotIndex);
+    else if (actionName === "bifeazaPrezenta") runner.bifeazaPrezentaSlot(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament, payload.slotIndex);
+    else if (actionName === "anuleazaSlot") runner.anuleazaSlotSiPrezenta(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.slotIndex);
+    else if (actionName === "comutaBlocareOra") runner.comutaBlocareOra(payload.saptamanaCheie, payload.zi, payload.ora, payload.blocat);
+    else if (actionName === "adaugaOraCustom") runner.adaugaOraCustomOrar(payload.saptamanaCheie, payload.zi, payload.ora);
     else if (actionName === "inregistreazaAbonament") runner.inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
     else if (actionName === "actualizeazaIncasare") runner.actualizeazaRandIncasare(payload.row, payload.data, payload.clienta, payload.suma, payload.metoda, payload.tip);
     else if (actionName === "actualizeazaCampProgramare") runner.actualizeazaCampProgramare(payload.row, payload.col, payload.val);
@@ -291,21 +302,35 @@ function comutaExpandareBaraCalendar(event) {
   }
 }
 
-function actualizeazaStareCardFinal(oraCheie) {
+function calibreazaLayoutEcran(oraCheie, closestBlock) {
   let endCard = document.getElementById('endScheduleCard');
-  let container = document.getElementById('sloturiContainer');
   if (!endCard) return;
 
   endCard.classList.remove('state-ora-17', 'state-ora-18');
+  endCard.style.minHeight = '';
 
-  if (oraCheie === '17:00') {
-    endCard.classList.add('state-ora-17');
-    if (container) container.style.paddingBottom = '0px';
-  } else if (oraCheie === '18:00') {
+  let headerEl = document.querySelector('header');
+  let daySelector = document.getElementById('dayButtonsContainer');
+  let navEl = document.getElementById('bottomNav');
+
+  let vh = window.innerHeight;
+  let hHeader = headerEl ? headerEl.offsetHeight : 50;
+  let hDays = daySelector ? daySelector.offsetHeight : 45;
+  let hNav = navEl ? navEl.offsetHeight : 64;
+  let topOffset = hHeader + hDays + 4;
+
+  let hBlock = (closestBlock && closestBlock.offsetHeight > 0) ? closestBlock.offsetHeight : 135;
+
+  if (oraCheie === '18:00') {
     endCard.classList.add('state-ora-18');
-    if (container) container.style.paddingBottom = '0px';
-  } else {
-    if (container) container.style.paddingBottom = '0px';
+    let spatiuNecesarDerulare = Math.max(160, vh - topOffset - hBlock + 30);
+    endCard.style.minHeight = spatiuNecesarDerulare + 'px';
+  } else if (oraCheie === '17:00') {
+    endCard.classList.add('state-ora-17');
+    let block18 = document.querySelector('.hour-block[data-ora="18:00"]');
+    let h18 = block18 ? block18.offsetHeight : 135;
+    let spatiuNecesar = Math.max(80, vh - topOffset - hBlock - h18 + 30);
+    endCard.style.minHeight = spatiuNecesar + 'px';
   }
 }
 
@@ -320,7 +345,7 @@ function autoScrollLaOraCurenta() {
 
   let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
   if (!esteSaptamanaActiva() || ziCurentaCheie !== zileChei[day]) {
-    actualizeazaStareCardFinal("");
+    calibreazaLayoutEcran("", null);
     window.scrollTo({ top: 0, behavior: 'auto' });
     return;
   }
@@ -350,45 +375,38 @@ function autoScrollLaOraCurenta() {
     }
   });
 
-  actualizeazaStareCardFinal(closestOraText);
+  calibreazaLayoutEcran(closestOraText, closestBlock);
 
-  if (closestBlock) {
-    if (currentHour <= 8) {
-      window.scrollTo({ top: 0, behavior: 'auto' });
-    } else {
-      let headerEl = document.querySelector('header');
-      let daySelector = document.getElementById('dayButtonsContainer');
-      let topOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45) + 10;
-      
-      // Asigură că la 17:00 și 18:00 pagina are suficient spațiu pentru a aduce cardul fix sub tabul de zile
-      let tabOrarEl = document.getElementById('tabOrar');
-      if (tabOrarEl && (closestOraText === '17:00' || closestOraText === '18:00')) {
-        let blockHeight = closestBlock.offsetHeight || 130;
-        let vh = window.innerHeight;
-        let spatiuNecesar = Math.max(0, Math.round(vh - blockHeight - topOffset - 40));
-        tabOrarEl.style.minHeight = `calc(100vh + ${spatiuNecesar}px)`;
-      } else if (tabOrarEl) {
-        tabOrarEl.style.minHeight = 'auto';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (closestBlock) {
+        if (currentHour <= 8) {
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        } else {
+          let headerEl = document.querySelector('header');
+          let daySelector = document.getElementById('dayButtonsContainer');
+          let hHeader = headerEl ? headerEl.offsetHeight : 50;
+          let hDays = daySelector ? daySelector.offsetHeight : 45;
+          let topOffset = hHeader + hDays + 4;
+          
+          let blockRect = closestBlock.getBoundingClientRect();
+          let exactTargetY = blockRect.top + window.pageYOffset - topOffset;
+
+          window.scrollTo({
+            top: Math.max(0, Math.round(exactTargetY)),
+            behavior: 'auto'
+          });
+        }
+
+        closestBlock.classList.remove('hour-block-current-highlight');
+        void closestBlock.offsetWidth;
+        closestBlock.classList.add('hour-block-current-highlight');
+        setTimeout(() => {
+          closestBlock.classList.remove('hour-block-current-highlight');
+        }, 2000);
       }
-
-      let blockRect = closestBlock.getBoundingClientRect();
-      let targetY = blockRect.top + window.pageYOffset - topOffset;
-
-      if (targetY < 60) targetY = 0;
-
-      window.scrollTo({
-        top: Math.max(0, Math.round(targetY)),
-        behavior: 'auto'
-      });
-    }
-
-    closestBlock.classList.remove('hour-block-current-highlight');
-    void closestBlock.offsetWidth;
-    closestBlock.classList.add('hour-block-current-highlight');
-    setTimeout(() => {
-      closestBlock.classList.remove('hour-block-current-highlight');
-    }, 2000);
-  }
+    });
+  });
 }
 
 function peComutareIstoricIncasari(detailsEl) {
@@ -417,6 +435,14 @@ function peComutareIstoricOrar(detailsEl) {
         behavior: 'smooth'
       });
     }, 80);
+  } else if (detailsEl && !detailsEl.open) {
+    let d = new Date();
+    let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+    if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[d.getDay()]) {
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 50);
+    }
   }
 }
 
@@ -489,6 +515,10 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
 window.onload = function() {
   reseteazaDateIncasariAzi();
   leagaAscultatoriCuratareErori();
+  initSwipeNavigation();
+
+  let detOrar = document.getElementById('detailsIstoricOrar');
+  if (detOrar) detOrar.open = false;
 
   let d = new Date();
   let aziIdx = d.getDay();
@@ -526,10 +556,84 @@ window.onload = function() {
 
   setTimeout(() => {
     autoScrollLaOraCurenta();
-  }, 60);
+  }, 100);
 
   incarcaBazaDateSilencios(null);
 };
+
+window.addEventListener('resize', () => {
+  if (tipTabCurent === 'orar') {
+    let now = new Date();
+    let currentHour = now.getHours();
+    let currentMinute = now.getMinutes();
+    let currentTimeInMinutes = currentHour * 60 + currentMinute;
+    let hourBlocks = document.querySelectorAll('.hour-block');
+    let closestBlock = null;
+    let minDiff = Infinity;
+    let closestOraText = "";
+
+    hourBlocks.forEach(block => {
+      let oraText = block.getAttribute('data-ora');
+      if (!oraText || oraText.indexOf(':') === -1) return;
+      let parts = oraText.split(':');
+      let blockMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+      let diff = Math.abs(currentTimeInMinutes - blockMinutes);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestBlock = block;
+        closestOraText = oraText;
+      }
+    });
+
+    calibreazaLayoutEcran(closestOraText, closestBlock);
+  }
+});
+
+function initSwipeNavigation() {
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchEndX = 0;
+  let touchEndY = 0;
+
+  document.addEventListener('touchstart', (e) => {
+    if (e.target && (e.target.closest('input') || e.target.closest('select') || e.target.closest('textarea') || e.target.closest('.day-selector') || e.target.closest('.calendar-drawer-content'))) {
+      touchStartX = 0;
+      touchStartY = 0;
+      return;
+    }
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', (e) => {
+    if (!touchStartX && !touchStartY) return;
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleGesture();
+  }, { passive: true });
+
+  function handleGesture() {
+    let diffX = touchEndX - touchStartX;
+    let diffY = touchEndY - touchStartY;
+    if (Math.abs(diffX) > 60 && Math.abs(diffX) > Math.abs(diffY) * 1.5) {
+      if (diffX < 0) {
+        if (tabIndexCurent < tabsOrder.length - 1) {
+          let nextTab = tabsOrder[tabIndexCurent + 1];
+          let btn = document.querySelectorAll('nav button')[nextTab.idx];
+          comutaTab(nextTab.id, nextTab.title, btn, nextTab.tip, nextTab.idx);
+        }
+      } else {
+        if (tabIndexCurent > 0) {
+          let prevTab = tabsOrder[tabIndexCurent - 1];
+          let btn = document.querySelectorAll('nav button')[prevTab.idx];
+          comutaTab(prevTab.id, prevTab.title, btn, prevTab.tip, prevTab.idx);
+        }
+      }
+    }
+    touchStartX = 0;
+    touchStartY = 0;
+  }
+}
 
 function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
   callBackend("getTotBazaDeDate", {}, function(data) {
@@ -564,11 +668,30 @@ function schimbaSaptamanaAnimat(directie) {
     lbl.style.transform = directie > 0 ? 'translateX(8px)' : 'translateX(-8px)';
   }
 
+  let detOrar = document.getElementById('detailsIstoricOrar');
+  if (detOrar) detOrar.open = false;
+
   setTimeout(() => {
     dataReferintaLuni.setDate(dataReferintaLuni.getDate() + (directie * 7));
-    actualizeazaBaraZile();
-    randeazaOrarInstant();
-    window.scrollTo({ top: 0, behavior: 'auto' });
+
+    if (esteSaptamanaActiva()) {
+      let d = new Date();
+      let aziIdx = d.getDay();
+      let zileChei = ["Luni", "Marti", "Miercuri", "Joi", "Vineri"];
+      ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
+      actualizeazaBaraZile();
+      randeazaOrarInstant();
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 50);
+    } else {
+      ziCurentaCheie = "Luni";
+      actualizeazaBaraZile();
+      randeazaOrarInstant();
+      calibreazaLayoutEcran("", null);
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
     if (lbl) {
       lbl.style.opacity = '1';
       lbl.style.transform = 'translateX(0)';
@@ -582,6 +705,10 @@ function revinoLaSaptamanaCurenta() {
     autoScrollLaOraCurenta();
     return;
   }
+
+  let detOrar = document.getElementById('detailsIstoricOrar');
+  if (detOrar) detOrar.open = false;
+
   dataReferintaLuni = new Date(dataReferintaLuniBaza.getTime());
   
   let d = new Date();
@@ -675,6 +802,10 @@ function actualizeazaBaraZile() {
 
 function schimbaZiInstant(ziCheie) {
   ziCurentaCheie = ziCheie;
+
+  let detOrar = document.getElementById('detailsIstoricOrar');
+  if (detOrar) detOrar.open = false;
+
   actualizeazaBaraZile();
   randeazaOrarInstant();
   
@@ -685,9 +816,7 @@ function schimbaZiInstant(ziCheie) {
   if (esteAzi) {
     autoScrollLaOraCurenta();
   } else {
-    actualizeazaStareCardFinal("");
-    let tabOrarEl = document.getElementById('tabOrar');
-    if (tabOrarEl) tabOrarEl.style.minHeight = 'auto';
+    calibreazaLayoutEcran("", null);
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
@@ -745,20 +874,39 @@ function populeazaSelectoriCliente() {
   }
 }
 
+function curataNumeLuna(str) {
+  if (!str) return "";
+  let curat = str.toString().trim();
+  curat = curat.replace(/^luna\s+/i, "").trim();
+  if (!curat) return "";
+  return curat.charAt(0).toUpperCase() + curat.slice(1).toLowerCase();
+}
+
 function populeazaSelectorLuni() {
   let selLuna = document.getElementById('filtruLunaIncasari');
-  if (!selLuna) return;
+  let selLunaOrar = document.getElementById('filtruLunaOrar');
 
-  let valoareAnterioara = selLuna.value;
   let luniSet = new Set();
+  const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
 
   (DB.incasari || []).forEach(i => {
     if (i && i.luna && i.luna.trim() !== "-" && i.luna.trim() !== "") {
-      luniSet.add(i.luna.trim());
+      let n = curataNumeLuna(i.luna);
+      if (n) luniSet.add(n);
     }
   });
 
-  const luniRo = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
+  (DB.prezente || []).forEach(p => {
+    if (p && p.data && p.data.indexOf('.') !== -1) {
+      let parts = p.data.split('.');
+      if (parts.length === 3) {
+        let m = parseInt(parts[1], 10);
+        if (m >= 1 && m <= 12) {
+          luniSet.add(luniRoNume[m - 1]);
+        }
+      }
+    }
+  });
 
   function calculeazaScorLuna(str) {
     if (!str) return 0;
@@ -768,18 +916,10 @@ function populeazaSelectorLuni() {
     if (anMatch) anGasit = parseInt(anMatch[1], 10);
     
     let lunaIdx = -1;
-    for (let idx = 0; idx < luniRo.length; idx++) {
-      if (s.indexOf(luniRo[idx]) !== -1) {
+    for (let idx = 0; idx < luniRoNume.length; idx++) {
+      if (s.indexOf(luniRoNume[idx].toLowerCase()) !== -1) {
         lunaIdx = idx;
         break;
-      }
-    }
-    if (lunaIdx === -1) {
-      let p = s.split(/[\.\-\/]/);
-      if (p.length >= 2) {
-        let m = parseInt(p[0], 10);
-        if (m >= 1 && m <= 12) lunaIdx = m - 1;
-        if (p[1] && p[1].length === 4) anGasit = parseInt(p[1], 10);
       }
     }
     return (anGasit || 2026) * 100 + (lunaIdx !== -1 ? lunaIdx : 0);
@@ -788,16 +928,28 @@ function populeazaSelectorLuni() {
   let luniArray = Array.from(luniSet);
   luniArray.sort((a, b) => calculeazaScorLuna(b) - calculeazaScorLuna(a));
 
-  selLuna.innerHTML = '<option value="">Toate lunile</option>';
-  luniArray.forEach(luna => {
-    let opt = document.createElement('option');
-    opt.value = luna;
-    opt.innerText = luna;
-    selLuna.appendChild(opt);
-  });
+  if (selLuna) {
+    let valAnterioara = selLuna.value;
+    selLuna.innerHTML = '<option value="">Toate lunile</option>';
+    luniArray.forEach(luna => {
+      let opt = document.createElement('option');
+      opt.value = luna;
+      opt.innerText = luna;
+      selLuna.appendChild(opt);
+    });
+    if (valAnterioara) selLuna.value = valAnterioara;
+  }
 
-  if (valoareAnterioara) {
-    selLuna.value = valoareAnterioara;
+  if (selLunaOrar) {
+    let valAnterioaraOrar = selLunaOrar.value;
+    selLunaOrar.innerHTML = '<option value="">Toate lunile</option>';
+    luniArray.forEach(luna => {
+      let opt = document.createElement('option');
+      opt.value = luna;
+      opt.innerText = luna;
+      selLunaOrar.appendChild(opt);
+    });
+    if (valAnterioaraOrar) selLunaOrar.value = valAnterioaraOrar;
   }
 }
 
@@ -834,11 +986,6 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   let detIstFisa = document.getElementById('detailsIstoricFisa');
   if (detIstFisa) detIstFisa.open = false;
 
-  let tabOrarEl = document.getElementById('tabOrar');
-  if (tabOrarEl && tipTab !== 'orar') {
-    tabOrarEl.style.minHeight = 'auto';
-  }
-
   window.scrollTo({ top: 0, behavior: 'auto' });
 
   if (tipTab === 'orar') {
@@ -854,7 +1001,7 @@ function randeazaOrarInstant() {
   if (!container) return;
   let dataCalendarCurenta = getDataCalendaristicaCurenta();
   let saptamanaCheie = getSaptamanaCheie();
-  let tagZiCautat = saptamanaCheie ? (saptamanaCheie + "_" + ziCurentaCheie) : ziCurentaCheie;
+  let tagZiCautat = saptamanaCheie + "_" + ziCurentaCheie;
   let eTrecuta = esteSaptamanaTrecuta();
 
   let sloturi = [];
@@ -910,14 +1057,13 @@ function randeazaOrarInstant() {
     return;
   }
 
+  // Căutare strict izolată după cheia săptămânii curente
   sloturi = (DB.orarSloturi || []).filter(s => {
     if (!s || !s.ziRaw) return false;
-    let z = s.ziRaw;
-    if (saptamanaCheie === "") {
-      return z === ziCurentaCheie || (ziCurentaCheie === "Marti" && z === "Marți");
-    } else {
-      return z === tagZiCautat;
-    }
+    let z = s.ziRaw.trim();
+    if (z === tagZiCautat) return true;
+    if (ziCurentaCheie === "Marti" && z === (saptamanaCheie + "_Marți")) return true;
+    return false;
   });
 
   let oreStandard = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
@@ -932,10 +1078,7 @@ function randeazaOrarInstant() {
   oreStandard.forEach(ora => {
     if (!grupuriOre[ora]) grupuriOre[ora] = [];
     while (grupuriOre[ora].length < 3) {
-      grupuriOre[ora].push({ row: null, ora: ora, clienta: "", antrenament: "", blocat: false, bifat: false });
-    }
-    if (grupuriOre[ora].length > 3) {
-      grupuriOre[ora] = grupuriOre[ora].slice(0, 3);
+      grupuriOre[ora].push({ row: null, ora: ora, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: grupuriOre[ora].length });
     }
   });
 
@@ -946,7 +1089,7 @@ function randeazaOrarInstant() {
     let sloturiOra = grupuriOre[ora] || [];
     let esteBlocat = sloturiOra.some(s => s && s.blocat);
     let ocupate = sloturiOra.filter(s => s && s.clienta && s.clienta.trim() !== "").length;
-    let total = Math.min(3, sloturiOra.length);
+    let total = sloturiOra.length;
 
     let badgeHtml = '';
     if (esteBlocat) {
@@ -969,7 +1112,7 @@ function randeazaOrarInstant() {
         <div class="hour-slots-wrapper">
     `;
 
-    sloturiOra.slice(0, 3).forEach((slot, idx) => {
+    sloturiOra.forEach((slot, idx) => {
       let clientaCurata = (slot && slot.clienta) ? slot.clienta.trim() : "";
       let clientaValida = gasesteClientaValida(clientaCurata);
       let isOccupied = !!clientaValida;
@@ -1015,15 +1158,18 @@ function randeazaOrarInstant() {
 }
 
 function comutaBlocareOraInstant(zi, ora, blocatNou) {
+  let saptamanaCheie = getSaptamanaCheie();
+  let tagZiCautat = saptamanaCheie + "_" + zi;
   let textConfirm = blocatNou ? `Blochezi intervalul orar ${ora}?` : `Deblochezi intervalul orar ${ora}?`;
+
   customConfirm("Blocare oră", textConfirm, function() {
     (DB.orarSloturi || []).forEach(s => {
-      if ((s.ziRaw === zi || s.ziRaw.indexOf(zi) !== -1) && s.ora === ora) {
+      if ((s.ziRaw === tagZiCautat || s.ziRaw === (saptamanaCheie + "_Marți")) && s.ora === ora) {
         s.blocat = blocatNou;
       }
     });
     randeazaOrarInstant();
-    callBackend("comutaBlocareOra", { zi: zi, ora: ora, blocat: blocatNou }, function() {
+    callBackend("comutaBlocareOra", { saptamanaCheie: saptamanaCheie, zi: zi, ora: ora, blocat: blocatNou }, function() {
       showToast(blocatNou ? `✓ Intervalul ${ora} a fost blocat!` : `✓ Intervalul ${ora} a fost deblocat!`);
       incarcaBazaDateSilencios();
     });
@@ -1064,7 +1210,7 @@ function peSchimbareNumeClienta(slotRowKey, zi, ora, slotIdx) {
           slot.bifat = false;
         }
         callBackend("salveazaSlotAuto", {
-          row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: "", antrenament: ""
+          row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: "", antrenament: "", slotIndex: slotIdx
         }, function() {
           incarcaBazaDateSilencios();
         });
@@ -1088,7 +1234,7 @@ function peSchimbareNumeClienta(slotRowKey, zi, ora, slotIdx) {
     }
 
     callBackend("salveazaSlotAuto", {
-      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament
+      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament, slotIndex: slotIdx
     }, function(res) {
       if (res && res.row) {
         if (!rowNum && elCli) {
@@ -1129,7 +1275,7 @@ function peSchimbareAntrenament(slotRowKey, zi, ora, slotIdx) {
   }
 
   callBackend("salveazaSlotAuto", {
-    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament
+    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament, slotIndex: slotIdx
   }, function(res) {
     if (res && res.row && !rowNum) {
       incarcaBazaDateSilencios();
@@ -1164,7 +1310,7 @@ function bifeazaPrezentaSlot(slotRowKey, zi, ora, slotIdx) {
 
   showToast("✓ Prezență marcată & ședință scăzută!");
   callBackend("bifeazaPrezenta", {
-    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament
+    row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, clienta: numeExact, antrenament: antrenament, slotIndex: slotIdx
   }, function() {
     incarcaBazaDateSilencios();
   });
@@ -1199,7 +1345,7 @@ function anuleazaSlot(slotRowKey, zi, ora, slotIdx) {
 
     showToast("✓ Slot eliberat!");
     callBackend("anuleazaSlot", {
-      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora
+      row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: ora, slotIndex: slotIdx
     }, function() {
       incarcaBazaDateSilencios();
     });
@@ -1213,8 +1359,9 @@ function adaugaOraCustom() {
     showToast("Introdu ora suplimentară!", "error");
     return;
   }
+  let saptamanaCheie = getSaptamanaCheie();
 
-  callBackend("adaugaOraCustom", { zi: ziCurentaCheie, ora: ora }, function(res) {
+  callBackend("adaugaOraCustom", { saptamanaCheie: saptamanaCheie, zi: ziCurentaCheie, ora: ora }, function(res) {
     showToast("✓ Oră adăugată: " + res.ora);
     if (inp) inp.value = '';
     incarcaBazaDateSilencios();
@@ -1223,11 +1370,33 @@ function adaugaOraCustom() {
 
 function filtreazaIstoricOrarInstant() {
   let fEl = document.getElementById('filtruClientaOrar');
-  let filtru = fEl ? fEl.value.toLowerCase() : "";
+  let fLuna = document.getElementById('filtruLunaOrar');
+  let filtruCli = fEl ? fEl.value.toLowerCase().trim() : "";
+  let filtruLuna = fLuna ? curataNumeLuna(fLuna.value) : "";
   let tbody = document.getElementById('istoricOrarTbody');
   if (!tbody) return;
 
-  let filtrate = (DB.prezente || []).filter(p => p && (!filtru || (p.clienta && p.clienta.toLowerCase() === filtru)));
+  const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+
+  let filtrate = (DB.prezente || []).filter(p => {
+    if (!p) return false;
+    let potrivesteCli = !filtruCli || (p.clienta && p.clienta.toLowerCase() === filtruCli);
+    let potrivesteLuna = true;
+
+    if (filtruLuna) {
+      let lunaPrezenta = "";
+      if (p.data && p.data.indexOf('.') !== -1) {
+        let parts = p.data.split('.');
+        if (parts.length === 3) {
+          let m = parseInt(parts[1], 10);
+          if (m >= 1 && m <= 12) lunaPrezenta = luniRoNume[m - 1];
+        }
+      }
+      potrivesteLuna = (lunaPrezenta === filtruLuna);
+    }
+
+    return potrivesteCli && potrivesteLuna;
+  });
 
   filtrate.sort((a, b) => {
     let tA = parseazaDataOraRo(a.data, a.ora);
@@ -1253,7 +1422,7 @@ function filtreazaIstoricOrarInstant() {
   tbody.innerHTML = html;
 }
 
-// --- PROGRAMĂRI & HOLD ---
+// --- PROGRAMĂRI & HOLD (Fără dropdown în Hold, căsuță extinsă) ---
 function getPillClass(val) {
   if (val === "Confirmata") return "pill-confirmata";
   if (val === "In asteptare") return "pill-asteptare";
@@ -1296,21 +1465,12 @@ function randeazaProgramariInstant() {
   if (holdContainer) {
     let holdHtml = '';
     (DB.progHold || []).forEach((item, index) => {
-      let pCls = getPillClass(item.prezenta);
       holdHtml += `
-        <div class="prog-grid-layout prog-row hold-row">
+        <div class="prog-grid-layout-hold prog-row hold-row">
           <div class="prog-idx">${index + 1}</div>
           <div class="prog-name">${item.nume}</div>
-          <div>
-            <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
-              <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
-              <option value="Confirmata" ${item.prezenta === 'Confirmata' ? 'selected' : ''}>Confirmata</option>
-              <option value="In asteptare" ${item.prezenta === 'In asteptare' ? 'selected' : ''}>In asteptare</option>
-              <option value="Absenta" ${item.prezenta === 'Absenta' ? 'selected' : ''}>Absenta</option>
-            </select>
-          </div>
-          <div>
-            <textarea class="prog-mentiuni-textarea" placeholder="Motiv..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+          <div style="grid-column: 3 / 4;">
+            <textarea class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="Motiv pauză..." onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
           </div>
           <div style="text-align:center;">
             <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="Șterge definitiv">🗑</button>
@@ -1573,15 +1733,21 @@ function getSumaSelectata() {
 function filtreazaIstoricIncasariInstant() {
   let fEl = document.getElementById('filtruClientaIncasari');
   let fLuna = document.getElementById('filtruLunaIncasari');
-  let filtru = fEl ? fEl.value.toLowerCase() : "";
-  let filtruLuna = fLuna ? fLuna.value.trim() : "";
+  let filtru = fEl ? fEl.value.toLowerCase().trim() : "";
+  let filtruLuna = fLuna ? curataNumeLuna(fLuna.value) : "";
   let tbody = document.getElementById('incasariIstoricTbody');
   if (!tbody) return;
 
   let filtrate = (DB.incasari || []).filter(i => {
     if (!i) return false;
     let potrivesteClienta = !filtru || (i.clienta && i.clienta.toLowerCase() === filtru);
-    let potrivesteLuna = !filtruLuna || (i.luna && i.luna.trim() === filtruLuna);
+    let potrivesteLuna = true;
+
+    if (filtruLuna) {
+      let lunaInc = curataNumeLuna(i.luna);
+      potrivesteLuna = (lunaInc === filtruLuna);
+    }
+
     return potrivesteClienta && potrivesteLuna;
   });
 
