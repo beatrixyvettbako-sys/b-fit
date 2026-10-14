@@ -315,36 +315,59 @@ function comutaExpandareBaraCalendar(event) {
   }
 }
 
+function getTopOffsetSubZile() {
+  let headerEl = document.querySelector('header');
+  let daySelector = document.getElementById('dayButtonsContainer');
+  let hHeader = headerEl ? headerEl.getBoundingClientRect().height : 50;
+  let hDays = daySelector ? daySelector.getBoundingClientRect().height : 45;
+  return hHeader + hDays + 5;
+}
+
 function calibreazaLayoutEcran(oraCheie, closestBlock) {
   let endCard = document.getElementById('endScheduleCard');
   if (!endCard) return;
 
+  endCard.style.transition = 'none';
   endCard.classList.remove('state-ora-17', 'state-ora-18');
   endCard.style.minHeight = '';
 
-  let headerEl = document.querySelector('header');
-  let daySelector = document.getElementById('dayButtonsContainer');
-  let navEl = document.getElementById('bottomNav');
-
-  let vh = window.innerHeight;
-  let hHeader = headerEl ? headerEl.offsetHeight : 50;
-  let hDays = daySelector ? daySelector.offsetHeight : 45;
-  let hNav = navEl ? navEl.offsetHeight : 64;
-  let topOffset = hHeader + hDays + 4;
-
-  let hBlock = (closestBlock && closestBlock.offsetHeight > 0) ? closestBlock.offsetHeight : 135;
+  if (!closestBlock) {
+    void endCard.offsetHeight;
+    endCard.style.transition = '';
+    return;
+  }
 
   if (oraCheie === '18:00') {
     endCard.classList.add('state-ora-18');
-    let spatiuNecesarDerulare = Math.max(160, vh - topOffset - hBlock + 30);
-    endCard.style.minHeight = spatiuNecesarDerulare + 'px';
   } else if (oraCheie === '17:00') {
     endCard.classList.add('state-ora-17');
-    let block18 = document.querySelector('.hour-block[data-ora="18:00"]');
-    let h18 = block18 ? block18.offsetHeight : 135;
-    let spatiuNecesar = Math.max(80, vh - topOffset - hBlock - h18 + 30);
-    endCard.style.minHeight = spatiuNecesar + 'px';
   }
+
+  void endCard.offsetHeight;
+
+  let vh = window.innerHeight;
+  let topOffset = getTopOffsetSubZile();
+  let navEl = document.getElementById('bottomNav');
+  let hNav = navEl ? navEl.getBoundingClientRect().height : 64;
+  let spatiuVizibilUtil = vh - topOffset - hNav - 10;
+
+  let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
+  let blockRect = closestBlock.getBoundingClientRect();
+  let istoricRect = istoricEl.getBoundingClientRect();
+
+  // Diferența relativă dintre cele 2 elemente din același container este 100% imună la transform/offsetParent
+  let inaltimeDeLaCardLaBazaIstoric = istoricRect.bottom - blockRect.top;
+
+  if (inaltimeDeLaCardLaBazaIstoric < spatiuVizibilUtil) {
+    let deficit = spatiuVizibilUtil - inaltimeDeLaCardLaBazaIstoric;
+    let currentEndCardHeight = endCard.getBoundingClientRect().height || 58;
+    endCard.style.minHeight = Math.ceil(currentEndCardHeight + deficit) + 'px';
+    void endCard.offsetHeight;
+  }
+
+  requestAnimationFrame(() => {
+    endCard.style.transition = '';
+  });
 }
 
 function autoScrollLaOraCurenta() {
@@ -388,36 +411,46 @@ function autoScrollLaOraCurenta() {
     }
   });
 
-  calibreazaLayoutEcran(closestOraText, closestBlock);
+  if (!closestBlock) return;
+
+  let calCard = document.getElementById('calendarExpandableCard');
+  if (calCard) calCard.classList.remove('is-expanded');
+
+  const executaAliniereMilimetrica = () => {
+    // Suspendăm temporar transform-ul animației de tab pentru ca getBoundingClientRect() să dea coordonatele finale 100% exacte
+    let prevAnim = tabOrar.style.animation;
+    let prevTransform = tabOrar.style.transform;
+    tabOrar.style.animation = 'none';
+    tabOrar.style.transform = 'none';
+    void tabOrar.offsetHeight;
+
+    calibreazaLayoutEcran(closestOraText, closestBlock);
+
+    let topOffset = getTopOffsetSubZile();
+    let blockTopDoc = closestBlock.getBoundingClientRect().top + window.pageYOffset;
+    let targetScrollY = Math.max(0, Math.round(blockTopDoc - topOffset));
+
+    window.scrollTo({
+      top: targetScrollY,
+      behavior: 'auto'
+    });
+
+    tabOrar.style.animation = prevAnim;
+    tabOrar.style.transform = prevTransform;
+  };
+
+  executaAliniereMilimetrica();
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (closestBlock) {
-        if (currentHour <= 8) {
-          window.scrollTo({ top: 0, behavior: 'auto' });
-        } else {
-          let headerEl = document.querySelector('header');
-          let daySelector = document.getElementById('dayButtonsContainer');
-          let hHeader = headerEl ? headerEl.offsetHeight : 50;
-          let hDays = daySelector ? daySelector.offsetHeight : 45;
-          let topOffset = hHeader + hDays + 4;
-          
-          let blockRect = closestBlock.getBoundingClientRect();
-          let exactTargetY = blockRect.top + window.pageYOffset - topOffset;
+      executaAliniereMilimetrica();
 
-          window.scrollTo({
-            top: Math.max(0, Math.round(exactTargetY)),
-            behavior: 'auto'
-          });
-        }
-
+      closestBlock.classList.remove('hour-block-current-highlight');
+      void closestBlock.offsetWidth;
+      closestBlock.classList.add('hour-block-current-highlight');
+      setTimeout(() => {
         closestBlock.classList.remove('hour-block-current-highlight');
-        void closestBlock.offsetWidth;
-        closestBlock.classList.add('hour-block-current-highlight');
-        setTimeout(() => {
-          closestBlock.classList.remove('hour-block-current-highlight');
-        }, 2000);
-      }
+      }, 2000);
     });
   });
 }
@@ -567,38 +600,18 @@ window.onload = function() {
   animaPilaMercur(0);
   actualizeazaHeaderVisual(tipTabCurent, 'Orar Săptămânal');
 
-  setTimeout(() => {
-    autoScrollLaOraCurenta();
-  }, 100);
+  autoScrollLaOraCurenta();
 
-  incarcaBazaDateSilencios(null);
+  incarcaBazaDateSilencios(null, true);
 };
 
 window.addEventListener('resize', () => {
   if (tipTabCurent === 'orar') {
     let now = new Date();
-    let currentHour = now.getHours();
-    let currentMinute = now.getMinutes();
-    let currentTimeInMinutes = currentHour * 60 + currentMinute;
-    let hourBlocks = document.querySelectorAll('.hour-block');
-    let closestBlock = null;
-    let minDiff = Infinity;
-    let closestOraText = "";
-
-    hourBlocks.forEach(block => {
-      let oraText = block.getAttribute('data-ora');
-      if (!oraText || oraText.indexOf(':') === -1) return;
-      let parts = oraText.split(':');
-      let blockMinutes = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-      let diff = Math.abs(currentTimeInMinutes - blockMinutes);
-      if (diff < minDiff) {
-        minDiff = diff;
-        closestBlock = block;
-        closestOraText = oraText;
-      }
-    });
-
-    calibreazaLayoutEcran(closestOraText, closestBlock);
+    let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+    if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[now.getDay()]) {
+      autoScrollLaOraCurenta();
+    }
   }
 });
 
@@ -663,13 +676,15 @@ function initSwipeNavigation() {
   }, { passive: true });
 }
 
-function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
+function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, aliniazaLaOraCurenta = false) {
   callBackend("getTotBazaDeDate", {}, function(data) {
     if (!data || !Array.isArray(data.orarSloturi)) return;
     DB = data;
     try {
       localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(data));
     } catch(e) {}
+
+    let scrollAnterior = window.pageYOffset;
 
     populeazaSelectoriCliente();
     populeazaSelectorLuni();
@@ -684,6 +699,34 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null) {
         sel.value = clientaSelectataDupaActualizare;
         actualizeazaStilSelect(sel);
         afiseazaFisaClientaInstant();
+      }
+    }
+
+    if (tipTabCurent === 'orar') {
+      if (aliniazaLaOraCurenta) {
+        autoScrollLaOraCurenta();
+      } else {
+        let now = new Date();
+        let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+        if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[now.getDay()]) {
+          let currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+          let closestBlock = null;
+          let minDiff = Infinity;
+          let closestOraText = "";
+          document.querySelectorAll('.hour-block').forEach(block => {
+            let oraText = block.getAttribute('data-ora');
+            if (!oraText || oraText.indexOf(':') === -1) return;
+            let parts = oraText.split(':');
+            let diff = Math.abs(currentTimeInMinutes - (parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10)));
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestBlock = block;
+              closestOraText = oraText;
+            }
+          });
+          calibreazaLayoutEcran(closestOraText, closestBlock);
+        }
+        window.scrollTo({ top: scrollAnterior, behavior: 'auto' });
       }
     }
   });
@@ -709,9 +752,7 @@ function schimbaSaptamanaAnimat(directie) {
       ziCurentaCheie = (aziIdx >= 1 && aziIdx <= 5) ? zileChei[aziIdx - 1] : "Luni";
       actualizeazaBaraZile();
       randeazaOrarInstant();
-      setTimeout(() => {
-        autoScrollLaOraCurenta();
-      }, 50);
+      autoScrollLaOraCurenta();
     } else {
       ziCurentaCheie = "Luni";
       actualizeazaBaraZile();
@@ -746,9 +787,7 @@ function revinoLaSaptamanaCurenta() {
 
   actualizeazaBaraZile();
   randeazaOrarInstant();
-  setTimeout(() => {
-    autoScrollLaOraCurenta();
-  }, 50);
+  autoScrollLaOraCurenta();
   showToast("✓ Ai revenit la săptămâna curentă!");
 }
 
@@ -1014,12 +1053,10 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   let detIstFisa = document.getElementById('detailsIstoricFisa');
   if (detIstFisa) detIstFisa.open = false;
 
-  window.scrollTo({ top: 0, behavior: 'auto' });
-
   if (tipTab === 'orar') {
-    setTimeout(() => {
-      autoScrollLaOraCurenta();
-    }, 50);
+    autoScrollLaOraCurenta();
+  } else {
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }
 
@@ -2039,7 +2076,7 @@ function salveazaModificareIncasare() {
   }
   if (!metoda || metoda === "-" || metoda === "") {
     showToast("Selectează metoda de plată!", "error");
-    document.getElementById('editIncMetoda').focus();
+    document.getElementById('incasareMetoda').focus();
     return;
   }
   if (!tip || tip === "-" || tip === "") {
