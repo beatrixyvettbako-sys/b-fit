@@ -2093,3 +2093,82 @@ function salveazaModificareIncasare() {
     incarcaBazaDateSilencios();
   });
 }
+
+// --- FUNCȚII MENIU LATERAL & SETĂRI (BEATRIX) ---
+
+function deschideMeniuLateral() {
+  let drawer = document.getElementById('appDrawer');
+  let backdrop = document.getElementById('appDrawerBackdrop');
+  if (drawer) drawer.classList.add('open');
+  if (backdrop) backdrop.classList.add('open');
+}
+
+function inchideMeniuLateral() {
+  let drawer = document.getElementById('appDrawer');
+  let backdrop = document.getElementById('appDrawerBackdrop');
+  if (drawer) drawer.classList.remove('open');
+  if (backdrop) backdrop.classList.remove('open');
+}
+
+function comutaSubmeniuCont() {
+  let sub = document.getElementById('contSubmenu');
+  let arrow = document.getElementById('contArrow');
+  if (!sub) return;
+  let esteAscuns = sub.style.display === 'none' || sub.style.display === '';
+  sub.style.display = esteAscuns ? 'flex' : 'none';
+  if (arrow) arrow.innerText = esteAscuns ? '▲' : '▼';
+}
+
+function seteazaTema(optiune) {
+  localStorage.setItem('beatrix_theme', optiune);
+  
+  ['themeBtnLight', 'themeBtnDark', 'themeBtnSystem'].forEach(id => {
+    let btn = document.getElementById(id);
+    if (btn) btn.classList.remove('active');
+  });
+
+  if (optiune === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    let btn = document.getElementById('themeBtnLight');
+    if (btn) btn.classList.add('active');
+  } else if (optiune === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    let btn = document.getElementById('themeBtnDark');
+    if (btn) btn.classList.add('active');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    let btn = document.getElementById('themeBtnSystem');
+    if (btn) btn.classList.add('active');
+  }
+  showToast("✓ Temă actualizată!");
+}
+
+function seteazaLimba(lang) {
+  localStorage.setItem('beatrix_lang', lang);
+  let btnRo = document.getElementById('langBtnRo');
+  let btnEn = document.getElementById('langBtnEn');
+  if (btnRo) btnRo.classList.toggle('active', lang === 'ro');
+  if (btnEn) btnEn.classList.toggle('active', lang === 'en');
+  
+  showToast(lang === 'ro' ? "✓ Limbă setată pe Română" : "✓ Language set to English");
+}
+
+function deschideEditProfile() {
+  inchideMeniuLateral();
+  showToast("Setările de profil vor urma!");
+}
+
+function deconectareCont() {
+  inchideMeniuLateral();
+  customConfirm("Deconectare", "Ești sigură că vrei să te deconectezi din cont?", function() {
+    showToast("✓ Deconectat cu succes!");
+  });
+}
+
+// Inițializare temă și limbă salvate la pornire
+(function() {
+  let temaSalvata = localStorage.getItem('beatrix_theme') || 'system';
+  seteazaTema(temaSalvata);
+  let langSalvata = localStorage.getItem('beatrix_lang') || 'ro';
+  seteazaLimba(langSalvata);
+})();
