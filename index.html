@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal23">
+  <link rel="stylesheet" href="style.css?v=fitFinal30">
 </head>
 <body>
 
@@ -26,7 +26,7 @@
       <div class="custom-modal-title" id="modalTitle">Confirmare</div>
       <div class="custom-modal-text" id="modalText">Ești sigură că vrei să continui?</div>
       <div class="custom-modal-actions">
-        <button class="btn btn-clear" style="flex:1;" onclick="closeCustomModal(false)">Renunță</button>
+        <button class="btn btn-clear" style="flex:1;" id="modalBtnCancel" onclick="closeCustomModal(false)">Renunță</button>
         <button class="btn" style="flex:1;" id="modalBtnConfirm" onclick="closeCustomModal(true)">Confirmă</button>
       </div>
     </div>
@@ -36,7 +36,7 @@
   <div id="modalEditareIncasareBackdrop">
     <div class="modal-edit-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-        <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);">✏️ Editare Încasare</div>
+        <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);" id="editPaymentModalTitle">✏️ Editare Încasare</div>
         <button onclick="inchideModalEditareIncasare()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
       </div>
       
@@ -76,15 +76,16 @@
             <option value="12 sedinte">12 sedinte</option>
             <option value="16 sedinte">16 sedinte</option>
             <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="Sedinta Individuala">Sedinta Individuala</option>
-            <option value="Sedinta Gratuita">Sedinta Gratuita</option>
+            <option value="18 trainers (12)">18 trainers (12)</option>
+            <option value="Sedinta Individuala">sedinta individuala</option>
+            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
         </div>
       </div>
 
       <div style="display:flex; gap:8px; margin-top:14px;">
-        <button class="btn btn-clear" style="flex:1;" onclick="inchideModalEditareIncasare()">Renunță</button>
-        <button class="btn" style="flex:1;" onclick="salveazaModificareIncasare()">Salvează</button>
+        <button class="btn btn-clear" style="flex:1;" id="editIncCancelBtn" onclick="inchideModalEditareIncasare()">Renunță</button>
+        <button class="btn" style="flex:1;" id="editIncSaveBtn" onclick="salveazaModificareIncasare()">Salvează</button>
       </div>
     </div>
   </div>
@@ -100,50 +101,35 @@
             <circle cx="12" cy="7" r="4"></circle>
           </svg>
         </div>
-        <div class="drawer-user-meta">
-          <div class="drawer-user-name" id="drawerUserName">Beatrix</div>
-          <div class="drawer-user-status" id="drawerUserStatus">Online</div>
-        </div>
       </div>
-      <button class="drawer-close-btn" onclick="inchideMeniuLateral()">✕</button>
+      <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </div>
 
     <div class="drawer-body">
-      <!-- Secțiune Cont (Accordion / Expandable) -->
+      <!-- Secțiune Temă -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Cont</div>
-        <button class="drawer-action-btn" onclick="comutaSubmeniuCont()">
-          <span>👤</span> <span style="flex:1;">Setări Cont</span> <span id="contArrow">▼</span>
-        </button>
-        <div id="contSubmenu" style="display:none; flex-direction:column; gap:6px; padding-left:10px; margin-top:4px;">
-          <button class="drawer-action-btn" onclick="deschideEditProfile()">
-            <span>✏️</span> <span>Editează profil</span>
-          </button>
-          <button class="drawer-action-btn drawer-btn-logout" onclick="deconectareCont()">
-            <span>🚪</span> <span>Deconectare</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Secțiune Temă (fără textul redundant) -->
-      <div class="drawer-section">
-        <div class="drawer-section-title">Temă</div>
+        <div class="drawer-section-title" id="themeSectionTitle">Temă</div>
         <div class="theme-selector-grid">
           <button class="theme-option-btn" id="themeBtnLight" onclick="seteazaTema('light')">
-            <span>☀️</span> Luminos
+            <span>☀️</span> <span id="themeBtnLightText">Luminos</span>
           </button>
           <button class="theme-option-btn" id="themeBtnDark" onclick="seteazaTema('dark')">
-            <span>🌙</span> Întunecat
+            <span>🌙</span> <span id="themeBtnDarkText">Întunecat</span>
           </button>
           <button class="theme-option-btn" id="themeBtnSystem" onclick="seteazaTema('system')">
-            <span>💻</span> Sistem
+            <span>💻</span> <span id="themeBtnSystemText">Sistem</span>
           </button>
         </div>
       </div>
 
       <!-- Secțiune Limbă cu Steaguri -->
       <div class="drawer-section">
-        <div class="drawer-section-title">Limbă / Language</div>
+        <div class="drawer-section-title" id="langSectionTitle">Limbă / Language</div>
         <div class="theme-selector-grid">
           <button class="lang-option-btn active" id="langBtnRo" onclick="seteazaLimba('ro')">
             <span style="font-size:1.1rem;">🇷🇴</span> Română
@@ -202,13 +188,13 @@
 
         <div class="calendar-drawer-content">
           <div class="drawer-nav-actions">
-            <button class="drawer-nav-btn" onclick="schimbaSaptamanaAnimat(-1)">
+            <button class="drawer-nav-btn" id="btnPastWeek" onclick="schimbaSaptamanaAnimat(-1)">
               <span>◀</span> Săpt. Trecută
             </button>
             <button class="drawer-btn-today" id="btnRevinoAzi" onclick="revinoLaSaptamanaCurenta()">
               Azi
             </button>
-            <button class="drawer-nav-btn" onclick="schimbaSaptamanaAnimat(1)">
+            <button class="drawer-nav-btn" id="btnNextWeek" onclick="schimbaSaptamanaAnimat(1)">
               Săpt. Viitoare <span>▶</span>
             </button>
           </div>
@@ -233,18 +219,18 @@
           </svg>
         </div>
         <div class="end-schedule-content">
-          <div class="end-schedule-title">Ziua-i gata, caloriile-s topite!</div>
-          <div class="end-schedule-subtitle">Antrenorul a supraviețuit și azi!</div>
+          <div class="end-schedule-title" id="endScheduleTitleText">Ziua-i gata, caloriile-s topite!</div>
+          <div class="end-schedule-subtitle" id="endScheduleSubText">Antrenorul a supraviețuit și azi!</div>
         </div>
       </div>
 
       <div style="margin: 10px 0 14px; padding: 8px 12px; background: var(--card-bg); border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-        <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary);">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary);" id="addOraCustomText">
           ➕ Adaugă oră suplimentară
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
           <input type="text" id="inputOraCustom" placeholder="07:30" style="width: 78px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; text-align: center; background: var(--card-bg); color: var(--text);">
-          <button class="btn" style="padding: 5px 10px; font-size: 0.78rem;" onclick="adaugaOraCustom()">+ Adaugă</button>
+          <button class="btn" style="padding: 5px 10px; font-size: 0.78rem;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">+ Adaugă</button>
         </div>
       </div>
 
@@ -256,20 +242,18 @@
               <path d="M3 3v5h5"></path>
               <path d="M12 7v5l4 2"></path>
             </svg>
-            Istoric Prezențe Orar
+            <span id="historyOrarSummaryText">Istoric Prezențe Orar</span>
           </span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
         <div style="margin-top: 10px;">
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
             <div class="form-group" style="margin-bottom:0;">
-              <label>Filtrează după clientă:</label>
-              <select id="filtruClientaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
-                <option value="">Toate clientele</option>
-              </select>
+              <label id="labelFiltruCliOrar">Filtrează după clientă:</label>
+              <input type="text" id="filtruClientaOrar" class="form-control" placeholder="Toate clientele" list="listaClienteVizibile" oninput="filtreazaIstoricOrarInstant()" onchange="filtreazaIstoricOrarInstant()">
             </div>
             <div class="form-group" style="margin-bottom:0;">
-              <label>Filtrează după lună:</label>
+              <label id="labelFiltruLunaOrar">Filtrează după lună:</label>
               <select id="filtruLunaOrar" class="form-control" onchange="filtreazaIstoricOrarInstant()">
                 <option value="">Toate lunile</option>
               </select>
@@ -301,7 +285,7 @@
             <option value="Activ">Activ</option>
             <option value="Hold">Hold</option>
           </select>
-          <button class="btn" style="padding:6px 12px; font-size:0.8rem;" onclick="adaugaClientaInProgramari()">Adaugă</button>
+          <button class="btn" style="padding:6px 12px; font-size:0.8rem;" id="progAddBtnText" onclick="adaugaClientaInProgramari()">Adaugă</button>
         </div>
       </div>
 
@@ -316,7 +300,7 @@
         <div id="progActiveList" class="loader">Se preiau programările...</div>
       </div>
 
-      <div class="hold-header">Hold</div>
+      <div class="hold-header" id="holdHeaderTitle">HOLD</div>
       <div class="prog-table-container" style="border-radius: 0 0 8px 8px; border-top: none;">
         <div id="progHoldList" class="loader">Se preiau clientele din Hold...</div>
       </div>
@@ -326,7 +310,7 @@
     <div id="tabFisa" class="tab-content">
       <details id="detailsDetailsAdaugareClienta" style="margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
         <summary class="summary-toggle-clean">
-          <span>➕ Adaugă o Clientă Nouă în Aplicație</span>
+          <span id="addClientSummaryText">➕ Adaugă o Clientă Nouă în Aplicație</span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
@@ -337,24 +321,23 @@
             <option value="12 sedinte">12 sedinte</option>
             <option value="16 sedinte">16 sedinte</option>
             <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="Sedinta Individuala">Sedinta Individuala</option>
-            <option value="Sedinta Gratuita">Sedinta Gratuita</option>
+            <option value="18 trainers (12)">18 trainers (12)</option>
+            <option value="Sedinta Individuala">sedinta individuala</option>
+            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
-          <button class="btn" onclick="creeazaClientaNouaDirect()">Salvează Clienta</button>
+          <button class="btn" id="saveClientDirectBtn" onclick="creeazaClientaNouaDirect()">Salvează Clienta</button>
         </div>
       </details>
 
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin:0;">SELECTEAZĂ CLIENTA</label>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin:0;" id="labelSelectClientFisa">SELECTEAZĂ CLIENTA</label>
           <label style="font-size:0.75rem; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin:0;">
             <input type="checkbox" id="checkArataArhivate" onchange="populeazaSelectoriCliente()" style="margin:0;">
-            <span>Arată și arhivate</span>
+            <span id="spanArataArhivate">Arată și arhivate</span>
           </label>
         </div>
-        <select id="selectClientaFisa" class="form-control select-faded" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
-          <option value="">Alege o clientă</option>
-        </select>
+        <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege sau tastează clientă..." list="listaClienteVizibile" oninput="actualizeazaStilSelect(this)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
 
         <!-- EMPTY STATE PENTRU FIȘĂ -->
         <div id="fisaEmptyState" class="empty-state-card">
@@ -364,8 +347,8 @@
               <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
             </svg>
           </div>
-          <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);">Nici o clientă selectată</div>
-          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; max-width: 290px; line-height: 1.35;">
+          <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);" id="emptyStateTitleText">Nici o clientă selectată</div>
+          <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; max-width: 290px; line-height: 1.35;" id="emptyStateDescText">
             Alege o clientă din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.
           </div>
         </div>
@@ -387,75 +370,76 @@
 
           <div class="metric-grid">
             <div class="metric-box">
-              <div style="font-size:0.75rem; color:var(--text-muted)">ȘEDINȚE RĂMASE</div>
+              <div style="font-size:0.75rem; color:var(--text-muted)" id="labelSedinteRamase">ȘEDINȚE RĂMASE</div>
               <div class="metric-val" id="fisaSedinteRamase">-</div>
             </div>
             <div class="metric-box">
-              <div style="font-size:0.75rem; color:var(--text-muted)">STATUS</div>
+              <div style="font-size:0.75rem; color:var(--text-muted)" id="labelStatusFisa">STATUS</div>
               <div style="margin-top:4px;" id="fisaStatusBadge"><span class="badge badge-activ">Activ</span></div>
             </div>
             <div class="metric-box">
-              <div style="font-size:0.75rem; color:var(--text-muted)">VALABILITATE PÂNĂ LA</div>
+              <div style="font-size:0.75rem; color:var(--text-muted)" id="labelValabilitate">VALABILITATE PÂNĂ LA</div>
               <div style="font-weight:700; margin-top:4px; font-size:0.85rem;" id="fisaValabilitate">-</div>
             </div>
             <div class="metric-box">
-              <div style="font-size:0.75rem; color:var(--text-muted)">ȘEDINȚE EFECTUATE</div>
+              <div style="font-size:0.75rem; color:var(--text-muted)" id="labelSedinteEfectuate">ȘEDINȚE EFECTUATE</div>
               <div style="font-weight:700; margin-top:4px;" id="fisaProgres">-</div>
             </div>
           </div>
 
           <details id="detailsEditareFisa" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
             <summary class="summary-toggle-clean">
-              <span>✏ Editează / Ajustează Datele Clientei</span>
+              <span id="editClientSummaryText">✏ Editează / Ajustează Datele Clientei</span>
               <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
             </summary>
             <div style="margin-top: 10px;">
               <div class="form-group">
-                <label>Nume Clientă (Redenumește peste tot)</label>
+                <label id="labelEditNume">Nume Clientă (Redenumește peste tot)</label>
                 <input type="text" id="editNume" class="form-control" placeholder="Nume și Prenume">
               </div>
 
               <div class="form-group">
-                <label>Tip Abonament</label>
+                <label id="labelEditTip">Tip Abonament</label>
                 <select id="editTip" class="form-control">
                   <option value="8 sedinte">8 sedinte</option>
                   <option value="10 sedinte">10 sedinte</option>
                   <option value="12 sedinte">12 sedinte</option>
                   <option value="16 sedinte">16 sedinte</option>
                   <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-                  <option value="Sedinta Individuala">Sedinta Individuala</option>
-                  <option value="Sedinta Gratuita">Sedinta Gratuita</option>
+                  <option value="18 trainers (12)">18 trainers (12)</option>
+                  <option value="Sedinta Individuala">sedinta individuala</option>
+                  <option value="Sedinta Gratuita">sedinta gratuita</option>
                 </select>
               </div>
 
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                 <div class="form-group">
-                  <label>Dată Start</label>
+                  <label id="labelEditStart">Dată Start</label>
                   <input type="text" id="editDataStart" class="form-control" placeholder="01.10.2026">
                 </div>
                 <div class="form-group">
-                  <label>Dată Expirare</label>
+                  <label id="labelEditExp">Dată Expirare</label>
                   <input type="text" id="editDataExpirare" class="form-control" placeholder="31.10.2026">
                 </div>
               </div>
 
               <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:6px;">
                 <div class="form-group">
-                  <label>Incluse</label>
+                  <label id="labelEditIncluse">Incluse</label>
                   <input type="number" id="editIncluse" class="form-control">
                 </div>
                 <div class="form-group">
-                  <label>Efectuate</label>
+                  <label id="labelEditEfectuate">Efectuate</label>
                   <input type="number" id="editEfectuate" class="form-control">
                 </div>
                 <div class="form-group">
-                  <label>Rămase</label>
+                  <label id="labelEditRamase">Rămase</label>
                   <input type="number" id="editRamase" class="form-control">
                 </div>
               </div>
 
               <div class="form-group">
-                <label>Status</label>
+                <label id="labelEditStatus">Status</label>
                 <select id="editStatus" class="form-control">
                   <option value="Activ">Activ</option>
                   <option value="Finalizat">Finalizat</option>
@@ -464,7 +448,7 @@
                 </select>
               </div>
 
-              <button class="btn" style="width: 100%; font-size: 0.85rem;" onclick="salveazaEditareClienta()">
+              <button class="btn" style="width: 100%; font-size: 0.85rem;" id="saveEditClientBtn" onclick="salveazaEditareClienta()">
                 Salvează Modificările
               </button>
             </div>
@@ -472,7 +456,7 @@
 
           <!-- Prelungește Valabilitate Abonament -->
           <div style="margin-top: 12px; padding: 12px; background: var(--card-bg); border: 1px dashed var(--primary); border-radius: 10px;">
-            <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;" id="extendValidityTitleText">
               ⏱ Prelungește Valabilitate Abonament
             </div>
             <div style="display: flex; gap: 6px; margin-bottom: 8px;">
@@ -482,7 +466,7 @@
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
               <input type="date" id="dataPrelungireManuala" class="form-control" style="padding: 6px; font-size: 0.85rem;">
-              <button class="btn" style="padding: 6px 10px; font-size: 0.8rem; background: #27ae60;" onclick="seteazaDataManuala()">Setează</button>
+              <button class="btn" style="padding: 6px 10px; font-size: 0.8rem; background: #27ae60;" id="setManualDateBtn" onclick="seteazaDataManuala()">Setează</button>
             </div>
           </div>
 
@@ -501,11 +485,19 @@
                   <path d="M3 3v5h5"></path>
                   <path d="M12 7v5l4 2"></path>
                 </svg>
-                <span>Istoric Prezențe Recente</span>
+                <span id="recentHistorySummaryText">Istoric Prezențe Recente</span>
               </span>
               <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
             </summary>
-            <div id="istoricPrezenteList" style="margin-top: 10px; font-size: 0.85rem;"></div>
+            <div style="margin-top: 10px;">
+              <div class="form-group" style="margin-bottom:8px;">
+                <label id="labelFiltruLunaFisa">Filtrează după lună:</label>
+                <select id="filtruLunaFisa" class="form-control" onchange="filtreazaIstoricFisaInstant()">
+                  <option value="">Toate lunile</option>
+                </select>
+              </div>
+              <div id="istoricPrezenteList" style="margin-top: 10px; font-size: 0.85rem;"></div>
+            </div>
           </details>
         </div>
       </div>
@@ -521,34 +513,36 @@
             <circle cx="14" cy="15" r="1.8" fill="var(--primary)" stroke="none"></circle>
             <circle cx="17" cy="15" r="1.8" fill="var(--primary)" stroke="none" opacity="0.6"></circle>
           </svg>
-          <span>Înregistrare Plată Nouă</span>
+          <span id="incasareTitleText">Înregistrare Plată Nouă</span>
         </h3>
         
         <div class="form-group">
-          <label>Nume Clientă (Existentă sau Nouă)</label>
+          <label id="labelIncNume">Nume Clientă (Existentă sau Nouă)</label>
           <input type="text" id="incasareNume" class="form-control" placeholder="Alege din listă sau scrie nume nou" list="listaClienteVizibile">
           <datalist id="listaClienteVizibile"></datalist>
         </div>
 
         <div class="form-group">
-          <label>Tip Abonament</label>
+          <label id="labelIncTip">Tip Abonament</label>
           <select id="incasareTip" class="form-control select-faded" onchange="actualizeazaStilSelect(this); autoSelecteazaSuma()">
-            <option value="">Alege tip abonament</option>
+            <option value="" id="optSelectSubPlaceholder">Alege tip abonament</option>
             <option value="8 sedinte">8 sedinte</option>
             <option value="10 sedinte">10 sedinte</option>
             <option value="12 sedinte">12 sedinte</option>
             <option value="16 sedinte">16 sedinte</option>
             <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="Sedinta Individuala">Sedinta Individuala</option>
-            <option value="Sedinta Gratuita">Sedinta Gratuita</option>
+            <option value="18 trainers (12)">18 trainers (12)</option>
+            <option value="Sedinta Individuala">sedinta individuala</option>
+            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
         </div>
 
         <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px;">
           <div class="form-group">
-            <label>Sumă (RON)</label>
+            <label id="labelIncSuma">Sumă (RON)</label>
             <select id="selectSumaPreset" class="form-control select-faded" onchange="actualizeazaStilSelect(this); gestioneazaSchimbareSumaPreset()">
-              <option value="">Suma</option>
+              <option value="" id="optSumaPlaceholder">Suma</option>
+              <option value="400">400 RON</option>
               <option value="450">450 RON</option>
               <option value="520">520 RON</option>
               <option value="600">600 RON</option>
@@ -561,9 +555,9 @@
             <input type="number" id="incasareSumaCustom" class="form-control" placeholder="Sumă (RON)" style="margin-top:6px; display:none;">
           </div>
           <div class="form-group">
-            <label>Metodă Plată</label>
+            <label id="labelIncMetoda">Metodă Plată</label>
             <select id="incasareMetoda" class="form-control select-faded" onchange="actualizeazaStilSelect(this)">
-              <option value="">Metoda Plata</option>
+              <option value="" id="optMetodaPlaceholder">Metoda Plata</option>
               <option value="Revolut">Revolut</option>
               <option value="Cash">Cash</option>
               <option value="ING / Card">ING / Card</option>
@@ -573,16 +567,16 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
           <div class="form-group">
-            <label>Dată Plată</label>
+            <label id="labelIncDataPlata">Dată Plată</label>
             <input type="date" id="incasareDataPlata" class="form-control">
           </div>
           <div class="form-group">
-            <label>Dată Start</label>
+            <label id="labelIncDataStart">Dată Start</label>
             <input type="date" id="incasareDataStart" class="form-control">
           </div>
         </div>
 
-        <button class="btn" style="width: 100%; margin-top: 4px;" onclick="salveazaIncasare()">
+        <button class="btn" style="width: 100%; margin-top: 4px;" id="submitAbonamentBtn" onclick="salveazaIncasare()">
           Încasează & Salvează Abonamentul
         </button>
       </div>
@@ -596,7 +590,7 @@
               <path d="M3 3v5h5"></path>
               <path d="M12 7v5l4 2"></path>
             </svg>
-            Istoric Încasări
+            <span id="historyIncSummaryText">Istoric Încasări</span>
           </span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
@@ -604,13 +598,11 @@
           
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
             <div class="form-group" style="margin-bottom:0;">
-              <label>Filtrează clientă:</label>
-              <select id="filtruClientaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
-                <option value="">Toate clientele</option>
-              </select>
+              <label id="labelFiltruCliInc">Filtrează clientă:</label>
+              <input type="text" id="filtruClientaIncasari" class="form-control" placeholder="Toate clientele" list="listaClienteVizibile" oninput="filtreazaIstoricIncasariInstant()" onchange="filtreazaIstoricIncasariInstant()">
             </div>
             <div class="form-group" style="margin-bottom:0;">
-              <label>Filtrează lună:</label>
+              <label id="labelFiltruLunaInc">Filtrează lună:</label>
               <select id="filtruLunaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
                 <option value="">Toate lunile</option>
               </select>
@@ -619,7 +611,7 @@
 
           <div class="total-incasari-card">
             <div>
-              <div class="total-incasari-label">Total Încasări</div>
+              <div class="total-incasari-label" id="totalIncLabelText">Total Încasări</div>
               <div class="total-incasari-count" id="totalIncasariCount">0 plăți găsite</div>
             </div>
             <div class="total-incasari-val" id="totalIncasariVal">0 RON</div>
@@ -699,6 +691,6 @@
     </button>
   </nav>
 
-  <script src="app.js?v=fitFinal23"></script>
+  <script src="app.js?v=fitFinal31"></script>
 </body>
 </html>
