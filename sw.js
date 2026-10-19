@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v30';
+const CACHE_NAME = 'bfit-cache-v32';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,8 +34,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Cererile către backend-ul Google Apps Script merg exclusiv prin rețea
-  if (url.hostname.includes('script.google.com') || url.hostname.includes('google.com')) {
+  // Cererile către backend-ul Google Apps Script și Supabase merg exclusiv prin rețea
+  if (
+    url.hostname.includes('script.google.com') ||
+    url.hostname.includes('google.com') ||
+    url.hostname.includes('supabase.co')
+  ) {
     event.respondWith(fetch(event.request));
     return;
   }
@@ -45,7 +49,7 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
             const responseToCache = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(event.request, responseToCache);
