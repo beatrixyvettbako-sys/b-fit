@@ -1,6 +1,14 @@
 const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
 const ESTE_APPS_SCRIPT = (typeof google !== 'undefined' && google.script && typeof google.script.run !== 'undefined');
 
+// --- CONFIGURARE SUPABASE ---
+const SUPABASE_URL = "https://qfnhluyczxugyqkbyvmc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz";
+let USE_SUPABASE = true;
+const supabaseClient = (typeof window !== 'undefined' && window.supabase)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
+
 // Dezactivăm restaurarea nativă automată a scroll-ului la refresh pentru a permite calibrarea exactă
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
@@ -445,7 +453,571 @@ function aplicaCuloareAntrenament(sel) {
   }
 }
 
+// --- UTILITARE FORMATE DATE RO & SUPABASE ---
+function formateazaDataRoLocal(d) {
+  if (!d) return "-";
+  if (d instanceof Date) {
+    let dd = String(d.getDate()).padStart(2, '0');
+    let mm = String(d.getMonth() + 1).padStart(2, '0');
+    let yyyy = d.getFullYear();
+    return `${dd}.${mm}.${yyyy}`;
+  }
+  let dStr = d.toString().trim();
+  if (dStr.indexOf("-") !== -1) {
+    let p = dStr.split("-");
+    if (p.length === 3 && p[0].length === 4) return `${p[2]}.${p[1]}.${p[0]}`;
+  }
+  return dStr;
+}
+
+function construiesteTagZiLocal(saptamanaCheie, zi) {
+  let ziCurata = zi ? zi.toString().trim() : "";
+  if (!saptamanaCheie || saptamanaCheie.trim() === "") return ziCurata;
+  let sCheie = saptamanaCheie.trim();
+  if (ziCurata.indexOf("W_") === 0) return ziCurata;
+  return sCheie + "_" + ziCurata;
+}
+
+function getNrSedinteAbonamentLocal(tip) {
+  let t = (tip || "").toLowerCase();
+  if (t.indexOf("gratuit") !== -1) return 0;
+  if (t.indexOf("trainers") !== -1 || t.indexOf("18") !== -1) return 12;
+  if (t.indexOf("16") !== -1) return 16;
+  if (t.indexOf("12") !== -1) return 12;
+  if (t.indexOf("10") !== -1) return 10;
+  if (t.indexOf("8") !== -1) return 8;
+  if (t.indexOf("individual") !== -1 || t.indexOf("1") !== -1) return 1;
+  return 8;
+}
+
+// --- MIGRARE AUTOMATĂ DIN GOOGLE SHEETS ÎN SUPABASE ---
+async function migreazaDateDinGoogleSheetsInSupabase() {
+  if (!supabaseClient) return;
+  try {
+    showToast("⏳ Se sincronizează datele din Google Sheets în Supabase...");
+    const resp = await fetch(API_URL + "?action=getTotBazaDeDate");
+    const gsData = await resp.json();
+    if (!gsData || !Array.isArray(gsData.clienti)) return;
+
+    // 1. Cliente
+    if (gsData.clienti.length > 0) {
+      const rowsCliente = gsData.clienti.map((c, idx) => ({
+        id: c.id || ("cli_" + (idx + 1)),
+        nume: c.nume,
+        tipAbonament: c.tipAbonament || "-",
+        incluse: Number(c.incluse) || 0,
+        efectuate: Number(c.efectuate) || 0,
+        ramase: Number(c.ramase) || 0,
+        dataStart: c.dataStart || "-",
+        dataExpirare: c.dataExpirare || "-",
+        status: c.status || "Activ"
+      }));
+      await supabaseClient.from('cliente').insert(rowsCliente);
+    }
+
+    // 2. Orar
+    if (Array.isArray(gsData.orarSloturi) && gsData.orarSloturi.length > 0) {
+      const rowsOrar = gsData.orarSloturi.map(o => ({
+        ziRaw: o.ziRaw || "",
+        ora: normalizeazaOraUi(o.ora),
+        clienta: o.clienta || "",
+        antrenament: o.antrenament || "",
+        blocat: !!o.blocat,
+        bifat: !!o.bifat,
+        slotIndex: Number(o.slotIndex) || 0
+      }));
+      await supabaseClient.from('orar').insert(rowsOrar);
+    }
+
+    // 3. Programari (Activ + Hold)
+    const rowsProg = [];
+    (gsData.progActive || []).forEach(p => {
+      rowsProg.push({ sectiune: 'Activ', nume: p.nume, prezenta: p.prezenta || '', mentiuni: p.mentiuni || '' });
+    });
+    (gsData.progHold || []).forEach(p => {
+      rowsProg.push({ sectiune: 'Hold', nume: p.nume, prezenta: p.prezenta || '', mentiuni: p.mentiuni || '' });
+    });
+    if (rowsProg.length > 0) {
+      await supabaseClient.from('programari').insert(rowsProg);
+    }
+
+    // 4. Încasări (înversăm ca să păstrăm ordinea cronologică la inserare)
+    if (Array.isArray(gsData.incasari) && gsData.incasari.length > 0) {
+      const rowsInc = [...gsData.incasari].reverse().map(i => ({
+        data: i.data || "-",
+        clienta: i.clienta || "",
+        suma: (i.suma || "").toString().replace(/RON/i, "").trim() || "-",
+        metoda: i.metoda || "-",
+        tip: i.tip || "-",
+        luna: i.luna || "-"
+      }));
+      await supabaseClient.from('incasari').insert(rowsInc);
+    }
+
+    // 5. Prezențe
+    if (Array.isArray(gsData.prezente) && gsData.prezente.length > 0) {
+      const rowsPrez = [...gsData.prezente].reverse().map(p => ({
+        data: p.data || "-",
+        zi: p.zi || "",
+        ora: normalizeazaOraUi(p.ora),
+        clienta: p.clienta || "",
+        antrenament: p.antrenament || "-"
+      }));
+      await supabaseClient.from('prezente').insert(rowsPrez);
+    }
+
+    showToast("✓ Migrare în Supabase completă!");
+    incarcaBazaDateSilencios(null, true);
+  } catch (err) {
+    console.error("Eroare migrare Supabase:", err);
+  }
+}
+
+async function executaActiuneSupabase(actionName, payload) {
+  const sb = supabaseClient;
+
+  const gasesteIdDupaNume = async (nume) => {
+    if (!nume || !nume.trim()) return "";
+    const { data } = await sb.from('cliente').select('id, row').ilike('nume', nume.trim()).limit(1);
+    if (data && data.length > 0) return data[0].id || ("cli_" + data[0].row);
+    return "";
+  };
+
+  const gasesteSauCreeazaSlotSupabase = async (saptamanaCheie, zi, ora, slotIndex, rowPropus) => {
+    const tagZi = construiesteTagZiLocal(saptamanaCheie, zi);
+    const oraNorm = normalizeazaOraUi(ora);
+    const slotIdx = (typeof slotIndex === "number") ? slotIndex : 0;
+
+    if (rowPropus) {
+      const { data: ex } = await sb.from('orar').select('*').eq('row', rowPropus).maybeSingle();
+      if (ex) {
+        const zEx = (ex.ziRaw || "").trim();
+        const oEx = normalizeazaOraUi(ex.ora);
+        const sEx = Number(ex.slotIndex) || 0;
+        if ((zEx === tagZi || (zi === "Marti" && zEx === (saptamanaCheie + "_Marți"))) && oEx === oraNorm && sEx === slotIdx) {
+          return ex;
+        }
+      }
+    }
+
+    const { data: list } = await sb.from('orar')
+      .select('*')
+      .in('ziRaw', zi === "Marti" ? [tagZi, saptamanaCheie + "_Marți"] : [tagZi])
+      .eq('ora', oraNorm)
+      .eq('slotIndex', slotIdx)
+      .limit(1);
+
+    if (list && list.length > 0) return list[0];
+
+    const { data: creat } = await sb.from('orar')
+      .insert([{ ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: slotIdx, client_id: "" }])
+      .select()
+      .single();
+    return creat;
+  };
+
+  if (actionName === "getTotBazaDeDate") {
+    const [resCli, resOrar, resProg, resInc, resPrez] = await Promise.all([
+      sb.from('cliente').select('*'),
+      sb.from('orar').select('*').order('row', { ascending: true }),
+      sb.from('programari').select('*').order('row', { ascending: true }),
+      sb.from('incasari').select('*').order('row', { ascending: false }),
+      sb.from('prezente').select('*').order('row', { ascending: false })
+    ]);
+
+    const clienti = (resCli.data || []).map(c => ({
+      row: c.row,
+      nume: (c.nume || "").trim(),
+      tipAbonament: c.tipAbonament || "-",
+      incluse: Number(c.incluse) || 0,
+      efectuate: Number(c.efectuate) || 0,
+      ramase: Number(c.ramase) || 0,
+      dataStart: c.dataStart || "-",
+      dataExpirare: c.dataExpirare || "-",
+      status: c.status || "Activ",
+      id: c.id || ("cli_" + c.row)
+    })).filter(c => c.nume !== "");
+
+    clienti.sort((a, b) => a.nume.localeCompare(b.nume));
+
+    // Dacă baza Supabase e complet goală la primul start, migrăm automat din Google Sheets
+    if (clienti.length === 0 && (resOrar.data || []).length === 0 && !localStorage.getItem('BFIT_SUPABASE_MIGRATED')) {
+      localStorage.setItem('BFIT_SUPABASE_MIGRATED', '1');
+      await migreazaDateDinGoogleSheetsInSupabase();
+      return executaActiuneSupabase("getTotBazaDeDate", {});
+    }
+
+    const orarSloturi = (resOrar.data || []).map(o => ({
+      row: o.row,
+      ziRaw: (o.ziRaw || "").trim(),
+      ora: normalizeazaOraUi(o.ora),
+      clienta: (o.clienta || "").trim(),
+      antrenament: (o.antrenament || "").trim(),
+      blocat: !!o.blocat,
+      bifat: !!o.bifat,
+      slotIndex: Number(o.slotIndex) || 0
+    }));
+
+    const progActive = [];
+    const progHold = [];
+    (resProg.data || []).forEach(p => {
+      const prNume = (p.nume || "").trim();
+      if (!prNume) return;
+      const item = {
+        row: p.row,
+        nume: prNume,
+        prezenta: (p.prezenta || "").trim(),
+        mentiuni: (p.mentiuni || "").trim()
+      };
+      if ((p.sectiune || "").trim() === "Hold") progHold.push(item);
+      else progActive.push(item);
+    });
+
+    const incasari = (resInc.data || []).map(i => {
+      const cl = (i.clienta || "").trim();
+      const sVal = (i.suma || "").toString().trim();
+      return {
+        row: i.row,
+        data: i.data || "-",
+        clienta: cl,
+        suma: sVal && sVal !== "-" ? (sVal.indexOf("RON") !== -1 ? sVal : sVal + " RON") : "-",
+        metoda: i.metoda || "-",
+        tip: i.tip || "-",
+        luna: i.luna || "-"
+      };
+    }).filter(i => i.clienta !== "");
+
+    const prezente = (resPrez.data || []).map(p => ({
+      row: p.row,
+      data: p.data || "-",
+      zi: p.zi || "",
+      ora: normalizeazaOraUi(p.ora),
+      clienta: (p.clienta || "").trim(),
+      antrenament: p.antrenament || "-"
+    })).filter(p => p.clienta !== "");
+
+    return { clienti, orarSloturi, progActive, progHold, incasari, prezente };
+  }
+
+  if (actionName === "salveazaSlotAuto") {
+    const slot = await gasesteSauCreeazaSlotSupabase(payload.saptamanaCheie, payload.zi, payload.ora, payload.slotIndex, payload.row);
+    const idCli = await gasesteIdDupaNume(payload.clienta);
+    await sb.from('orar').update({
+      clienta: payload.clienta || "",
+      antrenament: payload.antrenament || "",
+      client_id: idCli
+    }).eq('row', slot.row);
+    return { success: true, row: slot.row };
+  }
+
+  if (actionName === "bifeazaPrezenta") {
+    const slot = await gasesteSauCreeazaSlotSupabase(payload.saptamanaCheie, payload.zi, payload.ora, payload.slotIndex, payload.row);
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    const idCli = await gasesteIdDupaNume(payload.clienta);
+
+    await sb.from('orar').update({
+      clienta: payload.clienta || "",
+      antrenament: payload.antrenament || "",
+      bifat: true,
+      client_id: idCli
+    }).eq('row', slot.row);
+
+    if (payload.clienta && payload.clienta.trim() !== "") {
+      const { data: exPrez } = await sb.from('prezente')
+        .select('*')
+        .eq('data', payload.dataCalendar)
+        .eq('ora', oraNorm)
+        .ilike('clienta', payload.clienta.trim())
+        .limit(1);
+
+      if (exPrez && exPrez.length > 0) {
+        await sb.from('prezente').update({ antrenament: payload.antrenament || "", client_id: idCli }).eq('row', exPrez[0].row);
+      } else {
+        await sb.from('prezente').insert([{
+          data: payload.dataCalendar,
+          zi: payload.zi,
+          ora: oraNorm,
+          clienta: payload.clienta.trim(),
+          antrenament: payload.antrenament || "",
+          client_id: idCli
+        }]);
+      }
+
+      const esteGratuita = (payload.antrenament || "").toLowerCase().indexOf("gratuit") !== -1;
+      if (!esteGratuita) {
+        const { data: clList } = await sb.from('cliente').select('*').ilike('nume', payload.clienta.trim()).limit(1);
+        if (clList && clList.length > 0) {
+          const cl = clList[0];
+          if ((cl.tipAbonament || "").toLowerCase().indexOf("gratuit") === -1) {
+            const incluse = Number(cl.incluse) || 0;
+            const efectuate = (Number(cl.efectuate) || 0) + 1;
+            const ramase = Math.max(0, incluse - efectuate);
+            const upd = { efectuate, ramase };
+            if (ramase === 0 && incluse > 0) upd.status = "Finalizat";
+            await sb.from('cliente').update(upd).eq('row', cl.row);
+          }
+        }
+      }
+    }
+    return { success: true, row: slot.row };
+  }
+
+  if (actionName === "anuleazaSlot") {
+    const slot = await gasesteSauCreeazaSlotSupabase(payload.saptamanaCheie, payload.zi, payload.ora, payload.slotIndex, payload.row);
+    const clientaVeche = (slot.clienta || "").trim();
+    const antrenamentVechi = slot.antrenament || "";
+    const aFostBifat = !!slot.bifat;
+    const oraNorm = normalizeazaOraUi(payload.ora);
+
+    await sb.from('orar').update({
+      clienta: "",
+      antrenament: "",
+      bifat: false,
+      client_id: ""
+    }).eq('row', slot.row);
+
+    if (clientaVeche !== "" && aFostBifat) {
+      const { data: pList } = await sb.from('prezente')
+        .select('row')
+        .eq('data', payload.dataCalendar)
+        .eq('ora', oraNorm)
+        .ilike('clienta', clientaVeche)
+        .limit(1);
+
+      if (pList && pList.length > 0) {
+        await sb.from('prezente').delete().eq('row', pList[0].row);
+      }
+
+      const esteGratuita = antrenamentVechi.toLowerCase().indexOf("gratuit") !== -1;
+      if (!esteGratuita) {
+        const { data: clList } = await sb.from('cliente').select('*').ilike('nume', clientaVeche).limit(1);
+        if (clList && clList.length > 0) {
+          const cl = clList[0];
+          const incluse = Number(cl.incluse) || 0;
+          const efectuate = Math.max(0, (Number(cl.efectuate) || 0) - 1);
+          const ramase = Math.max(0, incluse - efectuate);
+          await sb.from('cliente').update({ efectuate, ramase, status: "Activ" }).eq('row', cl.row);
+        }
+      }
+    }
+    return { success: true, row: slot.row };
+  }
+
+  if (actionName === "comutaBlocareOra") {
+    const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    const { data: gasite } = await sb.from('orar')
+      .select('row')
+      .in('ziRaw', payload.zi === "Marti" ? [tagZi, payload.saptamanaCheie + "_Marți"] : [tagZi])
+      .eq('ora', oraNorm);
+
+    if (gasite && gasite.length > 0) {
+      const ids = gasite.map(g => g.row);
+      await sb.from('orar').update({ blocat: !!payload.blocat }).in('row', ids);
+    } else {
+      const noi = [0, 1, 2].map(idx => ({
+        ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: !!payload.blocat, bifat: false, slotIndex: idx, client_id: ""
+      }));
+      await sb.from('orar').insert(noi);
+    }
+    return { success: true };
+  }
+
+  if (actionName === "adaugaOraCustom") {
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
+    const noi = [0, 1, 2].map(idx => ({
+      ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: idx, client_id: ""
+    }));
+    await sb.from('orar').insert(noi);
+    return { success: true, ora: oraNorm };
+  }
+
+  if (actionName === "inregistreazaAbonament") {
+    const dPlata = payload.dataPlata ? new Date(payload.dataPlata) : new Date();
+    const dStart = payload.dataStart ? new Date(payload.dataStart) : new Date(dPlata.getTime());
+    const dExp = new Date(dStart.getTime());
+    dExp.setDate(dExp.getDate() + 30);
+
+    const totalSedinte = getNrSedinteAbonamentLocal(payload.tip);
+    const dataPlataRo = formateazaDataRoLocal(dPlata);
+    const dataStartRo = formateazaDataRoLocal(dStart);
+    const dataExpRo = formateazaDataRoLocal(dExp);
+    const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+    const lunaNume = luniRoNume[dPlata.getMonth()];
+
+    const { data: exCli } = await sb.from('cliente').select('*').ilike('nume', payload.nume.trim()).limit(1);
+    let idCli = "";
+
+    if (!exCli || exCli.length === 0) {
+      const { data: ins } = await sb.from('cliente').insert([{
+        nume: payload.nume.trim(),
+        tipAbonament: payload.tip,
+        incluse: totalSedinte,
+        efectuate: 0,
+        ramase: totalSedinte,
+        dataStart: dataStartRo,
+        dataExpirare: dataExpRo,
+        status: "Activ"
+      }]).select().single();
+      idCli = ins ? ("cli_" + ins.row) : "";
+      if (ins) await sb.from('cliente').update({ id: idCli }).eq('row', ins.row);
+    } else {
+      idCli = exCli[0].id || ("cli_" + exCli[0].row);
+      await sb.from('cliente').update({
+        tipAbonament: payload.tip,
+        incluse: totalSedinte,
+        efectuate: 0,
+        ramase: totalSedinte,
+        dataStart: dataStartRo,
+        dataExpirare: dataExpRo,
+        status: "Activ"
+      }).eq('row', exCli[0].row);
+    }
+
+    await sb.from('incasari').insert([{
+      data: dataPlataRo,
+      clienta: payload.nume.trim(),
+      suma: (payload.suma || "").toString(),
+      metoda: payload.metoda || "",
+      tip: payload.tip || "",
+      luna: lunaNume,
+      client_id: idCli
+    }]);
+
+    return { success: true };
+  }
+
+  if (actionName === "actualizeazaIncasare") {
+    let dObj = null;
+    if (payload.data && payload.data.indexOf("-") !== -1) {
+      dObj = new Date(payload.data);
+    } else if (payload.data && payload.data.indexOf(".") !== -1) {
+      let p = payload.data.split(".");
+      if (p.length === 3) dObj = new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0]));
+    }
+    if (!dObj || isNaN(dObj.getTime())) dObj = new Date();
+
+    const dataRo = formateazaDataRoLocal(dObj);
+    const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+    const lunaNume = luniRoNume[dObj.getMonth()];
+    const sumaCurata = payload.suma ? payload.suma.toString().replace(/RON/i, "").trim() : "";
+    const idCli = await gasesteIdDupaNume(payload.clienta);
+
+    await sb.from('incasari').update({
+      data: dataRo,
+      clienta: payload.clienta || "",
+      suma: sumaCurata,
+      metoda: payload.metoda || "",
+      tip: payload.tip || "",
+      luna: lunaNume,
+      client_id: idCli
+    }).eq('row', payload.row);
+    return { success: true };
+  }
+
+  if (actionName === "actualizeazaCampProgramare") {
+    const upd = {};
+    if (payload.col === 3) upd.prezenta = payload.val;
+    else if (payload.col === 4) upd.mentiuni = payload.val;
+    await sb.from('programari').update(upd).eq('row', payload.row);
+    return { success: true };
+  }
+
+  if (actionName === "adaugaRandProgramare") {
+    const valPrezenta = payload.esteHold ? "" : (payload.prezenta || "In asteptare");
+    const idCli = await gasesteIdDupaNume(payload.nume);
+    await sb.from('programari').insert([{
+      sectiune: payload.esteHold ? "Hold" : "Activ",
+      nume: payload.nume,
+      prezenta: valPrezenta,
+      mentiuni: payload.mentiuni || "",
+      client_id: idCli
+    }]);
+    return { success: true };
+  }
+
+  if (actionName === "mutaInHold") {
+    await sb.from('programari').update({ sectiune: "Hold", prezenta: "" }).eq('row', payload.row);
+    return { success: true };
+  }
+
+  if (actionName === "stergeRandProgramare") {
+    await sb.from('programari').delete().eq('row', payload.row);
+    return { success: true };
+  }
+
+  if (actionName === "actualizeazaDateClienta") {
+    const numeVechi = (payload.numeVechi || "").trim();
+    const numeNou = (payload.numeNou && payload.numeNou.trim() !== "") ? payload.numeNou.trim() : numeVechi;
+    const { data: ex } = await sb.from('cliente').select('*').ilike('nume', numeVechi).limit(1);
+    if (ex && ex.length > 0) {
+      await sb.from('cliente').update({
+        nume: numeNou,
+        tipAbonament: payload.tip,
+        incluse: Number(payload.incluse) || 0,
+        efectuate: Number(payload.efectuate) || 0,
+        ramase: Number(payload.ramase) || 0,
+        dataStart: payload.dataStart,
+        dataExpirare: payload.dataExp,
+        status: payload.status
+      }).eq('row', ex[0].row);
+
+      if (numeVechi.toLowerCase() !== numeNou.toLowerCase()) {
+        await sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        await sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+      }
+      return { success: true, numeNou };
+    }
+    return { success: false, numeNou };
+  }
+
+  if (actionName === "adaugaClientaDirect") {
+    const incluse = getNrSedinteAbonamentLocal(payload.tip);
+    const { data: ins } = await sb.from('cliente').insert([{
+      nume: payload.nume.trim(),
+      tipAbonament: payload.tip,
+      incluse: incluse,
+      efectuate: 0,
+      ramase: incluse,
+      dataStart: "-",
+      dataExpirare: "-",
+      status: "Activ"
+    }]).select().single();
+    if (ins) {
+      await sb.from('cliente').update({ id: "cli_" + ins.row }).eq('row', ins.row);
+    }
+    return { success: true };
+  }
+
+  if (actionName === "seteazaStatusClienta") {
+    await sb.from('cliente').update({ status: payload.statusNou }).ilike('nume', payload.nume.trim());
+    return { success: true };
+  }
+
+  if (actionName === "prelungesteValabilitate") {
+    const nouaData = payload.dataManuala
+      ? new Date(payload.dataManuala)
+      : new Date(new Date().getTime() + (Number(payload.zile) * 86400000));
+    const dataFinalaRo = formateazaDataRoLocal(nouaData);
+    await sb.from('cliente').update({ dataExpirare: dataFinalaRo, status: "Activ" }).ilike('nume', payload.nume.trim());
+    return { success: true, nouaData: dataFinalaRo };
+  }
+
+  return { success: false };
+}
+
 function callBackend(actionName, payload, callback) {
+  if (USE_SUPABASE && supabaseClient) {
+    executaActiuneSupabase(actionName, payload)
+      .then(res => { if (callback) callback(res); })
+      .catch(err => {
+        console.error("Eroare Supabase:", err);
+        showToast("Eroare sincronizare", "error");
+      });
+    return;
+  }
+
   if (ESTE_APPS_SCRIPT) {
     let runner = google.script.run
       .withSuccessHandler(function(res) { if (callback) callback(res); })
@@ -1223,10 +1795,12 @@ function populeazaSelectoriCliente() {
   let datalist = document.getElementById('listaClienteVizibile');
   if (!datalist) return;
 
+  let arataArhivate = document.getElementById('checkArataArhivate')?.checked || false;
+
   datalist.innerHTML = '';
   (DB.clienti || []).forEach(c => {
     let esteArhivat = (c.status || '').toLowerCase() === 'arhivat' || (c.status || '').toLowerCase() === 'archived';
-    if (!esteArhivat) {
+    if (!esteArhivat || arataArhivate) {
       let optL = document.createElement('option');
       optL.value = c.nume;
       datalist.appendChild(optL);
