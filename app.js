@@ -9,6 +9,9 @@ const supabaseClient = (typeof window !== 'undefined' && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
+let utilizatorCurent = null;
+let tipModAuth = 'login'; // 'login' sau 'signup'
+
 // Dezactivăm restaurarea nativă automată a scroll-ului la refresh pentru a permite calibrarea exactă
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
@@ -133,7 +136,36 @@ const i18n = {
     cancelBtn: "Renunță",
     confirmBtn: "Confirmă",
     editPaymentTitle: "✏️ Editare Încasare",
-    saveBtn: "Salvează"
+    saveBtn: "Salvează",
+
+    // Traduceri Ecran Login & Auth Feedback
+    authSubtitleLogin: "Autentificare antrenor & administrare",
+    authSubtitleSignup: "Creează un cont nou pentru studio",
+    authTabLogin: "Intră în cont",
+    authTabSignup: "Creează cont",
+    authEmailLabel: "Email",
+    authPasswordLabel: "Parolă",
+    authSubmitBtnLogin: "Intră în cont",
+    authSubmitBtnSignup: "Creează cont",
+    authMagicLinkBtn: "✨ Conectare fără parolă (Magic Link)",
+    authDividerOr: "sau",
+    authGoogleBtn: "Conectare cu Google",
+    authProcessing: "Se procesează...",
+    authFillEmailPass: "Completează email-ul și parola!",
+    authFillEmailOnly: "Introdu adresa de email pentru a primi Magic Link!",
+    authLoginSuccess: "✓ Conectat cu succes!",
+    authSignupSuccess: "✓ Cont creat și conectat!",
+    authSignupCheckEmail: "Cont creat! Verifică email-ul pentru confirmare.",
+    authMagicLinkSent: "✓ Link-ul de conectare a fost trimis pe email!",
+    authLogoutConfirmTitle: "Deconectare",
+    authLogoutConfirmText: "Ești sigură că vrei să ieși din cont?",
+
+    // Mapare Erori Supabase Auth
+    authErrInvalidCreds: "Date de autentificare invalide (email sau parolă greșită).",
+    authErrEmailNotConfirmed: "Adresa de email nu a fost încă confirmată.",
+    authErrUserExists: "Există deja un cont înregistrat cu această adresă de email.",
+    authErrPassLength: "Parola trebuie să aibă cel puțin 6 caractere.",
+    authErrGeneric: "Eroare la autentificare. Te rugăm să reîncerci."
   },
   en: {
     appTitle: "Weekly Schedule",
@@ -234,7 +266,36 @@ const i18n = {
     cancelBtn: "Cancel",
     confirmBtn: "Confirm",
     editPaymentTitle: "✏️ Edit Payment",
-    saveBtn: "Save"
+    saveBtn: "Save",
+
+    // Traduceri Ecran Login & Auth Feedback
+    authSubtitleLogin: "Coach authentication & administration",
+    authSubtitleSignup: "Create a new studio management account",
+    authTabLogin: "Log In",
+    authTabSignup: "Create Account",
+    authEmailLabel: "Email",
+    authPasswordLabel: "Password",
+    authSubmitBtnLogin: "Log In",
+    authSubmitBtnSignup: "Create Account",
+    authMagicLinkBtn: "✨ Passwordless login (Magic Link)",
+    authDividerOr: "or",
+    authGoogleBtn: "Sign in with Google",
+    authProcessing: "Processing...",
+    authFillEmailPass: "Please fill in email and password!",
+    authFillEmailOnly: "Enter your email address to receive the Magic Link!",
+    authLoginSuccess: "✓ Connected successfully!",
+    authSignupSuccess: "✓ Account created and connected!",
+    authSignupCheckEmail: "Account created! Please check your email for confirmation.",
+    authMagicLinkSent: "✓ The login link has been sent to your email!",
+    authLogoutConfirmTitle: "Log Out",
+    authLogoutConfirmText: "Are you sure you want to log out?",
+
+    // Mapare Erori Supabase Auth
+    authErrInvalidCreds: "Invalid login credentials (wrong email or password).",
+    authErrEmailNotConfirmed: "Email address has not been confirmed yet.",
+    authErrUserExists: "A user with this email address already exists.",
+    authErrPassLength: "Password should be at least 6 characters.",
+    authErrGeneric: "Authentication error. Please try again."
   }
 };
 
@@ -245,6 +306,334 @@ function t(key) {
     return i18n[currentLang][key];
   }
   return i18n['ro'][key] || key;
+}
+
+// Mapare erori din Supabase în mesaje bilingve prietenoase
+function localizeazaEroareAuth(errMessage) {
+  if (!errMessage) return t('authErrGeneric');
+  const msg = errMessage.toLowerCase();
+
+  if (msg.includes("invalid login credentials")) {
+    return t('authErrInvalidCreds');
+  }
+  if (msg.includes("email not confirmed")) {
+    return t('authErrEmailNotConfirmed');
+  }
+  if (msg.includes("user already registered") || msg.includes("already exists")) {
+    return t('authErrUserExists');
+  }
+  if (msg.includes("at least 6 characters") || msg.includes("password should be")) {
+    return t('authErrPassLength');
+  }
+  return errMessage;
+}
+
+// ==========================================
+// 1. SUPABASE AUTH & SESIUNE UTILIZATOR
+// ==========================================
+
+function afiseazaMesajAuthFeedback(mesaj, tip = 'error') {
+  const el = document.getElementById('authStatusFeedback');
+  if (!el) return;
+  el.innerText = mesaj;
+  el.className = 'auth-status-msg ' + (tip === 'error' ? 'error' : 'success');
+  el.style.display = 'block';
+}
+
+function ascundeMesajAuthFeedback() {
+  const el = document.getElementById('authStatusFeedback');
+  if (el) el.style.display = 'none';
+}
+
+function comutaTabAuth(mod) {
+  tipModAuth = mod;
+  ascundeMesajAuthFeedback();
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabSignup = document.getElementById('authTabSignup');
+  const btnSubmit = document.getElementById('authSubmitBtn');
+  const subTitle = document.getElementById('authSubtitleText');
+
+  if (mod === 'login') {
+    if (tabLogin) tabLogin.classList.add('active');
+    if (tabSignup) tabSignup.classList.remove('active');
+    if (btnSubmit) btnSubmit.innerText = t('authSubmitBtnLogin');
+    if (subTitle) subTitle.innerText = t('authSubtitleLogin');
+  } else {
+    if (tabSignup) tabSignup.classList.add('active');
+    if (tabLogin) tabLogin.classList.remove('active');
+    if (btnSubmit) btnSubmit.innerText = t('authSubmitBtnSignup');
+    if (subTitle) subTitle.innerText = t('authSubtitleSignup');
+  }
+}
+
+async function gestioneazaSubmitAuth(e) {
+  if (e) e.preventDefault();
+  if (!supabaseClient) return;
+
+  const email = (document.getElementById('authEmail')?.value || '').trim();
+  const password = document.getElementById('authPassword')?.value || '';
+  const btnSubmit = document.getElementById('authSubmitBtn');
+
+  if (!email || !password) {
+    afiseazaMesajAuthFeedback(t('authFillEmailPass'));
+    return;
+  }
+
+  ascundeMesajAuthFeedback();
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = t('authProcessing');
+  }
+
+  try {
+    if (tipModAuth === 'login') {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      showToast(t('authLoginSuccess'));
+    } else {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: email.split('@')[0]
+          }
+        }
+      });
+      if (error) throw error;
+      if (data?.session) {
+        showToast(t('authSignupSuccess'));
+      } else {
+        afiseazaMesajAuthFeedback(t('authSignupCheckEmail'), 'success');
+      }
+    }
+  } catch (err) {
+    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = tipModAuth === 'login' ? t('authSubmitBtnLogin') : t('authSubmitBtnSignup');
+    }
+  }
+}
+
+async function trimiteMagicLink() {
+  if (!supabaseClient) return;
+  const email = (document.getElementById('authEmail')?.value || '').trim();
+  if (!email) {
+    afiseazaMesajAuthFeedback(t('authFillEmailOnly'));
+    return;
+  }
+
+  ascundeMesajAuthFeedback();
+  try {
+    const { error } = await supabaseClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+    });
+    if (error) throw error;
+    afiseazaMesajAuthFeedback(t('authMagicLinkSent'), 'success');
+  } catch (err) {
+    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
+  }
+}
+
+async function loginCuGoogle() {
+  if (!supabaseClient) return;
+  ascundeMesajAuthFeedback();
+  try {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + window.location.pathname
+      }
+    });
+    if (error) throw error;
+  } catch (err) {
+    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
+  }
+}
+
+async function deconectareUtilizator() {
+  customConfirm(t('authLogoutConfirmTitle'), t('authLogoutConfirmText'), async function() {
+    if (supabaseClient) {
+      await supabaseClient.auth.signOut();
+    }
+    inchideMeniuLateral();
+    localStorage.removeItem('BFIT_DB_LOCAL');
+    window.location.reload();
+  });
+}
+
+function actualizeazaDateProfilUI(user) {
+  if (!user) return;
+  utilizatorCurent = user;
+
+  const meta = user.user_metadata || {};
+  const numeComplet = meta.full_name || meta.name || user.email?.split('@')[0] || 'Beatrix';
+  const prenume = numeComplet.trim().split(' ')[0] || 'Beatrix';
+  const avatarUrl = meta.avatar_url || meta.picture || '';
+
+  // Actualizare Nume Meniu Hub
+  const elName = document.getElementById('drawerUserNameLabel');
+  if (elName) elName.innerText = numeComplet;
+
+  // Actualizare Input Profil
+  const elInpNume = document.getElementById('profileInputNume');
+  if (elInpNume) elInpNume.value = numeComplet;
+
+  // Actualizare Avatare (Hub + Profil)
+  const elAvatarWrap = document.getElementById('drawerUserAvatar');
+  const elBigAvatar = document.getElementById('profileBigAvatarWrap');
+
+  const avatarInner = avatarUrl
+    ? `<img src="${avatarUrl}" alt="${prenume}">`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+
+  if (elAvatarWrap) elAvatarWrap.innerHTML = avatarInner;
+  if (elBigAvatar) elBigAvatar.innerHTML = avatarInner;
+}
+
+// Navigare pe straturi în sertarul lateral full-screen
+function navigheazaSubMeniu(strat) {
+  const layers = {
+    main: document.getElementById('drawerMainView'),
+    settings: document.getElementById('drawerSettingsView'),
+    profile: document.getElementById('drawerProfileView')
+  };
+
+  Object.values(layers).forEach(el => {
+    if (el) el.classList.remove('active');
+  });
+
+  if (layers[strat]) {
+    layers[strat].classList.add('active');
+  }
+}
+
+// Compresie Canvas WebP 256x256 & Upload Supabase Storage
+async function proceseazaSiUploadeazaAvatar(inputEl) {
+  if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
+  if (!supabaseClient || !utilizatorCurent) {
+    showToast(currentLang === 'en' ? 'You must be logged in to upload an avatar!' : 'Trebuie să fii conectată pentru a încărca poza!', 'error');
+    return;
+  }
+
+  const file = inputEl.files[0];
+  showToast(currentLang === 'en' ? '⏳ Optimizing and uploading photo...' : '⏳ Se optimizează și încarcă poza...');
+
+  try {
+    const imgBitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    const targetSize = 256;
+    canvas.width = targetSize;
+    canvas.height = targetSize;
+    const ctx = canvas.getContext('2d');
+
+    // Decupare centrată 1:1 pătrată
+    const srcSize = Math.min(imgBitmap.width, imgBitmap.height);
+    const srcX = (imgBitmap.width - srcSize) / 2;
+    const srcY = (imgBitmap.height - srcSize) / 2;
+
+    ctx.drawImage(imgBitmap, srcX, srcY, srcSize, srcSize, 0, 0, targetSize, targetSize);
+
+    // Export blob WebP comprimat
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        showToast(currentLang === 'en' ? 'Image processing error' : 'Eroare la procesarea imaginii', 'error');
+        return;
+      }
+
+      const filePath = `${utilizatorCurent.id}/avatar.webp`;
+      const { error: uploadError } = await supabaseClient.storage
+        .from('avatars')
+        .upload(filePath, blob, {
+          contentType: 'image/webp',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Upload avatar error:', uploadError);
+        showToast((currentLang === 'en' ? 'Storage upload error: ' : 'Eroare la încărcarea în storage: ') + uploadError.message, 'error');
+        return;
+      }
+
+      const { data: pubData } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+      const publicUrl = pubData.publicUrl + '?v=' + Date.now();
+
+      // Salvare avatar_url în user_metadata
+      const { data: updData, error: metaError } = await supabaseClient.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      });
+
+      if (metaError) throw metaError;
+
+      actualizeazaDateProfilUI(updData.user);
+      showToast(currentLang === 'en' ? '✓ Profile picture updated!' : '✓ Poză de profil actualizată!');
+    }, 'image/webp', 0.82);
+
+  } catch (err) {
+    console.error('Procesare foto eroare:', err);
+    showToast(currentLang === 'en' ? 'Photo processing error!' : 'Eroare la procesarea pozei!', 'error');
+  } finally {
+    inputEl.value = '';
+  }
+}
+
+async function salveazaNumeProfil() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const nouNume = (document.getElementById('profileInputNume')?.value || '').trim();
+  if (!nouNume) {
+    showToast(currentLang === 'en' ? 'Name cannot be empty!' : 'Numele nu poate fi gol!', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSalveazaNumeProfil');
+  if (btn) btn.disabled = true;
+
+  try {
+    const { data, error } = await supabaseClient.auth.updateUser({
+      data: { full_name: nouNume }
+    });
+    if (error) throw error;
+    actualizeazaDateProfilUI(data.user);
+    showToast(currentLang === 'en' ? '✓ Name updated!' : '✓ Nume actualizat!');
+  } catch (err) {
+    showToast(err.message || 'Eroare la salvare nume!', 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function schimbaParolaProfil() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const nouaParola = document.getElementById('profileInputParolaNoua')?.value || '';
+  const confirmaParola = document.getElementById('profileInputParolaConfirma')?.value || '';
+
+  if (!nouaParola || nouaParola.length < 6) {
+    showToast(currentLang === 'en' ? 'Password must be at least 6 characters!' : 'Parola trebuie să aibă minim 6 caractere!', 'error');
+    return;
+  }
+
+  if (nouaParola !== confirmaParola) {
+    showToast(currentLang === 'en' ? 'Passwords do not match!' : 'Parolele introduse nu coincid!', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSchimbaParolaProfil');
+  if (btn) btn.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: nouaParola });
+    if (error) throw error;
+    showToast(currentLang === 'en' ? '✓ Password updated successfully!' : '✓ Parola a fost actualizată!');
+    document.getElementById('profileInputParolaNoua').value = '';
+    document.getElementById('profileInputParolaConfirma').value = '';
+  } catch (err) {
+    showToast(localizeazaEroareAuth(err.message), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function normalizeazaOraUi(oraStr) {
@@ -455,7 +844,6 @@ function aplicaCuloareAntrenament(sel) {
   }
 }
 
-// --- UTILITARE FORMATE DATE RO & SUPABASE ---
 function formateazaDataRoLocal(d) {
   if (!d) return "-";
   if (d instanceof Date) {
@@ -492,95 +880,19 @@ function getNrSedinteAbonamentLocal(tip) {
   return 8;
 }
 
-// --- MIGRARE AUTOMATĂ DIN GOOGLE SHEETS ÎN SUPABASE ---
-async function migreazaDateDinGoogleSheetsInSupabase() {
-  if (!supabaseClient) return;
-  try {
-    showToast("⏳ Se sincronizează datele din Google Sheets în Supabase...");
-    const resp = await fetch(API_URL + "?action=getTotBazaDeDate");
-    const gsData = await resp.json();
-    if (!gsData || !Array.isArray(gsData.clienti)) return;
-
-    // 1. Cliente
-    if (gsData.clienti.length > 0) {
-      const rowsCliente = gsData.clienti.map((c, idx) => ({
-        id: c.id || ("cli_" + (idx + 1)),
-        nume: c.nume,
-        tipAbonament: c.tipAbonament || "-",
-        incluse: Number(c.incluse) || 0,
-        efectuate: Number(c.efectuate) || 0,
-        ramase: Number(c.ramase) || 0,
-        dataStart: c.dataStart || "-",
-        dataExpirare: c.dataExpirare || "-",
-        status: c.status || "Activ"
-      }));
-      await supabaseClient.from('cliente').insert(rowsCliente);
-    }
-
-    // 2. Orar
-    if (Array.isArray(gsData.orarSloturi) && gsData.orarSloturi.length > 0) {
-      const rowsOrar = gsData.orarSloturi.map(o => ({
-        ziRaw: o.ziRaw || "",
-        ora: normalizeazaOraUi(o.ora),
-        clienta: o.clienta || "",
-        antrenament: o.antrenament || "",
-        blocat: !!o.blocat,
-        bifat: !!o.bifat,
-        slotIndex: Number(o.slotIndex) || 0
-      }));
-      await supabaseClient.from('orar').insert(rowsOrar);
-    }
-
-    // 3. Programari (Activ + Hold)
-    const rowsProg = [];
-    (gsData.progActive || []).forEach(p => {
-      rowsProg.push({ sectiune: 'Activ', nume: p.nume, prezenta: p.prezenta || '', mentiuni: p.mentiuni || '' });
-    });
-    (gsData.progHold || []).forEach(p => {
-      rowsProg.push({ sectiune: 'Hold', nume: p.nume, prezenta: p.prezenta || '', mentiuni: p.mentiuni || '' });
-    });
-    if (rowsProg.length > 0) {
-      await supabaseClient.from('programari').insert(rowsProg);
-    }
-
-    // 4. Încasări (înversăm ca să păstrăm ordinea cronologică la inserare)
-    if (Array.isArray(gsData.incasari) && gsData.incasari.length > 0) {
-      const rowsInc = [...gsData.incasari].reverse().map(i => ({
-        data: i.data || "-",
-        clienta: i.clienta || "",
-        suma: (i.suma || "").toString().replace(/RON/i, "").trim() || "-",
-        metoda: i.metoda || "-",
-        tip: i.tip || "-",
-        luna: i.luna || "-"
-      }));
-      await supabaseClient.from('incasari').insert(rowsInc);
-    }
-
-    // 5. Prezențe
-    if (Array.isArray(gsData.prezente) && gsData.prezente.length > 0) {
-      const rowsPrez = [...gsData.prezente].reverse().map(p => ({
-        data: p.data || "-",
-        zi: p.zi || "",
-        ora: normalizeazaOraUi(p.ora),
-        clienta: p.clienta || "",
-        antrenament: p.antrenament || "-"
-      }));
-      await supabaseClient.from('prezente').insert(rowsPrez);
-    }
-
-    showToast("✓ Migrare în Supabase completă!");
-    incarcaBazaDateSilencios(null, true);
-  } catch (err) {
-    console.error("Eroare migrare Supabase:", err);
-  }
-}
+// ==========================================
+// 2. LOGICĂ BACKEND MULTI-TENANT SUPABASE
+// ==========================================
 
 async function executaActiuneSupabase(actionName, payload) {
   const sb = supabaseClient;
+  const uid = utilizatorCurent ? utilizatorCurent.id : null;
 
   const gasesteIdDupaNume = async (nume) => {
     if (!nume || !nume.trim()) return "";
-    const { data } = await sb.from('cliente').select('id, row').ilike('nume', nume.trim()).limit(1);
+    let q = sb.from('cliente').select('id, row').ilike('nume', nume.trim());
+    if (uid) q = q.eq('user_id', uid);
+    const { data } = await q.limit(1);
     if (data && data.length > 0) return data[0].id || ("cli_" + data[0].row);
     return "";
   };
@@ -591,7 +903,9 @@ async function executaActiuneSupabase(actionName, payload) {
     const slotIdx = (typeof slotIndex === "number") ? slotIndex : 0;
 
     if (rowPropus) {
-      const { data: ex } = await sb.from('orar').select('*').eq('row', rowPropus).maybeSingle();
+      let q = sb.from('orar').select('*').eq('row', rowPropus);
+      if (uid) q = q.eq('user_id', uid);
+      const { data: ex } = await q.maybeSingle();
       if (ex) {
         const zEx = (ex.ziRaw || "").trim();
         const oEx = normalizeazaOraUi(ex.ora);
@@ -602,30 +916,48 @@ async function executaActiuneSupabase(actionName, payload) {
       }
     }
 
-    const { data: list } = await sb.from('orar')
+    let qList = sb.from('orar')
       .select('*')
       .in('ziRaw', zi === "Marti" ? [tagZi, saptamanaCheie + "_Marți"] : [tagZi])
       .eq('ora', oraNorm)
-      .eq('slotIndex', slotIdx)
-      .limit(1);
+      .eq('slotIndex', slotIdx);
+    if (uid) qList = qList.eq('user_id', uid);
+    const { data: list } = await qList.limit(1);
 
     if (list && list.length > 0) return list[0];
 
-    const { data: creat } = await sb.from('orar')
-      .insert([{ ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: slotIdx, client_id: "" }])
-      .select()
-      .single();
+    const slotNou = {
+      ziRaw: tagZi,
+      ora: oraNorm,
+      clienta: "",
+      antrenament: "",
+      blocat: false,
+      bifat: false,
+      slotIndex: slotIdx,
+      client_id: ""
+    };
+    if (uid) slotNou.user_id = uid;
+
+    const { data: creat } = await sb.from('orar').insert([slotNou]).select().single();
     return creat;
   };
 
   if (actionName === "getTotBazaDeDate") {
-    const [resCli, resOrar, resProg, resInc, resPrez] = await Promise.all([
-      sb.from('cliente').select('*'),
-      sb.from('orar').select('*').order('row', { ascending: true }),
-      sb.from('programari').select('*').order('row', { ascending: true }),
-      sb.from('incasari').select('*').order('row', { ascending: false }),
-      sb.from('prezente').select('*').order('row', { ascending: false })
-    ]);
+    let qCli = sb.from('cliente').select('*');
+    let qOrar = sb.from('orar').select('*').order('row', { ascending: true });
+    let qProg = sb.from('programari').select('*').order('row', { ascending: true });
+    let qInc = sb.from('incasari').select('*').order('row', { ascending: false });
+    let qPrez = sb.from('prezente').select('*').order('row', { ascending: false });
+
+    if (uid) {
+      qCli = qCli.eq('user_id', uid);
+      qOrar = qOrar.eq('user_id', uid);
+      qProg = qProg.eq('user_id', uid);
+      qInc = qInc.eq('user_id', uid);
+      qPrez = qPrez.eq('user_id', uid);
+    }
+
+    const [resCli, resOrar, resProg, resInc, resPrez] = await Promise.all([qCli, qOrar, qProg, qInc, qPrez]);
 
     const clienti = (resCli.data || []).map(c => ({
       row: c.row,
@@ -641,13 +973,6 @@ async function executaActiuneSupabase(actionName, payload) {
     })).filter(c => c.nume !== "");
 
     clienti.sort((a, b) => a.nume.localeCompare(b.nume));
-
-    // Dacă baza Supabase e complet goală la primul start, migrăm automat din Google Sheets
-    if (clienti.length === 0 && (resOrar.data || []).length === 0 && !localStorage.getItem('BFIT_SUPABASE_MIGRATED')) {
-      localStorage.setItem('BFIT_SUPABASE_MIGRATED', '1');
-      await migreazaDateDinGoogleSheetsInSupabase();
-      return executaActiuneSupabase("getTotBazaDeDate", {});
-    }
 
     const orarSloturi = (resOrar.data || []).map(o => ({
       row: o.row,
@@ -725,29 +1050,34 @@ async function executaActiuneSupabase(actionName, payload) {
     }).eq('row', slot.row);
 
     if (payload.clienta && payload.clienta.trim() !== "") {
-      const { data: exPrez } = await sb.from('prezente')
+      let qEx = sb.from('prezente')
         .select('*')
         .eq('data', payload.dataCalendar)
         .eq('ora', oraNorm)
-        .ilike('clienta', payload.clienta.trim())
-        .limit(1);
+        .ilike('clienta', payload.clienta.trim());
+      if (uid) qEx = qEx.eq('user_id', uid);
+      const { data: exPrez } = await qEx.limit(1);
 
       if (exPrez && exPrez.length > 0) {
         await sb.from('prezente').update({ antrenament: payload.antrenament || "", client_id: idCli }).eq('row', exPrez[0].row);
       } else {
-        await sb.from('prezente').insert([{
+        const rowPrezNou = {
           data: payload.dataCalendar,
           zi: payload.zi,
           ora: oraNorm,
           clienta: payload.clienta.trim(),
           antrenament: payload.antrenament || "",
           client_id: idCli
-        }]);
+        };
+        if (uid) rowPrezNou.user_id = uid;
+        await sb.from('prezente').insert([rowPrezNou]);
       }
 
       const esteGratuita = (payload.antrenament || "").toLowerCase().indexOf("gratuit") !== -1;
       if (!esteGratuita) {
-        const { data: clList } = await sb.from('cliente').select('*').ilike('nume', payload.clienta.trim()).limit(1);
+        let qCl = sb.from('cliente').select('*').ilike('nume', payload.clienta.trim());
+        if (uid) qCl = qCl.eq('user_id', uid);
+        const { data: clList } = await qCl.limit(1);
         if (clList && clList.length > 0) {
           const cl = clList[0];
           if ((cl.tipAbonament || "").toLowerCase().indexOf("gratuit") === -1) {
@@ -779,12 +1109,13 @@ async function executaActiuneSupabase(actionName, payload) {
     }).eq('row', slot.row);
 
     if (clientaVeche !== "" && aFostBifat) {
-      const { data: pList } = await sb.from('prezente')
+      let qP = sb.from('prezente')
         .select('row')
         .eq('data', payload.dataCalendar)
         .eq('ora', oraNorm)
-        .ilike('clienta', clientaVeche)
-        .limit(1);
+        .ilike('clienta', clientaVeche);
+      if (uid) qP = qP.eq('user_id', uid);
+      const { data: pList } = await qP.limit(1);
 
       if (pList && pList.length > 0) {
         await sb.from('prezente').delete().eq('row', pList[0].row);
@@ -792,7 +1123,9 @@ async function executaActiuneSupabase(actionName, payload) {
 
       const esteGratuita = antrenamentVechi.toLowerCase().indexOf("gratuit") !== -1;
       if (!esteGratuita) {
-        const { data: clList } = await sb.from('cliente').select('*').ilike('nume', clientaVeche).limit(1);
+        let qCl = sb.from('cliente').select('*').ilike('nume', clientaVeche);
+        if (uid) qCl = qCl.eq('user_id', uid);
+        const { data: clList } = await qCl.limit(1);
         if (clList && clList.length > 0) {
           const cl = clList[0];
           const incluse = Number(cl.incluse) || 0;
@@ -808,18 +1141,24 @@ async function executaActiuneSupabase(actionName, payload) {
   if (actionName === "comutaBlocareOra") {
     const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
     const oraNorm = normalizeazaOraUi(payload.ora);
-    const { data: gasite } = await sb.from('orar')
+    let qG = sb.from('orar')
       .select('row')
       .in('ziRaw', payload.zi === "Marti" ? [tagZi, payload.saptamanaCheie + "_Marți"] : [tagZi])
       .eq('ora', oraNorm);
+    if (uid) qG = qG.eq('user_id', uid);
+    const { data: gasite } = await qG;
 
     if (gasite && gasite.length > 0) {
       const ids = gasite.map(g => g.row);
       await sb.from('orar').update({ blocat: !!payload.blocat }).in('row', ids);
     } else {
-      const noi = [0, 1, 2].map(idx => ({
-        ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: !!payload.blocat, bifat: false, slotIndex: idx, client_id: ""
-      }));
+      const noi = [0, 1, 2].map(idx => {
+        const item = {
+          ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: !!payload.blocat, bifat: false, slotIndex: idx, client_id: ""
+        };
+        if (uid) item.user_id = uid;
+        return item;
+      });
       await sb.from('orar').insert(noi);
     }
     return { success: true };
@@ -828,9 +1167,13 @@ async function executaActiuneSupabase(actionName, payload) {
   if (actionName === "adaugaOraCustom") {
     const oraNorm = normalizeazaOraUi(payload.ora);
     const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
-    const noi = [0, 1, 2].map(idx => ({
-      ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: idx, client_id: ""
-    }));
+    const noi = [0, 1, 2].map(idx => {
+      const item = {
+        ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, slotIndex: idx, client_id: ""
+      };
+      if (uid) item.user_id = uid;
+      return item;
+    });
     await sb.from('orar').insert(noi);
     return { success: true, ora: oraNorm };
   }
@@ -848,11 +1191,13 @@ async function executaActiuneSupabase(actionName, payload) {
     const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
     const lunaNume = luniRoNume[dPlata.getMonth()];
 
-    const { data: exCli } = await sb.from('cliente').select('*').ilike('nume', payload.nume.trim()).limit(1);
+    let qCli = sb.from('cliente').select('*').ilike('nume', payload.nume.trim());
+    if (uid) qCli = qCli.eq('user_id', uid);
+    const { data: exCli } = await qCli.limit(1);
     let idCli = "";
 
     if (!exCli || exCli.length === 0) {
-      const { data: ins } = await sb.from('cliente').insert([{
+      const rowCliNou = {
         nume: payload.nume.trim(),
         tipAbonament: payload.tip,
         incluse: totalSedinte,
@@ -861,7 +1206,10 @@ async function executaActiuneSupabase(actionName, payload) {
         dataStart: dataStartRo,
         dataExpirare: dataExpRo,
         status: "Activ"
-      }]).select().single();
+      };
+      if (uid) rowCliNou.user_id = uid;
+
+      const { data: ins } = await sb.from('cliente').insert([rowCliNou]).select().single();
       idCli = ins ? ("cli_" + ins.row) : "";
       if (ins) await sb.from('cliente').update({ id: idCli }).eq('row', ins.row);
     } else {
@@ -877,7 +1225,7 @@ async function executaActiuneSupabase(actionName, payload) {
       }).eq('row', exCli[0].row);
     }
 
-    await sb.from('incasari').insert([{
+    const rowIncNou = {
       data: dataPlataRo,
       clienta: payload.nume.trim(),
       suma: (payload.suma || "").toString(),
@@ -885,8 +1233,10 @@ async function executaActiuneSupabase(actionName, payload) {
       tip: payload.tip || "",
       luna: lunaNume,
       client_id: idCli
-    }]);
+    };
+    if (uid) rowIncNou.user_id = uid;
 
+    await sb.from('incasari').insert([rowIncNou]);
     return { success: true };
   }
 
@@ -929,13 +1279,15 @@ async function executaActiuneSupabase(actionName, payload) {
   if (actionName === "adaugaRandProgramare") {
     const valPrezenta = payload.esteHold ? "" : (payload.prezenta || "In asteptare");
     const idCli = await gasesteIdDupaNume(payload.nume);
-    await sb.from('programari').insert([{
+    const rowProgNou = {
       sectiune: payload.esteHold ? "Hold" : "Activ",
       nume: payload.nume,
       prezenta: valPrezenta,
       mentiuni: payload.mentiuni || "",
       client_id: idCli
-    }]);
+    };
+    if (uid) rowProgNou.user_id = uid;
+    await sb.from('programari').insert([rowProgNou]);
     return { success: true };
   }
 
@@ -952,7 +1304,10 @@ async function executaActiuneSupabase(actionName, payload) {
   if (actionName === "actualizeazaDateClienta") {
     const numeVechi = (payload.numeVechi || "").trim();
     const numeNou = (payload.numeNou && payload.numeNou.trim() !== "") ? payload.numeNou.trim() : numeVechi;
-    const { data: ex } = await sb.from('cliente').select('*').ilike('nume', numeVechi).limit(1);
+    let qEx = sb.from('cliente').select('*').ilike('nume', numeVechi);
+    if (uid) qEx = qEx.eq('user_id', uid);
+    const { data: ex } = await qEx.limit(1);
+
     if (ex && ex.length > 0) {
       await sb.from('cliente').update({
         nume: numeNou,
@@ -966,8 +1321,13 @@ async function executaActiuneSupabase(actionName, payload) {
       }).eq('row', ex[0].row);
 
       if (numeVechi.toLowerCase() !== numeNou.toLowerCase()) {
-        await sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
-        await sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        let qO = sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        let qP = sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        if (uid) {
+          qO = qO.eq('user_id', uid);
+          qP = qP.eq('user_id', uid);
+        }
+        await Promise.all([qO, qP]);
       }
       return { success: true, numeNou };
     }
@@ -976,7 +1336,7 @@ async function executaActiuneSupabase(actionName, payload) {
 
   if (actionName === "adaugaClientaDirect") {
     const incluse = getNrSedinteAbonamentLocal(payload.tip);
-    const { data: ins } = await sb.from('cliente').insert([{
+    const rowDirect = {
       nume: payload.nume.trim(),
       tipAbonament: payload.tip,
       incluse: incluse,
@@ -985,7 +1345,10 @@ async function executaActiuneSupabase(actionName, payload) {
       dataStart: "-",
       dataExpirare: "-",
       status: "Activ"
-    }]).select().single();
+    };
+    if (uid) rowDirect.user_id = uid;
+
+    const { data: ins } = await sb.from('cliente').insert([rowDirect]).select().single();
     if (ins) {
       await sb.from('cliente').update({ id: "cli_" + ins.row }).eq('row', ins.row);
     }
@@ -993,7 +1356,9 @@ async function executaActiuneSupabase(actionName, payload) {
   }
 
   if (actionName === "seteazaStatusClienta") {
-    await sb.from('cliente').update({ status: payload.statusNou }).ilike('nume', payload.nume.trim());
+    let q = sb.from('cliente').update({ status: payload.statusNou }).ilike('nume', payload.nume.trim());
+    if (uid) q = q.eq('user_id', uid);
+    await q;
     return { success: true };
   }
 
@@ -1002,7 +1367,9 @@ async function executaActiuneSupabase(actionName, payload) {
       ? new Date(payload.dataManuala)
       : new Date(new Date().getTime() + (Number(payload.zile) * 86400000));
     const dataFinalaRo = formateazaDataRoLocal(nouaData);
-    await sb.from('cliente').update({ dataExpirare: dataFinalaRo, status: "Activ" }).ilike('nume', payload.nume.trim());
+    let q = sb.from('cliente').update({ dataExpirare: dataFinalaRo, status: "Activ" }).ilike('nume', payload.nume.trim());
+    if (uid) q = q.eq('user_id', uid);
+    await q;
     return { success: true, nouaData: dataFinalaRo };
   }
 
@@ -1441,9 +1808,69 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('editPaymentModalTitle').innerText = t('editPaymentTitle');
   document.getElementById('editIncCancelBtn').innerText = t('cancelBtn');
   document.getElementById('editIncSaveBtn').innerText = t('saveBtn');
+
+  // Traduceri Ecran Autentificare (Login / Signup)
+  const elSubAuth = document.getElementById('authSubtitleText');
+  if (elSubAuth) elSubAuth.innerText = tipModAuth === 'login' ? t('authSubtitleLogin') : t('authSubtitleSignup');
+
+  const elTabLog = document.getElementById('authTabLogin');
+  if (elTabLog) elTabLog.innerText = t('authTabLogin');
+
+  const elTabSign = document.getElementById('authTabSignup');
+  if (elTabSign) elTabSign.innerText = t('authTabSignup');
+
+  const elLblEmail = document.getElementById('authEmailLabel');
+  if (elLblEmail) elLblEmail.innerText = t('authEmailLabel');
+
+  const elLblPass = document.getElementById('authPasswordLabel');
+  if (elLblPass) elLblPass.innerText = t('authPasswordLabel');
+
+  const elBtnSubAuth = document.getElementById('authSubmitBtn');
+  if (elBtnSubAuth && !elBtnSubAuth.disabled) {
+    elBtnSubAuth.innerText = tipModAuth === 'login' ? t('authSubmitBtnLogin') : t('authSubmitBtnSignup');
+  }
+
+  const elBtnMagic = document.getElementById('authMagicLinkBtn');
+  if (elBtnMagic) elBtnMagic.innerText = t('authMagicLinkBtn');
+
+  const elDivOr = document.getElementById('authDividerOrText');
+  if (elDivOr) elDivOr.innerText = t('authDividerOr');
+
+  const elTxtGoogle = document.getElementById('authGoogleBtnText');
+  if (elTxtGoogle) elTxtGoogle.innerText = t('authGoogleBtn');
+
+  // Butoane comutare limbă din ecranul de Login
+  const btnLogRo = document.getElementById('authLangBtnRo');
+  const btnLogEn = document.getElementById('authLangBtnEn');
+  if (btnLogRo) btnLogRo.classList.toggle('active', currentLang === 'ro');
+  if (btnLogEn) btnLogEn.classList.toggle('active', currentLang === 'en');
 }
 
-window.onload = function() {
+// ==========================================
+// 3. INIȚIALIZARE & GARDIAN SESIUNE
+// ==========================================
+
+async function verificaSesiuneSupabase() {
+  const overlay = document.getElementById('authScreenOverlay');
+  if (!supabaseClient) {
+    if (overlay) overlay.classList.add('auth-hidden');
+    return true;
+  }
+
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session && session.user) {
+    utilizatorCurent = session.user;
+    actualizeazaDateProfilUI(session.user);
+    if (overlay) overlay.classList.add('auth-hidden');
+    return true;
+  } else {
+    utilizatorCurent = null;
+    if (overlay) overlay.classList.remove('auth-hidden');
+    return false;
+  }
+}
+
+window.onload = async function() {
   reseteazaDateIncasariAzi();
   leagaAscultatoriCuratareErori();
   initSwipeNavigation();
@@ -1465,6 +1892,25 @@ window.onload = function() {
   }
 
   actualizeazaBaraZile();
+
+  // Ascultare schimbare sesiune Supabase în timp real
+  if (supabaseClient) {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+      const overlay = document.getElementById('authScreenOverlay');
+      if (session && session.user) {
+        utilizatorCurent = session.user;
+        actualizeazaDateProfilUI(session.user);
+        if (overlay) overlay.classList.add('auth-hidden');
+        incarcaBazaDateSilencios(null, true);
+      } else {
+        utilizatorCurent = null;
+        if (overlay) overlay.classList.remove('auth-hidden');
+      }
+    });
+  }
+
+  const areSesiune = await verificaSesiuneSupabase();
+  if (!areSesiune) return;
 
   let areCacheLocal = false;
   try {
@@ -1512,6 +1958,37 @@ window.addEventListener('resize', () => {
   }
 });
 
+// WAKE & FOREGROUND RESYNC FĂRĂ REGRESII (ECO-FRIENDLY & INSTANT)
+function gestioneazaRevenireForeground() {
+  let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+    return;
+  }
+
+  if (tipTabCurent === 'orar') {
+    let now = new Date();
+    let day = now.getDay();
+    let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
+    
+    // Dacă utilizatorul este pe săptămâna curentă și în ziua curentă, executăm saltul fluid
+    if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[day]) {
+      setTimeout(() => {
+        autoScrollLaOraCurenta();
+      }, 60);
+    }
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    gestioneazaRevenireForeground();
+  }
+});
+
+window.addEventListener('focus', () => {
+  gestioneazaRevenireForeground();
+});
+
 function initSwipeNavigation() {
   let touchStartX = 0;
   let touchStartY = 0;
@@ -1526,7 +2003,7 @@ function initSwipeNavigation() {
     }
 
     let target = e.target;
-    if (target && (target.closest('.day-selector') || target.tagName === 'TEXTAREA')) {
+    if (target && (target.closest('.day-selector') || target.tagName === 'TEXTAREA' || target.closest('.app-drawer') || target.closest('.auth-card'))) {
       esteGestBlocat = true;
       return;
     }
@@ -2081,7 +2558,6 @@ function randeazaOrarInstant() {
       let saveBtnDisabledAttr = (!isOccupied || slot.bifat) ? 'disabled' : '';
       let saveBtnClass = (!isOccupied || slot.bifat) ? 'btn btn-save-check btn-save-check-disabled' : 'btn btn-save-check';
 
-      // BUTONUL ✕ (Clear) DEZACTIVAT DACĂ SLOTUL ESTE COMPLET GOL
       let slotEsteCompletGol = !clientaCurata && !antVal;
       let clearBtnDisabledAttr = slotEsteCompletGol ? 'disabled' : '';
       let clearBtnClass = slotEsteCompletGol ? 'btn btn-clear btn-clear-disabled' : 'btn btn-clear';
@@ -2155,7 +2631,6 @@ function peSchimbareNumeClienta(zi, ora, slotIdx) {
     }
   }
 
-  // Actualizăm starea butonului ✕ imediat ce se tastează sau se șterge
   if (elBtnClear) {
     let elAnt = document.getElementById('ant_' + slotDomKey);
     let areCevaCompletat = (textIntrodus !== "") || (elAnt && elAnt.value !== "");
@@ -2360,7 +2835,6 @@ function anuleazaSlot(zi, ora, slotIdx) {
            Number(s.slotIndex) === Number(slotIdx);
   });
 
-  // Guard: dacă slotul este deja complet gol, nu deschidem modalul și nu facem nimic
   if (!textIntrodus && !antrenament && (!slotExistent || (!slotExistent.clienta && !slotExistent.antrenament))) {
     return;
   }
@@ -2904,7 +3378,6 @@ function filtreazaIstoricIncasariInstant() {
   tbody.innerHTML = html;
 }
 
-// FLAG BLOCARE DUBLU-CLICK LA SALVARE ÎNCASARE
 let esteIncasareInCurs = false;
 
 function salveazaIncasare() {
@@ -2955,7 +3428,6 @@ function salveazaIncasare() {
     return;
   }
 
-  // Blocare buton pentru a preveni salvarea dublă
   esteIncasareInCurs = true;
   let btnSubmit = document.getElementById('submitAbonamentBtn');
   if (btnSubmit) {
@@ -2998,7 +3470,6 @@ function salveazaIncasare() {
     reseteazaDateIncasariAzi();
     incarcaBazaDateSilencios();
 
-    // Deblocare buton salvare
     esteIncasareInCurs = false;
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -3083,6 +3554,7 @@ function salveazaModificareIncasare() {
 function deschideMeniuLateral() {
   let drawer = document.getElementById('appDrawer');
   let backdrop = document.getElementById('appDrawerBackdrop');
+  navigheazaSubMeniu('main');
   if (drawer) drawer.classList.add('open');
   if (backdrop) backdrop.classList.add('open');
 }
@@ -3094,7 +3566,6 @@ function inchideMeniuLateral() {
   if (backdrop) backdrop.classList.remove('open');
 }
 
-// --- GESTIUNE TEMA SISTEM ÎN TIMP REAL ---
 const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 function aplicaTemaSistemDinamica() {
@@ -3163,7 +3634,6 @@ function seteazaLimba(lang, silent = false) {
   }
 }
 
-// Inițializare temă și limbă salvate la pornire (silențios, fără toast)
 (function() {
   let temaSalvata = localStorage.getItem('beatrix_theme') || 'system';
   seteazaTema(temaSalvata, true);
