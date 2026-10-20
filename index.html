@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal32">
+  <link rel="stylesheet" href="style.css?v=fitFinal35">
 </head>
 <body>
 
@@ -224,7 +224,7 @@
         </div>
       </div>
 
-      <div style="margin: 10px 0 14px; padding: 8px 12px; background: var(--card-bg); border: 1px dashed var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+      <div class="extra-hour-card">
         <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary);" id="addOraCustomText">
           ➕ Adaugă oră suplimentară
         </div>
@@ -281,7 +281,7 @@
       <div class="card" style="padding: 10px 12px; margin-bottom: 10px;">
         <div style="display: flex; gap: 6px;">
           <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem;" placeholder="+ Adaugă clientă" list="listaClienteVizibile">
-          <select id="progNouSectiune" class="form-control" style="width:100px; padding:6px 4px; font-size:0.8rem;">
+          <select id="progNouSectiune" class="form-control">
             <option value="Activ">Activ</option>
             <option value="Hold">Hold</option>
           </select>
@@ -291,7 +291,7 @@
 
       <div class="prog-table-container">
         <div class="prog-grid-layout prog-header">
-          <div>#</div>
+          <div class="prog-header-hash">#</div>
           <div>Nume</div>
           <div>Prezență</div>
           <div>Mențiuni</div>
@@ -650,8 +650,8 @@
           <line x1="16" y1="2" x2="16" y2="6"></line>
           <line x1="8" y1="2" x2="8" y2="6"></line>
           <line x1="3" y1="9" x2="21" y2="9"></line>
-          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text>
-          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">DEC</text>
+          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
+          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
         </svg>
       </div>
       <span id="navTextOrar">Orar</span>
@@ -692,6 +692,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal32"></script>
+  <script src="app.js?v=fitFinal35"></script>
 </body>
 </html>
