@@ -14,15 +14,15 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal39">
+  <link rel="stylesheet" href="style.css?v=fitFinal41">
 </head>
 <body>
 
   <!-- TOAST NOTIFICĂRI -->
   <div id="customToast">✓ Mesaj</div>
 
-  <!-- ECRAN AUTENTIFICARE SUPABASE (OVERLAY LIQUID GLASS) -->
-  <div id="authScreenOverlay" class="auth-overlay">
+  <!-- ECRAN AUTENTIFICARE SUPABASE (ASCUNS IMPLICIT PENTRU A ELIMINA FLICKER-UL LA REFRESH) -->
+  <div id="authScreenOverlay" class="auth-overlay auth-hidden">
     <div class="auth-card">
       
       <!-- Comutator Discret Limbă pe Login Screen -->
@@ -32,10 +32,11 @@
         <button type="button" class="auth-lang-btn" id="authLangBtnEn" onclick="seteazaLimba('en')">🇬🇧 EN</button>
       </div>
 
-      <!-- Logo Oficial Aplicație B-Fit (Ganteră) -->
-      <div class="auth-logo-wrap">
-        <svg viewBox="0 0 512 512" width="28" height="28" fill="#ffffff">
-          <path d="M125.8 170.7c-21.7 0-39.3 17.6-39.3 39.3v17.5H74.1c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h12.4v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h17.5c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-17.5V210c0-21.7-17.6-39.3-39.3-39.3zm260.4 0c-21.7 0-39.3 17.6-39.3 39.3v17.5h-17.5c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h17.5v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h12.4c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-12.4V210c0-21.7-17.6-39.3-39.3-39.3zm-174.9 66.8h89.4v37H211.3v-37z"/>
+      <!-- Logo Oficial Aplicație B-Fit (Identic 1:1 cu icon.svg) -->
+      <div class="auth-app-icon-wrap">
+        <svg viewBox="0 0 512 512" width="56" height="56">
+          <rect width="512" height="512" rx="128" fill="#5c4d7d"/>
+          <path d="M125.8 170.7c-21.7 0-39.3 17.6-39.3 39.3v17.5H74.1c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h12.4v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h17.5c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-17.5V210c0-21.7-17.6-39.3-39.3-39.3zm260.4 0c-21.7 0-39.3 17.6-39.3 39.3v17.5h-17.5c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h17.5v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h12.4c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-12.4V210c0-21.7-17.6-39.3-39.3-39.3zm-174.9 66.8h89.4v37H211.3v-37z" fill="#ffffff"/>
         </svg>
       </div>
 
@@ -333,7 +334,7 @@
     </div>
   </div>
 
-  <!-- HEADER APLICAȚIE -->
+  <!-- HEADER APLICAȚIE (FLUID, FĂRĂ BORDER DELIMITATOR) -->
   <header>
     <div class="header-title-wrapper" id="pageTitleWrapper">
       <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
@@ -881,6 +882,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal39"></script>
+  <script src="app.js?v=fitFinal41"></script>
 </body>
 </html>
