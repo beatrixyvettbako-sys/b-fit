@@ -15,7 +15,7 @@
                   0 2px 6px -1px rgba(67, 53, 93, 0.04),
                   inset 0 1px 1px rgba(255, 255, 255, 0.9);
   --input-glass-bg: rgba(255, 255, 255, 0.82);
-  --header-glass-bg: linear-gradient(135deg, rgba(92, 77, 125, 0.82) 0%, rgba(74, 59, 107, 0.78) 100%);
+  --header-glass-bg: linear-gradient(135deg, rgba(92, 77, 125, 0.95) 0%, rgba(92, 77, 125, 0.95) 100%);
   --day-bar-glass: rgba(242, 239, 248, 0.82);
   --text: #2c3e50;
   --text-muted: #6c7a89;
@@ -47,7 +47,7 @@
                   0 2px 6px -1px rgba(0, 0, 0, 0.3),
                   inset 0 1px 0.5px rgba(255, 255, 255, 0.14);
   --input-glass-bg: rgba(18, 16, 26, 0.72);
-  --header-glass-bg: linear-gradient(135deg, rgba(92, 77, 125, 0.78) 0%, rgba(62, 49, 92, 0.75) 100%);
+  --header-glass-bg: linear-gradient(135deg, rgba(62, 49, 92, 0.95) 0%, rgba(62, 49, 92, 0.95) 100%);
   --day-bar-glass: rgba(18, 16, 27, 0.85);
   --text: #f1f5f9;
   --text-muted: #94a3b8;
@@ -68,10 +68,11 @@ body {
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text);
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 18px));
+  overflow-x: hidden;
 }
 
-/* HEADER LIQUID GLASS */
+/* HEADER LIQUID GLASS (UNITAR CU BARA DE SUS, FĂRĂ BORDER DELIMITATOR) */
 header {
   background: var(--header-glass-bg);
   backdrop-filter: blur(24px) saturate(180%);
@@ -84,9 +85,8 @@ header {
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 20px rgba(45, 35, 66, 0.16),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-bottom: none;
+  box-shadow: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -169,7 +169,7 @@ header {
   margin: auto;
 }
 
-/* ECRAN AUTENTIFICARE SUPABASE (OVERLAY FULL-SCREEN LIQUID GLASS) */
+/* ECRAN AUTENTIFICARE SUPABASE (FĂRĂ BARE DE SCROLL) */
 .auth-overlay {
   position: fixed;
   top: 0;
@@ -185,7 +185,14 @@ header {
   align-items: center;
   justify-content: center;
   padding: 16px;
+  overflow: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.32s ease;
+}
+
+.auth-overlay::-webkit-scrollbar {
+  display: none;
 }
 
 .auth-overlay.auth-hidden {
@@ -206,6 +213,7 @@ header {
   padding: 24px 20px 20px;
   box-shadow: 0 16px 40px rgba(45, 35, 66, 0.24), var(--glass-shadow);
   text-align: center;
+  overflow: hidden;
 }
 
 /* SELECTOR DISCRET LIMBĂ PE ECRANUL DE LOGIN */
@@ -240,20 +248,19 @@ header {
   background: var(--primary-light);
 }
 
-.auth-logo-wrap {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #5c4d7d 0%, #8b5cf6 100%);
-  border: 1.5px solid rgba(255, 255, 255, 0.55);
-  box-shadow: 0 6px 16px rgba(92, 77, 125, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+.auth-app-icon-wrap {
+  width: 56px;
+  height: 56px;
   margin: 0 auto 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(92, 77, 125, 0.35);
 }
 
-.auth-logo-wrap svg {
+.auth-app-icon-wrap svg {
   display: block;
 }
 
@@ -368,7 +375,7 @@ header {
   border: 1px solid #86efac;
 }
 
-/* MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI */
+/* MENIU LATERAL FULL-SCREEN (FĂRĂ LINIE DELIMITATOARE ÎN STÂNGA) */
 .drawer-backdrop {
   position: fixed;
   top: 0;
@@ -400,8 +407,8 @@ header {
   background-image: var(--bg-gradient);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border-left: 1px solid var(--glass-border);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.25);
+  border-left: none;
+  box-shadow: -10px 0 36px rgba(0, 0, 0, 0.28);
   z-index: 10001;
   display: flex;
   flex-direction: column;
@@ -443,7 +450,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: none;
   min-height: 54px;
   flex-shrink: 0;
 }
@@ -551,7 +558,7 @@ header {
   line-height: 1;
 }
 
-/* GESTIUNE AVATAR MARE & SCHIMBARE POZĂ CU CREION PUR MOV */
+/* GESTIUNE AVATAR MARE & SCHIMBARE POZĂ CU CREION PUR MOV MICȘORAT */
 .profile-avatar-center {
   display: flex;
   flex-direction: column;
@@ -598,31 +605,31 @@ header {
 
 .profile-avatar-pencil-btn {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
+  bottom: 1px;
+  right: 1px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--accent-purple);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+  box-shadow: 0 2px 5px rgba(139, 92, 246, 0.45);
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
   user-select: none;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
 .profile-avatar-pencil-btn svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   stroke: #ffffff;
 }
 
 .profile-avatar-pencil-btn:active {
-  transform: scale(0.9);
+  transform: scale(0.88);
   opacity: 0.9;
 }
 
@@ -729,31 +736,31 @@ header {
   width: 100%;
 }
 
-/* NAVIGARE BOTTOM BAR (EXTINSĂ LA MARGINEA ECRANULUI PE MOBIL) */
+/* NAVIGARE BOTTOM BAR (ALUNGITĂ PÂNĂ JOS LA MARGINE CU TRANSPARENȚĂ MARE) */
 nav {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.62);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: blur(26px) saturate(190%);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
   display: flex;
-  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  border-top: 1px solid rgba(255, 255, 255, 0.65);
   z-index: 1000;
   max-width: 650px;
   margin: 0 auto;
-  height: calc(60px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -4px 20px rgba(67, 53, 93, 0.06),
-              inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  height: calc(64px + env(safe-area-inset-bottom, 18px));
+  padding-bottom: env(safe-area-inset-bottom, 18px);
+  box-shadow: 0 -4px 24px rgba(67, 53, 93, 0.05),
+              inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 [data-theme="dark"] nav {
-  background: rgba(22, 19, 32, 0.65);
-  border-top-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: rgba(22, 19, 32, 0.46);
+  border-top-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .nav-mercury-pill {
