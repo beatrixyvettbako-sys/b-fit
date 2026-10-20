@@ -99,6 +99,7 @@ const i18n = {
     payDateLabel: "Dată Plată",
     payStartLabel: "Dată Start",
     paySubmitBtn: "Încasează & Salvează Abonamentul",
+    paySavingBtn: "Se salvează...",
     paymentHistoryTitle: "Istoric Încasări",
     totalPaymentsLabel: "Total Încasări",
     paymentsFound: "plăți găsite",
@@ -199,6 +200,7 @@ const i18n = {
     payDateLabel: "Payment Date",
     payStartLabel: "Start Date",
     paySubmitBtn: "Charge & Save Subscription",
+    paySavingBtn: "Saving...",
     paymentHistoryTitle: "Payment History",
     totalPaymentsLabel: "Total Payments",
     paymentsFound: "payments found",
@@ -1494,7 +1496,13 @@ window.onload = function() {
   }
 };
 
+// FIX GLITCH SCROLL MOBILE LA DESCHIDEREA TASTATURII
 window.addEventListener('resize', () => {
+  let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+  if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
+    return; // Tastatura virtuală mobilă este deschisă; ignorăm recalibrarea de scroll pentru a preveni flicker-ul
+  }
+
   if (tipTabCurent === 'orar') {
     let now = new Date();
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
@@ -1901,7 +1909,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   let detInc = document.getElementById('detailsIstoricIncasari');
   if (detInc) detInc.open = false;
 
-  let detAdaugFisa = document.getElementById('detailsAdaugareClienta');
+  let detAdaugFisa = document.getElementById('detailsDetailsAdaugareClienta');
   if (detAdaugFisa) detAdaugFisa.open = false;
 
   let detEditFisa = document.getElementById('detailsEditareFisa');
@@ -2073,6 +2081,11 @@ function randeazaOrarInstant() {
       let saveBtnDisabledAttr = (!isOccupied || slot.bifat) ? 'disabled' : '';
       let saveBtnClass = (!isOccupied || slot.bifat) ? 'btn btn-save-check btn-save-check-disabled' : 'btn btn-save-check';
 
+      // BUTONUL ✕ (Clear) DEZACTIVAT DACĂ SLOTUL ESTE COMPLET GOL
+      let slotEsteCompletGol = !clientaCurata && !antVal;
+      let clearBtnDisabledAttr = slotEsteCompletGol ? 'disabled' : '';
+      let clearBtnClass = slotEsteCompletGol ? 'btn btn-clear btn-clear-disabled' : 'btn btn-clear';
+
       html += `
         <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
           <div class="slot-num">${idx + 1}</div>
@@ -2082,7 +2095,7 @@ function randeazaOrarInstant() {
           </div>
           <div style="display:flex; gap:4px;">
             <button id="btn_save_${slotDomKey}" class="${saveBtnClass}" ${saveBtnDisabledAttr} title="${currentLang === 'en' ? 'Mark Attendance & Deduct Session' : 'Bifează Prezența & Scade Ședință'}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✓</button>
-            <button class="btn btn-clear" title="${currentLang === 'en' ? 'Free Slot & Remove from History' : 'Eliberează Slot & Șterge din Istoric'}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
+            <button id="btn_clear_${slotDomKey}" class="${clearBtnClass}" ${clearBtnDisabledAttr} title="${currentLang === 'en' ? 'Free Slot & Remove from History' : 'Eliberează Slot & Șterge din Istoric'}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
           </div>
         </div>
       `;
@@ -2128,6 +2141,7 @@ function peSchimbareNumeClienta(zi, ora, slotIdx) {
   let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
   let elCli = document.getElementById('cli_' + slotDomKey);
   let elBtnSave = document.getElementById('btn_save_' + slotDomKey);
+  let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
 
@@ -2138,6 +2152,18 @@ function peSchimbareNumeClienta(zi, ora, slotIdx) {
     } else {
       elBtnSave.disabled = true;
       elBtnSave.classList.add('btn-save-check-disabled');
+    }
+  }
+
+  // Actualizăm starea butonului ✕ imediat ce se tastează sau se șterge
+  if (elBtnClear) {
+    let elAnt = document.getElementById('ant_' + slotDomKey);
+    let areCevaCompletat = (textIntrodus !== "") || (elAnt && elAnt.value !== "");
+    elBtnClear.disabled = !areCevaCompletat;
+    if (areCevaCompletat) {
+      elBtnClear.classList.remove('btn-clear-disabled');
+    } else {
+      elBtnClear.classList.add('btn-clear-disabled');
     }
   }
 
@@ -2214,9 +2240,17 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
   let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
   let elCli = document.getElementById('cli_' + slotDomKey);
   let elAnt = document.getElementById('ant_' + slotDomKey);
+  let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
   let antrenament = elAnt ? elAnt.value : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
+
+  if (elBtnClear) {
+    let areCeva = (textIntrodus !== "") || (antrenament !== "");
+    elBtnClear.disabled = !areCeva;
+    if (areCeva) elBtnClear.classList.remove('btn-clear-disabled');
+    else elBtnClear.classList.add('btn-clear-disabled');
+  }
 
   if (!clientaGasita) {
     showToast(currentLang === 'en' ? "Please choose an active existing client first!" : "Alege mai întâi o clientă activă existentă!", "error");
@@ -2308,6 +2342,29 @@ function bifeazaPrezentaSlot(zi, ora, slotIdx) {
 }
 
 function anuleazaSlot(zi, ora, slotIdx) {
+  let saptamanaCheie = getSaptamanaCheie();
+  let tagZi = saptamanaCheie + "_" + zi;
+  let oraNorm = normalizeazaOraUi(ora);
+  let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
+
+  let elCli = document.getElementById('cli_' + slotDomKey);
+  let elAnt = document.getElementById('ant_' + slotDomKey);
+  let textIntrodus = elCli ? elCli.value.trim() : "";
+  let antrenament = elAnt ? elAnt.value : "";
+
+  let slotExistent = (DB.orarSloturi || []).find(s => {
+    if (!s || !s.ziRaw) return false;
+    let rawOra = normalizeazaOraUi(s.ora);
+    return (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === (saptamanaCheie + "_Marți"))) && 
+           rawOra === oraNorm && 
+           Number(s.slotIndex) === Number(slotIdx);
+  });
+
+  // Guard: dacă slotul este deja complet gol, nu deschidem modalul și nu facem nimic
+  if (!textIntrodus && !antrenament && (!slotExistent || (!slotExistent.clienta && !slotExistent.antrenament))) {
+    return;
+  }
+
   let confirmTitleText = currentLang === 'en' ? "Free slot" : "Eliberare slot";
   let confirmDescText = currentLang === 'en' ? 
     "Free this slot? The session will be restored to the client's profile if it was checked, and the entry will be removed from history." : 
@@ -2315,14 +2372,8 @@ function anuleazaSlot(zi, ora, slotIdx) {
 
   customConfirm(confirmTitleText, confirmDescText, function() {
     let dataCalendar = getDataCalendaristicaCurenta();
-    let saptamanaCheie = getSaptamanaCheie();
-    let tagZi = saptamanaCheie + "_" + zi;
-    let oraNorm = normalizeazaOraUi(ora);
-    let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
-
-    let elCli = document.getElementById('cli_' + slotDomKey);
-    let elAnt = document.getElementById('ant_' + slotDomKey);
     let elBtnSave = document.getElementById('btn_save_' + slotDomKey);
+    let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
 
     if (elCli) elCli.value = "";
     if (elAnt) {
@@ -2333,14 +2384,11 @@ function anuleazaSlot(zi, ora, slotIdx) {
       elBtnSave.disabled = true;
       elBtnSave.classList.add('btn-save-check-disabled');
     }
+    if (elBtnClear) {
+      elBtnClear.disabled = true;
+      elBtnClear.classList.add('btn-clear-disabled');
+    }
 
-    let slotExistent = (DB.orarSloturi || []).find(s => {
-      if (!s || !s.ziRaw) return false;
-      let rawOra = normalizeazaOraUi(s.ora);
-      return (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === (saptamanaCheie + "_Marți"))) && 
-             rawOra === oraNorm && 
-             Number(s.slotIndex) === Number(slotIdx);
-    });
     let rowNum = slotExistent ? slotExistent.row : null;
 
     if (slotExistent) {
@@ -2856,7 +2904,12 @@ function filtreazaIstoricIncasariInstant() {
   tbody.innerHTML = html;
 }
 
+// FLAG BLOCARE DUBLU-CLICK LA SALVARE ÎNCASARE
+let esteIncasareInCurs = false;
+
 function salveazaIncasare() {
+  if (esteIncasareInCurs) return;
+
   let inp = document.getElementById('incasareNume');
   let nume = inp ? inp.value.trim() : "";
   let tip = document.getElementById('incasareTip').value;
@@ -2902,6 +2955,16 @@ function salveazaIncasare() {
     return;
   }
 
+  // Blocare buton pentru a preveni salvarea dublă
+  esteIncasareInCurs = true;
+  let btnSubmit = document.getElementById('submitAbonamentBtn');
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = t('paySavingBtn');
+    btnSubmit.style.opacity = '0.65';
+    btnSubmit.style.pointerEvents = 'none';
+  }
+
   callBackend("inregistreazaAbonament", {
     nume: nume, tip: tip, suma: suma, metoda: metoda, dataPlata: dataPlata, dataStart: dataStart
   }, function() {
@@ -2934,6 +2997,15 @@ function salveazaIncasare() {
     
     reseteazaDateIncasariAzi();
     incarcaBazaDateSilencios();
+
+    // Deblocare buton salvare
+    esteIncasareInCurs = false;
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = t('paySubmitBtn');
+      btnSubmit.style.opacity = '';
+      btnSubmit.style.pointerEvents = '';
+    }
   });
 }
 
