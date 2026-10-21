@@ -72,9 +72,9 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg);
   background-image: var(--bg-gradient);
-  background-attachment: scroll;
+  background-attachment: fixed;
   color: var(--text);
-  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   min-height: 100dvh;
 }
@@ -796,39 +796,48 @@ header {
   width: 100%;
 }
 
-/* NAVIGARE BOTTOM BAR EXTINSĂ COMPLET PÂNĂ ÎN MARGINEA DE JOS A ECRANULUI (FĂRĂ BARĂ MOV DEDESUBT) */
+/* ==========================================
+   NAVIGARE BOTTOM BAR STIL REVOLUT (CAPSULĂ FLOTANTĂ)
+   ========================================== */
 nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(245, 243, 250, 0.88);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 28px);
+  max-width: 440px;
+  background: rgba(28, 25, 39, 0.94);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
   display: flex;
-  border-top: 1px solid rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 40px;
   z-index: 1000;
-  max-width: 650px;
-  margin: 0 auto;
-  min-height: calc(58px + env(safe-area-inset-bottom, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  box-shadow: 0 -4px 20px rgba(67, 53, 93, 0.06),
-              inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  height: 60px;
+  padding: 4px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.42),
+              0 4px 12px rgba(92, 77, 125, 0.15),
+              inset 0 1px 1px rgba(255, 255, 255, 0.18);
 }
 
 [data-theme="dark"] nav {
-  background: rgba(18, 16, 27, 0.9);
-  border-top-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: rgba(20, 18, 30, 0.92);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55),
+              inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="light"] nav {
+  background: rgba(43, 36, 60, 0.94);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .nav-mercury-pill {
   position: absolute;
-  top: 5px;
-  left: 0;
-  width: 25%;
-  height: 34px;
+  top: 4px;
+  left: 4px;
+  width: calc(25% - 2px);
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -838,52 +847,47 @@ nav {
 }
 
 .nav-mercury-drop {
-  width: 52px;
-  height: 34px;
-  border-radius: 17px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96) 0%, rgba(235, 226, 250, 0.9) 55%, rgba(246, 242, 255, 0.98) 100%);
-  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 1),
-              inset 0 -1.5px 2.5px rgba(139, 92, 246, 0.25),
-              0 4px 12px rgba(92, 77, 125, 0.2),
-              0 1px 3px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(139, 92, 246, 0.32);
+  width: 100%;
+  height: 50px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3),
+              0 4px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   transition: transform 0.24s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 [data-theme="dark"] .nav-mercury-drop {
-  background: linear-gradient(145deg, rgba(92, 77, 125, 0.55) 0%, rgba(58, 46, 84, 0.72) 60%, rgba(139, 92, 246, 0.38) 100%);
-  border-color: rgba(196, 181, 253, 0.42);
-  box-shadow: inset 0 1.5px 2px rgba(255, 255, 255, 0.35),
-              inset 0 -1.5px 2px rgba(139, 92, 246, 0.35),
-              0 4px 14px rgba(0, 0, 0, 0.45);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .mercury-morph {
-  transform: scaleX(1.22) scaleY(0.85);
+  transform: scaleX(1.15) scaleY(0.9);
 }
 
 nav button {
   flex: 1;
-  padding: 5px 2px 6px;
+  padding: 0;
   border: none;
   background: transparent;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   line-height: 1;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.55);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
+  justify-content: center;
+  gap: 2px;
   position: relative;
   z-index: 2;
   transition: color 0.2s ease;
 }
 
 nav button .nav-icon {
-  width: 52px;
-  height: 34px;
+  width: 100%;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -892,8 +896,8 @@ nav button .nav-icon {
 }
 
 nav button svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2;
@@ -905,14 +909,19 @@ nav button svg {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+nav button span {
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
 nav button.active {
-  color: var(--primary);
+  color: #ffffff;
   font-weight: 800;
 }
 
 nav button.active svg {
-  stroke: var(--primary);
-  transform: scale(1.06);
+  stroke: #ffffff;
+  transform: scale(1.08);
 }
 
 /* TRANZIȚII TAB-URI */
@@ -1988,4 +1997,416 @@ select.slot-select-type {
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28),
               inset 0 1px 0 rgba(255, 255, 255, 0.6);
   text-align: left;
+}
+
+/* ==========================================
+   SECȚIUNEA PLAN DE ANTRENAMENT (MODEL PDF + TABEL CSV + PRINT)
+   ========================================== */
+
+.modal-share-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 12, 24, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 10002;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.plan-toolbar-card {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1.5px solid var(--glass-border-subtle) !important;
+}
+
+.plan-actions-row {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.plan-client-banner {
+  border-left: 4px solid var(--accent-purple) !important;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+/* FOAIA DE ANTRENAMENT STIL PDF */
+.plan-pdf-sheet {
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 14px 12px 18px;
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 18px;
+}
+
+.plan-header-block {
+  border-bottom: 2px solid var(--primary);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+}
+
+.plan-doc-title-input {
+  width: 100%;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary);
+  border: 1px dashed transparent;
+  background: transparent;
+  padding: 2px 4px;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+
+.plan-doc-title-input:focus {
+  border-color: var(--accent-purple);
+  background: var(--input-glass-bg);
+}
+
+.plan-doc-subtitle-input {
+  width: 100%;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: 1px dashed transparent;
+  background: transparent;
+  padding: 2px 4px;
+  margin-top: 2px;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+
+.plan-doc-subtitle-input:focus {
+  border-color: var(--accent-purple);
+  background: var(--input-glass-bg);
+}
+
+.plan-meta-client-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* CHENARE ROTUNJITE PENTRU PRINCIPII / ÎNCĂLZIRE / SIGURANȚĂ (IDENTICE CU PDF-UL) */
+.plan-info-box {
+  background: var(--primary-light);
+  border: 1px solid rgba(92, 77, 125, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  page-break-inside: avoid;
+}
+
+.plan-info-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.plan-info-title-input {
+  flex: 1;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: transparent;
+  border: 1px dashed transparent;
+  padding: 2px 4px;
+  border-radius: 5px;
+  outline: none;
+  font-family: inherit;
+}
+
+.plan-info-title-input:focus {
+  border-color: var(--accent-purple);
+  background: var(--input-glass-bg);
+}
+
+.plan-info-textarea {
+  width: 100%;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 7px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 74px;
+  outline: none;
+}
+
+[data-theme="dark"] .plan-info-textarea {
+  background: rgba(15, 13, 22, 0.45);
+}
+
+.plan-info-textarea:focus {
+  border-color: var(--accent-purple);
+  background: var(--input-glass-bg);
+}
+
+.plan-info-rendered-text {
+  font-size: 0.8rem;
+  line-height: 1.48;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* SESIUNI / ZILE DE ANTRENAMENT */
+.plan-session-block {
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+  background: var(--card-bg);
+  page-break-inside: avoid;
+}
+
+.plan-session-header {
+  background: linear-gradient(90deg, rgba(92, 77, 125, 0.16) 0%, rgba(139, 92, 246, 0.08) 100%);
+  padding: 7px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.plan-session-title-input {
+  flex: 1;
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: transparent;
+  border: 1px dashed transparent;
+  padding: 2px 5px;
+  border-radius: 5px;
+  outline: none;
+  font-family: inherit;
+}
+
+.plan-session-title-input:focus {
+  border-color: var(--accent-purple);
+  background: var(--input-glass-bg);
+}
+
+/* TABELUL DE EXERCIȚII (PDF + CSV) */
+.plan-exercises-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.plan-exercises-table th {
+  background: rgba(92, 77, 125, 0.09);
+  color: var(--primary);
+  font-weight: 800;
+  text-align: left;
+  padding: 6px 5px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.71rem;
+}
+
+.plan-exercises-table td {
+  padding: 6px 5px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.plan-exercises-table tr:nth-child(even) {
+  background: rgba(92, 77, 125, 0.025);
+}
+
+.plan-ex-input,
+.plan-ex-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--input-glass-bg);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.76rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.plan-ex-textarea {
+  resize: vertical;
+  min-height: 36px;
+  line-height: 1.3;
+}
+
+.plan-ex-input:focus,
+.plan-ex-textarea:focus {
+  border-color: var(--accent-purple);
+}
+
+.plan-tracking-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 4px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+.plan-tracking-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plan-tracking-label {
+  font-size: 0.63rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.plan-footer-note {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.73rem;
+  font-style: italic;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 560px) {
+  .plan-exercises-table thead {
+    display: none;
+  }
+  .plan-exercises-table,
+  .plan-exercises-table tbody,
+  .plan-exercises-table tr,
+  .plan-exercises-table td {
+    display: block;
+    width: 100%;
+  }
+  .plan-exercises-table tr {
+    padding: 8px 8px 10px;
+    border-bottom: 1.5px solid var(--border);
+  }
+  .plan-exercises-table td {
+    padding: 3px 0;
+    border: none;
+  }
+}
+
+/* REGULI DE PRINT / EXPORT PDF NATIV VECTORIAL */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 10mm;
+  }
+
+  html, body {
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #1e293b !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  header,
+  #mainAppHeader,
+  nav,
+  #bottomNav,
+  #appDrawer,
+  #appDrawerBackdrop,
+  #authScreenOverlay,
+  #customToast,
+  #customModalBackdrop,
+  #modalSharePlanBackdrop,
+  #modalEditareIncasareBackdrop,
+  .no-print {
+    display: none !important;
+  }
+
+  .container {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .tab-content {
+    display: none !important;
+  }
+
+  #tabPlanAntrenament {
+    display: block !important;
+  }
+
+  .plan-pdf-sheet {
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .plan-info-box {
+    background: #f5f3fa !important;
+    border: 1px solid #c4bcd6 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .plan-session-block {
+    border: 1px solid #cbd5e1 !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 12px !important;
+  }
+
+  .plan-exercises-table thead {
+    display: table-header-group !important;
+  }
+
+  .plan-exercises-table {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .plan-exercises-table tbody {
+    display: table-row-group !important;
+  }
+
+  .plan-exercises-table tr {
+    display: table-row !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .plan-exercises-table th,
+  .plan-exercises-table td {
+    display: table-cell !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 5px 6px !important;
+    font-size: 9pt !important;
+    color: #1e293b !important;
+  }
+
+  .plan-exercises-table th {
+    background: #ece8f4 !important;
+    color: #43355d !important;
+    font-weight: 800 !important;
+  }
 }
