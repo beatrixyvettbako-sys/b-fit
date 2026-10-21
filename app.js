@@ -151,8 +151,10 @@ const i18n = {
     authDividerOr: "sau",
     authGoogleBtn: "Conectare cu Google",
     authProcessing: "Se procesează...",
-    authFillEmailPass: "Completează email-ul și parola!",
-    authFillEmailOnly: "Introdu adresa de email pentru a primi Magic Link!",
+    authFillEmailPass: "Te rugăm să completezi email-ul și parola!",
+    authFillEmailOnly: "Te rugăm să introduci adresa de email!",
+    authFillPassOnly: "Te rugăm să introduci parola!",
+    authInvalidEmailFormat: "Adresa de email introdusă nu este validă!",
     authLoginSuccess: "✓ Conectat cu succes!",
     authSignupSuccess: "✓ Cont creat și conectat!",
     authSignupCheckEmail: "Cont creat! Verifică email-ul pentru confirmare.",
@@ -161,11 +163,13 @@ const i18n = {
     authLogoutConfirmText: "Ești sigură că vrei să ieși din cont?",
 
     // Mapare Erori Supabase Auth
-    authErrInvalidCreds: "Date de autentificare invalide (email sau parolă greșită).",
+    authErrInvalidCreds: "Date de autentificare incorecte (email sau parolă greșită).",
     authErrEmailNotConfirmed: "Adresa de email nu a fost încă confirmată.",
     authErrUserExists: "Există deja un cont înregistrat cu această adresă de email.",
     authErrPassLength: "Parola trebuie să aibă cel puțin 6 caractere.",
-    authErrGeneric: "Eroare la autentificare. Te rugăm să reîncerci."
+    authErrRateLimit: "Prea multe încercări. Te rugăm să aștepți câteva momente.",
+    authErrNetwork: "Eroare de conexiune la rețea. Verifică internetul.",
+    authErrGeneric: "Eroare la autentificare. Verifică datele introduse și reîncearcă."
   },
   en: {
     appTitle: "Weekly Schedule",
@@ -282,7 +286,9 @@ const i18n = {
     authGoogleBtn: "Sign in with Google",
     authProcessing: "Processing...",
     authFillEmailPass: "Please fill in email and password!",
-    authFillEmailOnly: "Enter your email address to receive the Magic Link!",
+    authFillEmailOnly: "Please enter your email address!",
+    authFillPassOnly: "Please enter your password!",
+    authInvalidEmailFormat: "Please enter a valid email address!",
     authLoginSuccess: "✓ Connected successfully!",
     authSignupSuccess: "✓ Account created and connected!",
     authSignupCheckEmail: "Account created! Please check your email for confirmation.",
@@ -295,7 +301,9 @@ const i18n = {
     authErrEmailNotConfirmed: "Email address has not been confirmed yet.",
     authErrUserExists: "A user with this email address already exists.",
     authErrPassLength: "Password should be at least 6 characters.",
-    authErrGeneric: "Authentication error. Please try again."
+    authErrRateLimit: "Too many attempts. Please wait a moment and try again.",
+    authErrNetwork: "Network error. Please check your internet connection.",
+    authErrGeneric: "Authentication error. Please check your details and try again."
   }
 };
 
@@ -308,24 +316,66 @@ function t(key) {
   return i18n['ro'][key] || key;
 }
 
-// Mapare erori din Supabase în mesaje bilingve prietenoase
+// Comutare vizibilitate parolă (Ochișor Show / Hide Password)
+function comutaVizibilitateParola(inputId, btnEl) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  const esteAscunsa = input.type === 'password';
+  input.type = esteAscunsa ? 'text' : 'password';
+
+  if (btnEl) {
+    const eyeOpen = btnEl.querySelector('.eye-open');
+    const eyeClosed = btnEl.querySelector('.eye-closed');
+    if (eyeOpen) eyeOpen.style.display = esteAscunsa ? 'none' : 'block';
+    if (eyeClosed) eyeClosed.style.display = esteAscunsa ? 'block' : 'none';
+  }
+}
+
+// Sincronizare stare no-scroll pe body când Login sau Burger Menu este deschis
+function actualizeazaStareNoScrollBody() {
+  const authOverlay = document.getElementById('authScreenOverlay');
+  const drawer = document.getElementById('appDrawer');
+  const esteAuthVizibil = authOverlay && !authOverlay.classList.contains('auth-hidden');
+  const esteDrawerDeschis = drawer && drawer.classList.contains('open');
+
+  if (esteAuthVizibil || esteDrawerDeschis) {
+    document.body.classList.add('no-scroll');
+  } else {
+    document.body.classList.remove('no-scroll');
+  }
+}
+
+// Mapare completă a erorilor Supabase în limba selectată (fără mesaje netraduse în engleză)
 function localizeazaEroareAuth(errMessage) {
   if (!errMessage) return t('authErrGeneric');
   const msg = errMessage.toLowerCase();
 
-  if (msg.includes("invalid login credentials")) {
+  if (msg.includes("invalid login credentials") || msg.includes("invalid credentials") || msg.includes("wrong password") || msg.includes("user not found")) {
     return t('authErrInvalidCreds');
   }
   if (msg.includes("email not confirmed")) {
     return t('authErrEmailNotConfirmed');
   }
-  if (msg.includes("user already registered") || msg.includes("already exists")) {
+  if (msg.includes("user already registered") || msg.includes("already exists") || msg.includes("already been registered")) {
     return t('authErrUserExists');
   }
-  if (msg.includes("at least 6 characters") || msg.includes("password should be")) {
+  if (msg.includes("at least 6 characters") || msg.includes("password should be") || msg.includes("weak_password") || msg.includes("weak password")) {
     return t('authErrPassLength');
   }
-  return errMessage;
+  if (msg.includes("valid email") || msg.includes("unable to validate email") || msg.includes("invalid format") || msg.includes("invalid email")) {
+    return t('authInvalidEmailFormat');
+  }
+  if (msg.includes("missing email") || msg.includes("provide either an email")) {
+    return t('authFillEmailPass');
+  }
+  if (msg.includes("rate limit") || msg.includes("too many requests") || msg.includes("security purposes")) {
+    return t('authErrRateLimit');
+  }
+  if (msg.includes("failed to fetch") || msg.includes("network")) {
+    return t('authErrNetwork');
+  }
+  return t('authErrGeneric');
 }
 
 // ==========================================
@@ -370,12 +420,31 @@ async function gestioneazaSubmitAuth(e) {
   if (e) e.preventDefault();
   if (!supabaseClient) return;
 
-  const email = (document.getElementById('authEmail')?.value || '').trim();
-  const password = document.getElementById('authPassword')?.value || '';
+  const emailEl = document.getElementById('authEmail');
+  const passEl = document.getElementById('authPassword');
+  const email = (emailEl?.value || '').trim();
+  const password = passEl?.value || '';
   const btnSubmit = document.getElementById('authSubmitBtn');
 
-  if (!email || !password) {
+  if (!email && !password) {
     afiseazaMesajAuthFeedback(t('authFillEmailPass'));
+    if (emailEl) emailEl.focus();
+    return;
+  }
+  if (!email) {
+    afiseazaMesajAuthFeedback(t('authFillEmailOnly'));
+    if (emailEl) emailEl.focus();
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    afiseazaMesajAuthFeedback(t('authInvalidEmailFormat'));
+    if (emailEl) emailEl.focus();
+    return;
+  }
+  if (!password) {
+    afiseazaMesajAuthFeedback(t('authFillPassOnly'));
+    if (passEl) passEl.focus();
     return;
   }
 
@@ -391,6 +460,10 @@ async function gestioneazaSubmitAuth(e) {
       if (error) throw error;
       showToast(t('authLoginSuccess'));
     } else {
+      if (password.length < 6) {
+        afiseazaMesajAuthFeedback(t('authErrPassLength'));
+        return;
+      }
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
@@ -419,9 +492,17 @@ async function gestioneazaSubmitAuth(e) {
 
 async function trimiteMagicLink() {
   if (!supabaseClient) return;
-  const email = (document.getElementById('authEmail')?.value || '').trim();
+  const emailEl = document.getElementById('authEmail');
+  const email = (emailEl?.value || '').trim();
   if (!email) {
     afiseazaMesajAuthFeedback(t('authFillEmailOnly'));
+    if (emailEl) emailEl.focus();
+    return;
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    afiseazaMesajAuthFeedback(t('authInvalidEmailFormat'));
+    if (emailEl) emailEl.focus();
     return;
   }
 
@@ -1517,15 +1598,12 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
     let deficit = spatiuVizibilUtil - inaltimeDeLaCardLaBazaIstoric;
     let currentEndCardHeight = endCard.getBoundingClientRect().height || 58;
     endCard.style.minHeight = Math.ceil(currentEndCardHeight + deficit) + 'px';
-    void endCard.offsetHeight;
   }
 
-  requestAnimationFrame(() => {
-    endCard.style.transition = '';
-  });
+  endCard.style.transition = '';
 }
 
-function autoScrollLaOraCurenta() {
+function autoScrollLaOraCurenta(faraHighlight = false) {
   let now = new Date();
   let day = now.getDay();
   let currentHour = now.getHours();
@@ -1576,42 +1654,23 @@ function autoScrollLaOraCurenta() {
     calCard.style.transition = '';
   }
 
-  const executaAliniereMilimetrica = () => {
-    let prevAnim = tabOrar.style.animation;
-    let prevTransform = tabOrar.style.transform;
-    tabOrar.style.animation = 'none';
-    tabOrar.style.transform = 'none';
-    void tabOrar.offsetHeight;
+  calibreazaLayoutEcran(closestOraText, closestBlock);
 
-    calibreazaLayoutEcran(closestOraText, closestBlock);
+  let topOffset = getTopOffsetSubZile();
+  let blockTopDoc = closestBlock.getBoundingClientRect().top + window.pageYOffset;
+  let targetScrollY = Math.max(0, Math.round(blockTopDoc - topOffset));
 
-    let topOffset = getTopOffsetSubZile();
-    let blockTopDoc = closestBlock.getBoundingClientRect().top + window.pageYOffset;
-    let targetScrollY = Math.max(0, Math.round(blockTopDoc - topOffset));
-
-    window.scrollTo({
-      top: targetScrollY,
-      behavior: 'auto'
-    });
-
-    tabOrar.style.animation = prevAnim;
-    tabOrar.style.transform = prevTransform;
-  };
-
-  executaAliniereMilimetrica();
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      executaAliniereMilimetrica();
-
-      closestBlock.classList.remove('hour-block-current-highlight');
-      void closestBlock.offsetWidth;
-      closestBlock.classList.add('hour-block-current-highlight');
-      setTimeout(() => {
-        closestBlock.classList.remove('hour-block-current-highlight');
-      }, 2000);
-    });
+  window.scrollTo({
+    top: targetScrollY,
+    behavior: 'auto'
   });
+
+  if (!faraHighlight) {
+    closestBlock.classList.remove('hour-block-current-highlight');
+    requestAnimationFrame(() => {
+      closestBlock.classList.add('hour-block-current-highlight');
+    });
+  }
 }
 
 function peComutareIstoricIncasari(detailsEl) {
@@ -1645,7 +1704,7 @@ function peComutareIstoricOrar(detailsEl) {
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[d.getDay()]) {
       setTimeout(() => {
-        autoScrollLaOraCurenta();
+        autoScrollLaOraCurenta(true);
       }, 50);
     }
   }
@@ -1847,13 +1906,14 @@ function aplicaTraduceriInterfataStatic() {
 }
 
 // ==========================================
-// 3. INIȚIALIZARE & GARDIAN SESIUNE
+// 3. INIȚIALIZARE & GARDIAN SESIUNE (FĂRĂ FLICKER LA REFRESH)
 // ==========================================
 
 async function verificaSesiuneSupabase() {
   const overlay = document.getElementById('authScreenOverlay');
   if (!supabaseClient) {
     if (overlay) overlay.classList.add('auth-hidden');
+    actualizeazaStareNoScrollBody();
     return true;
   }
 
@@ -1862,10 +1922,12 @@ async function verificaSesiuneSupabase() {
     utilizatorCurent = session.user;
     actualizeazaDateProfilUI(session.user);
     if (overlay) overlay.classList.add('auth-hidden');
+    actualizeazaStareNoScrollBody();
     return true;
   } else {
     utilizatorCurent = null;
     if (overlay) overlay.classList.remove('auth-hidden');
+    actualizeazaStareNoScrollBody();
     return false;
   }
 }
@@ -1893,23 +1955,33 @@ window.onload = async function() {
 
   actualizeazaBaraZile();
 
-  // Ascultare schimbare sesiune Supabase în timp real
+  let sesiuneInitializata = false;
+
+  // Ascultare schimbare sesiune Supabase în timp real (ignorăm INITIAL_SESSION duplicat pentru a preveni dublul refresh / flicker)
   if (supabaseClient) {
     supabaseClient.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+
       const overlay = document.getElementById('authScreenOverlay');
       if (session && session.user) {
+        const eraNeconectat = !utilizatorCurent;
         utilizatorCurent = session.user;
         actualizeazaDateProfilUI(session.user);
         if (overlay) overlay.classList.add('auth-hidden');
-        incarcaBazaDateSilencios(null, true);
-      } else {
+        actualizeazaStareNoScrollBody();
+        if (eraNeconectat && sesiuneInitializata) {
+          incarcaBazaDateSilencios(null, true);
+        }
+      } else if (event === 'SIGNED_OUT') {
         utilizatorCurent = null;
         if (overlay) overlay.classList.remove('auth-hidden');
+        actualizeazaStareNoScrollBody();
       }
     });
   }
 
   const areSesiune = await verificaSesiuneSupabase();
+  sesiuneInitializata = true;
   if (!areSesiune) return;
 
   let areCacheLocal = false;
@@ -1946,19 +2018,19 @@ window.onload = async function() {
 window.addEventListener('resize', () => {
   let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
-    return; // Tastatura virtuală mobilă este deschisă; ignorăm recalibrarea de scroll pentru a preveni flicker-ul
+    return;
   }
 
   if (tipTabCurent === 'orar') {
     let now = new Date();
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[now.getDay()]) {
-      autoScrollLaOraCurenta();
+      autoScrollLaOraCurenta(true);
     }
   }
 });
 
-// WAKE & FOREGROUND RESYNC FĂRĂ REGRESII (ECO-FRIENDLY & INSTANT)
+// WAKE & FOREGROUND RESYNC FĂRĂ FLICKER
 function gestioneazaRevenireForeground() {
   let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
@@ -1970,11 +2042,8 @@ function gestioneazaRevenireForeground() {
     let day = now.getDay();
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     
-    // Dacă utilizatorul este pe săptămâna curentă și în ziua curentă, executăm saltul fluid
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[day]) {
-      setTimeout(() => {
-        autoScrollLaOraCurenta();
-      }, 60);
+      autoScrollLaOraCurenta(true);
     }
   }
 }
@@ -1983,10 +2052,6 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     gestioneazaRevenireForeground();
   }
-});
-
-window.addEventListener('focus', () => {
-  gestioneazaRevenireForeground();
 });
 
 function initSwipeNavigation() {
@@ -2055,10 +2120,20 @@ function initSwipeNavigation() {
 function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, aliniazaLaOraCurenta = false) {
   callBackend("getTotBazaDeDate", {}, function(data) {
     if (!data || !Array.isArray(data.orarSloturi)) return;
+
+    const jsonNou = JSON.stringify(data);
+    const jsonVechi = localStorage.getItem("BFIT_DB_LOCAL");
+    const dateNeschimbate = (jsonNou === jsonVechi);
+
     DB = data;
     try {
-      localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(data));
+      localStorage.setItem("BFIT_DB_LOCAL", jsonNou);
     } catch(e) {}
+
+    // Dacă datele sunt 100% identice cu cache-ul deja afișat și nu s-a cerut salt forțat, evităm distrugerea și recrearea DOM-ului (0 flicker)
+    if (dateNeschimbate && !clientaSelectataDupaActualizare && !aliniazaLaOraCurenta) {
+      return;
+    }
 
     let scrollAnterior = window.pageYOffset;
 
@@ -2256,12 +2331,21 @@ function actualizeazaBaraZile() {
 }
 
 function schimbaZiInstant(ziCheie) {
+  if (ziCurentaCheie === ziCheie) return;
   ziCurentaCheie = ziCheie;
 
   let detOrar = document.getElementById('detailsIstoricOrar');
   if (detOrar) detOrar.open = false;
 
-  actualizeazaBaraZile();
+  // Actualizăm doar clasa activă pe butoanele de zile fără a distruge containerul sticky
+  const dayBtns = document.querySelectorAll('#dayButtonsContainer .day-btn');
+  const zile = getZileConfig();
+  dayBtns.forEach((btn, idx) => {
+    if (zile[idx]) {
+      btn.classList.toggle('active', zile[idx].cheie === ziCurentaCheie);
+    }
+  });
+
   randeazaOrarInstant();
   
   let d = new Date();
@@ -2396,7 +2480,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (detIstFisa) detIstFisa.open = false;
 
   if (tipTab === 'orar') {
-    autoScrollLaOraCurenta();
+    autoScrollLaOraCurenta(true);
   } else {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
@@ -3557,6 +3641,7 @@ function deschideMeniuLateral() {
   navigheazaSubMeniu('main');
   if (drawer) drawer.classList.add('open');
   if (backdrop) backdrop.classList.add('open');
+  actualizeazaStareNoScrollBody();
 }
 
 function inchideMeniuLateral() {
@@ -3564,6 +3649,7 @@ function inchideMeniuLateral() {
   let backdrop = document.getElementById('appDrawerBackdrop');
   if (drawer) drawer.classList.remove('open');
   if (backdrop) backdrop.classList.remove('open');
+  actualizeazaStareNoScrollBody();
 }
 
 const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
