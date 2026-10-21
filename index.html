@@ -9,12 +9,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Beatrix">
-  <meta name="theme-color" content="#5c4d7d">
+  <meta name="theme-color" content="#f2eff8">
   
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal41">
+  <link rel="stylesheet" href="style.css?v=fitFinal42">
 </head>
 <body>
 
@@ -32,10 +32,24 @@
         <button type="button" class="auth-lang-btn" id="authLangBtnEn" onclick="seteazaLimba('en')">🇬🇧 EN</button>
       </div>
 
-      <!-- Logo Oficial Aplicație B-Fit (Identic 1:1 cu icon.svg) -->
+      <!-- Logo Rotund Modern Liquid Glass Mov -->
       <div class="auth-app-icon-wrap">
-        <svg viewBox="0 0 512 512" width="56" height="56">
-          <rect width="512" height="512" rx="128" fill="#5c4d7d"/>
+        <svg viewBox="0 0 512 512" width="64" height="64">
+          <defs>
+            <linearGradient id="liquidPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#8b5cf6"/>
+              <stop offset="50%" stop-color="#5c4d7d"/>
+              <stop offset="100%" stop-color="#3b2d54"/>
+            </linearGradient>
+            <linearGradient id="glassShineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+              <stop offset="45%" stop-color="#ffffff" stop-opacity="0.08"/>
+              <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="256" fill="url(#liquidPurpleGrad)"/>
+          <ellipse cx="256" cy="120" rx="185" ry="92" fill="url(#glassShineGrad)"/>
+          <circle cx="256" cy="256" r="246" fill="none" stroke="rgba(255,255,255,0.38)" stroke-width="6"/>
           <path d="M125.8 170.7c-21.7 0-39.3 17.6-39.3 39.3v17.5H74.1c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h12.4v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h17.5c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-17.5V210c0-21.7-17.6-39.3-39.3-39.3zm260.4 0c-21.7 0-39.3 17.6-39.3 39.3v17.5h-17.5c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h17.5v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h12.4c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-12.4V210c0-21.7-17.6-39.3-39.3-39.3zm-174.9 66.8h89.4v37H211.3v-37z" fill="#ffffff"/>
         </svg>
       </div>
@@ -49,16 +63,28 @@
         <button type="button" class="auth-tab-btn" id="authTabSignup" onclick="comutaTabAuth('signup')">Creează cont</button>
       </div>
 
-      <!-- Formular Email & Parolă -->
-      <form id="authForm" onsubmit="gestioneazaSubmitAuth(event)" style="display:flex; flex-direction:column; gap:10px;">
+      <!-- Formular Email & Parolă (novalidate pentru mesaje 100% în limba aplicației) -->
+      <form id="authForm" novalidate onsubmit="gestioneazaSubmitAuth(event)" style="display:flex; flex-direction:column; gap:10px;">
         <div class="form-group" style="margin-bottom:0; text-align:left;">
           <label style="font-size:0.75rem;" id="authEmailLabel">Email</label>
-          <input type="email" id="authEmail" class="form-control" placeholder="exemplu@email.com" required autocomplete="email">
+          <input type="email" id="authEmail" class="form-control" placeholder="exemplu@email.com" autocomplete="email">
         </div>
 
         <div class="form-group" style="margin-bottom:0; text-align:left;" id="authPasswordGroup">
           <label style="font-size:0.75rem;" id="authPasswordLabel">Parolă</label>
-          <input type="password" id="authPassword" class="form-control" placeholder="••••••••" autocomplete="current-password">
+          <div class="password-field-wrap">
+            <input type="password" id="authPassword" class="form-control" placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('authPassword', this)" tabindex="-1" aria-label="Arată/Ascunde parola">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
         </div>
 
         <button type="submit" class="btn" style="width:100%; padding:10px; font-weight:800; margin-top:4px;" id="authSubmitBtn">
@@ -160,7 +186,7 @@
     </div>
   </div>
 
-  <!-- MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI -->
+  <!-- MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI (FĂRĂ SCROLL INUTIL) -->
   <div id="appDrawerBackdrop" class="drawer-backdrop" onclick="inchideMeniuLateral()"></div>
   <div id="appDrawer" class="app-drawer">
 
@@ -175,7 +201,7 @@
             </svg>
           </div>
           <div>
-            <div style="font-size:0.74rem; opacity:0.85; font-weight:600;" id="drawerGreetingLabel">Bună,</div>
+            <div style="font-size:0.74rem; opacity:0.85; font-weight:600;" id="drawerGreetingLabel">Salut,</div>
             <div style="font-size:1.05rem; font-weight:800; line-height:1.2;" id="drawerUserNameLabel">Beatrix</div>
           </div>
         </div>
@@ -193,7 +219,7 @@
           <div class="drawer-nav-card-left">
             <div class="drawer-nav-icon">👤</div>
             <div>
-              <div class="drawer-nav-title" id="drawerMenuProfileTitle">Profil & Cont</div>
+              <div class="drawer-nav-title" id="drawerMenuProfileTitle">Profil</div>
               <div class="drawer-nav-desc" id="drawerMenuProfileDesc">Avatar, nume, parolă</div>
             </div>
           </div>
@@ -213,7 +239,7 @@
         </div>
 
         <!-- Buton Deconectare cu Stil Liquid Glass -->
-        <div style="margin-top:auto; padding-top:20px;">
+        <div style="margin-top:auto; padding-top:12px;">
           <button type="button" class="btn btn-logout-glass" onclick="deconectareUtilizator()">
             <span>🚪</span> <span id="drawerLogoutBtnText">Ieși din cont</span>
           </button>
@@ -308,20 +334,44 @@
         </div>
 
         <!-- Modificare Nume / Prenume -->
-        <div class="form-group" style="margin-top:16px;">
+        <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
           <label id="profileNameLabel">Nume și Prenume</label>
           <input type="text" id="profileInputNume" class="form-control" placeholder="Beatrix">
-          <button type="button" class="btn" style="width:100%; margin-top:8px; font-size:0.82rem;" id="btnSalveazaNumeProfil" onclick="salveazaNumeProfil()">
+          <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" id="btnSalveazaNumeProfil" onclick="salveazaNumeProfil()">
             Salvează Nume
           </button>
         </div>
 
-        <!-- Schimbare Parolă & Confirmare Parolă -->
-        <div class="form-group" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">
+        <!-- Schimbare Parolă & Confirmare Parolă (cu ochișor) -->
+        <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
           <label id="profilePassLabel">Schimbă Parola</label>
-          <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 6 caractere)" autocomplete="new-password">
-          <input type="password" id="profileInputParolaConfirma" class="form-control" placeholder="Confirmă parola nouă" autocomplete="new-password" style="margin-top:8px;">
-          <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px; font-size:0.82rem;" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()">
+          <div class="password-field-wrap">
+            <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 6 caractere)" autocomplete="new-password">
+            <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaNoua', this)" tabindex="-1" aria-label="Arată/Ascunde parola">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="password-field-wrap" style="margin-top:6px;">
+            <input type="password" id="profileInputParolaConfirma" class="form-control" placeholder="Confirmă parola nouă" autocomplete="new-password">
+            <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaConfirma', this)" tabindex="-1" aria-label="Arată/Ascunde parola">
+              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <button type="button" class="btn btn-clear" style="width:100%; margin-top:6px; font-size:0.82rem;" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()">
             Actualizează Parola
           </button>
         </div>
@@ -334,7 +384,7 @@
     </div>
   </div>
 
-  <!-- HEADER APLICAȚIE (FLUID, FĂRĂ BORDER DELIMITATOR) -->
+  <!-- HEADER APLICAȚIE (LIQUID GLASS AERISIT & UNIFICAT) -->
   <header>
     <div class="header-title-wrapper" id="pageTitleWrapper">
       <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
@@ -826,7 +876,7 @@
 
   </div>
 
-  <!-- NAVIGARE BOTTOM BAR MERCURY PILL -->
+  <!-- NAVIGARE BOTTOM BAR MERCURY PILL EXTINSĂ PÂNĂ ÎN BAZA ECRANULUI -->
   <nav id="bottomNav">
     <div class="nav-mercury-pill" id="navMercuryPill">
       <div class="nav-mercury-drop"></div>
@@ -882,6 +932,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal41"></script>
+  <script src="app.js?v=fitFinal42"></script>
 </body>
 </html>
