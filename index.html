@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal43">
+  <link rel="stylesheet" href="style.css?v=fitFinal46">
 </head>
 <body>
 
@@ -128,6 +128,40 @@
     </div>
   </div>
 
+  <!-- MODAL SHARE PLAN DE ANTRENAMENT CĂTRE CLIENTĂ -->
+  <div id="modalSharePlanBackdrop" class="modal-share-backdrop" style="display:none;">
+    <div class="modal-edit-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" id="sharePlanModalTitle">📤 Distribuie Planul Clientei</div>
+        <button type="button" onclick="inchideModalSharePlan()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+
+      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="sharePlanModalDesc">
+        Clienta poate deschide link-ul fără cont, își poate vedea exercițiile și își poate completa greutățile (kg), seturile și statusul în timp real.
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label id="sharePlanLinkLabel">Link Interactiv Clientă</label>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="inputSharePlanUrl" class="form-control" readonly style="font-size:0.78rem; font-weight:600;">
+          <button type="button" class="btn" style="white-space:nowrap; padding:6px 10px; font-size:0.78rem;" onclick="copiazaLinkSharePlan()" id="btnCopyShareLink">📋 Copiază</button>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
+        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="trimiteShareNativPlan()">
+          <span>📲</span> <span id="btnNativeShareText">Trimite Link pe WhatsApp / Share...</span>
+        </button>
+        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextWhatsAppPlan()">
+          <span>💬</span> <span id="btnCopyWaText">Copiază Textul Formatat pt. WhatsApp</span>
+        </button>
+        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="inchideModalSharePlan(); exportaPlanCurentPDF();">
+          <span>📄</span> <span id="btnShareExportPdfText">Generează / Salvează ca PDF</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL EDITARE ÎNCASARE -->
   <div id="modalEditareIncasareBackdrop">
     <div class="modal-edit-card">
@@ -214,7 +248,7 @@
       </div>
 
       <div class="drawer-body">
-        <!-- Card Navigare Setări Profil -->
+        <!-- 1. Card Navigare Setări Profil -->
         <div class="drawer-nav-card" onclick="navigheazaSubMeniu('profile')">
           <div class="drawer-nav-card-left">
             <div class="drawer-nav-icon">👤</div>
@@ -226,7 +260,19 @@
           <div class="drawer-nav-arrow">›</div>
         </div>
 
-        <!-- Card Navigare Setări Aplicație -->
+        <!-- 2. Card Navigare Plan de Antrenament (MUTAT SUB PROFIL) -->
+        <div class="drawer-nav-card" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">🏋️‍♀️</div>
+            <div>
+              <div class="drawer-nav-title" id="drawerMenuWorkoutTitle">Plan de Antrenament</div>
+              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc">Programe, export PDF & share cliente</div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <!-- 3. Card Navigare Setări Aplicație -->
         <div class="drawer-nav-card" onclick="navigheazaSubMeniu('settings')">
           <div class="drawer-nav-card-left">
             <div class="drawer-nav-icon">⚙️</div>
@@ -385,7 +431,7 @@
   </div>
 
   <!-- HEADER APLICAȚIE (LIQUID GLASS AERISIT & UNIFICAT) -->
-  <header>
+  <header id="mainAppHeader">
     <div class="header-title-wrapper" id="pageTitleWrapper">
       <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -401,7 +447,7 @@
     </div>
 
     <!-- Buton Meniu Lateral -->
-    <button class="header-icon-bubble-btn" onclick="deschideMeniuLateral()" title="Meniu setări" style="margin-left: auto;">
+    <button class="header-icon-bubble-btn" id="headerBurgerBtn" onclick="deschideMeniuLateral()" title="Meniu setări" style="margin-left: auto;">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -874,15 +920,75 @@
       </details>
     </div>
 
+    <!-- 5. PLAN DE ANTRENAMENT (ACCESIBIL DIN MENIUL LATERAL SUB PROFIL & LINK SHARE CLIENTĂ) -->
+    <div id="tabPlanAntrenament" class="tab-content">
+
+      <!-- BARĂ ACȚIUNI ANTRENOR (ASCUNSĂ LA PRINT ȘI ÎN MODUL CLIENTĂ SHARE) -->
+      <div class="card plan-toolbar-card no-print" id="planCoachToolbar">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:8px;">
+          <label style="font-size:0.76rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin:0;" id="planSelectLabel">ALEGE SAU CREEAZĂ PLAN</label>
+          <div style="display:flex; gap:5px;">
+            <label for="inputImportCsvPlan" class="btn btn-clear" style="padding:4px 8px; font-size:0.74rem; cursor:pointer; margin:0;" title="Importă fișier CSV din Google Sheets">
+              📥 <span id="btnImportCsvText">Import CSV</span>
+            </label>
+            <input type="file" id="inputImportCsvPlan" accept=".csv,text/csv" style="display:none;" onchange="importaPlanDinCsv(this)">
+            <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
+              + <span id="btnNewPlanText">Plan Nou</span>
+            </button>
+          </div>
+        </div>
+
+        <select id="selectPlanExistent" class="form-control" onchange="selecteazaPlanDinLista(this.value)" style="margin-bottom:8px; font-weight:700;">
+          <option value="">-- Alege un plan salvat --</option>
+        </select>
+
+        <!-- Butoane Acțiuni Rapide pe Planul Activ -->
+        <div class="plan-actions-row">
+          <button type="button" class="btn" style="flex:1.2; font-size:0.78rem; padding:7px 8px;" onclick="salveazaPlanCurentInBaza()" id="btnSavePlanAction">
+            💾 <span id="btnSavePlanText">Salvează</span>
+          </button>
+          <button type="button" class="btn btn-clear" style="flex:1; font-size:0.78rem; padding:7px 8px;" onclick="comutaModPrevizualizarePlan()" id="btnTogglePreviewPlan">
+            👁️ <span id="btnPreviewPlanText">Mod PDF</span>
+          </button>
+          <button type="button" class="btn btn-clear" style="flex:1; font-size:0.78rem; padding:7px 8px;" onclick="exportaPlanCurentPDF()">
+            📄 <span id="btnExportPdfPlanText">PDF</span>
+          </button>
+          <button type="button" class="btn" style="flex:1; font-size:0.78rem; padding:7px 8px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="deschideModalSharePlan()">
+            📤 <span id="btnSharePlanText">Share</span>
+          </button>
+          <button type="button" class="btn btn-archive" style="padding:7px 8px; font-size:0.78rem;" onclick="stergePlanCurent()" title="Șterge planul">
+            🗑
+          </button>
+        </div>
+      </div>
+
+      <!-- BANNER MOD CLIENTĂ (VIZIBIL DOAR CÂND CLIENTA DESCHIDE LINK-UL PARTAJAT ?plan=...) -->
+      <div class="card plan-client-banner no-print" id="planClientSharedBanner" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div>
+            <div style="font-size:0.86rem; font-weight:800; color:var(--primary);" id="clientBannerTitle">🏋️‍♀️ Fișa ta de antrenament</div>
+            <div style="font-size:0.73rem; color:var(--text-muted);" id="clientBannerSub">Poți completa greutățile (kg), seturile și statusul direct mai jos.</div>
+          </div>
+          <button type="button" class="btn btn-clear" style="padding:6px 10px; font-size:0.76rem; white-space:nowrap;" onclick="exportaPlanCurentPDF()">
+            📄 PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTAINERUL DOCUMENTULUI (DESIGN IDENTIC CU PDF-UL DE REFERINȚĂ + TABEL CSV) -->
+      <div id="planDocumentContainer" class="plan-pdf-sheet"></div>
+
+    </div>
+
   </div>
 
-  <!-- NAVIGARE BOTTOM BAR MERCURY PILL EXTINSĂ PÂNĂ ÎN BAZA ECRANULUI -->
-  <nav id="bottomNav">
+  <!-- NAVIGARE BOTTOM BAR STIL REVOLUT (CAPSULĂ FLOTANTĂ LIQUID GLASS) -->
+  <nav id="bottomNav" class="nav-revolut-bar">
     <div class="nav-mercury-pill" id="navMercuryPill">
       <div class="nav-mercury-drop"></div>
     </div>
 
-    <!-- Buton Orar cu Iconiță Calendar 21 DEC identică stilistic cu header-ul -->
+    <!-- 1. Buton Orar (Inspirat din logo-ul R/Calendar Revolut) -->
     <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar', 0)" id="navBtnOrar">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -897,6 +1003,7 @@
       <span id="navTextOrar">Orar</span>
     </button>
 
+    <!-- 2. Buton Programări -->
     <button onclick="comutaTab('tabProgramari', 'Programări', this, 'prog', 1)" id="navBtnProg">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -907,6 +1014,7 @@
       <span id="navTextProg">Programări</span>
     </button>
 
+    <!-- 3. Buton Fișă Clientă -->
     <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa', 2)" id="navBtnFisa">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -918,6 +1026,7 @@
       <span id="navTextFisa">Fișă</span>
     </button>
 
+    <!-- 4. Buton Încasări -->
     <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari', 3)" id="navBtnIncasari">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -932,6 +1041,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal43"></script>
+  <script src="app.js?v=fitFinal46"></script>
 </body>
 </html>
