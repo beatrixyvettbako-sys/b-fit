@@ -9,12 +9,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Beatrix">
-  <meta name="theme-color" content="#5c4d7d">
+  <meta name="theme-color" content="#f2eff8">
   
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal54">
+  <link rel="stylesheet" href="style.css?v=fitFinal55">
 </head>
 <body>
 
@@ -562,12 +562,12 @@
     <div id="tabProgramari" class="tab-content">
       <div class="card" style="padding: 10px 12px; margin-bottom: 10px;">
         <div style="display: flex; gap: 6px;">
-          <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem;" placeholder="+ Adaugă clientă" list="listaClienteVizibile">
+          <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem; flex:1; min-width:0;" placeholder="+ Adaugă clientă" list="listaClienteVizibile">
           <select id="progNouSectiune" class="form-control">
             <option value="Activ">Activ</option>
             <option value="Hold">Hold</option>
           </select>
-          <button class="btn" style="padding:6px 12px; font-size:0.8rem;" id="progAddBtnText" onclick="adaugaClientaInProgramari()">Adaugă</button>
+          <button class="btn" style="padding:6px 10px; font-size:0.8rem; white-space:nowrap; flex-shrink:0;" id="progAddBtnText" onclick="adaugaClientaInProgramari()">Adaugă</button>
         </div>
       </div>
 
@@ -1030,6 +1030,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal54"></script>
+  <script src="app.js?v=fitFinal55"></script>
 </body>
 </html>

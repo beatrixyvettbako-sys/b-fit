@@ -777,6 +777,39 @@ function gasesteClientaValida(numeIntrodus) {
   }) || null;
 }
 
+// Bara de jos devine compactă (doar iconițe) când utilizatoarea derulează în jos și revine când derulează în sus.
+// Reacționează doar la derularea făcută cu degetul / rotița, nu la salturile automate (ex. la ora curentă).
+(function () {
+  let ultimulY = window.scrollY;
+  let ultimaAtingere = 0;
+  const marcheazaInteractiune = () => { ultimaAtingere = Date.now(); };
+  window.addEventListener('touchmove', marcheazaInteractiune, { passive: true });
+  window.addEventListener('wheel', marcheazaInteractiune, { passive: true });
+
+  window.addEventListener('scroll', () => {
+    const y = window.scrollY;
+    const delta = y - ultimulY;
+    const nav = document.getElementById('bottomNav');
+    if (nav && Date.now() - ultimaAtingere < 1200 && Math.abs(delta) > 6) {
+      nav.classList.toggle('nav-compact', delta > 0 && y > 40);
+    }
+    if (nav && y <= 40) nav.classList.remove('nav-compact');
+    ultimulY = y;
+  }, { passive: true });
+})();
+
+// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea de fundal a temei curente
+(function () {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (!meta) return;
+  const actualizeaza = () => {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (bg) meta.setAttribute('content', bg);
+  };
+  new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  actualizeaza();
+})();
+
 function animaPilaMercur(nouIndex) {
   const pill = document.getElementById('navMercuryPill');
   if (!pill) return;
@@ -1701,7 +1734,7 @@ function peComutareIstoricOrar(detailsEl) {
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[d.getDay()]) {
       setTimeout(() => {
-        autoScrollLaOraCurenta(true);
+        autoScrollLaOraCurenta();
       }, 50);
     }
   }
@@ -2090,7 +2123,7 @@ window.addEventListener('resize', () => {
     let now = new Date();
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[now.getDay()]) {
-      autoScrollLaOraCurenta(true);
+      autoScrollLaOraCurenta();
     }
   }
 });
@@ -2107,7 +2140,7 @@ function gestioneazaRevenireForeground() {
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
     
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[day]) {
-      autoScrollLaOraCurenta(true);
+      autoScrollLaOraCurenta();
     }
   }
 }
@@ -2524,7 +2557,10 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
 
   const bottomNav = document.getElementById('bottomNav');
-  if (bottomNav) bottomNav.style.display = 'flex';
+  if (bottomNav) {
+    bottomNav.style.display = 'flex';
+    bottomNav.classList.remove('nav-compact');
+  }
 
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
@@ -2558,7 +2594,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (detIstFisa) detIstFisa.open = false;
 
   if (tipTab === 'orar') {
-    autoScrollLaOraCurenta(true);
+    autoScrollLaOraCurenta();
   } else {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
@@ -3148,7 +3184,7 @@ function randeazaProgramariInstant() {
             </select>
           </div>
           <div>
-            <textarea class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
           </div>
           <div style="text-align:center;">
             <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="${currentLang === 'en' ? 'Move to Hold' : 'Mută în Hold'}">🗑</button>
@@ -3168,7 +3204,7 @@ function randeazaProgramariInstant() {
           <div class="prog-idx">${index + 1}</div>
           <div class="prog-name">${item.nume}</div>
           <div style="grid-column: 3 / 4;">
-            <textarea class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
           </div>
           <div style="text-align:center;">
             <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="${currentLang === 'en' ? 'Delete permanently' : 'Șterge definitiv'}">🗑</button>
