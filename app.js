@@ -808,12 +808,12 @@ if ('serviceWorker' in navigator) {
   }
 }
 
-// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea de fundal a temei curente
+// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau nuanța header-ului din tema curentă (--status-bar-color)
 (function () {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
   const actualizeaza = () => {
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--status-bar-color').trim();
     if (bg) meta.setAttribute('content', bg);
   };
   new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
@@ -3982,7 +3982,8 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
     if (opt.disabled || opt.hidden || (faraOptiuneGoala && !opt.value)) return;
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'plan-picker-item' + (opt.value === sel.value ? ' is-selected' : '');
+    // Opțiunea goală (ex. „Tip antrenament”, „-”) apare gri și nu e marcată ca alegere
+    btn.className = 'plan-picker-item' + (!opt.value ? ' is-empty' : (opt.value === sel.value ? ' is-selected' : ''));
     btn.setAttribute('role', 'option');
     btn.textContent = opt.text;
     btn.onclick = () => {
@@ -4012,7 +4013,8 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
   let panel = null;
   let selDeschis = null;
 
-  const esteLista = (el) => el && el.tagName === 'SELECT' && el.classList.contains('form-control') && el.id !== 'selectPlanExistent' && !el.disabled;
+  // Listele din formulare, pastilele de status (Confirmata / În așteptare / Absenta, status exerciții) și Tip antrenament din sloturi
+  const esteLista = (el) => el && el.tagName === 'SELECT' && (el.classList.contains('form-control') || el.classList.contains('pill-select') || el.classList.contains('slot-select-type')) && el.id !== 'selectPlanExistent' && !el.disabled;
 
   const inchide = () => {
     if (panel) panel.classList.remove('is-open');
@@ -4028,7 +4030,9 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
     }
     selDeschis = sel;
     // Opțiunea goală e placeholder doar la listele estompate (ex. „Metoda Plata”); la filtre „Toate lunile” rămâne
-    construiesteOptiuniListaProprie(panel, sel, sel.classList.contains('select-faded') || sel.classList.contains('select-active'), inchide);
+    // La Tip antrenament opțiunea goală rămâne, ca tipul să poată fi șters ca înainte
+    const placeholderAscuns = sel.classList.contains('form-control') && (sel.classList.contains('select-faded') || sel.classList.contains('select-active'));
+    construiesteOptiuniListaProprie(panel, sel, placeholderAscuns, inchide);
 
     const r = sel.getBoundingClientRect();
     panel.style.left = Math.max(8, r.left) + 'px';

@@ -15,8 +15,8 @@
                   0 2px 6px -1px rgba(67, 53, 93, 0.04),
                   inset 0 1px 1px rgba(255, 255, 255, 0.92);
   --input-glass-bg: rgba(255, 255, 255, 0.9);
-  --header-glass-bg: rgba(242, 239, 248, 0.6);
-  --day-bar-glass: rgba(242, 239, 248, 0.6);
+  --header-glass-bg: rgba(235, 229, 246, 0.8);
+  --day-bar-glass: rgba(235, 229, 246, 0.8);
   --text: #2c3e50;
   --text-muted: #6c7a89;
   --border: rgba(196, 188, 214, 0.55);
@@ -30,6 +30,7 @@
   --accent-purple: #8b5cf6;
   --accent-purple-light: #c4b5fd;
   --header-height: 50px;
+  --status-bar-color: #ebe5f6;
 }
 
 [data-theme="dark"] {
@@ -48,13 +49,14 @@
                   0 2px 6px -1px rgba(0, 0, 0, 0.3),
                   inset 0 1px 0.5px rgba(255, 255, 255, 0.14);
   --input-glass-bg: rgba(18, 16, 26, 0.82);
-  --header-glass-bg: rgba(18, 16, 27, 0.6);
-  --day-bar-glass: rgba(18, 16, 27, 0.6);
+  --header-glass-bg: rgba(22, 18, 32, 0.8);
+  --day-bar-glass: rgba(22, 18, 32, 0.8);
   --text: #f1f5f9;
   --text-muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.11);
   --placeholder-fade: #64748b;
   --accent-purple-light: #d8b4fe;
+  --status-bar-color: #161220;
 }
 
 * {
@@ -832,7 +834,7 @@ nav {
 }
 
 [data-theme="dark"] nav {
-  background: rgba(18, 15, 28, 0.58);
+  background: var(--header-glass-bg);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.5),
               inset 0 1px 1px rgba(255, 255, 255, 0.15);
@@ -947,19 +949,6 @@ body::after {
   right: 0;
   bottom: 0;
   height: calc(10px + env(safe-area-inset-bottom, 0px));
-  z-index: 999;
-}
-
-/* Conținutul se estompează spre marginea de jos, sub bara plutitoare */
-body::before {
-  content: '';
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
-  background: linear-gradient(to top, var(--bg) 30%, transparent);
-  pointer-events: none;
   z-index: 999;
 }
 
@@ -2363,6 +2352,11 @@ select.slot-select-type {
 
 [data-theme="dark"] .plan-picker-item.is-selected {
   color: var(--accent-purple-light);
+}
+
+.plan-picker-item.is-empty {
+  color: var(--placeholder-fade);
+  font-weight: 500;
 }
 
 .plan-picker-empty {
