@@ -22,14 +22,15 @@
   --border: rgba(196, 188, 214, 0.55);
   --radius: 12px;
   --color-confirmata: #15803d;
-  --color-asteptare: #c2410c;
+  --color-asteptare: #f59e0b;
   --color-absenta: #b91c1c;
   --color-empty: #475569;
   --color-hold: #f5b041;
   --placeholder-fade: #94a3b8;
   --accent-purple: #8b5cf6;
   --accent-purple-light: #c4b5fd;
-  --header-height: 50px;
+  /* Include zona camerei din fullscreen (env = 0 în browser și în modul normal) */
+  --header-height: calc(50px + env(safe-area-inset-top, 0px));
   --status-bar-color: #ebe5f6;
 }
 
@@ -137,7 +138,7 @@ header {
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   color: var(--primary);
-  padding: 6px 12px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 12px 6px;
   height: var(--header-height);
   font-weight: 800;
   font-size: 1.05rem;
@@ -504,7 +505,7 @@ header {
 }
 
 .drawer-header {
-  padding: 8px 16px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 16px 8px;
   background: var(--header-glass-bg);
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
@@ -1702,7 +1703,8 @@ select.slot-select-type {
 
 .prog-grid-layout-hold {
   display: grid;
-  grid-template-columns: 24px 1.15fr 1.1fr 24px;
+  /* Hold: coloana „Motiv pauză” mai lată (nu are pastilă de prezență) */
+  grid-template-columns: 24px 1fr 1.7fr 24px;
   padding: 6px 5px;
   gap: 5px;
   align-items: center;
@@ -1747,11 +1749,11 @@ select.slot-select-type {
   font-weight: 600;
   color: var(--text);
   word-break: break-word;
-  text-align: center;
+  text-align: left;
   width: 100%;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 0 2px;
 }
 
@@ -1789,7 +1791,11 @@ select.slot-select-type {
 }
 
 .pill-confirmata { background-color: var(--color-confirmata) !important; color: #ffffff !important; }
-.pill-asteptare { background-color: var(--color-asteptare) !important; color: #ffffff !important; }
+/* În așteptare: portocaliu-galben, cu text și săgeată închise ca să se citească */
+.pill-asteptare { background-color: var(--color-asteptare) !important; color: #3b2304 !important; }
+.pill-select.pill-asteptare {
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%233b2304" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') !important;
+}
 .pill-absenta { background-color: var(--color-absenta) !important; color: #ffffff !important; }
 .pill-empty { background-color: var(--color-empty) !important; color: #ffffff !important; }
 
@@ -1820,23 +1826,31 @@ select.slot-select-type {
   margin: 0 auto;
 }
 
+/* Antetul secțiunii HOLD: ca antetul tabelului de programări, cu un punct portocaliu ca indiciu */
 .hold-header {
-  background: linear-gradient(135deg, rgba(245, 176, 65, 0.92) 0%, rgba(230, 150, 35, 0.92) 100%);
-  color: #1e1b18;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: linear-gradient(90deg, rgba(92, 77, 125, 0.14) 0%, rgba(139, 92, 246, 0.08) 100%), var(--card-bg);
+  color: var(--primary-dark);
   font-weight: 800;
-  font-size: 0.95rem;
-  text-align: center;
-  padding: 7px;
-  border-radius: 10px 10px 0 0;
+  font-size: 0.8rem;
+  padding: 6px;
+  border-radius: 11px 11px 0 0;
   margin-top: 12px;
-  letter-spacing: 1px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-bottom: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.8px;
+  border: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--border);
 }
 
-.hold-row {
-  background: rgba(245, 176, 65, 0.1) !important;
+.hold-header::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-hold);
+  box-shadow: 0 0 0 3px rgba(245, 176, 65, 0.22);
 }
 
 .btn-trash-action {
@@ -2266,6 +2280,7 @@ select.slot-select-type {
 .plan-picker-trigger {
   display: block;
   text-align: left;
+  font-size: 0.8rem; /* ca „Alege clientă sau lasă liber pentru șablon” */
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
@@ -2433,7 +2448,7 @@ select.slot-select-type {
   font-size: 1.25rem;
   font-weight: 800;
   color: var(--primary);
-  border: 1px dashed transparent;
+  border: 1px solid transparent;
   background: transparent;
   padding: 2px 4px;
   border-radius: 6px;
@@ -2451,7 +2466,7 @@ select.slot-select-type {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text-muted);
-  border: 1px dashed transparent;
+  border: 1px solid transparent;
   background: transparent;
   padding: 2px 4px;
   margin-top: 2px;
@@ -2498,7 +2513,7 @@ select.slot-select-type {
   font-weight: 800;
   color: var(--primary);
   background: transparent;
-  border: 1px dashed transparent;
+  border: 1px solid transparent;
   padding: 2px 4px;
   border-radius: 5px;
   outline: none;
@@ -2567,7 +2582,7 @@ select.slot-select-type {
   font-weight: 800;
   color: var(--primary);
   background: transparent;
-  border: 1px dashed transparent;
+  border: 1px solid transparent;
   padding: 2px 5px;
   border-radius: 5px;
   outline: none;

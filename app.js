@@ -345,6 +345,48 @@ function t(key) {
   return i18n['ro'][key] || key;
 }
 
+// Text scurt în limba curentă, pentru șabloanele HTML generate din JS
+function tr(ro, en) {
+  return currentLang === 'en' ? en : ro;
+}
+
+// Valori salvate în română (abonamente, statusuri, luni) afișate în engleză; valoarea din bază rămâne aceeași
+const TRADUCERI_VALORI_EN = {
+  '8 sedinte': '8 sessions', '10 sedinte': '10 sessions', '12 sedinte': '12 sessions', '16 sedinte': '16 sessions',
+  '16 sedinte 1:1': '16 sessions 1:1', 'sedinta individuala': 'Single session', 'sedinta gratuita': 'Free session',
+  'activ': 'Active', 'finalizat': 'Completed', 'expirat': 'Expired', 'arhivat': 'Archived',
+  'în așteptare': 'Pending', 'sărit': 'Skipped',
+  'ianuarie': 'January', 'februarie': 'February', 'martie': 'March', 'aprilie': 'April', 'mai': 'May', 'iunie': 'June',
+  'iulie': 'July', 'august': 'August', 'septembrie': 'September', 'octombrie': 'October', 'noiembrie': 'November', 'decembrie': 'December'
+};
+
+function traduceValoare(text) {
+  if (currentLang !== 'en' || !text) return text;
+  return TRADUCERI_VALORI_EN[String(text).trim().toLowerCase()] || text;
+}
+
+// Textele fixe din index.html marcate cu data-en / data-en-placeholder / data-en-title / data-en-aria,
+// plus opțiunile din liste cu valori românești. Originalul românesc se păstrează în data-ro*.
+function aplicaTraduceriAtribute() {
+  const perechi = [['en', 'ro', null], ['enPlaceholder', 'roPlaceholder', 'placeholder'], ['enTitle', 'roTitle', 'title'], ['enAria', 'roAria', 'aria-label']];
+  document.querySelectorAll('[data-en],[data-en-placeholder],[data-en-title],[data-en-aria]').forEach(el => {
+    perechi.forEach(([cheieEn, cheieRo, atribut]) => {
+      if (el.dataset[cheieEn] === undefined) return;
+      if (el.dataset[cheieRo] === undefined) el.dataset[cheieRo] = atribut ? (el.getAttribute(atribut) || '') : el.textContent.trim();
+      const valoare = currentLang === 'en' ? el.dataset[cheieEn] : el.dataset[cheieRo];
+      if (atribut) el.setAttribute(atribut, valoare); else el.textContent = valoare;
+    });
+  });
+  document.querySelectorAll('select option').forEach(opt => {
+    if (opt.dataset.en !== undefined) return;
+    if (opt.dataset.ro === undefined) {
+      if (!TRADUCERI_VALORI_EN[opt.textContent.trim().toLowerCase()]) return;
+      opt.dataset.ro = opt.textContent.trim();
+    }
+    opt.textContent = currentLang === 'en' ? traduceValoare(opt.dataset.ro) : opt.dataset.ro;
+  });
+}
+
 function comutaVizibilitateParola(inputId, btnEl) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -1537,13 +1579,13 @@ function callBackend(actionName, payload, callback) {
       .then(res => { if (callback) callback(res); })
       .catch(err => {
         console.error("Eroare Supabase:", err);
-        showToast("Eroare sincronizare", "error");
+        showToast(tr("Eroare sincronizare", "Sync error"), "error");
       });
     return;
   }
 
   // Biblioteca Supabase nu s-a încărcat (ex. fără internet la pornire)
-  showToast("Eroare sincronizare", "error");
+  showToast(tr("Eroare sincronizare", "Sync error"), "error");
 }
 
 function showToast(mesaj, tip = 'success') {
@@ -1771,7 +1813,9 @@ function peComutareIstoricFisa(detailsEl) {
 // CONTROL HEADER STÂNGA / DREAPTA PE PLANUL DE ANTRENAMENT (BACK / CLOSE)
 function gestioneazaClickStangaHeader(event) {
   if (tipTabCurent === 'plan') {
+    // Înapoi (‹) duce la meniul din care a fost deschis planul; X din dreapta închide direct
     revenireDinPlanAntrenament();
+    if (!esteModClientaShare) deschideMeniuLateral();
   } else if (tipTabCurent === 'orar') {
     comutaExpandareBaraCalendar(event);
   }
@@ -1804,7 +1848,7 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
 
   if (tipTab === 'plan') {
     wrapper.innerHTML = `
-      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="Înapoi">
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="${tr('Înapoi', 'Back')}">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
@@ -1812,7 +1856,7 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
       <span id="pageTitle">${titlu}</span>
     `;
     if (burgerBtn && rightSvg) {
-      burgerBtn.setAttribute('title', 'Închide');
+      burgerBtn.setAttribute('title', tr('Închide', 'Close'));
       rightSvg.innerHTML = `
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1879,6 +1923,9 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
 }
 
 function aplicaTraduceriInterfataStatic() {
+  aplicaTraduceriAtribute();
+  const elModPdf = document.getElementById('btnPreviewPlanText');
+  if (elModPdf) elModPdf.innerText = esteModPrevizualizarePdf ? t('btnEditMode') : t('btnPreviewPdfMode');
   document.getElementById('navTextOrar').innerText = t('navOrar');
   document.getElementById('navTextProg').innerText = t('navProg');
   document.getElementById('navTextFisa').innerText = t('navFisa');
@@ -2566,7 +2613,7 @@ function populeazaSelectorLuni() {
     luniArray.forEach(luna => {
       let opt = document.createElement('option');
       opt.value = luna;
-      opt.innerText = luna;
+      opt.innerText = traduceValoare(luna);
       sel.appendChild(opt);
     });
     if (valAnterioara) sel.value = valAnterioara;
@@ -2595,7 +2642,10 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (tipTab === 'incasari') {
     reseteazaDateIncasariAzi();
   }
-  
+
+  // Titlul vine mereu din tabsOrder în limba curentă (butoanele din bara de jos trimit titlul scris în română)
+  const tabInfo = tabsOrder.find(tb => tb.id === tabId);
+  if (tabInfo) titlu = currentLang === 'en' ? tabInfo.titleEn : tabInfo.titleRo;
   actualizeazaHeaderVisual(tipTab, titlu);
 
   let detOrar = document.getElementById('detailsIstoricOrar');
@@ -3181,6 +3231,9 @@ function getPillClass(val) {
 function randeazaProgramariInstant() {
   let actContainer = document.getElementById('progActiveList');
   let holdContainer = document.getElementById('progHoldList');
+  // După randare nu mai sunt „în încărcare”: fără padding-ul de 16px, rândurile se aliniază cu antetul (#, Nume...)
+  if (actContainer) actContainer.classList.remove('loader');
+  if (holdContainer) holdContainer.classList.remove('loader');
 
   if (actContainer) {
     let actHtml = '';
@@ -3314,11 +3367,11 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('graficBara').style.width = procent + '%';
   document.getElementById('graficProcent').innerText = procent + '%';
   document.getElementById('graficProgresText').innerText = progresText;
-  document.getElementById('fisaTipAbonamentAfisat').innerText = client.tipAbonament;
+  document.getElementById('fisaTipAbonamentAfisat').innerText = traduceValoare(client.tipAbonament);
 
   let badge = document.getElementById('fisaStatusBadge');
   let stLower = (client.status || '').toLowerCase();
-  let statusText = client.status;
+  let statusText = traduceValoare(client.status);
   if (stLower === 'activ' || stLower === 'active') {
     badge.innerHTML = `<span class="badge badge-activ">${currentLang === 'en' ? 'Active' : 'Activ'}</span>`;
   } else if (stLower === 'arhivat' || stLower === 'archived') {
@@ -3897,7 +3950,7 @@ function populeazaSelectorPlanuri() {
   if (!sel) return;
 
   const idCurent = planActiv && planActiv.id ? planActiv.id : "";
-  sel.innerHTML = `<option value="">${currentLang === 'en' ? 'Choose a saved plan' : 'Alege un plan salvat'}</option>`;
+  sel.innerHTML = `<option value="">${currentLang === 'en' ? 'Choose a plan' : 'Alege un plan'}</option>`;
 
   // Ordine alfabetică naturală (Săptămâna 2 înainte de Săptămâna 10), grupat pe clientă
   const eticheta = p => `${p.clienta ? `[${p.clienta}] ` : ''}${p.titlu}`;
@@ -4178,17 +4231,17 @@ function randeazaPlanAntrenamentUI() {
       <div class="plan-header-block">
         <div style="font-size:1.3rem; font-weight:800; color:var(--primary); line-height:1.25;">${escAttr(planActiv.titlu)}</div>
         <div style="font-size:0.83rem; font-weight:600; color:var(--text-muted); margin-top:4px;">${escAttr(planActiv.subtitlu)}</div>
-        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);">👤 Clientă: ${escAttr(planActiv.clienta)}</div>` : ''}
+        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);">👤 ${tr('Clientă', 'Client')}: ${escAttr(planActiv.clienta)}</div>` : ''}
       </div>
     `;
   } else {
     html += `
       <div class="plan-header-block">
-        <input type="text" class="plan-doc-title-input" value="${escAttr(planActiv.titlu)}" placeholder="Titlu program (ex: Program de forță generală)" oninput="planActiv.titlu = this.value">
-        <input type="text" class="plan-doc-subtitle-input" value="${escAttr(planActiv.subtitlu)}" placeholder="Subtitlu / detalii (ex: 3 sesiuni pe săptămână)" oninput="planActiv.subtitlu = this.value">
+        <input type="text" class="plan-doc-title-input" value="${escAttr(planActiv.titlu)}" placeholder="${tr('Titlu program (ex: Program de forță generală)', 'Program title (e.g. General strength program)')}" oninput="planActiv.titlu = this.value">
+        <input type="text" class="plan-doc-subtitle-input" value="${escAttr(planActiv.subtitlu)}" placeholder="${tr('Subtitlu / detalii (ex: 3 sesiuni pe săptămână)', 'Subtitle / details (e.g. 3 sessions per week)')}" oninput="planActiv.subtitlu = this.value">
         <div class="plan-meta-client-row no-print">
-          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;">👤 Clientă:</span>
-          <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="Alege clientă sau lasă liber pt. șablon..." list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
+          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;">👤 ${tr('Clientă', 'Client')}:</span>
+          <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="${tr('Alege clientă sau lasă liber pentru șablon', 'Choose a client or leave empty for a template')}" list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
         </div>
       </div>
     `;
@@ -4207,7 +4260,7 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-info-box">
           <div class="plan-info-box-header">
             <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].titlu = this.value">
-            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_inceput', ${sIdx})" title="Șterge secțiunea">${SVG_COS_PLAN}</button>
+            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_inceput', ${sIdx})" title="${tr('Șterge secțiunea', 'Delete section')}">${SVG_COS_PLAN}</button>
           </div>
           <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
@@ -4219,7 +4272,7 @@ function randeazaPlanAntrenamentUI() {
     html += `
       <div class="no-print" style="margin-bottom:12px;">
         <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 9px;" onclick="adaugaSectiuneTextPlan('sectiuni_inceput')">
-          + Adaugă Secțiune Introductivă (Principii / Încălzire)
+          ${tr('+ Adaugă Secțiune Introductivă (Principii / Încălzire)', '+ Add Intro Section (Principles / Warm-up)')}
         </button>
       </div>
     `;
@@ -4233,20 +4286,20 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-session-header">
           ${doarCitireStructura
             ? `<div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div>`
-            : `<input type="text" class="plan-session-title-input" value="${escAttr(ses.titlu)}" placeholder="Titlu Sesiune / Zi" oninput="planActiv.continut_json.sesiuni[${sesIdx}].titlu = this.value">
-               <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSesiunePlan(${sesIdx})" title="Șterge toată ziua/sesiunea">${SVG_COS_PLAN}</button>`
+            : `<input type="text" class="plan-session-title-input" value="${escAttr(ses.titlu)}" placeholder="${tr('Titlu Sesiune / Zi', 'Session / Day title')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].titlu = this.value">
+               <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSesiunePlan(${sesIdx})" title="${tr('Șterge toată ziua/sesiunea', 'Delete the whole day/session')}">${SVG_COS_PLAN}</button>`
           }
         </div>
 
         <table class="plan-exercises-table">
           <thead>
             <tr>
-              <th style="width:22%;">Exercițiu</th>
-              <th style="width:12%;">Serii x Rep.</th>
-              <th style="width:10%;">Pauză</th>
-              <th style="width:28%;">Cum se execută / Indicații</th>
+              <th style="width:22%;">${tr('Exercițiu', 'Exercise')}</th>
+              <th style="width:12%;">${tr('Serii x Rep.', 'Sets x Reps')}</th>
+              <th style="width:10%;">${tr('Pauză', 'Rest')}</th>
+              <th style="width:28%;">${tr('Cum se execută / Indicații', 'How to perform / Notes')}</th>
               <th style="width:9%;">Kg</th>
-              <th style="width:9%;">Seturi</th>
+              <th style="width:9%;">${tr('Seturi', 'Sets')}</th>
               <th style="width:10%;">Status</th>
               ${!doarCitireStructura ? `<th class="no-print" style="width:28px;"></th>` : ''}
             </tr>
@@ -4268,7 +4321,7 @@ function randeazaPlanAntrenamentUI() {
             <td>${escAttr(ex.indicatii)}</td>
             <td style="text-align:center; font-weight:700;">${escAttr(ex.greutate_kg || '')}</td>
             <td style="text-align:center; font-weight:700;">${escAttr(ex.seturi_finalizate || '')}</td>
-            <td style="text-align:center; font-weight:700;">${escAttr(stVal)}</td>
+            <td style="text-align:center; font-weight:700;">${escAttr(traduceValoare(stVal))}</td>
           </tr>
         `;
       } else if (esteModClientaShare) {
@@ -4277,26 +4330,26 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${nrAfisat}. ${escAttr(ex.exercitiu)}</div>
               <div style="font-size:0.75rem; font-weight:700; color:var(--text); margin-top:2px;">
-                🎯 ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • ⏱ Pauză: ${escAttr(ex.pauza)}` : ''}
+                🎯 ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • ⏱ ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}
               </div>
               <div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">
                 ${escAttr(ex.indicatii)}
               </div>
               <div class="plan-tracking-grid">
                 <div class="plan-tracking-field">
-                  <span class="plan-tracking-label">Greutate (kg)</span>
+                  <span class="plan-tracking-label">${tr('Greutate (kg)', 'Weight (kg)')}</span>
                   <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" readonly>
                 </div>
                 <div class="plan-tracking-field">
-                  <span class="plan-tracking-label">Seturi făcute</span>
+                  <span class="plan-tracking-label">${tr('Seturi făcute', 'Sets done')}</span>
                   <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" readonly>
                 </div>
                 <div class="plan-tracking-field">
                   <span class="plan-tracking-label">Status</span>
                   <select class="pill-select ${pillCls}" disabled>
-                    <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>În așteptare</option>
-                    <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>Finalizat</option>
-                    <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>Sărit</option>
+                    <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>${traduceValoare('În așteptare')}</option>
+                    <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>${traduceValoare('Finalizat')}</option>
+                    <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>${traduceValoare('Sărit')}</option>
                   </select>
                 </div>
               </div>
@@ -4309,7 +4362,7 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <div style="display:flex; align-items:center; gap:4px;">
                 <span style="font-weight:800; color:var(--primary); font-size:0.76rem;">${nrAfisat}.</span>
-                <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="Nume exercițiu" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value">
+                <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value">
               </div>
             </td>
             <td>
@@ -4319,23 +4372,23 @@ function randeazaPlanAntrenamentUI() {
               <input type="text" class="plan-ex-input" value="${escAttr(ex.pauza)}" placeholder="60-90 sec" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].pauza = this.value">
             </td>
             <td>
-              <textarea class="plan-ex-textarea" placeholder="Indicații tehnice / cum se execută..." oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].indicatii = this.value">${escAttr(ex.indicatii)}</textarea>
+              <textarea class="plan-ex-textarea" placeholder="${tr('Indicații tehnice / cum se execută...', 'Technique notes / how to perform...')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].indicatii = this.value">${escAttr(ex.indicatii)}</textarea>
             </td>
             <td>
               <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="Kg" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].greutate_kg = this.value">
             </td>
             <td>
-              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="Seturi" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_finalizate = this.value">
+              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="${tr('Seturi', 'Sets')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_finalizate = this.value">
             </td>
             <td>
               <select class="pill-select ${pillCls}" onchange="this.className='pill-select '+getPillClass(this.value); planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].status = this.value">
-                <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>În așteptare</option>
-                <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>Finalizat</option>
-                <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>Sărit</option>
+                <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>${traduceValoare('În așteptare')}</option>
+                <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>${traduceValoare('Finalizat')}</option>
+                <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>${traduceValoare('Sărit')}</option>
               </select>
             </td>
             <td class="no-print" style="text-align:center; vertical-align:middle;">
-              <button type="button" class="btn-trash-action btn-trash-plan" onclick="stergeExercitiuPlan(${sesIdx}, ${exIdx})" title="Șterge exercițiul">${SVG_COS_PLAN}</button>
+              <button type="button" class="btn-trash-action btn-trash-plan" onclick="stergeExercitiuPlan(${sesIdx}, ${exIdx})" title="${tr('Șterge exercițiul', 'Delete exercise')}">${SVG_COS_PLAN}</button>
             </td>
           </tr>
         `;
@@ -4348,7 +4401,7 @@ function randeazaPlanAntrenamentUI() {
         ${!doarCitireStructura ? `
           <div class="no-print" style="padding:7px 10px; background:rgba(92,77,125,0.04); border-top:1px solid var(--border);">
             <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 10px;" onclick="adaugaExercitiuPlan(${sesIdx})">
-              + Adaugă Exercițiu în această sesiune
+              ${tr('+ Adaugă Exercițiu în această sesiune', '+ Add Exercise to this session')}
             </button>
           </div>
         ` : ''}
@@ -4360,7 +4413,7 @@ function randeazaPlanAntrenamentUI() {
     html += `
       <div class="no-print" style="margin-bottom:14px;">
         <button type="button" class="btn" style="font-size:0.78rem; padding:7px 12px; width:100%;" onclick="adaugaSesiunePlan()">
-          ➕ Adaugă Zi / Sesiune Nouă de Antrenament
+          ${tr('➕ Adaugă Zi / Sesiune Nouă de Antrenament', '➕ Add New Workout Day / Session')}
         </button>
       </div>
     `;
@@ -4379,7 +4432,7 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-info-box">
           <div class="plan-info-box-header">
             <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].titlu = this.value">
-            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_final', ${sIdx})" title="Șterge secțiunea">${SVG_COS_PLAN}</button>
+            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_final', ${sIdx})" title="${tr('Șterge secțiunea', 'Delete section')}">${SVG_COS_PLAN}</button>
           </div>
           <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
@@ -4391,7 +4444,7 @@ function randeazaPlanAntrenamentUI() {
     html += `
       <div class="no-print" style="margin-bottom:10px;">
         <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 9px;" onclick="adaugaSectiuneTextPlan('sectiuni_final')">
-          + Adaugă Secțiune Finală (Siguranță / Alimentație)
+          ${tr('+ Adaugă Secțiune Finală (Siguranță / Alimentație)', '+ Add Final Section (Safety / Nutrition)')}
         </button>
       </div>
     `;
@@ -4403,7 +4456,7 @@ function randeazaPlanAntrenamentUI() {
     } else {
       html += `
         <div class="plan-footer-note">
-          <input type="text" class="plan-ex-input" style="font-style:italic;" value="${escAttr(cjson.nota_subsol)}" placeholder="Notă de subsol..." oninput="planActiv.continut_json.nota_subsol = this.value">
+          <input type="text" class="plan-ex-input" style="font-style:italic;" value="${escAttr(cjson.nota_subsol)}" placeholder="${tr('Notă de subsol...', 'Footnote...')}" oninput="planActiv.continut_json.nota_subsol = this.value">
         </div>
       `;
     }
@@ -4415,8 +4468,8 @@ function randeazaPlanAntrenamentUI() {
 function adaugaSectiuneTextPlan(cheieLista) {
   if (!planActiv || !planActiv.continut_json) return;
   planActiv.continut_json[cheieLista].push({
-    titlu: "Secțiune nouă (ex: Recomandări)",
-    continut: "• Adaugă indicațiile aici..."
+    titlu: tr("Secțiune nouă (ex: Recomandări)", "New section (e.g. Recommendations)"),
+    continut: tr("• Adaugă indicațiile aici...", "• Add your notes here...")
   });
   randeazaPlanAntrenamentUI();
 }
@@ -4431,7 +4484,7 @@ function adaugaSesiunePlan() {
   if (!planActiv || !planActiv.continut_json) return;
   const nrSes = planActiv.continut_json.sesiuni.length + 1;
   planActiv.continut_json.sesiuni.push({
-    titlu: `ZIUA ${nrSes}: Sesiune nouă de antrenament`,
+    titlu: tr(`ZIUA ${nrSes}: Sesiune nouă de antrenament`, `DAY ${nrSes}: New workout session`),
     exercitii: [
       { nr: 1, exercitiu: "", seturi_repetari: "3 x 12", pauza: "60-90 sec", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" }
     ]
@@ -4440,7 +4493,7 @@ function adaugaSesiunePlan() {
 }
 
 function stergeSesiunePlan(sesIdx) {
-  customConfirm("Ștergere sesiune", "Ești sigură că vrei să ștergi această sesiune și exercițiile ei?", function() {
+  customConfirm(tr("Ștergere sesiune", "Delete session"), tr("Ești sigură că vrei să ștergi această sesiune și exercițiile ei?", "Are you sure you want to delete this session and its exercises?"), function() {
     planActiv.continut_json.sesiuni.splice(sesIdx, 1);
     randeazaPlanAntrenamentUI();
   });
@@ -4520,7 +4573,7 @@ async function salveazaPlanCurentInBaza(silent = false) {
     return rezultat;
   } catch (err) {
     console.error("Eroare salvare plan:", err);
-    if (!silent) showToast("Eroare la salvarea planului: " + (err.message || ""), "error");
+    if (!silent) showToast(tr("Eroare la salvarea planului: ", "Error saving plan: ") + (err.message || ""), "error");
     return null;
   }
 }
@@ -4532,7 +4585,7 @@ async function stergePlanCurent() {
     return;
   }
 
-  customConfirm("Ștergere Plan", `Ștergi definitiv planul „${planActiv.titlu}”?`, async function() {
+  customConfirm(tr("Ștergere Plan", "Delete Plan"), tr(`Ștergi definitiv planul „${planActiv.titlu}”?`, `Permanently delete the plan "${planActiv.titlu}"?`), async function() {
     try {
       await supabaseClient.from('planuri_antrenament').delete().eq('id', planActiv.id);
       DB.planuri = (DB.planuri || []).filter(p => p.id !== planActiv.id);
@@ -4542,7 +4595,7 @@ async function stergePlanCurent() {
       randeazaPlanAntrenamentUI();
       showToast(t('toastPlanDeleted'));
     } catch (err) {
-      showToast("Eroare la ștergere!", "error");
+      showToast(tr("Eroare la ștergere!", "Error deleting!"), "error");
     }
   });
 }
@@ -4710,7 +4763,7 @@ async function deschideModalSharePlan() {
   const idPlan = salvat ? salvat.id : (planActiv ? planActiv.id : null);
 
   if (!idPlan) {
-    showToast("Salvează mai întâi planul în baza de date!", "error");
+    showToast(tr("Salvează mai întâi planul în baza de date!", "Save the plan first!"), "error");
     return;
   }
 
@@ -4745,7 +4798,7 @@ async function trimiteShareNativPlan() {
     try {
       await navigator.share({
         title: titlu,
-        text: `🏋️‍♀️ ${titlu} – deschide fișa ta de antrenament:`,
+        text: `🏋️‍♀️ ${titlu} – ${tr('deschide fișa ta de antrenament', 'open your workout sheet')}:`,
         url: url
       });
     } catch (e) {}
@@ -4763,7 +4816,7 @@ function copiazaTextFormatatPlan() {
     txt += `📌 ${ses.titlu}\n`;
     (ses.exercitii || []).forEach((ex, i) => {
       txt += `${i + 1}. ${ex.exercitiu} — ${ex.seturi_repetari}`;
-      if (ex.pauza) txt += ` (pauză ${ex.pauza})`;
+      if (ex.pauza) txt += ` (${tr('pauză', 'rest')} ${ex.pauza})`;
       if (ex.indicatii) txt += `\n   💡 ${ex.indicatii}`;
       txt += `\n`;
     });
@@ -4772,7 +4825,7 @@ function copiazaTextFormatatPlan() {
 
   const inp = document.getElementById('inputSharePlanUrl');
   if (inp && inp.value) {
-    txt += `🔗 Fișa ta de antrenament:\n${inp.value}`;
+    txt += `🔗 ${tr('Fișa ta de antrenament', 'Your workout sheet')}:\n${inp.value}`;
   }
 
   navigator.clipboard.writeText(txt).then(() => {
@@ -4803,7 +4856,7 @@ async function initModClientaSharePlan(planId) {
   const tabPlan = document.getElementById('tabPlanAntrenament');
   if (tabPlan) tabPlan.classList.add('active');
 
-  actualizeazaHeaderVisual('plan', 'Fișă Antrenament');
+  actualizeazaHeaderVisual('plan', currentLang === 'en' ? 'Workout Sheet' : 'Fișă Antrenament');
   actualizeazaStareNoScrollBody();
 
   if (!supabaseClient) return;
@@ -4817,7 +4870,7 @@ async function initModClientaSharePlan(planId) {
     if (error || !data) {
       document.getElementById('planDocumentContainer').innerHTML = `
         <div style="padding:24px; text-align:center; color:var(--text-muted);">
-          Planul de antrenament nu a fost găsit sau link-ul a expirat.
+          ${tr('Planul de antrenament nu a fost găsit sau link-ul a expirat.', 'The workout plan was not found or the link has expired.')}
         </div>
       `;
       return;
