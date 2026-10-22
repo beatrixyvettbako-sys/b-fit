@@ -29,7 +29,7 @@ let tipTabCurent = 'orar';
 let tabAnteriorPlan = 'orar';
 const tabsOrder = [
   { id: 'tabOrar', titleRo: 'Orar Săptămânal', titleEn: 'Weekly Schedule', tip: 'orar', idx: 0 },
-  { id: 'tabProgramari', titleRo: 'Programări', titleEn: 'Bookings', tip: 'prog', idx: 1 },
+  { id: 'tabProgramari', titleRo: 'Confirmări', titleEn: 'Check-in', tip: 'prog', idx: 1 },
   { id: 'tabFisa', titleRo: 'Fișă Clientă', titleEn: 'Client Profile', tip: 'fisa', idx: 2 },
   { id: 'tabIncasari', titleRo: 'Încasări', titleEn: 'Payments', tip: 'incasari', idx: 3 }
 ];
@@ -39,7 +39,7 @@ const i18n = {
   ro: {
     appTitle: "Orar Săptămânal",
     navOrar: "Orar",
-    navProg: "Programări",
+    navProg: "Confirmări",
     navFisa: "Fișă",
     navIncasari: "Încasări",
     pastWeek: "Săpt. Trecută",
@@ -49,7 +49,7 @@ const i18n = {
     futureWeekState: "Planificat (Săptămână viitoare)",
     endScheduleTitle: "Ziua-i gata, caloriile-s topite!",
     endScheduleSubtitle: "Antrenorul a supraviețuit și azi!",
-    addExtraHour: "➕ Adaugă oră suplimentară",
+    addExtraHour: "Adaugă oră suplimentară",
     addBtn: "+ Adaugă",
     historyOrarTitle: "Istoric Prezențe Orar",
     filterClient: "Filtrează după clientă:",
@@ -63,7 +63,7 @@ const i18n = {
     holdSection: "Hold",
     noRecords: "Nici o înregistrare",
     noClientsHold: "Nici o clientă în Hold",
-    addNewClientTitle: "➕ Adaugă o Clientă Nouă în Aplicație",
+    addNewClientTitle: "Adaugă o Clientă Nouă în Aplicație",
     clientNamePlaceholder: "Nume și Prenume clientă",
     saveClientBtn: "Salvează Clienta",
     selectClientLabel: "SELECTEAZĂ CLIENTA",
@@ -75,7 +75,7 @@ const i18n = {
     statusLabel: "STATUS",
     validityLabel: "VALABILITATE PÂNĂ LA",
     sessionsDone: "ȘEDINȚE EFECTUATE",
-    editClientTitle: "✏ Editează / Ajustează Datele Clientei",
+    editClientTitle: "Editează / Ajustează Datele Clientei",
     renameClientLabel: "Nume Clientă (Redenumește peste tot)",
     subTypeLabel: "Tip Abonament",
     startDateLabel: "Dată Start",
@@ -84,10 +84,10 @@ const i18n = {
     doneLabel: "Efectuate",
     remainingLabel: "Rămase",
     saveChangesBtn: "Salvează Modificările",
-    extendValidityTitle: "⏱ Prelungește Valabilitate Abonament",
+    extendValidityTitle: "Prelungește Valabilitate Abonament",
     setBtn: "Setează",
-    archiveBtn: "📦 Arhivează / Ascunde din Liste",
-    reactivateBtn: "♻ Reactivează Clienta (Arată în Liste)",
+    archiveBtn: "Arhivează / Ascunde din Liste",
+    reactivateBtn: "Reactivează Clienta (Arată în Liste)",
     recentHistoryTitle: "Istoric Prezențe Recente",
     noPresenceYet: "Nici o prezență înregistrată încă.",
     newPaymentTitle: "Înregistrare Plată Nouă",
@@ -134,7 +134,7 @@ const i18n = {
     confirmTitle: "Confirmare",
     cancelBtn: "Renunță",
     confirmBtn: "Confirmă",
-    editPaymentTitle: "✏️ Editare Încasare",
+    editPaymentTitle: "Editare Încasare",
     saveBtn: "Salvează",
 
     // Plan de Antrenament
@@ -162,7 +162,7 @@ const i18n = {
     authPasswordLabel: "Parolă",
     authSubmitBtnLogin: "Intră în cont",
     authSubmitBtnSignup: "Creează cont",
-    authMagicLinkBtn: "✨ Conectare fără parolă (Magic Link)",
+    authMagicLinkBtn: "Conectare fără parolă (Magic Link)",
     authDividerOr: "sau",
     authGoogleBtn: "Conectare cu Google",
     authProcessing: "Se procesează...",
@@ -188,7 +188,7 @@ const i18n = {
   en: {
     appTitle: "Weekly Schedule",
     navOrar: "Schedule",
-    navProg: "Bookings",
+    navProg: "Check-in",
     navFisa: "Profile",
     navIncasari: "Payments",
     pastWeek: "Past Week",
@@ -198,7 +198,7 @@ const i18n = {
     futureWeekState: "Planned (Next week)",
     endScheduleTitle: "Day is done, calories burned!",
     endScheduleSubtitle: "The coach survived today too!",
-    addExtraHour: "➕ Add extra hour",
+    addExtraHour: "Add extra hour",
     addBtn: "+ Add",
     historyOrarTitle: "Schedule Attendance History",
     filterClient: "Filter by client:",
@@ -212,7 +212,7 @@ const i18n = {
     holdSection: "Hold",
     noRecords: "No records",
     noClientsHold: "No clients in Hold",
-    addNewClientTitle: "➕ Add New Client to App",
+    addNewClientTitle: "Add New Client to App",
     clientNamePlaceholder: "Client Full Name",
     saveClientBtn: "Save Client",
     selectClientLabel: "SELECT CLIENT",
@@ -224,7 +224,7 @@ const i18n = {
     statusLabel: "STATUS",
     validityLabel: "VALID UNTIL",
     sessionsDone: "SESSIONS DONE",
-    editClientTitle: "✏ Edit / Adjust Client Data",
+    editClientTitle: "Edit / Adjust Client Data",
     renameClientLabel: "Client Name (Rename everywhere)",
     subTypeLabel: "Subscription Type",
     startDateLabel: "Start Date",
@@ -233,10 +233,10 @@ const i18n = {
     doneLabel: "Done",
     remainingLabel: "Left",
     saveChangesBtn: "Save Changes",
-    extendValidityTitle: "⏱ Extend Subscription Validity",
+    extendValidityTitle: "Extend Subscription Validity",
     setBtn: "Set",
-    archiveBtn: "📦 Archive / Hide from lists",
-    reactivateBtn: "♻ Reactivate Client (Show in lists)",
+    archiveBtn: "Archive / Hide from lists",
+    reactivateBtn: "Reactivate Client (Show in lists)",
     recentHistoryTitle: "Recent Attendance History",
     noPresenceYet: "No attendance recorded yet.",
     newPaymentTitle: "Register New Payment",
@@ -283,7 +283,7 @@ const i18n = {
     confirmTitle: "Confirmation",
     cancelBtn: "Cancel",
     confirmBtn: "Confirm",
-    editPaymentTitle: "✏️ Edit Payment",
+    editPaymentTitle: "Edit Payment",
     saveBtn: "Save",
 
     // Workout Plan
@@ -311,7 +311,7 @@ const i18n = {
     authPasswordLabel: "Password",
     authSubmitBtnLogin: "Log In",
     authSubmitBtnSignup: "Create Account",
-    authMagicLinkBtn: "✨ Passwordless login (Magic Link)",
+    authMagicLinkBtn: "Passwordless login (Magic Link)",
     authDividerOr: "or",
     authGoogleBtn: "Sign in with Google",
     authProcessing: "Processing...",
@@ -1877,7 +1877,7 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
   let iconHtml = '';
   if (tipTab === 'orar') {
     iconHtml = `
-      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="${currentLang === 'en' ? 'Toggle week selector' : 'Comută selectorul de săptămână'}">
+      <button class="header-icon-bubble-btn header-icon-clickable" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="${currentLang === 'en' ? 'Toggle week selector' : 'Comută selectorul de săptămână'}">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -2044,7 +2044,7 @@ function aplicaTraduceriInterfataStatic() {
   if (elBtnSubAuth && !elBtnSubAuth.disabled) {
     elBtnSubAuth.innerText = tipModAuth === 'login' ? t('authSubmitBtnLogin') : t('authSubmitBtnSignup');
   }
-  const elBtnMagic = document.getElementById('authMagicLinkBtn');
+  const elBtnMagic = document.getElementById('authMagicLinkBtnText');
   if (elBtnMagic) elBtnMagic.innerText = t('authMagicLinkBtn');
   const elDivOr = document.getElementById('authDividerOrText');
   if (elDivOr) elDivOr.innerText = t('authDividerOr');
@@ -3260,7 +3260,7 @@ function randeazaProgramariInstant() {
             <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
           </div>
           <div style="text-align:center;">
-            <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="${currentLang === 'en' ? 'Move to Hold' : 'Mută în Hold'}">🗑</button>
+            <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="${currentLang === 'en' ? 'Move to Hold' : 'Mută în Hold'}">${SVG_COS_PLAN}</button>
           </div>
         </div>
       `;
@@ -3280,7 +3280,7 @@ function randeazaProgramariInstant() {
             <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
           </div>
           <div style="text-align:center;">
-            <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="${currentLang === 'en' ? 'Delete permanently' : 'Șterge definitiv'}">🗑</button>
+            <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="${currentLang === 'en' ? 'Delete permanently' : 'Șterge definitiv'}">${SVG_COS_PLAN}</button>
           </div>
         </div>
       `;
@@ -3383,11 +3383,13 @@ function afiseazaFisaClientaInstant() {
   let btnArch = document.getElementById('btnArhivareToggle');
   if (btnArch) {
     if (stLower === 'arhivat' || stLower === 'archived') {
-      btnArch.innerText = t('reactivateBtn');
-      btnArch.style.color = '#15803d'; btnArch.style.borderColor = '#86efac'; btnArch.style.background = '#f0fdf4';
+      document.getElementById('btnArhivareToggleText').innerText = t('reactivateBtn');
+      btnArch.querySelector('svg').innerHTML = '<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/>';
+      btnArch.style.color = '#15803d';
     } else {
-      btnArch.innerText = t('archiveBtn');
-      btnArch.style.color = '#b91c1c'; btnArch.style.borderColor = '#fecaca'; btnArch.style.background = '#fef2f2';
+      document.getElementById('btnArhivareToggleText').innerText = t('archiveBtn');
+      btnArch.querySelector('svg').innerHTML = '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M10 12h4"/>';
+      btnArch.style.color = '';
     }
   }
 
@@ -3642,7 +3644,7 @@ function filtreazaIstoricIncasariInstant() {
         <td style="${sumaStil}">${item.suma}</td>
         <td style="text-align:center;">${metodaContinut}</td>
         <td>${tipContinut}</td>
-        <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;">✏️</td>
+        <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></td>
       </tr>
     `;
   });
@@ -4210,7 +4212,7 @@ function comutaModPrevizualizarePlan() {
 }
 
 // Iconița de coș pentru butoanele de ștergere din plan (zi, secțiuni, exerciții), aceeași ca pe Programări
-const SVG_COS_PLAN = '🗑';
+const SVG_COS_PLAN = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
 function randeazaPlanAntrenamentUI() {
   const container = document.getElementById('planDocumentContainer');
@@ -4231,7 +4233,7 @@ function randeazaPlanAntrenamentUI() {
       <div class="plan-header-block">
         <div style="font-size:1.3rem; font-weight:800; color:var(--primary); line-height:1.25;">${escAttr(planActiv.titlu)}</div>
         <div style="font-size:0.83rem; font-weight:600; color:var(--text-muted); margin-top:4px;">${escAttr(planActiv.subtitlu)}</div>
-        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);">👤 ${tr('Clientă', 'Client')}: ${escAttr(planActiv.clienta)}</div>` : ''}
+        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Clientă', 'Client')}: ${escAttr(planActiv.clienta)}</div>` : ''}
       </div>
     `;
   } else {
@@ -4240,7 +4242,7 @@ function randeazaPlanAntrenamentUI() {
         <input type="text" class="plan-doc-title-input" value="${escAttr(planActiv.titlu)}" placeholder="${tr('Titlu program (ex: Program de forță generală)', 'Program title (e.g. General strength program)')}" oninput="planActiv.titlu = this.value">
         <input type="text" class="plan-doc-subtitle-input" value="${escAttr(planActiv.subtitlu)}" placeholder="${tr('Subtitlu / detalii (ex: 3 sesiuni pe săptămână)', 'Subtitle / details (e.g. 3 sessions per week)')}" oninput="planActiv.subtitlu = this.value">
         <div class="plan-meta-client-row no-print">
-          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;">👤 ${tr('Clientă', 'Client')}:</span>
+          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Clientă', 'Client')}:</span>
           <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="${tr('Alege clientă sau lasă liber pentru șablon', 'Choose a client or leave empty for a template')}" list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
         </div>
       </div>
@@ -4330,7 +4332,7 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${nrAfisat}. ${escAttr(ex.exercitiu)}</div>
               <div style="font-size:0.75rem; font-weight:700; color:var(--text); margin-top:2px;">
-                🎯 ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • ⏱ ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}
+                <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5"/></svg> ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}
               </div>
               <div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">
                 ${escAttr(ex.indicatii)}
@@ -4413,7 +4415,7 @@ function randeazaPlanAntrenamentUI() {
     html += `
       <div class="no-print" style="margin-bottom:14px;">
         <button type="button" class="btn" style="font-size:0.78rem; padding:7px 12px; width:100%;" onclick="adaugaSesiunePlan()">
-          ${tr('➕ Adaugă Zi / Sesiune Nouă de Antrenament', '➕ Add New Workout Day / Session')}
+          <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> ${tr('Adaugă Zi / Sesiune Nouă de Antrenament', 'Add New Workout Day / Session')}
         </button>
       </div>
     `;
@@ -4943,7 +4945,8 @@ function seteazaLimba(lang, silent = false) {
   filtreazaIstoricIncasariInstant();
   filtreazaIstoricOrarInstant();
   filtreazaIstoricFisaInstant();
-  
+  if (document.getElementById('selectClientaFisa')?.value) afiseazaFisaClientaInstant();
+
   if (tipTabCurent === 'plan') {
     actualizeazaHeaderVisual('plan', t('workoutPlanTitle'));
     randeazaPlanAntrenamentUI();

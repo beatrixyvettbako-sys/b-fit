@@ -194,6 +194,14 @@ header {
   user-select: none;
 }
 
+/* Iconița Orar deschide calendarul: inel și strălucire discrete, ca să se vadă că e apăsabilă */
+.header-icon-bubble-btn.header-icon-clickable {
+  border-color: rgba(196, 181, 253, 0.85);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.35),
+              0 3px 12px rgba(139, 92, 246, 0.45),
+              inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+
 .header-icon-bubble-btn:active {
   transform: scale(0.92);
   opacity: 0.9;
@@ -1211,6 +1219,10 @@ nav button.active span {
 /* Dark: textele zilelor au aceleași culori ca bara de jos */
 [data-theme="dark"] .day-btn {
   color: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+              inset 0 1px 1px rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .day-btn.active {
@@ -1218,7 +1230,7 @@ nav button.active span {
   color: var(--accent-purple-light);
   border-color: rgba(196, 181, 253, 0.35);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
-              inset 0 1px 1px rgba(255, 255, 255, 0.28);
+              inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
 /* CARDURI GENERALE & DETAILS */
@@ -1862,7 +1874,7 @@ select.slot-select-type {
 .btn-trash-action {
   background: transparent;
   border: none;
-  color: var(--placeholder-fade);
+  color: #b91c1c;
   cursor: pointer;
   font-size: 0.9rem;
   display: inline-flex;
@@ -1870,7 +1882,13 @@ select.slot-select-type {
   justify-content: center;
   padding: 2px;
   border-radius: 6px;
+  filter: drop-shadow(0 2px 3px rgba(67, 53, 93, 0.35));
   transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .btn-trash-action {
+  color: #f87171;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.7));
 }
 
 .btn-trash-action:active {
@@ -2269,6 +2287,10 @@ select.slot-select-type {
 /* Varianta roșie (ștergere) a butonului glass */
 .btn-glass-subtle.btn-glass-danger {
   color: #b91c1c !important;
+}
+
+[data-theme="dark"] .btn-glass-subtle.btn-glass-danger {
+  color: #f87171 !important;
 }
 
 .btn-glass-danger .plan-btn-svg {
