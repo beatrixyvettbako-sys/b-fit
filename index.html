@@ -14,14 +14,14 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal46">
+  <link rel="stylesheet" href="style.css?v=fitFinal53">
 </head>
 <body>
 
   <!-- TOAST NOTIFICĂRI -->
   <div id="customToast">✓ Mesaj</div>
 
-  <!-- ECRAN AUTENTIFICARE SUPABASE (ASCUNS IMPLICIT PENTRU A ELIMINA FLICKER-UL LA REFRESH) -->
+  <!-- ECRAN AUTENTIFICARE SUPABASE -->
   <div id="authScreenOverlay" class="auth-overlay auth-hidden">
     <div class="auth-card">
       
@@ -63,7 +63,7 @@
         <button type="button" class="auth-tab-btn" id="authTabSignup" onclick="comutaTabAuth('signup')">Creează cont</button>
       </div>
 
-      <!-- Formular Email & Parolă (novalidate pentru mesaje 100% în limba aplicației) -->
+      <!-- Formular Email & Parolă -->
       <form id="authForm" novalidate onsubmit="gestioneazaSubmitAuth(event)" style="display:flex; flex-direction:column; gap:10px;">
         <div class="form-group" style="margin-bottom:0; text-align:left;">
           <label style="font-size:0.75rem;" id="authEmailLabel">Email</label>
@@ -137,11 +137,11 @@
       </div>
 
       <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="sharePlanModalDesc">
-        Clienta poate deschide link-ul fără cont, își poate vedea exercițiile și își poate completa greutățile (kg), seturile și statusul în timp real.
+        Clienta poate deschide link-ul fără cont și își poate vedea exercițiile.
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
-        <label id="sharePlanLinkLabel">Link Interactiv Clientă</label>
+        <label id="sharePlanLinkLabel">Link Clientă</label>
         <div style="display:flex; gap:6px;">
           <input type="text" id="inputSharePlanUrl" class="form-control" readonly style="font-size:0.78rem; font-weight:600;">
           <button type="button" class="btn" style="white-space:nowrap; padding:6px 10px; font-size:0.78rem;" onclick="copiazaLinkSharePlan()" id="btnCopyShareLink">📋 Copiază</button>
@@ -150,13 +150,13 @@
 
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
         <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="trimiteShareNativPlan()">
-          <span>📲</span> <span id="btnNativeShareText">Trimite Link pe WhatsApp / Share...</span>
+          <span>📲</span> <span id="btnNativeShareText">Trimite Link...</span>
         </button>
-        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextWhatsAppPlan()">
-          <span>💬</span> <span id="btnCopyWaText">Copiază Textul Formatat pt. WhatsApp</span>
+        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextFormatatPlan()">
+          <span>💬</span> <span id="btnCopyWaText">Copiază Textul Formatat</span>
         </button>
         <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="inchideModalSharePlan(); exportaPlanCurentPDF();">
-          <span>📄</span> <span id="btnShareExportPdfText">Generează / Salvează ca PDF</span>
+          <span>📄</span> <span id="btnShareExportPdfText">Trimite ca PDF</span>
         </button>
       </div>
     </div>
@@ -220,7 +220,7 @@
     </div>
   </div>
 
-  <!-- MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI (FĂRĂ SCROLL INUTIL) -->
+  <!-- MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI -->
   <div id="appDrawerBackdrop" class="drawer-backdrop" onclick="inchideMeniuLateral()"></div>
   <div id="appDrawer" class="app-drawer">
 
@@ -260,10 +260,14 @@
           <div class="drawer-nav-arrow">›</div>
         </div>
 
-        <!-- 2. Card Navigare Plan de Antrenament (MUTAT SUB PROFIL) -->
+        <!-- 2. Card Navigare Plan de Antrenament (Liquid Glass Mov Minimalist) -->
         <div class="drawer-nav-card" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
           <div class="drawer-nav-card-left">
-            <div class="drawer-nav-icon">🏋️‍♀️</div>
+            <div class="drawer-nav-icon" style="background: rgba(139, 92, 246, 0.18); border: 1px solid rgba(139, 92, 246, 0.35);">
+              <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--accent-purple); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;">
+                <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"/>
+              </svg>
+            </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuWorkoutTitle">Plan de Antrenament</div>
               <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc">Programe, export PDF & share cliente</div>
@@ -311,7 +315,6 @@
       </div>
 
       <div class="drawer-body">
-        <!-- Secțiune Temă -->
         <div class="drawer-section">
           <div class="drawer-section-title" id="themeSectionTitle">Temă</div>
           <div class="theme-selector-grid">
@@ -327,7 +330,6 @@
           </div>
         </div>
 
-        <!-- Secțiune Limbă -->
         <div class="drawer-section" style="margin-top:14px;">
           <div class="drawer-section-title" id="langSectionTitle">Limbă / Language</div>
           <div class="theme-selector-grid">
@@ -360,7 +362,6 @@
       </div>
 
       <div class="drawer-body">
-        <!-- Avatar Mare cu Buton Creion Discret (Doar Mov) -->
         <div class="profile-avatar-center">
           <div class="profile-avatar-badge-wrap">
             <div class="profile-avatar-big" id="profileBigAvatarWrap">
@@ -379,7 +380,6 @@
           </div>
         </div>
 
-        <!-- Modificare Nume / Prenume -->
         <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
           <label id="profileNameLabel">Nume și Prenume</label>
           <input type="text" id="profileInputNume" class="form-control" placeholder="Beatrix">
@@ -388,7 +388,6 @@
           </button>
         </div>
 
-        <!-- Schimbare Parolă & Confirmare Parolă (cu ochișor) -->
         <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
           <label id="profilePassLabel">Schimbă Parola</label>
           <div class="password-field-wrap">
@@ -430,10 +429,10 @@
     </div>
   </div>
 
-  <!-- HEADER APLICAȚIE (LIQUID GLASS AERISIT & UNIFICAT) -->
+  <!-- HEADER APLICAȚIE (CONTROL DINAMIC BACK / CLOSE PENTRU PLAN DE ANTRENAMENT) -->
   <header id="mainAppHeader">
     <div class="header-title-wrapper" id="pageTitleWrapper">
-      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="Comută selectorul de săptămână">
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="Comută selectorul de săptămână">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -446,9 +445,9 @@
       <span id="pageTitle">Orar Săptămânal</span>
     </div>
 
-    <!-- Buton Meniu Lateral -->
-    <button class="header-icon-bubble-btn" id="headerBurgerBtn" onclick="deschideMeniuLateral()" title="Meniu setări" style="margin-left: auto;">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Buton Dreapta: Meniu Burger SAU Buton Închide '✕' pe Plan de Antrenament -->
+    <button class="header-icon-bubble-btn" id="headerBurgerBtn" onclick="gestioneazaClickDreaptaHeader()" title="Meniu" style="margin-left: auto;">
+      <svg id="headerRightIconSvg" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="12" x2="21" y2="12"></line>
         <line x1="3" y1="18" x2="21" y2="18"></line>
@@ -461,7 +460,6 @@
     <!-- 1. ORAR -->
     <div id="tabOrar" class="tab-content active">
       
-      <!-- BARA UNICĂ EXPANDABILĂ -->
       <div class="calendar-expandable-card" id="calendarExpandableCard">
         <div class="calendar-header-info">
           <div class="calendar-title-container">
@@ -489,7 +487,7 @@
 
       <div id="sloturiContainer"></div>
 
-      <!-- CARD FINALUL PROGRAMULUI CU GANTERĂ ȘI TEXTE AMUZANTE -->
+      <!-- CARD FINALUL PROGRAMULUI CU GANTERĂ -->
       <div class="end-schedule-card" id="endScheduleCard">
         <div class="end-schedule-icon-wrap">
           <svg class="end-schedule-dumbbell-svg" viewBox="0 0 24 24" fill="currentColor">
@@ -509,12 +507,12 @@
       </div>
 
       <div class="extra-hour-card">
-        <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary);" id="addOraCustomText">
+        <div style="font-size: 0.8rem; font-weight: 700; color: var(--primary); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis;" id="addOraCustomText">
           ➕ Adaugă oră suplimentară
         </div>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <input type="text" id="inputOraCustom" placeholder="07:30" style="width: 78px; padding: 5px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; text-align: center; background: var(--card-bg); color: var(--text);">
-          <button class="btn" style="padding: 5px 10px; font-size: 0.78rem;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">+ Adaugă</button>
+        <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+          <input type="text" id="inputOraCustom" placeholder="07:30" style="width: 54px; padding: 5px 3px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; text-align: center; background: var(--card-bg); color: var(--text);">
+          <button class="btn" style="padding: 5px 8px; font-size: 0.76rem; white-space: nowrap;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">+ Adaugă</button>
         </div>
       </div>
 
@@ -623,7 +621,6 @@
         </div>
         <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege sau tastează clientă..." list="listaClienteVizibile" oninput="actualizeazaStilSelect(this)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
 
-        <!-- EMPTY STATE PENTRU FIȘĂ -->
         <div id="fisaEmptyState" class="empty-state-card">
           <div class="empty-state-icon-wrap">
             <svg class="empty-state-svg" viewBox="0 0 24 24">
@@ -738,7 +735,6 @@
             </div>
           </details>
 
-          <!-- Prelungește Valabilitate Abonament -->
           <div style="margin-top: 12px; padding: 12px; background: var(--card-bg); border: 1px dashed var(--primary); border-radius: 10px;">
             <div style="font-weight: 700; font-size: 0.85rem; color: var(--primary); margin-bottom: 8px;" id="extendValidityTitleText">
               ⏱ Prelungește Valabilitate Abonament
@@ -760,7 +756,6 @@
             </button>
           </div>
 
-          <!-- Istoric Prezențe Recente -->
           <details id="detailsIstoricFisa" style="margin-top: 18px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px;" ontoggle="peComutareIstoricFisa(this)">
             <summary class="summary-toggle-clean">
               <span class="icon-history-title">
@@ -865,7 +860,6 @@
         </button>
       </div>
 
-      <!-- ISTORIC ÎNCASĂRI (FIT TO SCREEN) -->
       <details id="detailsIstoricIncasari" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px;" ontoggle="peComutareIstoricIncasari(this)">
         <summary class="summary-toggle-clean">
           <span>
@@ -920,54 +914,54 @@
       </details>
     </div>
 
-    <!-- 5. PLAN DE ANTRENAMENT (ACCESIBIL DIN MENIUL LATERAL SUB PROFIL & LINK SHARE CLIENTĂ) -->
+    <!-- 5. PLAN DE ANTRENAMENT (ECRAN SECUNDAR DEDICAT) -->
     <div id="tabPlanAntrenament" class="tab-content">
 
-      <!-- BARĂ ACȚIUNI ANTRENOR (ASCUNSĂ LA PRINT ȘI ÎN MODUL CLIENTĂ SHARE) -->
+      <!-- BARĂ ACȚIUNI ANTRENOR (BUTON SIMPLIFICAT 'IMPORT' PENTRU CSV / JSON) -->
       <div class="card plan-toolbar-card no-print" id="planCoachToolbar">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:8px;">
           <label style="font-size:0.76rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin:0;" id="planSelectLabel">ALEGE SAU CREEAZĂ PLAN</label>
           <div style="display:flex; gap:5px;">
-            <label for="inputImportCsvPlan" class="btn btn-clear" style="padding:4px 8px; font-size:0.74rem; cursor:pointer; margin:0;" title="Importă fișier CSV din Google Sheets">
-              📥 <span id="btnImportCsvText">Import CSV</span>
+            <label for="inputImportPlanFile" class="btn btn-glass-subtle" style="padding:4px 9px; font-size:0.74rem; cursor:pointer; margin:0;" title="Importă fișier plan (CSV sau JSON)">
+              <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
+              <span id="btnImportPlanText">Import</span>
             </label>
-            <input type="file" id="inputImportCsvPlan" accept=".csv,text/csv" style="display:none;" onchange="importaPlanDinCsv(this)">
+            <input type="file" id="inputImportPlanFile" accept=".csv,text/csv,.json,application/json" style="display:none;" onchange="importaPlanDinFisier(this)">
             <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
               + <span id="btnNewPlanText">Plan Nou</span>
             </button>
           </div>
         </div>
 
-        <select id="selectPlanExistent" class="form-control" onchange="selecteazaPlanDinLista(this.value)" style="margin-bottom:8px; font-weight:700;">
-          <option value="">-- Alege un plan salvat --</option>
+        <select id="selectPlanExistent" class="form-control select-faded" onchange="actualizeazaStilSelect(this); selecteazaPlanDinLista(this.value)" style="margin-bottom:8px; font-weight:700;">
+          <option value="">Alege un plan salvat</option>
         </select>
 
-        <!-- Butoane Acțiuni Rapide pe Planul Activ -->
         <div class="plan-actions-row">
-          <button type="button" class="btn" style="flex:1.2; font-size:0.78rem; padding:7px 8px;" onclick="salveazaPlanCurentInBaza()" id="btnSavePlanAction">
-            💾 <span id="btnSavePlanText">Salvează</span>
+          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="salveazaPlanCurentInBaza()" id="btnSavePlanAction">
+            <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            <span id="btnSavePlanText">Salvează</span>
           </button>
-          <button type="button" class="btn btn-clear" style="flex:1; font-size:0.78rem; padding:7px 8px;" onclick="comutaModPrevizualizarePlan()" id="btnTogglePreviewPlan">
-            👁️ <span id="btnPreviewPlanText">Mod PDF</span>
+          <button type="button" class="btn btn-glass-subtle" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="comutaModPrevizualizarePlan()" id="btnTogglePreviewPlan">
+            <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+            <span id="btnPreviewPlanText">Mod PDF</span>
           </button>
-          <button type="button" class="btn btn-clear" style="flex:1; font-size:0.78rem; padding:7px 8px;" onclick="exportaPlanCurentPDF()">
-            📄 <span id="btnExportPdfPlanText">PDF</span>
+          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="deschideModalSharePlan()">
+            <svg class="plan-btn-svg" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+            <span id="btnSharePlanText">Share</span>
           </button>
-          <button type="button" class="btn" style="flex:1; font-size:0.78rem; padding:7px 8px; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="deschideModalSharePlan()">
-            📤 <span id="btnSharePlanText">Share</span>
-          </button>
-          <button type="button" class="btn btn-archive" style="padding:7px 8px; font-size:0.78rem;" onclick="stergePlanCurent()" title="Șterge planul">
-            🗑
+          <button type="button" class="btn btn-glass-subtle btn-glass-danger" style="padding:6px 10px;" onclick="stergePlanCurent()" title="Șterge planul">
+            <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
         </div>
       </div>
 
-      <!-- BANNER MOD CLIENTĂ (VIZIBIL DOAR CÂND CLIENTA DESCHIDE LINK-UL PARTAJAT ?plan=...) -->
+      <!-- BANNER MOD CLIENTĂ -->
       <div class="card plan-client-banner no-print" id="planClientSharedBanner" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <div>
             <div style="font-size:0.86rem; font-weight:800; color:var(--primary);" id="clientBannerTitle">🏋️‍♀️ Fișa ta de antrenament</div>
-            <div style="font-size:0.73rem; color:var(--text-muted);" id="clientBannerSub">Poți completa greutățile (kg), seturile și statusul direct mai jos.</div>
+            <div style="font-size:0.73rem; color:var(--text-muted);" id="clientBannerSub">Exercițiile tale de mai jos. Le poți salva ca PDF.</div>
           </div>
           <button type="button" class="btn btn-clear" style="padding:6px 10px; font-size:0.76rem; white-space:nowrap;" onclick="exportaPlanCurentPDF()">
             📄 PDF
@@ -975,20 +969,18 @@
         </div>
       </div>
 
-      <!-- CONTAINERUL DOCUMENTULUI (DESIGN IDENTIC CU PDF-UL DE REFERINȚĂ + TABEL CSV) -->
       <div id="planDocumentContainer" class="plan-pdf-sheet"></div>
 
     </div>
 
   </div>
 
-  <!-- NAVIGARE BOTTOM BAR STIL REVOLUT (CAPSULĂ FLOTANTĂ LIQUID GLASS) -->
+  <!-- NAVIGARE BOTTOM BAR STIL REVOLUT (FLOTANTĂ) -->
   <nav id="bottomNav" class="nav-revolut-bar">
     <div class="nav-mercury-pill" id="navMercuryPill">
       <div class="nav-mercury-drop"></div>
     </div>
 
-    <!-- 1. Buton Orar (Inspirat din logo-ul R/Calendar Revolut) -->
     <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar', 0)" id="navBtnOrar">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1003,7 +995,6 @@
       <span id="navTextOrar">Orar</span>
     </button>
 
-    <!-- 2. Buton Programări -->
     <button onclick="comutaTab('tabProgramari', 'Programări', this, 'prog', 1)" id="navBtnProg">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -1014,7 +1005,6 @@
       <span id="navTextProg">Programări</span>
     </button>
 
-    <!-- 3. Buton Fișă Clientă -->
     <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa', 2)" id="navBtnFisa">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -1026,7 +1016,6 @@
       <span id="navTextFisa">Fișă</span>
     </button>
 
-    <!-- 4. Buton Încasări -->
     <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari', 3)" id="navBtnIncasari">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
@@ -1041,6 +1030,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal46"></script>
+  <script src="app.js?v=fitFinal53"></script>
 </body>
 </html>

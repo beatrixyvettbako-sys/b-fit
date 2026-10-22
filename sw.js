@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v46';
+const CACHE_NAME = 'bfit-cache-v53';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,12 +34,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Cererile către backend-ul Google Apps Script și Supabase merg exclusiv prin rețea
-  if (
-    url.hostname.includes('script.google.com') ||
-    url.hostname.includes('google.com') ||
-    url.hostname.includes('supabase.co')
-  ) {
+  // Cererile către backend-ul Supabase merg exclusiv prin rețea
+  if (url.hostname.includes('supabase.co')) {
     event.respondWith(fetch(event.request));
     return;
   }

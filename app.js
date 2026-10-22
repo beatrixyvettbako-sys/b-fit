@@ -1,10 +1,8 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwN9ez1NjA32MnfUZGLcLjdWjsi9h4qilDBmjBVjm3lUhwU0Z2jMuta6p-NP9lmnG9H/exec";
-const ESTE_APPS_SCRIPT = (typeof google !== 'undefined' && google.script && typeof google.script.run !== 'undefined');
-
 // --- CONFIGURARE SUPABASE ---
 const SUPABASE_URL = "https://qfnhluyczxugyqkbyvmc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz";
 let USE_SUPABASE = true;
+const URL_APLICATIE = "https://app.beatrixyvett.com/";
 const supabaseClient = (typeof window !== 'undefined' && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
@@ -12,7 +10,6 @@ const supabaseClient = (typeof window !== 'undefined' && window.supabase)
 let utilizatorCurent = null;
 let tipModAuth = 'login'; // 'login' sau 'signup'
 
-// Dezactivăm restaurarea nativă automată a scroll-ului la refresh pentru a permite calibrarea exactă
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
 }
@@ -29,6 +26,7 @@ let DB = {
 
 let tabIndexCurent = 0;
 let tipTabCurent = 'orar';
+let tabAnteriorPlan = 'orar';
 const tabsOrder = [
   { id: 'tabOrar', titleRo: 'Orar Săptămânal', titleEn: 'Weekly Schedule', tip: 'orar', idx: 0 },
   { id: 'tabProgramari', titleRo: 'Programări', titleEn: 'Bookings', tip: 'prog', idx: 1 },
@@ -143,21 +141,19 @@ const i18n = {
     workoutPlanTitle: "Plan de Antrenament",
     drawerWorkoutDesc: "Programe, export PDF & share cliente",
     planSelectLabel: "ALEGE SAU CREEAZĂ PLAN",
-    btnImportCsv: "Import CSV",
+    btnImportPlan: "Import",
     btnNewPlan: "Plan Nou",
     btnSavePlan: "Salvează",
     btnPreviewPdfMode: "Mod PDF",
-    btnEditMode: "Mod Editare",
-    btnExportPdf: "PDF",
+    btnEditMode: "Editare",
     btnSharePlan: "Share",
     toastPlanSaved: "✓ Planul de antrenament a fost salvat!",
     toastPlanDeleted: "✓ Planul a fost șters!",
-    toastCsvImported: "✓ Sesiune importată din CSV!",
+    toastPlanImported: "✓ Fișierul a fost importat cu succes!",
     toastLinkCopied: "✓ Link copiat în clipboard!",
-    toastWaTextCopied: "✓ Antrenament copiat pentru WhatsApp!",
-    toastProgressSaved: "✓ Progres salvat automat!",
+    toastTextCopied: "✓ Antrenament copiat ca text!",
+    toastPdfGenerating: "Se generează PDF-ul...",
 
-    // Traduceri Ecran Login & Auth Feedback
     authSubtitleLogin: "Autentificare antrenor & administrare",
     authSubtitleSignup: "Creează un cont nou pentru studio",
     authTabLogin: "Intră în cont",
@@ -181,7 +177,6 @@ const i18n = {
     authLogoutConfirmTitle: "Deconectare",
     authLogoutConfirmText: "Ești sigură că vrei să ieși din cont?",
 
-    // Mapare Erori Supabase Auth
     authErrInvalidCreds: "Date de autentificare incorecte (email sau parolă greșită).",
     authErrEmailNotConfirmed: "Adresa de email nu a fost încă confirmată.",
     authErrUserExists: "Există deja un cont înregistrat cu această adresă de email.",
@@ -295,21 +290,19 @@ const i18n = {
     workoutPlanTitle: "Workout Plan",
     drawerWorkoutDesc: "Programs, PDF export & client share",
     planSelectLabel: "CHOOSE OR CREATE PLAN",
-    btnImportCsv: "Import CSV",
+    btnImportPlan: "Import",
     btnNewPlan: "New Plan",
     btnSavePlan: "Save",
     btnPreviewPdfMode: "PDF Mode",
-    btnEditMode: "Edit Mode",
-    btnExportPdf: "PDF",
+    btnEditMode: "Edit",
     btnSharePlan: "Share",
     toastPlanSaved: "✓ Workout plan saved!",
     toastPlanDeleted: "✓ Workout plan deleted!",
-    toastCsvImported: "✓ Session imported from CSV!",
+    toastPlanImported: "✓ File imported successfully!",
     toastLinkCopied: "✓ Link copied to clipboard!",
-    toastWaTextCopied: "✓ Workout copied for WhatsApp!",
-    toastProgressSaved: "✓ Progress auto-saved!",
+    toastTextCopied: "✓ Workout copied as text!",
+    toastPdfGenerating: "Generating PDF...",
 
-    // Traduceri Ecran Login & Auth Feedback
     authSubtitleLogin: "Coach authentication & administration",
     authSubtitleSignup: "Create a new studio management account",
     authTabLogin: "Log In",
@@ -333,7 +326,6 @@ const i18n = {
     authLogoutConfirmTitle: "Log Out",
     authLogoutConfirmText: "Are you sure you want to log out?",
 
-    // Mapare Erori Supabase Auth
     authErrInvalidCreds: "Invalid login credentials (wrong email or password).",
     authErrEmailNotConfirmed: "Email address has not been confirmed yet.",
     authErrUserExists: "A user with this email address already exists.",
@@ -353,7 +345,6 @@ function t(key) {
   return i18n['ro'][key] || key;
 }
 
-// Comutare vizibilitate parolă (Ochișor Show / Hide Password)
 function comutaVizibilitateParola(inputId, btnEl) {
   const input = document.getElementById(inputId);
   if (!input) return;
@@ -369,7 +360,6 @@ function comutaVizibilitateParola(inputId, btnEl) {
   }
 }
 
-// Sincronizare stare no-scroll pe body când Login sau Burger Menu este deschis
 function actualizeazaStareNoScrollBody() {
   const authOverlay = document.getElementById('authScreenOverlay');
   const drawer = document.getElementById('appDrawer');
@@ -383,7 +373,6 @@ function actualizeazaStareNoScrollBody() {
   }
 }
 
-// Mapare completă a erorilor Supabase în limba selectată
 function localizeazaEroareAuth(errMessage) {
   if (!errMessage) return t('authErrGeneric');
   const msg = errMessage.toLowerCase();
@@ -991,7 +980,7 @@ function getNrSedinteAbonamentLocal(tip) {
 }
 
 // ==========================================
-// 2. LOGICĂ BACKEND MULTI-TENANT SUPABASE
+// 2. LOGICĂ BACKEND SUPABASE
 // ==========================================
 
 async function executaActiuneSupabase(actionName, payload) {
@@ -1066,12 +1055,10 @@ async function executaActiuneSupabase(actionName, payload) {
       qProg = qProg.eq('user_id', uid);
       qInc = qInc.eq('user_id', uid);
       qPrez = qPrez.eq('user_id', uid);
-      qPlanuri = qPlanuri.eq('user_id', uid);
     }
 
     const [resCli, resOrar, resProg, resInc, resPrez, resPlan] = await Promise.all([
-      qCli, qOrar, qProg, qInc, qPrez,
-      qPlanuri.then(r => r).catch(() => ({ data: [] }))
+      qCli, qOrar, qProg, qInc, qPrez, qPlanuri
     ]);
 
     const clienti = (resCli.data || []).map(c => ({
@@ -1512,48 +1499,8 @@ function callBackend(actionName, payload, callback) {
     return;
   }
 
-  if (ESTE_APPS_SCRIPT) {
-    let runner = google.script.run
-      .withSuccessHandler(function(res) { if (callback) callback(res); })
-      .withFailureHandler(function(err) { showToast("Eroare Apps Script: " + err.message, "error"); });
-
-    if (actionName === "getTotBazaDeDate") runner.getTotBazaDeDate();
-    else if (actionName === "salveazaSlotAuto") runner.salveazaSlotAuto(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament, payload.slotIndex);
-    else if (actionName === "bifeazaPrezenta") runner.bifeazaPrezentaSlot(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.clienta, payload.antrenament, payload.slotIndex);
-    else if (actionName === "anuleazaSlot") runner.anuleazaSlotSiPrezenta(payload.row, payload.saptamanaCheie, payload.dataCalendar, payload.zi, payload.ora, payload.slotIndex);
-    else if (actionName === "comutaBlocareOra") runner.comutaBlocareOra(payload.saptamanaCheie, payload.zi, payload.ora, payload.blocat);
-    else if (actionName === "adaugaOraCustom") runner.adaugaOraCustomOrar(payload.saptamanaCheie, payload.zi, payload.ora);
-    else if (actionName === "inregistreazaAbonament") runner.inregistreazaAbonament(payload.nume, payload.tip, payload.dataPlata, payload.dataStart, payload.suma, payload.metoda);
-    else if (actionName === "actualizeazaIncasare") runner.actualizeazaRandIncasare(payload.row, payload.data, payload.clienta, payload.suma, payload.metoda, payload.tip);
-    else if (actionName === "actualizeazaCampProgramare") runner.actualizeazaCampProgramare(payload.row, payload.col, payload.val);
-    else if (actionName === "adaugaRandProgramare") runner.adaugaRandNouProgramare(payload.nume, payload.prezenta, payload.mentiuni, payload.esteHold);
-    else if (actionName === "mutaInHold") runner.mutaInHold(payload.row);
-    else if (actionName === "stergeRandProgramare") runner.stergeRandProgramare(payload.row);
-    else if (actionName === "actualizeazaDateClienta") runner.actualizeazaDateClienta(payload.numeVechi, payload.numeNou, payload.tip, payload.dataStart, payload.dataExp, payload.incluse, payload.efectuate, payload.ramase, payload.status);
-    else if (actionName === "adaugaClientaDirect") runner.adaugaClientaNouaDirect(payload.nume, payload.tip);
-    else if (actionName === "seteazaStatusClienta") runner.seteazaStatusClienta(payload.nume, payload.statusNou);
-    else if (actionName === "prelungesteValabilitate") runner.prelungesteValabilitate(payload.nume, payload.zile, payload.dataManuala);
-  } else {
-    if (actionName === "getTotBazaDeDate") {
-      fetch(API_URL + "?action=getTotBazaDeDate")
-        .then(r => r.json())
-        .then(data => {
-          if (callback) callback(data);
-        })
-        .catch(err => {
-          console.error("Eroare incarcare:", err);
-        });
-    } else {
-      payload.action = actionName;
-      fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-      })
-      .then(r => r.json())
-      .then(data => { if (callback) callback(data); })
-      .catch(err => showToast("Eroare sincronizare", "error"));
-    }
-  }
+  // Biblioteca Supabase nu s-a încărcat (ex. fără internet la pornire)
+  showToast("Eroare sincronizare", "error");
 }
 
 function showToast(mesaj, tip = 'success') {
@@ -1629,8 +1576,9 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
   let vh = window.innerHeight;
   let topOffset = getTopOffsetSubZile();
   let navEl = document.getElementById('bottomNav');
-  let hNav = navEl ? navEl.getBoundingClientRect().height : 64;
-  let spatiuVizibilUtil = vh - topOffset - hNav - 10;
+  let hNav = navEl ? navEl.getBoundingClientRect().height : 60;
+  // Bara de jos plutește la 10px de margine; +12px spațiu ca istoricul să rămână deasupra ei
+  let spatiuVizibilUtil = vh - topOffset - hNav - 10 - 12;
 
   let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
   let blockRect = closestBlock.getBoundingClientRect();
@@ -1646,6 +1594,10 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
 
   endCard.style.transition = '';
 }
+
+// Momentul ultimului highlight; re-randarea orarului în timpul animației îl reaplică
+let momentHighlightOra = 0;
+const DURATA_HIGHLIGHT_ORA = 1800;
 
 function autoScrollLaOraCurenta(faraHighlight = false) {
   let now = new Date();
@@ -1710,10 +1662,11 @@ function autoScrollLaOraCurenta(faraHighlight = false) {
   });
 
   if (!faraHighlight) {
+    // Reflow forțat între remove și add, ca animația să repornească și dacă clasa exista deja
     closestBlock.classList.remove('hour-block-current-highlight');
-    requestAnimationFrame(() => {
-      closestBlock.classList.add('hour-block-current-highlight');
-    });
+    void closestBlock.offsetWidth;
+    closestBlock.classList.add('hour-block-current-highlight');
+    momentHighlightOra = Date.now();
   }
 }
 
@@ -1721,7 +1674,7 @@ function peComutareIstoricIncasari(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 52;
+      let hOffset = headerEl ? headerEl.offsetHeight : 50;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -1736,7 +1689,7 @@ function peComutareIstoricOrar(detailsEl) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let hOffset = (headerEl ? headerEl.offsetHeight : 52) + (daySelector ? daySelector.offsetHeight : 45);
+      let hOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45);
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -1758,7 +1711,7 @@ function peComutareIstoricFisa(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
       let headerEl = document.querySelector('header');
-      let hOffset = headerEl ? headerEl.offsetHeight : 52;
+      let hOffset = headerEl ? headerEl.offsetHeight : 50;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
         top: Math.max(0, Math.round(elTop - hOffset - 12)),
@@ -1768,14 +1721,72 @@ function peComutareIstoricFisa(detailsEl) {
   }
 }
 
+// CONTROL HEADER STÂNGA / DREAPTA PE PLANUL DE ANTRENAMENT (BACK / CLOSE)
+function gestioneazaClickStangaHeader(event) {
+  if (tipTabCurent === 'plan') {
+    revenireDinPlanAntrenament();
+  } else if (tipTabCurent === 'orar') {
+    comutaExpandareBaraCalendar(event);
+  }
+}
+
+function gestioneazaClickDreaptaHeader() {
+  if (tipTabCurent === 'plan') {
+    revenireDinPlanAntrenament();
+  } else {
+    deschideMeniuLateral();
+  }
+}
+
+function revenireDinPlanAntrenament() {
+  const bottomNav = document.getElementById('bottomNav');
+  if (bottomNav) bottomNav.style.display = 'flex';
+
+  let tinta = tabAnteriorPlan || 'orar';
+  let tabGasit = tabsOrder.find(t => t.tip === tinta) || tabsOrder[0];
+  let btn = document.querySelectorAll('nav button')[tabGasit.idx];
+  let titlu = currentLang === 'en' ? tabGasit.titleEn : tabGasit.titleRo;
+  comutaTab(tabGasit.id, titlu, btn, tabGasit.tip, tabGasit.idx);
+}
+
 function actualizeazaHeaderVisual(tipTab, titlu) {
   let wrapper = document.getElementById('pageTitleWrapper');
+  let burgerBtn = document.getElementById('headerBurgerBtn');
+  let rightSvg = document.getElementById('headerRightIconSvg');
   if (!wrapper) return;
+
+  if (tipTab === 'plan') {
+    wrapper.innerHTML = `
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="Înapoi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <span id="pageTitle">${titlu}</span>
+    `;
+    if (burgerBtn && rightSvg) {
+      burgerBtn.setAttribute('title', 'Închide');
+      rightSvg.innerHTML = `
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      `;
+    }
+    return;
+  }
+
+  if (burgerBtn && rightSvg) {
+    burgerBtn.setAttribute('title', 'Meniu');
+    rightSvg.innerHTML = `
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    `;
+  }
 
   let iconHtml = '';
   if (tipTab === 'orar') {
     iconHtml = `
-      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="comutaExpandareBaraCalendar(event)" title="${currentLang === 'en' ? 'Toggle week selector' : 'Comută selectorul de săptămână'}">
+      <button class="header-icon-bubble-btn" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="${currentLang === 'en' ? 'Toggle week selector' : 'Comută selectorul de săptămână'}">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -1813,17 +1824,6 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
           <line x1="2" y1="10" x2="22" y2="10"></line>
           <circle cx="14" cy="15" r="1.8" fill="#fff" stroke="none"></circle>
           <circle cx="17" cy="15" r="1.8" fill="#fff" stroke="none" opacity="0.6"></circle>
-        </svg>
-      </div>
-    `;
-  } else if (tipTab === 'plan') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
         </svg>
       </div>
     `;
@@ -1923,47 +1923,37 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('editIncCancelBtn').innerText = t('cancelBtn');
   document.getElementById('editIncSaveBtn').innerText = t('saveBtn');
 
-  // Meniu Plan de Antrenament
   const elWTitle = document.getElementById('drawerMenuWorkoutTitle');
   if (elWTitle) elWTitle.innerText = t('workoutPlanTitle');
   const elWDesc = document.getElementById('drawerMenuWorkoutDesc');
   if (elWDesc) elWDesc.innerText = t('drawerWorkoutDesc');
   const elPlanSelLbl = document.getElementById('planSelectLabel');
   if (elPlanSelLbl) elPlanSelLbl.innerText = t('planSelectLabel');
-  const elBtnCsv = document.getElementById('btnImportCsvText');
-  if (elBtnCsv) elBtnCsv.innerText = t('btnImportCsv');
+  const elBtnImport = document.getElementById('btnImportPlanText');
+  if (elBtnImport) elBtnImport.innerText = t('btnImportPlan');
   const elBtnNewPlan = document.getElementById('btnNewPlanText');
   if (elBtnNewPlan) elBtnNewPlan.innerText = t('btnNewPlan');
   const elBtnSavePlan = document.getElementById('btnSavePlanText');
   if (elBtnSavePlan) elBtnSavePlan.innerText = t('btnSavePlan');
 
-  // Traduceri Ecran Autentificare
   const elSubAuth = document.getElementById('authSubtitleText');
   if (elSubAuth) elSubAuth.innerText = tipModAuth === 'login' ? t('authSubtitleLogin') : t('authSubtitleSignup');
-
   const elTabLog = document.getElementById('authTabLogin');
   if (elTabLog) elTabLog.innerText = t('authTabLogin');
-
   const elTabSign = document.getElementById('authTabSignup');
   if (elTabSign) elTabSign.innerText = t('authTabSignup');
-
   const elLblEmail = document.getElementById('authEmailLabel');
   if (elLblEmail) elLblEmail.innerText = t('authEmailLabel');
-
   const elLblPass = document.getElementById('authPasswordLabel');
   if (elLblPass) elLblPass.innerText = t('authPasswordLabel');
-
   const elBtnSubAuth = document.getElementById('authSubmitBtn');
   if (elBtnSubAuth && !elBtnSubAuth.disabled) {
     elBtnSubAuth.innerText = tipModAuth === 'login' ? t('authSubmitBtnLogin') : t('authSubmitBtnSignup');
   }
-
   const elBtnMagic = document.getElementById('authMagicLinkBtn');
   if (elBtnMagic) elBtnMagic.innerText = t('authMagicLinkBtn');
-
   const elDivOr = document.getElementById('authDividerOrText');
   if (elDivOr) elDivOr.innerText = t('authDividerOr');
-
   const elTxtGoogle = document.getElementById('authGoogleBtnText');
   if (elTxtGoogle) elTxtGoogle.innerText = t('authGoogleBtn');
 
@@ -1974,7 +1964,7 @@ function aplicaTraduceriInterfataStatic() {
 }
 
 // ==========================================
-// 3. INIȚIALIZARE & GARDIAN SESIUNE (FĂRĂ FLICKER LA REFRESH)
+// 3. INIȚIALIZARE & GARDIAN SESIUNE
 // ==========================================
 
 async function verificaSesiuneSupabase() {
@@ -2006,7 +1996,6 @@ window.onload = async function() {
   initSwipeNavigation();
   aplicaTraduceriInterfataStatic();
 
-  // Verificăm dacă aplicația a fost deschisă de o clientă prin link-ul de Share (?plan=UUID)
   const urlParams = new URLSearchParams(window.location.search);
   const sharedPlanId = urlParams.get('plan');
   if (sharedPlanId) {
@@ -2258,6 +2247,10 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, alinia
             }
           });
           calibreazaLayoutEcran(closestOraText, closestBlock);
+          // Datele din Supabase pot sosi în timpul animației și înlocuiesc cardurile: reaplicăm highlight-ul
+          if (closestBlock && Date.now() - momentHighlightOra < DURATA_HIGHLIGHT_ORA) {
+            closestBlock.classList.add('hour-block-current-highlight');
+          }
         }
         window.scrollTo({ top: scrollAnterior, behavior: 'auto' });
       }
@@ -2529,6 +2522,10 @@ function populeazaSelectorLuni() {
 
 function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
+
+  const bottomNav = document.getElementById('bottomNav');
+  if (bottomNav) bottomNav.style.display = 'flex';
+
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
   let target = document.getElementById(tabId);
@@ -3119,9 +3116,9 @@ function filtreazaIstoricOrarInstant() {
 }
 
 function getPillClass(val) {
-  if (val === "Confirmata" || val === "Confirmed") return "pill-confirmata";
-  if (val === "In asteptare" || val === "Pending") return "pill-asteptare";
-  if (val === "Absenta" || val === "Absent") return "pill-absenta";
+  if (val === "Confirmata" || val === "Confirmed" || val === "Finalizat") return "pill-confirmata";
+  if (val === "In asteptare" || val === "Pending" || val === "În așteptare") return "pill-asteptare";
+  if (val === "Absenta" || val === "Absent" || val === "Sărit") return "pill-absenta";
   return "pill-empty";
 }
 
@@ -3740,7 +3737,6 @@ function inchideMeniuLateral() {
 let planActiv = null;
 let esteModPrevizualizarePdf = false;
 let esteModClientaShare = false;
-let timerAutoSaveClienta = null;
 
 function escAttr(str) {
   return (str || '').toString()
@@ -3755,7 +3751,7 @@ function construiesteSablonPlanDefault() {
     id: null,
     clienta: "",
     titlu: "Program de forță & tonifiere",
-    subtitlu: "B-Fit Studio • maximum 3 sesiuni pe săptămână • exerciții ghidate & jurnal progres",
+    subtitlu: "B-Fit Studio • structură completă pe zile & jurnal progres",
     continut_json: {
       sectiuni_inceput: [
         {
@@ -3769,18 +3765,11 @@ function construiesteSablonPlanDefault() {
       ],
       sesiuni: [
         {
-          titlu: "SĂPTĂMÂNA 1 - ZIUA 1: Spate + Biceps & Triceps",
+          titlu: "ZIUA 1: Sesiune de introducere",
           exercitii: [
-            { nr: 1, exercitiu: "Tracțiuni la helcometru cu priză largă", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Trage bara la piept, du coatele în jos și în spate. Priză largă.", greutate_kg: "", seturi_finalizate: "1", status: "În așteptare" },
-            { nr: 2, exercitiu: "Tracțiuni la helcometru cu priză îngustă (Mâner V)", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Priză neutră, apropie omoplații, fără balans.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 3, exercitiu: "Ramat la aparat din șezut / la cablu", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Trage spre abdomen, spatele drept, umerii jos.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 4, exercitiu: "Ramat din aplecat cu gantera / haltera", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Trunchi aplecat, spatele drept, trage spre șold.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 5, exercitiu: "Face Pull la cablu", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Sfoara la nivelul feței, trage spre tâmple, coatele în lateral.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 6, exercitiu: "Fluturări inverse cu gantere din aplecat", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Deschide brațele lateral (T), coatele ușor flexate.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 7, exercitiu: "Flexii biceps cu gantere pe bancă înclinată 45°", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Priză supinație, coatele fixe pe lângă corp.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 8, exercitiu: "Flexii biceps cu haltera", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Stând în picioare, fără balans din șolduri.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 9, exercitiu: "Extensia coatelor la cablu cu sfoară (Triceps)", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Împinge în jos, separă sfoara la final.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 10, exercitiu: "Extensia coatelor la aparatul pentru triceps", seturi_repetari: "3 x 15", pauza: "60 sec", indicatii: "Spatele pe spătar, împinge mânerele prin extensia coatelor.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" }
+            { nr: 1, exercitiu: "Genuflexiuni cu greutate proprie", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Coborâre controlată, spatele drept.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
+            { nr: 2, exercitiu: "Tracțiuni la helcometru cu priză largă", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Trage spre piept, coatele în jos.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
+            { nr: 3, exercitiu: "Plank (Scândură)", seturi_repetari: "3 x 45 sec", pauza: "60 sec", indicatii: "Abdomen încordat, corp aliniat.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" }
           ]
         }
       ],
@@ -3795,9 +3784,14 @@ function construiesteSablonPlanDefault() {
   };
 }
 
-function deschideSectiunePlanAntrenamentDinMeniu() {
+async function deschideSectiunePlanAntrenamentDinMeniu() {
   inchideMeniuLateral();
+  tabAnteriorPlan = tipTabCurent || 'orar';
   tipTabCurent = 'plan';
+
+  // Ascundere Bottom Nav Bar
+  const bottomNav = document.getElementById('bottomNav');
+  if (bottomNav) bottomNav.style.display = 'none';
 
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
@@ -3807,17 +3801,38 @@ function deschideSectiunePlanAntrenamentDinMeniu() {
 
   actualizeazaHeaderVisual('plan', t('workoutPlanTitle'));
 
+  // Dacă nu este selectat niciun plan, afișează șablonul default de creare
   if (!planActiv) {
-    if (DB.planuri && DB.planuri.length > 0) {
-      selecteazaPlanDinLista(DB.planuri[0].id);
-    } else {
-      planActiv = construiesteSablonPlanDefault();
-      randeazaPlanAntrenamentUI();
-    }
-  } else {
-    randeazaPlanAntrenamentUI();
+    planActiv = construiesteSablonPlanDefault();
   }
 
+  // Preluare proaspătă din Supabase pentru lista de planuri din dropdown
+  if (USE_SUPABASE && supabaseClient) {
+    try {
+      const { data: planuriNoi, error } = await supabaseClient
+        .from('planuri_antrenament')
+        .select('*')
+        .order('updated_at', { ascending: false });
+
+      if (!error && Array.isArray(planuriNoi)) {
+        DB.planuri = planuriNoi.map(pl => ({
+          id: pl.id,
+          user_id: pl.user_id,
+          clienta: pl.clienta || "",
+          titlu: pl.titlu || "Program de antrenament",
+          subtitlu: pl.subtitlu || "",
+          continut_json: pl.continut_json || {},
+          updated_at: pl.updated_at
+        }));
+        try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
+      }
+    } catch (err) {
+      console.error("Eroare sincronizare planuri:", err);
+    }
+  }
+  
+  populeazaSelectorPlanuri();
+  randeazaPlanAntrenamentUI();
   window.scrollTo({ top: 0, behavior: 'auto' });
 }
 
@@ -3825,20 +3840,22 @@ function populeazaSelectorPlanuri() {
   const sel = document.getElementById('selectPlanExistent');
   if (!sel) return;
 
-  const idCurent = planActiv && planActiv.id ? planActiv.id : sel.value;
-  sel.innerHTML = `<option value="">${currentLang === 'en' ? '-- Choose saved plan --' : '-- Alege un plan salvat --'}</option>`;
+  const idCurent = planActiv && planActiv.id ? planActiv.id : "";
+  sel.innerHTML = `<option value="">${currentLang === 'en' ? 'Choose a saved plan' : 'Alege un plan salvat'}</option>`;
 
-  (DB.planuri || []).forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    const prefixCli = p.clienta ? `[${p.clienta}] ` : '';
-    opt.innerText = `${prefixCli}${p.titlu}`;
-    sel.appendChild(opt);
-  });
+  // Ordine alfabetică naturală (Săptămâna 2 înainte de Săptămâna 10), grupat pe clientă
+  const eticheta = p => `${p.clienta ? `[${p.clienta}] ` : ''}${p.titlu}`;
+  [...(DB.planuri || [])]
+    .sort((a, b) => eticheta(a).localeCompare(eticheta(b), 'ro', { numeric: true, sensitivity: 'base' }))
+    .forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.innerText = eticheta(p);
+      sel.appendChild(opt);
+    });
 
-  if (idCurent) {
-    sel.value = idCurent;
-  }
+  sel.value = idCurent;
+  actualizeazaStilSelect(sel);
 }
 
 function selecteazaPlanDinLista(idPlan) {
@@ -3847,7 +3864,7 @@ function selecteazaPlanDinLista(idPlan) {
     randeazaPlanAntrenamentUI();
     return;
   }
-  const gasit = (DB.planuri || []).find(p => p.id === idPlan);
+  const gasit = (DB.planuri || []).find(p => String(p.id) === String(idPlan));
   if (gasit) {
     planActiv = JSON.parse(JSON.stringify(gasit));
     randeazaPlanAntrenamentUI();
@@ -3858,7 +3875,10 @@ function creeazaPlanNouCuSablon() {
   planActiv = construiesteSablonPlanDefault();
   esteModPrevizualizarePdf = false;
   const sel = document.getElementById('selectPlanExistent');
-  if (sel) sel.value = '';
+  if (sel) {
+    sel.value = '';
+    actualizeazaStilSelect(sel);
+  }
   randeazaPlanAntrenamentUI();
   showToast(currentLang === 'en' ? '✓ New template loaded!' : '✓ Șablon nou încărcat!');
 }
@@ -3946,7 +3966,7 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-session-header">
           ${doarCitireStructura
             ? `<div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div>`
-            : `<input type="text" class="plan-session-title-input" value="${escAttr(ses.titlu)}" placeholder="Titlu Sesiune / Zi (ex: Sesiunea A - Picioare, piept, spate)" oninput="planActiv.continut_json.sesiuni[${sesIdx}].titlu = this.value">
+            : `<input type="text" class="plan-session-title-input" value="${escAttr(ses.titlu)}" placeholder="Titlu Sesiune / Zi" oninput="planActiv.continut_json.sesiuni[${sesIdx}].titlu = this.value">
                <button type="button" class="btn-trash-action no-print" onclick="stergeSesiunePlan(${sesIdx})" title="Șterge toată ziua/sesiunea">🗑</button>`
           }
         </div>
@@ -3998,15 +4018,15 @@ function randeazaPlanAntrenamentUI() {
               <div class="plan-tracking-grid">
                 <div class="plan-tracking-field">
                   <span class="plan-tracking-label">Greutate (kg)</span>
-                  <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="kg" oninput="actualizeazaProgresExClienta(${sesIdx}, ${exIdx}, 'greutate_kg', this.value)">
+                  <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" readonly>
                 </div>
                 <div class="plan-tracking-field">
                   <span class="plan-tracking-label">Seturi făcute</span>
-                  <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="ex: 3" oninput="actualizeazaProgresExClienta(${sesIdx}, ${exIdx}, 'seturi_finalizate', this.value)">
+                  <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" readonly>
                 </div>
                 <div class="plan-tracking-field">
                   <span class="plan-tracking-label">Status</span>
-                  <select class="pill-select ${pillCls}" onchange="this.className='pill-select '+getPillClass(this.value); actualizeazaProgresExClienta(${sesIdx}, ${exIdx}, 'status', this.value)">
+                  <select class="pill-select ${pillCls}" disabled>
                     <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>În așteptare</option>
                     <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>Finalizat</option>
                     <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>Sărit</option>
@@ -4184,10 +4204,11 @@ function stergeExercitiuPlan(sesIdx, exIdx) {
   randeazaPlanAntrenamentUI();
 }
 
+// Salvare sincronizată direct cu tabela planuri_antrenament din Supabase
 async function salveazaPlanCurentInBaza(silent = false) {
   if (!supabaseClient || !planActiv) return null;
 
-  const uid = utilizatorCurent ? utilizatorCurent.id : planActiv.user_id;
+  const uid = utilizatorCurent ? utilizatorCurent.id : (planActiv.user_id || null);
   const payload = {
     clienta: (planActiv.clienta || "").trim(),
     titlu: (planActiv.titlu || "Program de antrenament").trim(),
@@ -4249,7 +4270,7 @@ async function stergePlanCurent() {
       await supabaseClient.from('planuri_antrenament').delete().eq('id', planActiv.id);
       DB.planuri = (DB.planuri || []).filter(p => p.id !== planActiv.id);
       try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
-      planActiv = DB.planuri.length > 0 ? JSON.parse(JSON.stringify(DB.planuri[0])) : construiesteSablonPlanDefault();
+      planActiv = construiesteSablonPlanDefault();
       populeazaSelectorPlanuri();
       randeazaPlanAntrenamentUI();
       showToast(t('toastPlanDeleted'));
@@ -4278,17 +4299,39 @@ function parseazaLinieCsv(line) {
   return result;
 }
 
-function importaPlanDinCsv(inputEl) {
+// Butonul unificat 'Import' acceptă atât JSON cât și CSV
+function importaPlanDinFisier(inputEl) {
   if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
   const file = inputEl.files[0];
   const reader = new FileReader();
 
   reader.onload = function(e) {
-    const text = e.target.result || '';
+    const text = (e.target.result || '').trim();
+    if (!text) return;
+
+    if (file.name.toLowerCase().endsWith('.json') || text.startsWith('{')) {
+      try {
+        const obj = JSON.parse(text);
+        if (obj.continut_json) {
+          planActiv = obj;
+        } else if (obj.sesiuni) {
+          if (!planActiv) planActiv = construiesteSablonPlanDefault();
+          planActiv.continut_json = obj;
+        }
+        randeazaPlanAntrenamentUI();
+        showToast(t('toastPlanImported'));
+        inputEl.value = '';
+        return;
+      } catch (err) {
+        console.error("Eroare parsare JSON:", err);
+      }
+    }
+
+    // Fallback: Parsare CSV
     const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
     if (lines.length === 0) return;
 
-    let titluSesiune = file.name.replace(/\.csv$/i, '');
+    let titluSesiune = file.name.replace(/\.[^/.]+$/, "");
     const exercitiiImportate = [];
 
     lines.forEach((line, idx) => {
@@ -4320,23 +4363,79 @@ function importaPlanDinCsv(inputEl) {
     });
 
     randeazaPlanAntrenamentUI();
-    showToast(t('toastCsvImported'));
+    showToast(t('toastPlanImported'));
     inputEl.value = '';
   };
 
   reader.readAsText(file, 'UTF-8');
 }
 
-function exportaPlanCurentPDF() {
+// Librăria de generare PDF se încarcă doar la primul export
+function incarcaHtml2Pdf() {
+  if (window.html2pdf) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// Generează fișierul PDF și îl trimite prin meniul nativ de share (sau îl descarcă)
+async function exportaPlanCurentPDF() {
+  if (!planActiv) return;
+  showToast(t('toastPdfGenerating'));
+
   const eraModPreview = esteModPrevizualizarePdf;
   esteModPrevizualizarePdf = true;
   randeazaPlanAntrenamentUI();
 
-  setTimeout(() => {
+  const titlu = (planActiv.titlu || 'Plan de antrenament').trim();
+  const numeFisier = [titlu, planActiv.clienta].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+
+  try {
+    await incarcaHtml2Pdf();
+    const blob = await html2pdf().set({
+      margin: [12, 10],
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2,
+        onclone: (doc) => {
+          // PDF-ul e mereu pe fundal alb, indiferent de tema aplicației
+          doc.documentElement.setAttribute('data-theme', 'light');
+          doc.querySelectorAll('.plan-pdf-sheet').forEach(el => el.classList.add('pdf-export'));
+        }
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.plan-info-box'] }
+    }).from(document.getElementById('planDocumentContainer')).outputPdf('blob');
+
+    const fisier = new File([blob], numeFisier, { type: 'application/pdf' });
+    let trimis = false;
+    if (navigator.canShare && navigator.canShare({ files: [fisier] })) {
+      try {
+        await navigator.share({ files: [fisier], title: titlu });
+        trimis = true;
+      } catch (e) {
+        trimis = (e.name === 'AbortError');
+      }
+    }
+    if (!trimis) {
+      const url = URL.createObjectURL(fisier);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = numeFisier;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  } catch (err) {
+    console.error("Eroare generare PDF:", err);
     window.print();
+  } finally {
     esteModPrevizualizarePdf = eraModPreview;
     randeazaPlanAntrenamentUI();
-  }, 180);
+  }
 }
 
 async function deschideModalSharePlan() {
@@ -4344,11 +4443,12 @@ async function deschideModalSharePlan() {
   const idPlan = salvat ? salvat.id : (planActiv ? planActiv.id : null);
 
   if (!idPlan) {
-    showToast("Salvează mai întâi planul și asigură-te că ai creat tabelul în Supabase!", "error");
+    showToast("Salvează mai întâi planul în baza de date!", "error");
     return;
   }
 
-  const shareUrl = `${window.location.origin}${window.location.pathname}?plan=${idPlan}`;
+  // Mereu adresa de producție, chiar dacă planul e trimis din testarea locală
+  const shareUrl = `${URL_APLICATIE}?plan=${idPlan}`;
   const inp = document.getElementById('inputSharePlanUrl');
   if (inp) inp.value = shareUrl;
 
@@ -4378,7 +4478,7 @@ async function trimiteShareNativPlan() {
     try {
       await navigator.share({
         title: titlu,
-        text: `🏋️‍♀️ ${titlu} – deschide fișa ta interactivă de antrenament:`,
+        text: `🏋️‍♀️ ${titlu} – deschide fișa ta de antrenament:`,
         url: url
       });
     } catch (e) {}
@@ -4387,17 +4487,17 @@ async function trimiteShareNativPlan() {
   }
 }
 
-function copiazaTextWhatsAppPlan() {
+function copiazaTextFormatatPlan() {
   if (!planActiv) return;
-  let txt = `🏋️‍♀️ *${planActiv.titlu}*\n`;
-  if (planActiv.subtitlu) txt += `_${planActiv.subtitlu}_\n\n`;
+  let txt = `🏋️‍♀️ ${planActiv.titlu}\n`;
+  if (planActiv.subtitlu) txt += `${planActiv.subtitlu}\n\n`;
 
   (planActiv.continut_json?.sesiuni || []).forEach(ses => {
-    txt += `📌 *${ses.titlu}*\n`;
+    txt += `📌 ${ses.titlu}\n`;
     (ses.exercitii || []).forEach((ex, i) => {
-      txt += `${i + 1}. *${ex.exercitiu}* — ${ex.seturi_repetari}`;
+      txt += `${i + 1}. ${ex.exercitiu} — ${ex.seturi_repetari}`;
       if (ex.pauza) txt += ` (pauză ${ex.pauza})`;
-      if (ex.indicatii) txt += `\n   💡 _${ex.indicatii}_`;
+      if (ex.indicatii) txt += `\n   💡 ${ex.indicatii}`;
       txt += `\n`;
     });
     txt += `\n`;
@@ -4405,11 +4505,11 @@ function copiazaTextWhatsAppPlan() {
 
   const inp = document.getElementById('inputSharePlanUrl');
   if (inp && inp.value) {
-    txt += `🔗 Completează greutățile (kg) și seturile direct în fișa ta:\n${inp.value}`;
+    txt += `🔗 Fișa ta de antrenament:\n${inp.value}`;
   }
 
   navigator.clipboard.writeText(txt).then(() => {
-    showToast(t('toastWaTextCopied'));
+    showToast(t('toastTextCopied'));
   });
 }
 
@@ -4442,10 +4542,9 @@ async function initModClientaSharePlan(planId) {
   if (!supabaseClient) return;
 
   try {
+    // Funcție Supabase care întoarce doar planul cu id-ul din link (fără acces la tabel)
     const { data, error } = await supabaseClient
-      .from('planuri_antrenament')
-      .select('*')
-      .eq('id', planId)
+      .rpc('citeste_plan_share', { p_id: planId })
       .maybeSingle();
 
     if (error || !data) {
@@ -4462,25 +4561,6 @@ async function initModClientaSharePlan(planId) {
   } catch (err) {
     console.error("Eroare incarcare plan share:", err);
   }
-}
-
-function actualizeazaProgresExClienta(sesIdx, exIdx, camp, valoare) {
-  const ex = planActiv?.continut_json?.sesiuni?.[sesIdx]?.exercitii?.[exIdx];
-  if (!ex) return;
-  ex[camp] = valoare;
-
-  clearTimeout(timerAutoSaveClienta);
-  timerAutoSaveClienta = setTimeout(async () => {
-    if (!supabaseClient || !planActiv || !planActiv.id) return;
-    await supabaseClient
-      .from('planuri_antrenament')
-      .update({
-        continut_json: planActiv.continut_json,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', planActiv.id);
-    showToast(t('toastProgressSaved'));
-  }, 550);
 }
 
 const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
