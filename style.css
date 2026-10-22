@@ -1157,7 +1157,8 @@ nav button.active span {
   padding: 4px 8px 8px;
   margin: -4px -8px 6px -8px;
   position: sticky;
-  top: var(--header-height);
+  /* 1px sub header (care e deasupra), ca să nu rămână o linie între ele când zona camerei are înălțime fracționară */
+  top: calc(var(--header-height) - 1px);
   z-index: 950;
   background: var(--day-bar-glass);
   backdrop-filter: blur(22px) saturate(180%);
@@ -1541,11 +1542,16 @@ select.slot-select-type {
 }
 
 .btn-archive {
-  background: rgba(254, 242, 242, 0.85);
+  background: var(--input-glass-bg);
   color: #b91c1c;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   padding: 6px 10px;
   font-size: 0.8rem;
+}
+
+[data-theme="dark"] .btn-archive {
+  color: #f87171;
 }
 
 .input-error {
