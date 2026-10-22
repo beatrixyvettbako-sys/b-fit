@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal56">
+  <link rel="stylesheet" href="style.css?v=fitFinal57">
 </head>
 <body>
 
@@ -933,7 +933,14 @@
           </div>
         </div>
 
-        <select id="selectPlanExistent" class="form-control select-faded" onchange="actualizeazaStilSelect(this); selecteazaPlanDinLista(this.value)" style="margin-bottom:8px; font-weight:700;">
+        <!-- Listă proprie de planuri (desenată de aplicație); select-ul ascuns rămâne sursa datelor și a evenimentului change -->
+        <div class="plan-picker" id="planPicker">
+          <button type="button" class="form-control plan-picker-trigger select-faded" id="planPickerTrigger" onclick="comutaListaPlanuri()" aria-haspopup="listbox" aria-expanded="false">
+            <span id="planPickerLabel">Alege un plan salvat</span>
+          </button>
+          <div class="plan-picker-panel" id="planPickerPanel" role="listbox"></div>
+        </div>
+        <select id="selectPlanExistent" class="form-control select-faded" onchange="actualizeazaStilSelect(this); selecteazaPlanDinLista(this.value)" style="display:none;">
           <option value="">Alege un plan salvat</option>
         </select>
 
@@ -950,8 +957,8 @@
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
             <span id="btnSharePlanText">Share</span>
           </button>
-          <button type="button" class="btn btn-glass-subtle btn-glass-danger" style="padding:6px 10px;" onclick="stergePlanCurent()" title="Șterge planul">
-            <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          <button type="button" class="btn btn-glass-subtle btn-glass-danger" style="padding:0 10px; height:31px; line-height:1;" onclick="stergePlanCurent()" title="Șterge planul">
+            🗑
           </button>
         </div>
       </div>
@@ -1030,6 +1037,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal56"></script>
+  <script src="app.js?v=fitFinal57"></script>
 </body>
 </html>

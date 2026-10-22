@@ -1643,6 +1643,10 @@ let momentHighlightOra = 0;
 const DURATA_HIGHLIGHT_ORA = 1800;
 
 function autoScrollLaOraCurenta(faraHighlight = false) {
+  // Saltul la ora curentă se calculează pentru bara de jos la mărime normală
+  const navJos = document.getElementById('bottomNav');
+  if (navJos) navJos.classList.remove('nav-compact');
+
   let now = new Date();
   let day = now.getDay();
   let currentHour = now.getHours();
@@ -3936,7 +3940,182 @@ function populeazaSelectorPlanuri() {
 
   sel.value = idCurent;
   actualizeazaStilSelect(sel);
+  sincronizeazaListaPlanuri();
 }
+
+// Lista proprie de planuri: se construiește din select-ul ascuns (grupuri + opțiuni) și îl actualizează la alegere
+function sincronizeazaListaPlanuri() {
+  const sel = document.getElementById('selectPlanExistent');
+  const trigger = document.getElementById('planPickerTrigger');
+  const label = document.getElementById('planPickerLabel');
+  const panel = document.getElementById('planPickerPanel');
+  if (!sel || !trigger || !label || !panel) return;
+
+  const optAles = sel.value ? sel.options[sel.selectedIndex] : null;
+  if (optAles) {
+    const grup = optAles.parentElement.tagName === 'OPTGROUP' ? optAles.parentElement.label : '';
+    label.textContent = grup ? `${grup} · ${optAles.text}` : optAles.text;
+  } else {
+    label.textContent = sel.options[0] ? sel.options[0].text : '';
+  }
+  trigger.classList.toggle('select-faded', !sel.value);
+  trigger.classList.toggle('select-active', !!sel.value);
+
+  construiesteOptiuniListaProprie(panel, sel, true, () => {
+    comutaListaPlanuri(false);
+    sincronizeazaListaPlanuri();
+  });
+
+  if (!panel.children.length) {
+    const gol = document.createElement('div');
+    gol.className = 'plan-picker-empty';
+    gol.textContent = currentLang === 'en' ? 'No saved plans yet' : 'Niciun plan salvat încă';
+    panel.appendChild(gol);
+  }
+}
+
+// Construiește rândurile listei proprii din opțiunile unui <select> (cu grupuri); la alegere setează valoarea
+// și declanșează change, ca logica existentă a select-ului să ruleze neschimbată
+function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere) {
+  panel.innerHTML = '';
+  const adaugaElement = (opt) => {
+    if (opt.disabled || opt.hidden || (faraOptiuneGoala && !opt.value)) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'plan-picker-item' + (opt.value === sel.value ? ' is-selected' : '');
+    btn.setAttribute('role', 'option');
+    btn.textContent = opt.text;
+    btn.onclick = () => {
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      if (laAlegere) laAlegere();
+    };
+    panel.appendChild(btn);
+  };
+
+  [...sel.children].forEach(copil => {
+    if (copil.tagName === 'OPTGROUP') {
+      const titlu = document.createElement('div');
+      titlu.className = 'plan-picker-group';
+      titlu.textContent = copil.label;
+      panel.appendChild(titlu);
+      [...copil.children].forEach(adaugaElement);
+    } else {
+      adaugaElement(copil);
+    }
+  });
+}
+
+// Listele de alegere din formulare (select.form-control) se deschid în lista proprie a aplicației, nu în cea a telefonului.
+// Select-ul rămâne la locul lui (aceeași mărime, același text afișat); doar lista deschisă e înlocuită.
+(function () {
+  let panel = null;
+  let selDeschis = null;
+
+  const esteLista = (el) => el && el.tagName === 'SELECT' && el.classList.contains('form-control') && el.id !== 'selectPlanExistent' && !el.disabled;
+
+  const inchide = () => {
+    if (panel) panel.classList.remove('is-open');
+    selDeschis = null;
+  };
+
+  const deschide = (sel) => {
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.className = 'plan-picker-panel lista-proprie-panel';
+      panel.setAttribute('role', 'listbox');
+      document.body.appendChild(panel);
+    }
+    selDeschis = sel;
+    // Opțiunea goală e placeholder doar la listele estompate (ex. „Metoda Plata”); la filtre „Toate lunile” rămâne
+    construiesteOptiuniListaProprie(panel, sel, sel.classList.contains('select-faded') || sel.classList.contains('select-active'), inchide);
+
+    const r = sel.getBoundingClientRect();
+    panel.style.left = Math.max(8, r.left) + 'px';
+    panel.style.width = Math.max(r.width, 160) + 'px';
+    panel.classList.add('is-open');
+    const spatiuJos = window.innerHeight - r.bottom - 80;
+    if (spatiuJos < Math.min(panel.scrollHeight, 220) && r.top > spatiuJos) {
+      panel.style.top = '';
+      panel.style.bottom = (window.innerHeight - r.top + 4) + 'px';
+    } else {
+      panel.style.bottom = '';
+      panel.style.top = (r.bottom + 4) + 'px';
+    }
+    const latimeMax = window.innerWidth - 16;
+    if (panel.getBoundingClientRect().right > latimeMax) panel.style.left = Math.max(8, latimeMax - panel.offsetWidth) + 'px';
+
+    const ales = panel.querySelector('.is-selected');
+    panel.scrollTop = ales ? Math.max(0, ales.offsetTop - panel.clientHeight / 2) : 0;
+  };
+
+  // Oprește lista nativă și deschide-o pe a noastră.
+  // Pe telefon reacționează la atingere scurtă (touchend), ca derularea care începe pe o listă să meargă normal.
+  const comuta = (sel) => { if (selDeschis === sel) inchide(); else deschide(sel); };
+  let atingere = null;
+  document.addEventListener('touchstart', (e) => {
+    const sel = e.target.closest ? e.target.closest('select') : null;
+    atingere = esteLista(sel) && e.touches.length === 1 ? { sel, x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  }, { capture: true, passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (!atingere) return;
+    const t = e.changedTouches[0];
+    const scurta = Math.abs(t.clientX - atingere.x) < 10 && Math.abs(t.clientY - atingere.y) < 10;
+    const sel = atingere.sel;
+    atingere = null;
+    if (!scurta) return;
+    e.preventDefault();
+    comuta(sel);
+  }, { capture: true, passive: false });
+  document.addEventListener('mousedown', (e) => {
+    const sel = e.target.closest ? e.target.closest('select') : null;
+    if (!esteLista(sel)) return;
+    e.preventDefault();
+    comuta(sel);
+  }, true);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { inchide(); return; }
+    if (esteLista(e.target) && [' ', 'Enter', 'ArrowDown', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      deschide(e.target);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!selDeschis) return;
+    if (panel && panel.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('select') === selDeschis) return;
+    inchide();
+  }, true);
+
+  window.addEventListener('scroll', () => { if (selDeschis) inchide(); }, { passive: true });
+  window.addEventListener('resize', () => { if (selDeschis) inchide(); });
+})();
+
+function comutaListaPlanuri(deschide) {
+  const picker = document.getElementById('planPicker');
+  const trigger = document.getElementById('planPickerTrigger');
+  if (!picker) return;
+  const deschis = (typeof deschide === 'boolean') ? deschide : !picker.classList.contains('is-open');
+  picker.classList.toggle('is-open', deschis);
+  if (trigger) trigger.setAttribute('aria-expanded', deschis ? 'true' : 'false');
+  if (deschis) {
+    // Derulează doar lista (nu și pagina) până la planul ales
+    const panel = document.getElementById('planPickerPanel');
+    const ales = picker.querySelector('.plan-picker-item.is-selected');
+    if (panel) panel.scrollTop = ales ? Math.max(0, ales.offsetTop - panel.clientHeight / 2) : 0;
+  }
+}
+
+// Închide lista de planuri la atingere în afara ei sau la Escape
+document.addEventListener('click', (e) => {
+  const picker = document.getElementById('planPicker');
+  if (picker && picker.classList.contains('is-open') && !picker.contains(e.target)) comutaListaPlanuri(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') comutaListaPlanuri(false);
+});
 
 function selecteazaPlanDinLista(idPlan) {
   if (!idPlan) {
@@ -3958,6 +4137,7 @@ function creeazaPlanNouCuSablon() {
   if (sel) {
     sel.value = '';
     actualizeazaStilSelect(sel);
+    sincronizeazaListaPlanuri();
   }
   randeazaPlanAntrenamentUI();
   showToast(currentLang === 'en' ? '✓ New template loaded!' : '✓ Șablon nou încărcat!');
@@ -3972,8 +4152,8 @@ function comutaModPrevizualizarePlan() {
   randeazaPlanAntrenamentUI();
 }
 
-// Iconița minimalistă de coș pentru butoanele de ștergere din plan (zi, secțiuni, exerciții)
-const SVG_COS_PLAN = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+// Iconița de coș pentru butoanele de ștergere din plan (zi, secțiuni, exerciții), aceeași ca pe Programări
+const SVG_COS_PLAN = '🗑';
 
 function randeazaPlanAntrenamentUI() {
   const container = document.getElementById('planDocumentContainer');
