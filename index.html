@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal53">
+  <link rel="stylesheet" href="style.css?v=fitFinal54">
 </head>
 <body>
 
@@ -920,14 +920,14 @@
       <!-- BARĂ ACȚIUNI ANTRENOR (BUTON SIMPLIFICAT 'IMPORT' PENTRU CSV / JSON) -->
       <div class="card plan-toolbar-card no-print" id="planCoachToolbar">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:8px;">
-          <label style="font-size:0.76rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin:0;" id="planSelectLabel">ALEGE SAU CREEAZĂ PLAN</label>
+          <label style="font-size:0.76rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin:0;" id="planSelectLabel">ALEGE PLAN</label>
           <div style="display:flex; gap:5px;">
             <label for="inputImportPlanFile" class="btn btn-glass-subtle" style="padding:4px 9px; font-size:0.74rem; cursor:pointer; margin:0;" title="Importă fișier plan (CSV sau JSON)">
               <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
               <span id="btnImportPlanText">Import</span>
             </label>
             <input type="file" id="inputImportPlanFile" accept=".csv,text/csv,.json,application/json" style="display:none;" onchange="importaPlanDinFisier(this)">
-            <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
+            <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
               + <span id="btnNewPlanText">Plan Nou</span>
             </button>
           </div>
@@ -1030,6 +1030,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal53"></script>
+  <script src="app.js?v=fitFinal54"></script>
 </body>
 </html>

@@ -1775,6 +1775,35 @@ select.slot-select-type {
   transform: scale(0.9);
 }
 
+/* Coșurile din planul de antrenament: glass, roșu, cu umbră de plutire ca butoanele .btn */
+.btn-trash-action.btn-trash-plan {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  flex-shrink: 0;
+  color: #b91c1c;
+  background: var(--input-glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 16px -3px rgba(67, 53, 93, 0.32),
+              0 2px 4px rgba(67, 53, 93, 0.1),
+              inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .btn-trash-action.btn-trash-plan {
+  color: #f87171;
+  box-shadow: 0 6px 16px -3px rgba(0, 0, 0, 0.6),
+              0 2px 4px rgba(0, 0, 0, 0.3),
+              inset 0 1px 1px rgba(255, 255, 255, 0.14);
+}
+
+.btn-trash-plan .plan-btn-svg {
+  width: 13px;
+  height: 13px;
+}
+
 .incasari-table-fit {
   width: 100%;
   border-collapse: collapse;
@@ -2134,6 +2163,11 @@ select.slot-select-type {
 #selectPlanExistent option {
   color: var(--text);
   font-weight: 700;
+}
+
+#selectPlanExistent optgroup {
+  color: var(--primary);
+  font-weight: 800;
 }
 
 #selectPlanExistent option[value=""] {

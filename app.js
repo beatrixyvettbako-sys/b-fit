@@ -140,7 +140,7 @@ const i18n = {
     // Plan de Antrenament
     workoutPlanTitle: "Plan de Antrenament",
     drawerWorkoutDesc: "Programe, export PDF & share cliente",
-    planSelectLabel: "ALEGE SAU CREEAZĂ PLAN",
+    planSelectLabel: "ALEGE PLAN",
     btnImportPlan: "Import",
     btnNewPlan: "Plan Nou",
     btnSavePlan: "Salvează",
@@ -289,7 +289,7 @@ const i18n = {
     // Workout Plan
     workoutPlanTitle: "Workout Plan",
     drawerWorkoutDesc: "Programs, PDF export & client share",
-    planSelectLabel: "CHOOSE OR CREATE PLAN",
+    planSelectLabel: "CHOOSE PLAN",
     btnImportPlan: "Import",
     btnNewPlan: "New Plan",
     btnSavePlan: "Save",
@@ -3845,14 +3845,42 @@ function populeazaSelectorPlanuri() {
 
   // Ordine alfabetică naturală (Săptămâna 2 înainte de Săptămâna 10), grupat pe clientă
   const eticheta = p => `${p.clienta ? `[${p.clienta}] ` : ''}${p.titlu}`;
-  [...(DB.planuri || [])]
-    .sort((a, b) => eticheta(a).localeCompare(eticheta(b), 'ro', { numeric: true, sensitivity: 'base' }))
-    .forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.innerText = eticheta(p);
-      sel.appendChild(opt);
-    });
+  const sortate = [...(DB.planuri || [])]
+    .sort((a, b) => eticheta(a).localeCompare(eticheta(b), 'ro', { numeric: true, sensitivity: 'base' }));
+
+  // Titlurile „Săptămâna N - Ziua M: ...” se grupează pe săptămâni, ca rândurile din listă să fie scurte
+  const grupuri = new Map();
+  const altele = [];
+  sortate.forEach(p => {
+    const m = (p.titlu || '').match(/^(S[ăa]pt[ăa]m[âa]na\s+\d+)\s*[-–—:]\s*(.+)$/i);
+    if (!m) { altele.push(p); return; }
+    const cheie = `${p.clienta ? `[${p.clienta}] ` : ''}${m[1]}`;
+    if (!grupuri.has(cheie)) grupuri.set(cheie, []);
+    grupuri.get(cheie).push({ id: p.id, text: m[2] });
+  });
+
+  const adaugaOptiune = (parinte, id, text) => {
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.innerText = text;
+    parinte.appendChild(opt);
+  };
+
+  grupuri.forEach((lista, cheie) => {
+    const grup = document.createElement('optgroup');
+    grup.label = cheie;
+    lista.forEach(p => adaugaOptiune(grup, p.id, p.text));
+    sel.appendChild(grup);
+  });
+
+  if (altele.length > 0) {
+    const parinte = grupuri.size > 0 ? document.createElement('optgroup') : sel;
+    if (parinte !== sel) {
+      parinte.label = currentLang === 'en' ? 'Other plans' : 'Alte planuri';
+      sel.appendChild(parinte);
+    }
+    altele.forEach(p => adaugaOptiune(parinte, p.id, eticheta(p)));
+  }
 
   sel.value = idCurent;
   actualizeazaStilSelect(sel);
@@ -3891,6 +3919,9 @@ function comutaModPrevizualizarePlan() {
   }
   randeazaPlanAntrenamentUI();
 }
+
+// Iconița minimalistă de coș pentru butoanele de ștergere din plan (zi, secțiuni, exerciții)
+const SVG_COS_PLAN = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
 
 function randeazaPlanAntrenamentUI() {
   const container = document.getElementById('planDocumentContainer');
@@ -3940,7 +3971,7 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-info-box">
           <div class="plan-info-box-header">
             <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].titlu = this.value">
-            <button type="button" class="btn-trash-action no-print" onclick="stergeSectiuneTextPlan('sectiuni_inceput', ${sIdx})" title="Șterge secțiunea">🗑</button>
+            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_inceput', ${sIdx})" title="Șterge secțiunea">${SVG_COS_PLAN}</button>
           </div>
           <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
@@ -3967,7 +3998,7 @@ function randeazaPlanAntrenamentUI() {
           ${doarCitireStructura
             ? `<div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div>`
             : `<input type="text" class="plan-session-title-input" value="${escAttr(ses.titlu)}" placeholder="Titlu Sesiune / Zi" oninput="planActiv.continut_json.sesiuni[${sesIdx}].titlu = this.value">
-               <button type="button" class="btn-trash-action no-print" onclick="stergeSesiunePlan(${sesIdx})" title="Șterge toată ziua/sesiunea">🗑</button>`
+               <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSesiunePlan(${sesIdx})" title="Șterge toată ziua/sesiunea">${SVG_COS_PLAN}</button>`
           }
         </div>
 
@@ -4068,7 +4099,7 @@ function randeazaPlanAntrenamentUI() {
               </select>
             </td>
             <td class="no-print" style="text-align:center; vertical-align:middle;">
-              <button type="button" class="btn-trash-action" onclick="stergeExercitiuPlan(${sesIdx}, ${exIdx})" title="Șterge exercițiul">✕</button>
+              <button type="button" class="btn-trash-action btn-trash-plan" onclick="stergeExercitiuPlan(${sesIdx}, ${exIdx})" title="Șterge exercițiul">${SVG_COS_PLAN}</button>
             </td>
           </tr>
         `;
@@ -4112,7 +4143,7 @@ function randeazaPlanAntrenamentUI() {
         <div class="plan-info-box">
           <div class="plan-info-box-header">
             <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].titlu = this.value">
-            <button type="button" class="btn-trash-action no-print" onclick="stergeSectiuneTextPlan('sectiuni_final', ${sIdx})" title="Șterge secțiunea">🗑</button>
+            <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_final', ${sIdx})" title="Șterge secțiunea">${SVG_COS_PLAN}</button>
           </div>
           <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
