@@ -798,6 +798,16 @@ function gasesteClientaValida(numeIntrodus) {
   }, { passive: true });
 })();
 
+// Service worker: pagina se ia mereu de pe internet (versiunea nouă apare la deschidere), fișierele merg și offline
+// Local (127.0.0.1 / localhost) fără service worker, ca modificările să se vadă imediat la testare
+if ('serviceWorker' in navigator) {
+  if (['127.0.0.1', 'localhost'].includes(location.hostname)) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
+  } else {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+}
+
 // Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea de fundal a temei curente
 (function () {
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -1608,8 +1618,8 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
 
   let vh = window.innerHeight;
   let topOffset = getTopOffsetSubZile();
-  let navEl = document.getElementById('bottomNav');
-  let hNav = navEl ? navEl.getBoundingClientRect().height : 60;
+  // Înălțimea normală a barei de jos (56px), nu cea de moment: bara se poate afla compactă sau în animație
+  let hNav = 56;
   // Bara de jos plutește la 10px de margine; +12px spațiu ca istoricul să rămână deasupra ei
   let spatiuVizibilUtil = vh - topOffset - hNav - 10 - 12;
 
@@ -2113,7 +2123,13 @@ window.onload = async function() {
   }
 };
 
+// Saltul la ora curentă doar când se schimbă lățimea (rotire, ecran pliabil).
+// Pe Android înălțimea se schimbă și în timpul scroll-ului rapid; aceea nu trebuie să mute pagina.
+let ultimaLatimeFereastra = window.innerWidth;
 window.addEventListener('resize', () => {
+  if (window.innerWidth === ultimaLatimeFereastra) return;
+  ultimaLatimeFereastra = window.innerWidth;
+
   let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
     return;

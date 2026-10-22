@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v55';
+const CACHE_NAME = 'bfit-cache-v56';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,7 +12,8 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // cache: 'reload' ocolește cache-ul HTTP (GitHub Pages: max-age=600), ca să nu salvăm o versiune veche
+      return cache.addAll(ASSETS_TO_CACHE.map((url) => new Request(url, { cache: 'reload' })));
     })
   );
 });
@@ -40,10 +41,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Strategie Stale-While-Revalidate pentru resursele statice (GitHub Pages)
+  // Pagina (index.html): întâi rețeaua, ca o versiune nouă publicată să apară de la prima deschidere;
+  // copia din cache rămâne doar pentru offline
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request, { cache: 'no-cache' })
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request).then((r) => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Strategie Stale-While-Revalidate pentru resursele statice (GitHub Pages);
+  // no-cache = verifică mereu cu serverul în loc să folosească o copie HTTP de până la 10 minute
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request)
+      const fetchPromise = fetch(event.request, { cache: 'no-cache' })
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200 && (networkResponse.type === 'basic' || networkResponse.type === 'cors')) {
             const responseToCache = networkResponse.clone();

@@ -35,10 +35,12 @@ Verifică și că `ASSETS_TO_CACHE` din `sw.js` conține `./`, `./index.html`, `
 
 ## 4. După publicare
 
-Spune că GitHub Pages se actualizează în 1-2 minute și că pe telefon (PWA instalată) versiunea nouă apare după o redeschidere a aplicației: service worker-ul folosește stale-while-revalidate, deci prima deschidere poate arăta încă versiunea veche.
+Spune că GitHub Pages se actualizează în 1-2 minute și că pe telefon (PWA instalată) versiunea nouă apare când aplicația e închisă complet și redeschisă (pagina se ia de pe rețea la fiecare deschidere).
 
 ## Reguli service worker (de păstrat la orice modificare în `sw.js`)
 
+- Service worker-ul e înregistrat din `app.js` (`navigator.serviceWorker.register('sw.js')`); fără asta `sw.js` nu rulează deloc.
 - Cererile către `supabase.co` merg exclusiv prin rețea, ocolind cache-ul.
-- Resursele statice: stale-while-revalidate.
+- Pagina (navigare): întâi rețeaua, cache doar offline, ca versiunea nouă să apară la prima deschidere.
+- Resursele statice: stale-while-revalidate, cu `cache: 'no-cache'` (GitHub Pages trimite `max-age=600`).
 - La `activate`, cache-urile cu alt nume decât `CACHE_NAME` se șterg.
