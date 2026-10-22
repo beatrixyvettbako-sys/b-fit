@@ -31,7 +31,7 @@
   --accent-purple-light: #c4b5fd;
   /* Include zona camerei din fullscreen (env = 0 în browser și în modul normal) */
   --header-height: calc(50px + env(safe-area-inset-top, 0px));
-  --status-bar-color: #ebe5f6;
+  --status-bar-color: #5c4d7d;
 }
 
 [data-theme="dark"] {
@@ -57,7 +57,7 @@
   --border: rgba(255, 255, 255, 0.11);
   --placeholder-fade: #64748b;
   --accent-purple-light: #d8b4fe;
-  --status-bar-color: #161220;
+  --status-bar-color: #5c4d7d;
 }
 
 * {
@@ -146,7 +146,7 @@ header {
   top: 0;
   z-index: 1000;
   border-bottom: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  box-shadow: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -154,7 +154,7 @@ header {
 
 [data-theme="dark"] header {
   color: #e2d9f3;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .header-title-wrapper {

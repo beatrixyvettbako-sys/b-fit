@@ -4,7 +4,7 @@
   "description": "Orar & Gestiune Antrenamente",
   "start_url": "index.html",
   "scope": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "background_color": "#5c4d7d",
   "theme_color": "#5c4d7d",
