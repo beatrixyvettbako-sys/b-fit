@@ -1168,6 +1168,7 @@ async function executaActiuneSupabase(actionName, payload) {
       clienta: (o.clienta || "").trim(),
       antrenament: (o.antrenament || "").trim(),
       blocat: !!o.blocat,
+      motiv: (o.motiv || "").trim(),
       bifat: !!o.bifat,
       slotIndex: Number(o.slotIndex) || 0
     }));
@@ -1347,17 +1348,34 @@ async function executaActiuneSupabase(actionName, payload) {
 
     if (gasite && gasite.length > 0) {
       const ids = gasite.map(g => g.row);
-      await sb.from('orar').update({ blocat: !!payload.blocat }).in('row', ids);
+      const upd = { blocat: !!payload.blocat };
+      if (payload.motiv !== undefined) upd.motiv = payload.motiv;
+      const { error: errUpd } = await sb.from('orar').update(upd).in('row', ids);
+      if (errUpd) throw errUpd;
     } else {
       const noi = [0, 1, 2].map(idx => {
         const item = {
-          ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: !!payload.blocat, bifat: false, slotIndex: idx, client_id: ""
+          ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: !!payload.blocat, motiv: payload.motiv || "", bifat: false, slotIndex: idx, client_id: ""
         };
         if (uid) item.user_id = uid;
         return item;
       });
-      await sb.from('orar').insert(noi);
+      const { error: errIns } = await sb.from('orar').insert(noi);
+      if (errIns) throw errIns;
     }
+    return { success: true };
+  }
+
+  if (actionName === "salveazaMotivOra") {
+    const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    let q = sb.from('orar')
+      .update({ motiv: payload.motiv || "" })
+      .in('ziRaw', payload.zi === "Marti" ? [tagZi, payload.saptamanaCheie + "_Marți"] : [tagZi])
+      .eq('ora', oraNorm);
+    if (uid) q = q.eq('user_id', uid);
+    const { error } = await q;
+    if (error) throw error;
     return { success: true };
   }
 
@@ -1573,19 +1591,21 @@ async function executaActiuneSupabase(actionName, payload) {
   return { success: false };
 }
 
-function callBackend(actionName, payload, callback) {
+function callBackend(actionName, payload, callback, peEroare) {
   if (USE_SUPABASE && supabaseClient) {
     executaActiuneSupabase(actionName, payload)
       .then(res => { if (callback) callback(res); })
       .catch(err => {
         console.error("Eroare Supabase:", err);
         showToast(tr("Eroare sincronizare", "Sync error"), "error");
+        if (peEroare) peEroare(err);
       });
     return;
   }
 
   // Biblioteca Supabase nu s-a încărcat (ex. fără internet la pornire)
   showToast(tr("Eroare sincronizare", "Sync error"), "error");
+  if (peEroare) peEroare();
 }
 
 function showToast(mesaj, tip = 'success') {
@@ -1596,17 +1616,23 @@ function showToast(mesaj, tip = 'success') {
   setTimeout(() => { tEl.className = ''; }, 2600);
 }
 
-function customConfirm(titlu, text, onConfirm) {
+// `camp` (opțional): { placeholder, valoare }. Afișează un câmp de text, iar onConfirm primește ce s-a scris.
+function customConfirm(titlu, text, onConfirm, camp) {
   document.getElementById('modalTitle').innerText = titlu;
   document.getElementById('modalText').innerText = text;
   document.getElementById('modalBtnConfirm').innerText = t('confirmBtn');
+  const inp = document.getElementById('modalInput');
+  inp.style.display = camp ? 'block' : 'none';
+  inp.value = camp ? (camp.valoare || '') : '';
+  inp.placeholder = camp ? (camp.placeholder || '') : '';
   document.getElementById('customModalBackdrop').style.display = 'flex';
   modalCallback = onConfirm;
 }
 
 function closeCustomModal(confirmed) {
   document.getElementById('customModalBackdrop').style.display = 'none';
-  if (confirmed && modalCallback) modalCallback();
+  const inp = document.getElementById('modalInput');
+  if (confirmed && modalCallback) modalCallback(inp.value.trim());
   modalCallback = null;
 }
 
@@ -1814,8 +1840,10 @@ function peComutareIstoricFisa(detailsEl) {
 function gestioneazaClickStangaHeader(event) {
   if (tipTabCurent === 'plan') {
     // Înapoi (‹) duce la meniul din care a fost deschis planul; X din dreapta închide direct
-    revenireDinPlanAntrenament();
-    if (!esteModClientaShare) deschideMeniuLateral();
+    iesireDinPlanCuConfirmare(() => {
+      revenireDinPlanAntrenament();
+      if (!esteModClientaShare) deschideMeniuLateral();
+    });
   } else if (tipTabCurent === 'orar') {
     comutaExpandareBaraCalendar(event);
   }
@@ -1823,10 +1851,18 @@ function gestioneazaClickStangaHeader(event) {
 
 function gestioneazaClickDreaptaHeader() {
   if (tipTabCurent === 'plan') {
-    revenireDinPlanAntrenament();
+    iesireDinPlanCuConfirmare(revenireDinPlanAntrenament);
   } else {
     deschideMeniuLateral();
   }
+}
+
+// Ieșirea din plan cu modificări nesalvate cere confirmare; la „renunț” planul revine la varianta salvată
+function iesireDinPlanCuConfirmare(iesire) {
+  dupaConfirmareModificariPlan(() => {
+    if (estePlanModificat()) renuntaLaModificariPlan();
+    iesire();
+  });
 }
 
 function revenireDinPlanAntrenament() {
@@ -2775,9 +2811,11 @@ function randeazaOrarInstant() {
     let total = sloturiOra.length;
 
     let badgeHtml = '';
+    let clientsBadgeHtml = '';
     let occupiedText = currentLang === 'en' ? 'occupied' : 'ocupate';
     if (esteBlocat) {
       badgeHtml = `<div class="hour-badge hour-badge-blocked">${currentLang === 'en' ? 'Hour Blocked!' : 'Ora Blocată!'}</div>`;
+      if (ocupate > 0) clientsBadgeHtml = `<div class="hour-badge hour-badge-busy">${ocupate} ${currentLang === 'en' ? (ocupate === 1 ? 'client' : 'clients') : (ocupate === 1 ? 'clientă' : 'cliente')}</div>`;
     } else {
       badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / ${total} ${occupiedText}</div>`;
     }
@@ -2793,10 +2831,20 @@ function randeazaOrarInstant() {
             </button>
             <span>${ora}</span>
           </div>
+          ${clientsBadgeHtml}
           ${badgeHtml}
         </div>
-        <div class="hour-slots-wrapper" ${esteBlocat ? 'style="pointer-events: none; opacity: 0.65; user-select: none;"' : ''}>
+        <div class="hour-slots-wrapper" ${esteBlocat ? 'style="pointer-events: none; user-select: none;"' : ''}>
     `;
+
+    if (esteBlocat) {
+      let motivCurent = (sloturiOra.find(s => s && s.motiv) || {}).motiv || '';
+      html += `
+        <div class="hour-motiv-overlay">
+          <textarea class="hour-motiv-input" id="motiv_${ora.replace(':', '')}" rows="2" maxlength="300" placeholder="${tr('Motiv / notiță (ex: programare)', 'Reason / note (e.g. appointment)')}" oninput="peSchimbareMotivOra('${ziCurentaCheie}', '${ora}')">${escAttr(motivCurent)}</textarea>
+        </div>
+      `;
+    }
 
     sloturiOra.forEach((slot, idx) => {
       let slotIdx = (typeof slot.slotIndex === 'number') ? slot.slotIndex : idx;
@@ -2851,32 +2899,65 @@ function randeazaOrarInstant() {
   container.innerHTML = html;
 }
 
+// O blocare/deblocare în curs: o a doua atingere pe 🕒 ar putea crea rânduri duplicate în baza de date
+let blocareOraInCurs = false;
+
 function comutaBlocareOraInstant(zi, ora, blocatNou) {
+  if (blocareOraInCurs) {
+    showToast(tr("Se salvează, încearcă din nou în câteva secunde", "Saving, try again in a few seconds"), "error");
+    return;
+  }
   let saptamanaCheie = getSaptamanaCheie();
   let tagZiCautat = saptamanaCheie + "_" + zi;
   let oraNorm = normalizeazaOraUi(ora);
   let textConfirm = blocatNou ? 
     (currentLang === 'en' ? `Block time slot ${oraNorm}?` : `Blochezi intervalul orar ${oraNorm}?`) : 
     (currentLang === 'en' ? `Unblock time slot ${oraNorm}?` : `Deblochezi intervalul orar ${oraNorm}?`);
+  const sloturiOra = (DB.orarSloturi || []).filter(s => (s.ziRaw === tagZiCautat || s.ziRaw === (saptamanaCheie + "_Marți")) && normalizeazaOraUi(s.ora) === oraNorm);
+  // Motivul se cere doar la blocare, cu câmpul gol; la deblocare se șterge
+  const camp = blocatNou ? { placeholder: tr('Motiv / notiță (opțional)', 'Reason / note (optional)') } : undefined;
 
-  customConfirm(currentLang === 'en' ? "Time Slot Locking" : "Blocare oră", textConfirm, function() {
-    (DB.orarSloturi || []).forEach(s => {
-      let rawOra = normalizeazaOraUi(s.ora);
-      if ((s.ziRaw === tagZiCautat || s.ziRaw === (saptamanaCheie + "_Marți")) && rawOra === oraNorm) {
-        s.blocat = blocatNou;
-      }
+  customConfirm(currentLang === 'en' ? "Time Slot Locking" : "Blocare oră", textConfirm, function(motivNou) {
+    sloturiOra.forEach(s => {
+      s.blocat = blocatNou;
+      s.motiv = blocatNou ? motivNou : '';
     });
     randeazaOrarInstant();
     try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
 
-    callBackend("comutaBlocareOra", { saptamanaCheie: saptamanaCheie, zi: zi, ora: oraNorm, blocat: blocatNou }, function() {
+    const payload = { saptamanaCheie: saptamanaCheie, zi: zi, ora: oraNorm, blocat: blocatNou };
+    payload.motiv = blocatNou ? motivNou : '';
+    blocareOraInCurs = true;
+    callBackend("comutaBlocareOra", payload, function() {
+      blocareOraInCurs = false;
       showToast(blocatNou ? 
         (currentLang === 'en' ? `✓ Time slot ${oraNorm} has been blocked!` : `✓ Intervalul ${oraNorm} a fost blocat!`) : 
         (currentLang === 'en' ? `✓ Time slot ${oraNorm} has been unblocked!` : `✓ Intervalul ${oraNorm} a fost deblocat!`)
       );
       incarcaBazaDateSilencios();
-    });
+    }, function() { blocareOraInCurs = false; });
+  }, camp);
+}
+
+// Notița orei blocate se salvează singură, la o scurtă pauză după ultima tastă
+let debounceTimerMotiv = null;
+function peSchimbareMotivOra(zi, ora) {
+  let oraNorm = normalizeazaOraUi(ora);
+  let el = document.getElementById('motiv_' + oraNorm.replace(':', ''));
+  if (!el) return;
+  let saptamanaCheie = getSaptamanaCheie();
+  let tagZiCautat = saptamanaCheie + "_" + zi;
+  let motiv = el.value.trim();
+
+  (DB.orarSloturi || []).forEach(s => {
+    if ((s.ziRaw === tagZiCautat || s.ziRaw === (saptamanaCheie + "_Marți")) && normalizeazaOraUi(s.ora) === oraNorm) s.motiv = motiv;
   });
+
+  clearTimeout(debounceTimerMotiv);
+  debounceTimerMotiv = setTimeout(() => {
+    try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+    callBackend("salveazaMotivOra", { saptamanaCheie: saptamanaCheie, zi: zi, ora: oraNorm, motiv: motiv });
+  }, 700);
 }
 
 let debounceTimerNume = null;
@@ -3857,40 +3938,25 @@ function escAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
+// Plan nou: gol, cu o singură zi neîncepută (titlul se completează la salvare)
 function construiesteSablonPlanDefault() {
   return {
     id: null,
     clienta: "",
-    titlu: "Program de forță & tonifiere",
-    subtitlu: "B-Fit Studio • structură completă pe zile & jurnal progres",
+    titlu: "",
+    subtitlu: "",
     continut_json: {
-      sectiuni_inceput: [
-        {
-          titlu: "1. Principii de bază (citește înainte de prima sesiune)",
-          continut: "• Frecvență: Alege zile nealăturate (de exemplu luni, miercuri, vineri), cu cel puțin o zi de pauză între sesiuni.\n• Intensitate: Efort moderat. La finalul fiecărei serii trebuie să mai poți face 2–3 repetări curate (scara de efort 6–7 din 10).\n• Tehnică: Tehnica contează mai mult decât greutatea. Dacă execuția se strică, oprește seria sau scade greutatea.\n• Pregătire: Ține apă la îndemână, încălțăminte sport stabilă, mănâncă ceva ușor cu 1–2 ore înainte de sesiune."
-        },
-        {
-          titlu: "2. Structura unei sesiuni (aprox. 45–55 minute)",
-          continut: "Încălzire (8–10 minute) – la fiecare sesiune:\n• 2–3 minute mers rapid sau bicicletă ușoară\n• Rotiri de umeri, brațe, trunchi, șolduri, glezne (10 repetări pe fiecare)\n• 10 genuflexiuni fără greutate, 8 fandări înapoi pe picior, 10 ridicări pe vârfuri\n\nRevenire (5 minute):\n• Mers lent 2 minute, apoi întinderi ușoare 20–30 sec pentru coapse, fesieri, spate, piept și umeri."
-        }
-      ],
+      sectiuni_inceput: [],
       sesiuni: [
         {
-          titlu: "ZIUA 1: Sesiune de introducere",
+          titlu: tr("ZIUA 1: Sesiune nouă de antrenament", "DAY 1: New workout session"),
           exercitii: [
-            { nr: 1, exercitiu: "Genuflexiuni cu greutate proprie", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Coborâre controlată, spatele drept.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 2, exercitiu: "Tracțiuni la helcometru cu priză largă", seturi_repetari: "3 x 15", pauza: "60-90 sec", indicatii: "Trage spre piept, coatele în jos.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" },
-            { nr: 3, exercitiu: "Plank (Scândură)", seturi_repetari: "3 x 45 sec", pauza: "60 sec", indicatii: "Abdomen încordat, corp aliniat.", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" }
+            { nr: 1, exercitiu: "", seturi_repetari: "", pauza: "", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "" }
           ]
         }
       ],
-      sectiuni_final: [
-        {
-          titlu: "Reguli de siguranță & recuperare",
-          continut: "• Oprește imediat seria dacă apare durere ascuțită în articulații (genunchi, șold, umăr, gleznă) sau în coloană.\n• Somn 8 ore pe noapte și hidratare corespunzătoare.\n• Proteine la fiecare masă (ouă, carne, pește, lactate, leguminoase) și suficienți carbohidrați."
-        }
-      ],
-      nota_subsol: "Notă: acest program este personalizat în cadrul B-Fit Studio. Notează în tabel greutatea și seturile finalizate la fiecare sesiune."
+      sectiuni_final: [],
+      nota_subsol: ""
     }
   };
 }
@@ -4176,7 +4242,54 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') comutaListaPlanuri(false);
 });
 
+// Planul curent are modificări nesalvate: față de varianta din baza de date (plan salvat) sau față de planul gol (plan nou)
+function estePlanModificat() {
+  if (!planActiv || esteModClientaShare) return false;
+  if (!planActiv.id) return !estePlanNouGol();
+  const salvat = (DB.planuri || []).find(p => String(p.id) === String(planActiv.id));
+  if (!salvat) return false;
+  const cheie = p => JSON.stringify([(p.clienta || '').trim(), (p.titlu || '').trim(), (p.subtitlu || '').trim(), p.continut_json || {}]);
+  return cheie(planActiv) !== cheie(salvat);
+}
+
+// Rulează `continua` direct sau, dacă ar pierde modificări nesalvate, doar după confirmare
+function dupaConfirmareModificariPlan(continua) {
+  if (!estePlanModificat()) { continua(); return; }
+  customConfirm(
+    tr("Modificări nesalvate", "Unsaved changes"),
+    tr("Ai modificări nesalvate în plan. Renunți la ele?", "You have unsaved changes in the plan. Discard them?"),
+    continua
+  );
+}
+
+// Închiderea paginii cu modificări nesalvate (desktop; pe telefon browserul nu o mai cere mereu)
+window.addEventListener('beforeunload', (e) => {
+  if (estePlanModificat()) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// După „renunț”: planul revine la varianta salvată (sau la planul gol), ca să nu rămână modificările în memorie
+function renuntaLaModificariPlan() {
+  const salvat = planActiv && planActiv.id ? (DB.planuri || []).find(p => String(p.id) === String(planActiv.id)) : null;
+  planActiv = salvat ? JSON.parse(JSON.stringify(salvat)) : construiesteSablonPlanDefault();
+}
+
 function selecteazaPlanDinLista(idPlan) {
+  if (estePlanModificat()) {
+    // Lista arată din nou planul curent cât timp așteaptă răspunsul
+    populeazaSelectorPlanuri();
+    dupaConfirmareModificariPlan(() => {
+      renuntaLaModificariPlan();
+      incarcaPlanDinLista(idPlan);
+    });
+    return;
+  }
+  incarcaPlanDinLista(idPlan);
+}
+
+function incarcaPlanDinLista(idPlan) {
   if (!idPlan) {
     planActiv = construiesteSablonPlanDefault();
     randeazaPlanAntrenamentUI();
@@ -4185,13 +4298,20 @@ function selecteazaPlanDinLista(idPlan) {
   const gasit = (DB.planuri || []).find(p => String(p.id) === String(idPlan));
   if (gasit) {
     planActiv = JSON.parse(JSON.stringify(gasit));
+    populeazaSelectorPlanuri();
     randeazaPlanAntrenamentUI();
   }
 }
 
 function creeazaPlanNouCuSablon() {
+  dupaConfirmareModificariPlan(pornestePlanNou);
+}
+
+function pornestePlanNou() {
   planActiv = construiesteSablonPlanDefault();
   esteModPrevizualizarePdf = false;
+  const btnTxt = document.getElementById('btnPreviewPlanText');
+  if (btnTxt) btnTxt.innerText = t('btnPreviewPdfMode');
   const sel = document.getElementById('selectPlanExistent');
   if (sel) {
     sel.value = '';
@@ -4199,7 +4319,7 @@ function creeazaPlanNouCuSablon() {
     sincronizeazaListaPlanuri();
   }
   randeazaPlanAntrenamentUI();
-  showToast(currentLang === 'en' ? '✓ New template loaded!' : '✓ Șablon nou încărcat!');
+  showToast(currentLang === 'en' ? '✓ New plan started!' : '✓ Plan nou început!');
 }
 
 function comutaModPrevizualizarePlan() {
@@ -4261,10 +4381,10 @@ function randeazaPlanAntrenamentUI() {
       html += `
         <div class="plan-info-box">
           <div class="plan-info-box-header">
-            <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].titlu = this.value">
+            <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" placeholder="${tr('Titlu secțiune (ex: Recomandări)', 'Section title (e.g. Recommendations)')}" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].titlu = this.value">
             <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_inceput', ${sIdx})" title="${tr('Șterge secțiunea', 'Delete section')}">${SVG_COS_PLAN}</button>
           </div>
-          <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
+          <textarea class="plan-info-textarea" placeholder="${tr('Adaugă indicațiile aici...', 'Add your notes here...')}" oninput="planActiv.continut_json.sectiuni_inceput[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
       `;
     }
@@ -4311,7 +4431,8 @@ function randeazaPlanAntrenamentUI() {
 
     listaEx.forEach((ex, exIdx) => {
       const nrAfisat = ex.nr || (exIdx + 1);
-      const stVal = ex.status || 'În așteptare';
+      // „În așteptare” (valoarea veche, salvată în planurile existente) se afișează ca „fără status”
+      const stVal = (ex.status && ex.status !== 'În așteptare') ? ex.status : '';
       const pillCls = getPillClass(stVal);
 
       if (esteModPrevizualizarePdf) {
@@ -4348,8 +4469,8 @@ function randeazaPlanAntrenamentUI() {
                 </div>
                 <div class="plan-tracking-field">
                   <span class="plan-tracking-label">Status</span>
-                  <select class="pill-select ${pillCls}" disabled>
-                    <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>${traduceValoare('În așteptare')}</option>
+                  <select class="pill-select plan-status-select ${pillCls}" disabled>
+                    <option value="" ${stVal === "" ? "selected" : ""}>Status</option>
                     <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>${traduceValoare('Finalizat')}</option>
                     <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>${traduceValoare('Sărit')}</option>
                   </select>
@@ -4368,10 +4489,10 @@ function randeazaPlanAntrenamentUI() {
               </div>
             </td>
             <td>
-              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_repetari)}" placeholder="3 x 12" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_repetari = this.value">
+              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_repetari)}" placeholder="${tr('Seturi x rep/sec', 'Sets x reps/sec')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_repetari = this.value">
             </td>
             <td>
-              <input type="text" class="plan-ex-input" value="${escAttr(ex.pauza)}" placeholder="60-90 sec" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].pauza = this.value">
+              <input type="text" class="plan-ex-input" value="${escAttr(ex.pauza)}" placeholder="${tr('Pauză (sec)', 'Rest (sec)')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].pauza = this.value">
             </td>
             <td>
               <textarea class="plan-ex-textarea" placeholder="${tr('Indicații tehnice / cum se execută...', 'Technique notes / how to perform...')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].indicatii = this.value">${escAttr(ex.indicatii)}</textarea>
@@ -4383,8 +4504,8 @@ function randeazaPlanAntrenamentUI() {
               <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="${tr('Seturi', 'Sets')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_finalizate = this.value">
             </td>
             <td>
-              <select class="pill-select ${pillCls}" onchange="this.className='pill-select '+getPillClass(this.value); planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].status = this.value">
-                <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>${traduceValoare('În așteptare')}</option>
+              <select class="pill-select plan-status-select ${pillCls}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].status = this.value">
+                <option value="" ${stVal === "" ? "selected" : ""}>Status</option>
                 <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>${traduceValoare('Finalizat')}</option>
                 <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>${traduceValoare('Sărit')}</option>
               </select>
@@ -4433,10 +4554,10 @@ function randeazaPlanAntrenamentUI() {
       html += `
         <div class="plan-info-box">
           <div class="plan-info-box-header">
-            <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].titlu = this.value">
+            <input type="text" class="plan-info-title-input" value="${escAttr(sec.titlu)}" placeholder="${tr('Titlu secțiune (ex: Recomandări)', 'Section title (e.g. Recommendations)')}" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].titlu = this.value">
             <button type="button" class="btn-trash-action btn-trash-plan no-print" onclick="stergeSectiuneTextPlan('sectiuni_final', ${sIdx})" title="${tr('Șterge secțiunea', 'Delete section')}">${SVG_COS_PLAN}</button>
           </div>
-          <textarea class="plan-info-textarea" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
+          <textarea class="plan-info-textarea" placeholder="${tr('Adaugă indicațiile aici...', 'Add your notes here...')}" oninput="planActiv.continut_json.sectiuni_final[${sIdx}].continut = this.value">${escAttr(sec.continut)}</textarea>
         </div>
       `;
     }
@@ -4465,13 +4586,14 @@ function randeazaPlanAntrenamentUI() {
   }
 
   container.innerHTML = html;
+  actualizeazaButonStergePlan();
 }
 
 function adaugaSectiuneTextPlan(cheieLista) {
   if (!planActiv || !planActiv.continut_json) return;
   planActiv.continut_json[cheieLista].push({
-    titlu: tr("Secțiune nouă (ex: Recomandări)", "New section (e.g. Recommendations)"),
-    continut: tr("• Adaugă indicațiile aici...", "• Add your notes here...")
+    titlu: "",
+    continut: ""
   });
   randeazaPlanAntrenamentUI();
 }
@@ -4488,7 +4610,7 @@ function adaugaSesiunePlan() {
   planActiv.continut_json.sesiuni.push({
     titlu: tr(`ZIUA ${nrSes}: Sesiune nouă de antrenament`, `DAY ${nrSes}: New workout session`),
     exercitii: [
-      { nr: 1, exercitiu: "", seturi_repetari: "3 x 12", pauza: "60-90 sec", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "În așteptare" }
+      { nr: 1, exercitiu: "", seturi_repetari: "", pauza: "", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "" }
     ]
   });
   randeazaPlanAntrenamentUI();
@@ -4508,12 +4630,12 @@ function adaugaExercitiuPlan(sesIdx) {
   ses.exercitii.push({
     nr: ses.exercitii.length + 1,
     exercitiu: "",
-    seturi_repetari: "3 x 15",
-    pauza: "60-90 sec",
+    seturi_repetari: "",
+    pauza: "",
     indicatii: "",
     greutate_kg: "",
     seturi_finalizate: "",
-    status: "În așteptare"
+    status: ""
   });
   randeazaPlanAntrenamentUI();
 }
@@ -4521,9 +4643,11 @@ function adaugaExercitiuPlan(sesIdx) {
 function stergeExercitiuPlan(sesIdx, exIdx) {
   const ses = planActiv?.continut_json?.sesiuni?.[sesIdx];
   if (!ses || !Array.isArray(ses.exercitii)) return;
-  ses.exercitii.splice(exIdx, 1);
-  ses.exercitii.forEach((e, i) => { e.nr = i + 1; });
-  randeazaPlanAntrenamentUI();
+  customConfirm(tr("Ștergere exercițiu", "Delete exercise"), tr("Ești sigură că vrei să ștergi acest exercițiu?", "Are you sure you want to delete this exercise?"), function() {
+    ses.exercitii.splice(exIdx, 1);
+    ses.exercitii.forEach((e, i) => { e.nr = i + 1; });
+    randeazaPlanAntrenamentUI();
+  });
 }
 
 // Salvare sincronizată direct cu tabela planuri_antrenament din Supabase
@@ -4580,10 +4704,32 @@ async function salveazaPlanCurentInBaza(silent = false) {
   }
 }
 
+// Plan nesalvat și neatins: nu are ce să se șteargă, deci butonul de coș e inactiv
+function estePlanNouGol() {
+  if (!planActiv || planActiv.id) return false;
+  const gol = construiesteSablonPlanDefault();
+  const cheie = p => JSON.stringify([p.clienta, p.titlu, p.subtitlu, p.continut_json]);
+  return cheie(planActiv) === cheie(gol);
+}
+
+function actualizeazaButonStergePlan() {
+  const btn = document.getElementById('btnStergePlan');
+  if (btn) btn.classList.toggle('btn-clear-disabled', estePlanNouGol());
+}
+
+// Câmpurile planului se editează fără re-randare, deci starea butonului se actualizează la fiecare tastare
+document.addEventListener('input', (e) => {
+  if (e.target.closest && e.target.closest('#planDocumentContainer')) actualizeazaButonStergePlan();
+});
+
 async function stergePlanCurent() {
+  if (estePlanNouGol()) return;
+
   if (!planActiv || !planActiv.id) {
-    planActiv = construiesteSablonPlanDefault();
-    randeazaPlanAntrenamentUI();
+    customConfirm(tr("Renunțare plan", "Discard plan"), tr("Renunți la planul nou, nesalvat?", "Discard the new, unsaved plan?"), function() {
+      planActiv = construiesteSablonPlanDefault();
+      randeazaPlanAntrenamentUI();
+    });
     return;
   }
 
@@ -4634,15 +4780,18 @@ function importaPlanDinFisier(inputEl) {
     if (file.name.toLowerCase().endsWith('.json') || text.startsWith('{')) {
       try {
         const obj = JSON.parse(text);
-        if (obj.continut_json) {
-          planActiv = obj;
-        } else if (obj.sesiuni) {
-          if (!planActiv) planActiv = construiesteSablonPlanDefault();
-          planActiv.continut_json = obj;
-        }
-        randeazaPlanAntrenamentUI();
-        showToast(t('toastPlanImported'));
         inputEl.value = '';
+        // Importul JSON înlocuiește planul curent, deci cere confirmare dacă are modificări nesalvate
+        dupaConfirmareModificariPlan(() => {
+          if (obj.continut_json) {
+            planActiv = obj;
+          } else if (obj.sesiuni) {
+            if (!planActiv) planActiv = construiesteSablonPlanDefault();
+            planActiv.continut_json = obj;
+          }
+          randeazaPlanAntrenamentUI();
+          showToast(t('toastPlanImported'));
+        });
         return;
       } catch (err) {
         console.error("Eroare parsare JSON:", err);
@@ -4671,7 +4820,7 @@ function importaPlanDinFisier(inputEl) {
           indicatii: cols[3] || "",
           greutate_kg: cols[4] || "",
           seturi_finalizate: cols[5] || "",
-          status: cols[6] || "În așteptare"
+          status: cols[6] || ""
         });
       }
     });
@@ -4761,6 +4910,10 @@ async function exportaPlanCurentPDF() {
 }
 
 async function deschideModalSharePlan() {
+  if (planActiv && !planActiv.id && !(planActiv.titlu || '').trim()) {
+    showToast(tr("Adaugă un titlu planului înainte să-l trimiți!", "Add a plan title before sharing!"), "error");
+    return;
+  }
   const salvat = await salveazaPlanCurentInBaza(true);
   const idPlan = salvat ? salvat.id : (planActiv ? planActiv.id : null);
 

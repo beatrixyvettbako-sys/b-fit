@@ -2882,3 +2882,90 @@ select.slot-select-type {
   color: #43355d !important;
   font-weight: 800 !important;
 }
+
+/* Status exercițiu din plan: pastilă mai mică; neales = câmp glass cu placeholder, ca restul câmpurilor */
+.pill-select.plan-status-select {
+  padding: 2px 12px 2px 5px;
+  font-size: 0.64rem;
+  border-width: 1px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14), inset 0 1px 0.5px rgba(255, 255, 255, 0.4);
+}
+
+.pill-select.plan-status-select.pill-empty {
+  background-color: var(--input-glass-bg) !important;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%2394a3b8" height="12" viewBox="0 0 24 24" width="12" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') !important;
+  color: var(--placeholder-fade) !important;
+  border: 1px solid var(--border) !important;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+/* Lățimea pastilei de status: cât textul, nu cât rândul întreg */
+.pill-select.plan-status-select {
+  width: auto;
+  min-width: 86px;
+  max-width: 100%;
+  margin: 0;
+}
+
+/* Status din plan: centrat și ceva mai mare */
+.pill-select.plan-status-select {
+  min-width: 120px;
+  margin: 0 auto;
+  padding: 4px 16px 4px 8px;
+  font-size: 0.74rem;
+}
+
+/* Coșul planului inactiv: mai puțin estompat decât celelalte butoane dezactivate, ca iconița roșie să rămână vizibilă */
+#btnStergePlan.btn-clear-disabled {
+  opacity: 0.8 !important;
+}
+
+/* Ora blocată: sloturile rămân la locul lor, sub un blur puternic; peste ele stă notița (motiv / reminder) */
+.hour-block-blocked .hour-slots-wrapper {
+  position: relative;
+}
+
+.hour-motiv-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  pointer-events: auto;
+}
+
+[data-theme="dark"] .hour-motiv-overlay {
+  background: rgba(18, 16, 26, 0.45);
+}
+
+.hour-motiv-input {
+  width: 100%;
+  height: 100%;
+  min-height: 52px;
+  max-height: 100%;
+  resize: none;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.35;
+  outline: none;
+}
+
+[data-theme="dark"] .hour-motiv-input {
+  background: rgba(18, 16, 26, 0.35);
+}
+
+.hour-motiv-input:focus {
+  border-color: var(--accent-purple);
+}

@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal62">
+  <link rel="stylesheet" href="style.css?v=fitFinal63">
 </head>
 <body>
 
@@ -122,6 +122,7 @@
     <div class="custom-modal-card">
       <div class="custom-modal-title" id="modalTitle">Confirmare</div>
       <div class="custom-modal-text" id="modalText">Ești sigură că vrei să continui?</div>
+      <input type="text" id="modalInput" class="form-control" style="display:none; margin-bottom:14px;" maxlength="120" autocomplete="off">
       <div class="custom-modal-actions">
         <button class="btn btn-clear" style="flex:1;" id="modalBtnCancel" onclick="closeCustomModal(false)">Renunță</button>
         <button class="btn" style="flex:1;" id="modalBtnConfirm" onclick="closeCustomModal(true)">Confirmă</button>
@@ -984,7 +985,7 @@
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
             <span id="btnSharePlanText">Share</span>
           </button>
-          <button type="button" class="btn" style="padding:0 10px; height:31px; line-height:1; color:#ff4d4d;" onclick="stergePlanCurent()" title="Șterge planul" data-en-title="Delete plan">
+          <button type="button" class="btn" style="padding:0 10px; height:31px; line-height:1; color:#ff4d4d;" id="btnStergePlan" onclick="stergePlanCurent()" title="Șterge planul" data-en-title="Delete plan">
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           </button>
         </div>
@@ -1064,6 +1065,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal62"></script>
+  <script src="app.js?v=fitFinal63"></script>
 </body>
 </html>
