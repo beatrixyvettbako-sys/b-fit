@@ -14,12 +14,22 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal66">
+  <link rel="stylesheet" href="style.css?v=fitFinal67">
 </head>
 <body>
 
   <!-- TOAST NOTIFICĂRI -->
   <div id="customToast">✓ Mesaj</div>
+
+  <!-- ECRAN CLIENTĂ (rol „clienta” din profiles): doar citire, deocamdată abonamentul -->
+  <div id="clientaScreen" class="auth-overlay auth-hidden">
+    <div class="auth-card">
+      <div class="auth-title" id="clientaSalut">Salut!</div>
+      <div class="auth-subtitle" data-en="Your subscription">Abonamentul tău</div>
+      <div id="clientaContinut" style="text-align:left; margin-top:6px;"></div>
+      <button type="button" class="btn" style="width:100%; margin-top:16px;" onclick="deconectareUtilizator()" data-en="Sign out">Ieși din cont</button>
+    </div>
+  </div>
 
   <!-- ECRAN AUTENTIFICARE SUPABASE -->
   <div id="authScreenOverlay" class="auth-overlay auth-hidden">
@@ -712,6 +722,17 @@
             </div>
           </div>
 
+          <div id="blocContClienta" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);" data-en="ACCOUNT IN THE APP">CONT ÎN APLICAȚIE</span>
+              <span style="font-size: 0.75rem; font-weight: 700; color: var(--primary);" id="fisaContStatus">-</span>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@clienta.ro" autocomplete="off" style="flex: 1; min-width: 0;">
+              <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()" style="white-space: nowrap;">Trimite invitația</button>
+            </div>
+          </div>
+
           <details id="detailsEditareFisa" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
             <summary class="summary-toggle-clean">
               <span class="icon-history-title">
@@ -1086,6 +1107,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal66"></script>
+  <script src="app.js?v=fitFinal67"></script>
 </body>
 </html>

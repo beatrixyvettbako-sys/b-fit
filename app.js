@@ -8,6 +8,7 @@ const supabaseClient = (typeof window !== 'undefined' && window.supabase)
   : null;
 
 let utilizatorCurent = null;
+let rolUtilizator = 'antrenor'; // 'antrenor' | 'clienta' (din tabelul profiles)
 let tipModAuth = 'login'; // 'login' sau 'signup'
 
 if ('scrollRestoration' in history) {
@@ -622,6 +623,7 @@ async function deconectareUtilizator() {
     }
     inchideMeniuLateral();
     localStorage.removeItem('BFIT_DB_LOCAL');
+    localStorage.removeItem('BFIT_ROL');
     window.location.reload();
   });
 }
@@ -1168,7 +1170,9 @@ async function executaActiuneSupabase(actionName, payload) {
       dataStart: c.dataStart || "-",
       dataExpirare: c.dataExpirare || "-",
       status: c.status || "Activ",
-      id: c.id || ("cli_" + c.row)
+      id: c.id || ("cli_" + c.row),
+      emailInvitatie: (c.email_invitatie || "").trim(),
+      contConectat: !!c.auth_user_id
     })).filter(c => c.nume !== "");
 
     clienti.sort((a, b) => a.nume.localeCompare(b.nume));
@@ -1598,6 +1602,13 @@ async function executaActiuneSupabase(actionName, payload) {
     if (uid) q = q.eq('user_id', uid);
     await q;
     return { success: true, nouaData: dataFinalaRo };
+  }
+
+  if (actionName === "seteazaEmailInvitatie") {
+    let q = sb.from('cliente').update({ email_invitatie: payload.email }).ilike('nume', payload.nume.trim());
+    if (uid) q = q.eq('user_id', uid);
+    const { error } = await q;
+    return { success: !error };
   }
 
   return { success: false };
@@ -2115,6 +2126,50 @@ function aplicaTraduceriInterfataStatic() {
 // 3. INIȚIALIZARE & GARDIAN SESIUNE
 // ==========================================
 
+// Rolul vine din tabelul profiles. Contul invitat devine „clienta” la primul login, prin leaga_cont_clienta().
+// Rolul doar alege ecranul; accesul la date îl hotărăsc politicile RLS din Supabase.
+async function incarcaRolUtilizator() {
+  rolUtilizator = 'antrenor';
+  if (!supabaseClient || !utilizatorCurent) return;
+  try {
+    const { data: profil, error } = await supabaseClient.from('profiles').select('rol').eq('id', utilizatorCurent.id).maybeSingle();
+    if (error) throw error;
+    if (profil && profil.rol === 'clienta') {
+      rolUtilizator = 'clienta';
+    } else {
+      const { data: legat } = await supabaseClient.rpc('leaga_cont_clienta');
+      if (legat === true) rolUtilizator = 'clienta';
+    }
+    localStorage.setItem('BFIT_ROL', rolUtilizator);
+  } catch (e) {
+    // fără rețea: ultimul rol cunoscut pe acest dispozitiv
+    rolUtilizator = localStorage.getItem('BFIT_ROL') === 'clienta' ? 'clienta' : 'antrenor';
+  }
+}
+
+function randeazaEcranClienta(c) {
+  const prenume = (c.nume || '').trim().split(' ')[0];
+  document.getElementById('clientaSalut').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
+  const rand = (eticheta, valoare) => `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--text-muted); font-size:0.85rem;">${eticheta}</span><b>${escAttr(String(valoare))}</b></div>`;
+  document.getElementById('clientaContinut').innerHTML =
+    rand(tr('Abonament', 'Subscription'), traduceValoare(c.tipAbonament || '-')) +
+    rand(tr('Ședințe rămase', 'Sessions left'), c.ramase ?? '-') +
+    rand(tr('Ședințe efectuate', 'Sessions done'), `${c.efectuate ?? 0} ${tr('din', 'of')} ${c.incluse ?? 0}`) +
+    rand(tr('Valabil până la', 'Valid until'), c.dataExpirare || '-');
+}
+
+async function afiseazaEcranClienta() {
+  document.getElementById('clientaScreen')?.classList.remove('auth-hidden');
+  actualizeazaStareNoScrollBody();
+  const { data, error } = await supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1);
+  const c = data && data[0];
+  if (error || !c) {
+    document.getElementById('clientaContinut').innerText = tr('Nu am găsit abonamentul. Contactează antrenorul.', 'Subscription not found. Contact your trainer.');
+    return;
+  }
+  randeazaEcranClienta(c);
+}
+
 async function verificaSesiuneSupabase() {
   const overlay = document.getElementById('authScreenOverlay');
   if (!supabaseClient) {
@@ -2127,6 +2182,7 @@ async function verificaSesiuneSupabase() {
   if (session && session.user) {
     utilizatorCurent = session.user;
     actualizeazaDateProfilUI(session.user);
+    await incarcaRolUtilizator();
     if (overlay) overlay.classList.add('auth-hidden');
     actualizeazaStareNoScrollBody();
     return true;
@@ -2182,10 +2238,14 @@ window.onload = async function() {
         if (overlay) overlay.classList.add('auth-hidden');
         actualizeazaStareNoScrollBody();
         if (eraNeconectat && sesiuneInitializata) {
-          incarcaBazaDateSilencios(null, true);
+          incarcaRolUtilizator().then(() => {
+            if (rolUtilizator === 'clienta') afiseazaEcranClienta();
+            else incarcaBazaDateSilencios(null, true);
+          });
         }
       } else if (event === 'SIGNED_OUT') {
         utilizatorCurent = null;
+        document.getElementById('clientaScreen')?.classList.add('auth-hidden');
         if (overlay) overlay.classList.remove('auth-hidden');
         actualizeazaStareNoScrollBody();
       }
@@ -2195,6 +2255,10 @@ window.onload = async function() {
   const areSesiune = await verificaSesiuneSupabase();
   sesiuneInitializata = true;
   if (!areSesiune) return;
+  if (rolUtilizator === 'clienta') {
+    afiseazaEcranClienta();
+    return;
+  }
 
   let areCacheLocal = false;
   try {
@@ -3525,7 +3589,48 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('editRamase').value = client.ramase;
   document.getElementById('editStatus').value = client.status;
 
+  actualizeazaBlocContClienta(client);
   filtreazaIstoricFisaInstant();
+}
+
+function actualizeazaBlocContClienta(client) {
+  const inp = document.getElementById('fisaEmailInvitatie');
+  const stare = document.getElementById('fisaContStatus');
+  const btn = document.getElementById('btnInvitaClienta');
+  if (!inp || !stare || !btn) return;
+  inp.value = client.emailInvitatie || '';
+  inp.disabled = client.contConectat;
+  btn.style.display = client.contConectat ? 'none' : '';
+  btn.innerText = client.emailInvitatie ? tr('Retrimite invitația', 'Resend invitation') : tr('Trimite invitația', 'Send invitation');
+  stare.innerText = client.contConectat
+    ? tr('Cont conectat', 'Account linked')
+    : (client.emailInvitatie ? tr('Așteaptă conectarea', 'Waiting to sign in') : tr('Fără cont', 'No account'));
+}
+
+// Emailul se salvează întâi în fișă (leaga_cont_clienta îl caută la login), apoi se trimite link-ul de acces
+function invitaClienta() {
+  const sel = document.getElementById('selectClientaFisa');
+  const nume = sel ? sel.value.trim() : '';
+  const email = (document.getElementById('fisaEmailInvitatie').value || '').trim().toLowerCase();
+  if (!nume) return;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast(t('authInvalidEmailFormat'), 'error');
+    return;
+  }
+  const btn = document.getElementById('btnInvitaClienta');
+  btn.disabled = true;
+  callBackend("seteazaEmailInvitatie", { nume: nume, email: email }, async function(res) {
+    if (!res || !res.success) {
+      btn.disabled = false;
+      showToast(tr("Eroare sincronizare", "Sync error"), "error");
+      return;
+    }
+    const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE } });
+    btn.disabled = false;
+    if (error) showToast(tr('Emailul nu s-a putut trimite', 'Could not send the email'), 'error');
+    else showToast(tr('Invitație trimisă', 'Invitation sent'));
+    incarcaBazaDateSilencios(nume);
+  }, function() { btn.disabled = false; });
 }
 
 function filtreazaIstoricFisaInstant() {
