@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal65">
+  <link rel="stylesheet" href="style.css?v=fitFinal66">
 </head>
 <body>
 
@@ -37,9 +37,9 @@
         <svg viewBox="0 0 512 512" width="64" height="64">
           <defs>
             <linearGradient id="liquidPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#8b5cf6"/>
-              <stop offset="50%" stop-color="#5c4d7d"/>
-              <stop offset="100%" stop-color="#3b2d54"/>
+              <stop offset="0%" style="stop-color:var(--accent-purple)"/>
+              <stop offset="50%" style="stop-color:var(--brand)"/>
+              <stop offset="100%" style="stop-color:var(--brand-deep)"/>
             </linearGradient>
             <linearGradient id="glassShineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
@@ -280,7 +280,7 @@
         <!-- 2. Card Navigare Plan de Antrenament (Liquid Glass Mov Minimalist) -->
         <div class="drawer-nav-card" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
           <div class="drawer-nav-card-left">
-            <div class="drawer-nav-icon" style="background: rgba(139, 92, 246, 0.18); border: 1px solid rgba(139, 92, 246, 0.35);">
+            <div class="drawer-nav-icon" style="background: rgba(var(--accent-rgb), 0.18); border: 1px solid rgba(var(--accent-rgb), 0.35);">
               <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--accent-purple); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;">
                 <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"/>
               </svg>
@@ -345,6 +345,27 @@
             </button>
             <button class="theme-option-btn" id="themeBtnSystem" onclick="seteazaTema('system')">
               <svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> <span id="themeBtnSystemText">Sistem</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="drawer-section" style="margin-top:14px;">
+          <div class="drawer-section-title" id="accentSectionTitle">Culoare</div>
+          <div class="theme-selector-grid accent-grid">
+            <button class="theme-option-btn" id="accentBtnViolet" onclick="seteazaAccent('violet')">
+              <span class="accent-swatch" style="background:#8b5cf6;"></span> <span id="accentBtnVioletText">Mov</span>
+            </button>
+            <button class="theme-option-btn" id="accentBtnBlue" onclick="seteazaAccent('blue')">
+              <span class="accent-swatch" style="background:#3b82f6;"></span> <span id="accentBtnBlueText">Albastru</span>
+            </button>
+            <button class="theme-option-btn" id="accentBtnRed" onclick="seteazaAccent('red')">
+              <span class="accent-swatch" style="background:#e11d48;"></span> <span id="accentBtnRedText">Roșu</span>
+            </button>
+            <button class="theme-option-btn" id="accentBtnGreen" onclick="seteazaAccent('green')">
+              <span class="accent-swatch" style="background:#10b981;"></span> <span id="accentBtnGreenText">Verde</span>
+            </button>
+            <button class="theme-option-btn" id="accentBtnGraphite" onclick="seteazaAccent('graphite')">
+              <span class="accent-swatch" style="background:#8b94a1;"></span> <span id="accentBtnGraphiteText">Grafit</span>
             </button>
           </div>
         </div>
@@ -1065,6 +1086,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal65"></script>
+  <script src="app.js?v=fitFinal66"></script>
 </body>
 </html>

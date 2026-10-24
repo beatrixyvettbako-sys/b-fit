@@ -110,6 +110,12 @@ const i18n = {
     lightTheme: "Luminos",
     darkTheme: "Întunecat",
     systemTheme: "Sistem",
+    accentTitle: "Culoare",
+    accentViolet: "Mov",
+    accentBlue: "Albastru",
+    accentRed: "Roșu",
+    accentGreen: "Verde",
+    accentGraphite: "Grafit",
     langTitle: "Limbă / Language",
     toastThemeUpdated: "✓ Temă actualizată!",
     toastLangRo: "✓ Limbă setată pe Română",
@@ -259,6 +265,12 @@ const i18n = {
     lightTheme: "Light",
     darkTheme: "Dark",
     systemTheme: "System",
+    accentTitle: "Color",
+    accentViolet: "Violet",
+    accentBlue: "Blue",
+    accentRed: "Red",
+    accentGreen: "Green",
+    accentGraphite: "Graphite",
     langTitle: "Language / Limbă",
     toastThemeUpdated: "✓ Theme updated!",
     toastLangRo: "✓ Limbă setată pe Română",
@@ -858,7 +870,7 @@ if ('serviceWorker' in navigator) {
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--status-bar-color').trim();
     if (bg) meta.setAttribute('content', bg);
   };
-  new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-accent'] });
   actualizeaza();
 })();
 
@@ -2043,6 +2055,12 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('themeBtnLightText').innerText = t('lightTheme');
   document.getElementById('themeBtnDarkText').innerText = t('darkTheme');
   document.getElementById('themeBtnSystemText').innerText = t('systemTheme');
+  document.getElementById('accentSectionTitle').innerText = t('accentTitle');
+  document.getElementById('accentBtnVioletText').innerText = t('accentViolet');
+  document.getElementById('accentBtnBlueText').innerText = t('accentBlue');
+  document.getElementById('accentBtnRedText').innerText = t('accentRed');
+  document.getElementById('accentBtnGreenText').innerText = t('accentGreen');
+  document.getElementById('accentBtnGraphiteText').innerText = t('accentGraphite');
   document.getElementById('langSectionTitle').innerText = t('langTitle');
 
   document.getElementById('modalTitle').innerText = t('confirmTitle');
@@ -4454,8 +4472,7 @@ function randeazaPlanAntrenamentUI() {
 
     listaEx.forEach((ex, exIdx) => {
       const nrAfisat = ex.nr || (exIdx + 1);
-      // „În așteptare” (valoarea veche, salvată în planurile existente) se afișează ca „fără status”
-      const stVal = (ex.status && ex.status !== 'În așteptare') ? ex.status : '';
+      const stVal = ex.status || '';
       const pillCls = getPillClass(stVal);
 
       if (esteModPrevizualizarePdf) {
@@ -4529,6 +4546,7 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <select class="pill-select plan-status-select ${pillCls}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].status = this.value">
                 <option value="" ${stVal === "" ? "selected" : ""}>Status</option>
+                <option value="În așteptare" ${stVal === 'În așteptare' ? 'selected' : ''}>${traduceValoare('În așteptare')}</option>
                 <option value="Finalizat" ${stVal === 'Finalizat' ? 'selected' : ''}>${traduceValoare('Finalizat')}</option>
                 <option value="Sărit" ${stVal === 'Sărit' ? 'selected' : ''}>${traduceValoare('Sărit')}</option>
               </select>
@@ -4545,7 +4563,7 @@ function randeazaPlanAntrenamentUI() {
           </tbody>
         </table>
         ${!doarCitireStructura ? `
-          <div class="no-print" style="padding:7px 10px; background:rgba(92,77,125,0.04); border-top:1px solid var(--border);">
+          <div class="no-print" style="padding:7px 10px; background:rgba(var(--primary-rgb),0.04); border-top:1px solid var(--border);">
             <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 10px;" onclick="adaugaExercitiuPlan(${sesIdx})">
               ${tr('+ Adaugă Exercițiu în această sesiune', '+ Add Exercise to this session')}
             </button>
@@ -5103,6 +5121,22 @@ function seteazaTema(optiune, silent = false) {
   }
 }
 
+// Paleta de culori: mov (implicit, fără atribut) sau albastru (data-accent="blue")
+const PALETE_ACCENT = ['violet', 'blue', 'red', 'green', 'graphite'];
+
+function seteazaAccent(optiune, silent = false) {
+  const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'violet';
+  localStorage.setItem('beatrix_accent', paleta);
+  if (paleta === 'violet') document.documentElement.removeAttribute('data-accent');
+  else document.documentElement.setAttribute('data-accent', paleta);
+  PALETE_ACCENT.forEach(p => {
+    document.getElementById('accentBtn' + p.charAt(0).toUpperCase() + p.slice(1))?.classList.toggle('active', p === paleta);
+  });
+  // Iconița din tab și cea de pe ecranul principal (iOS o citește la „Add to Home Screen”) urmează paleta
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.setAttribute('href', paleta === 'violet' ? 'icon.svg' : `icon-${paleta}.svg`));
+  if (!silent) showToast(t('toastThemeUpdated'));
+}
+
 function seteazaLimba(lang, silent = false) {
   currentLang = lang;
   localStorage.setItem('beatrix_lang', lang);
@@ -5139,6 +5173,7 @@ function seteazaLimba(lang, silent = false) {
 (function() {
   let temaSalvata = localStorage.getItem('beatrix_theme') || 'system';
   seteazaTema(temaSalvata, true);
+  seteazaAccent(localStorage.getItem('beatrix_accent') || 'violet', true);
   let langSalvata = localStorage.getItem('beatrix_lang') || 'ro';
   seteazaLimba(langSalvata, true);
 })();

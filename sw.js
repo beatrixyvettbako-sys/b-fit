@@ -1,11 +1,15 @@
-const CACHE_NAME = 'bfit-cache-v65';
+const CACHE_NAME = 'bfit-cache-v66';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './icon-blue.svg',
+  './icon-red.svg',
+  './icon-green.svg',
+  './icon-graphite.svg'
 ];
 
 self.addEventListener('install', (event) => {
