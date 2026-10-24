@@ -1572,11 +1572,13 @@ async function executaActiuneSupabase(actionName, payload) {
       if (numeVechi.toLowerCase() !== numeNou.toLowerCase()) {
         let qO = sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
         let qP = sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        let qPl = sb.from('planuri_antrenament').update({ clienta: numeNou }).ilike('clienta', numeVechi);
         if (uid) {
           qO = qO.eq('user_id', uid);
           qP = qP.eq('user_id', uid);
+          qPl = qPl.eq('user_id', uid);
         }
-        await Promise.all([qO, qP]);
+        await Promise.all([qO, qP, qPl]);
       }
       return { success: true, numeNou };
     }
@@ -3898,6 +3900,8 @@ function salveazaEditareClienta() {
     incluse: inc, efectuate: ef, ramase: ram, status: st
   }, function(res) {
     showToast(t('toastDataUpdated'));
+    // Planul deschis în memorie păstrează numele nou, altfel la salvare ar readuce numele vechi
+    if (planActiv && (planActiv.clienta || '').trim().toLowerCase() === numeVechi.toLowerCase()) planActiv.clienta = numeNou;
     incarcaBazaDateSilencios(res && res.numeNou ? res.numeNou : numeNou);
   });
 }
@@ -4333,6 +4337,9 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
     planActiv = construiesteSablonPlanDefault();
   }
 
+  // Planul deschis și neatins se reia din baza de date (clienta poate fi completat progresul între timp)
+  const eraNemodificat = !!(planActiv.id && !estePlanModificat());
+
   // Preluare proaspătă din Supabase pentru lista de planuri din dropdown
   if (USE_SUPABASE && supabaseClient) {
     try {
@@ -4352,12 +4359,14 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
           updated_at: pl.updated_at
         }));
         try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
+        const proaspat = eraNemodificat ? DB.planuri.find(p => String(p.id) === String(planActiv.id)) : null;
+        if (proaspat) planActiv = JSON.parse(JSON.stringify(proaspat));
       }
     } catch (err) {
       console.error("Eroare sincronizare planuri:", err);
     }
   }
-  
+
   populeazaSelectorPlanuri();
   randeazaPlanAntrenamentUI();
   window.scrollTo({ top: 0, behavior: 'auto' });
@@ -5000,9 +5009,33 @@ function stergeExercitiuPlan(sesIdx, exIdx) {
   });
 }
 
+// Progresul clientei (greutate, seturi, status) se scrie direct în baza de date. La salvare îl păstrăm
+// pentru exercițiile unde antrenorul nu a modificat câmpul și care sunt tot la locul lor (același nume).
+// Întoarce true dacă a preluat ceva nou.
+async function integreazaProgresClientei() {
+  if (!planActiv.id) return false;
+  const { data: proaspat } = await supabaseClient.from('planuri_antrenament').select('continut_json').eq('id', planActiv.id).maybeSingle();
+  const initial = (DB.planuri || []).find(p => String(p.id) === String(planActiv.id));
+  if (!proaspat || !initial) return false;
+  let preluat = false;
+  (planActiv.continut_json?.sesiuni || []).forEach((ses, s) => (ses.exercitii || []).forEach((ex, e) => {
+    const dinBaza = proaspat.continut_json?.sesiuni?.[s]?.exercitii?.[e];
+    const dinInitial = initial.continut_json?.sesiuni?.[s]?.exercitii?.[e];
+    if (!dinBaza || !dinInitial || (dinBaza.exercitiu || '') !== (ex.exercitiu || '')) return;
+    ['greutate_kg', 'seturi_finalizate', 'status'].forEach(camp => {
+      if ((ex[camp] || '') === (dinInitial[camp] || '') && (dinBaza[camp] || '') !== (ex[camp] || '')) {
+        ex[camp] = dinBaza[camp] || '';
+        preluat = true;
+      }
+    });
+  }));
+  return preluat;
+}
+
 // Salvare sincronizată direct cu tabela planuri_antrenament din Supabase
 async function salveazaPlanCurentInBaza(silent = false) {
   if (!supabaseClient || !planActiv) return null;
+  const progresPreluat = await integreazaProgresClientei().catch(() => false);
 
   const uid = utilizatorCurent ? utilizatorCurent.id : (planActiv.user_id || null);
   const payload = {
@@ -5045,7 +5078,12 @@ async function salveazaPlanCurentInBaza(silent = false) {
       populeazaSelectorPlanuri();
     }
 
-    if (!silent) showToast(t('toastPlanSaved'));
+    if (progresPreluat) {
+      showToast(tr('Plan salvat; am preluat și progresul completat de clientă.', 'Plan saved; client progress was kept too.'));
+      randeazaPlanAntrenamentUI();
+    } else if (!silent) {
+      showToast(t('toastPlanSaved'));
+    }
     return rezultat;
   } catch (err) {
     console.error("Eroare salvare plan:", err);
