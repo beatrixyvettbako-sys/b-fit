@@ -2815,7 +2815,7 @@ function randeazaOrarInstant() {
     let occupiedText = currentLang === 'en' ? 'occupied' : 'ocupate';
     if (esteBlocat) {
       badgeHtml = `<div class="hour-badge hour-badge-blocked">${currentLang === 'en' ? 'Hour Blocked!' : 'Ora Blocată!'}</div>`;
-      if (ocupate > 0) clientsBadgeHtml = `<div class="hour-badge hour-badge-busy">${ocupate} ${currentLang === 'en' ? (ocupate === 1 ? 'client' : 'clients') : (ocupate === 1 ? 'clientă' : 'cliente')}</div>`;
+      if (ocupate > 0) clientsBadgeHtml = `<div class="hour-badge hour-badge-busy">${ocupate} / ${total} ${occupiedText}</div>`;
     } else {
       badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / ${total} ${occupiedText}</div>`;
     }
@@ -2882,7 +2882,7 @@ function randeazaOrarInstant() {
         <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
           <div class="slot-num">${idx + 1}</div>
           <div class="slot-info">
-            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx})">
+            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx})">
             ${selectAntHtml}
           </div>
           <div style="display:flex; gap:4px;">
@@ -2961,6 +2961,23 @@ function peSchimbareMotivOra(zi, ora) {
 }
 
 let debounceTimerNume = null;
+function seteazaStilSlotOcupat(elCli, ocupat) {
+  let rand = elCli ? elCli.closest('.slot-row') : null;
+  if (!rand) return;
+  rand.classList.toggle('slot-occupied', ocupat);
+  rand.classList.toggle('slot-free', !ocupat);
+
+  let bloc = rand.closest('.hour-block');
+  let badge = bloc ? bloc.querySelector('.hour-badge-busy, .hour-badge-free') : null;
+  if (!badge) return;
+  let inputs = bloc.querySelectorAll('.slot-input');
+  let nr = 0;
+  inputs.forEach(inp => { if (gasesteClientaValida(inp.value.trim())) nr++; });
+  badge.textContent = `${nr} / ${inputs.length} ${currentLang === 'en' ? 'occupied' : 'ocupate'}`;
+  badge.classList.toggle('hour-badge-busy', nr > 0);
+  badge.classList.toggle('hour-badge-free', nr === 0);
+}
+
 function peSchimbareNumeClienta(zi, ora, slotIdx) {
   let oraNorm = normalizeazaOraUi(ora);
   let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
@@ -2969,6 +2986,7 @@ function peSchimbareNumeClienta(zi, ora, slotIdx) {
   let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
+  seteazaStilSlotOcupat(elCli, !!clientaGasita);
 
   if (elBtnSave) {
     if (clientaGasita) {
@@ -3199,6 +3217,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
     let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
 
     if (elCli) elCli.value = "";
+    seteazaStilSlotOcupat(elCli, false);
     if (elAnt) {
       elAnt.value = "";
       aplicaCuloareAntrenament(elAnt);

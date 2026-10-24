@@ -1421,6 +1421,26 @@ details {
   border-color: var(--accent-purple);
 }
 
+/* După alegerea din listă, Chrome colorează câmpul albastru (autofill); păstrăm fundalul aplicației */
+.slot-input:-webkit-autofill,
+.slot-input:-webkit-autofill:hover,
+.slot-input:-webkit-autofill:focus,
+.slot-input:autofill {
+  -webkit-text-fill-color: var(--text);
+  box-shadow: 0 0 0 1000px #ffffff inset;
+  transition: background-color 9999s ease-out 0s;
+}
+
+[data-theme="dark"] .slot-input {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .slot-input:-webkit-autofill,
+[data-theme="dark"] .slot-input:-webkit-autofill:hover,
+[data-theme="dark"] .slot-input:-webkit-autofill:focus,
+[data-theme="dark"] .slot-input:autofill {
+  box-shadow: 0 0 0 1000px #1c1927 inset;
+}
 input::placeholder,
 textarea::placeholder {
   color: var(--placeholder-fade) !important;
@@ -2952,7 +2972,7 @@ select.slot-select-type {
   resize: none;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.45);
-  color: var(--text);
+  color: var(--primary);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 0.88rem;
@@ -2964,6 +2984,7 @@ select.slot-select-type {
 
 [data-theme="dark"] .hour-motiv-input {
   background: rgba(18, 16, 26, 0.35);
+  color: #cbb8ee;
 }
 
 .hour-motiv-input:focus {
