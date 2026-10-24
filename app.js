@@ -2882,7 +2882,7 @@ function randeazaOrarInstant() {
         <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
           <div class="slot-num">${idx + 1}</div>
           <div class="slot-info">
-            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx})">
+            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
             ${selectAntHtml}
           </div>
           <div style="display:flex; gap:4px;">
@@ -2978,7 +2978,7 @@ function seteazaStilSlotOcupat(elCli, ocupat) {
   badge.classList.toggle('hour-badge-free', nr === 0);
 }
 
-function peSchimbareNumeClienta(zi, ora, slotIdx) {
+function peSchimbareNumeClienta(zi, ora, slotIdx, ev) {
   let oraNorm = normalizeazaOraUi(ora);
   let slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
   let elCli = document.getElementById('cli_' + slotDomKey);
@@ -2987,6 +2987,10 @@ function peSchimbareNumeClienta(zi, ora, slotIdx) {
   let textIntrodus = elCli ? elCli.value.trim() : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
   seteazaStilSlotOcupat(elCli, !!clientaGasita);
+
+  // Alegere din listă (nu tastare): ieșim din câmp, salvarea pornește oricum după debounce
+  let dinLista = ev && (ev.inputType === 'insertReplacementText' || !ev.inputType);
+  if (clientaGasita && dinLista && elCli) elCli.blur();
 
   if (elBtnSave) {
     if (clientaGasita) {
