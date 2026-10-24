@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal67">
+  <link rel="stylesheet" href="style.css?v=fitFinal68">
 </head>
 <body>
 
@@ -22,13 +22,17 @@
   <div id="customToast">✓ Mesaj</div>
 
   <!-- ECRAN CLIENTĂ (rol „clienta” din profiles): doar citire, deocamdată abonamentul -->
-  <div id="clientaScreen" class="auth-overlay auth-hidden">
-    <div class="auth-card">
-      <div class="auth-title" id="clientaSalut">Salut!</div>
-      <div class="auth-subtitle" data-en="Your subscription">Abonamentul tău</div>
-      <div id="clientaContinut" style="text-align:left; margin-top:6px;"></div>
-      <button type="button" class="btn" style="width:100%; margin-top:16px;" onclick="deconectareUtilizator()" data-en="Sign out">Ieși din cont</button>
-    </div>
+  <div id="clientaScreen" class="clienta-app auth-hidden">
+    <header class="clienta-header">
+      <button type="button" class="header-icon-bubble-btn" id="clientaBtnInapoi" onclick="clientaInapoi()" style="visibility:hidden;" title="Înapoi" data-en-title="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="clienta-title" id="clientaTitlu">B-Fit</div>
+      <button type="button" class="header-icon-bubble-btn" onclick="deschideMeniuLateral()" title="Meniu" data-en-title="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+      </button>
+    </header>
+    <div class="clienta-body" id="clientaContinut"></div>
   </div>
 
   <!-- ECRAN AUTENTIFICARE SUPABASE -->
@@ -106,6 +110,7 @@
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4M17 19h4"/></svg>
           <span id="authMagicLinkBtnText">Conectare fără parolă (Magic Link)</span>
         </button>
+        <div style="font-size:0.72rem; color:var(--text-muted); text-align:center; line-height:1.35;" data-en="Got an invitation? Enter your email and tap Magic Link.">Ai primit o invitație? Introdu emailul și apasă Magic Link.</div>
       </form>
 
       <div class="auth-divider">
@@ -288,7 +293,7 @@
         </div>
 
         <!-- 2. Card Navigare Plan de Antrenament (Liquid Glass Mov Minimalist) -->
-        <div class="drawer-nav-card" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
+        <div class="drawer-nav-card doar-antrenor" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
           <div class="drawer-nav-card-left">
             <div class="drawer-nav-icon" style="background: rgba(var(--accent-rgb), 0.18); border: 1px solid rgba(var(--accent-rgb), 0.35);">
               <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--accent-purple); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;">
@@ -673,7 +678,7 @@
             <span id="spanArataArhivate">Arată și arhivate</span>
           </label>
         </div>
-        <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege clienta..." data-en-placeholder="Choose client..." list="listaClienteVizibile" oninput="actualizeazaStilSelect(this)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
+        <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege clienta..." data-en-placeholder="Choose client..." list="listaClienteVizibile" autocomplete="off" oninput="peInputClientaFisa(event)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
 
         <div id="fisaEmptyState" class="empty-state-card">
           <div class="empty-state-icon-wrap">
@@ -1107,6 +1112,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal67"></script>
+  <script src="app.js?v=fitFinal68"></script>
 </body>
 </html>

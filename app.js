@@ -1014,6 +1014,24 @@ function actualizeazaStilSelect(sel) {
   }
 }
 
+// Alegere din lista de cliente (nu tastare): evenimentul vine ca înlocuire / fără inputType, sau textul sare cu mai mult de un caracter.
+// Telefoanele raportează inputType diferit, de aceea nu ne bazăm doar pe el.
+function esteAlegereDinLista(el, ev) {
+  const lungimeVeche = el._lungimeAnterioara || 0;
+  el._lungimeAnterioara = el.value.length;
+  return !!ev && (ev.inputType === 'insertReplacementText' || !ev.inputType || el.value.length - lungimeVeche > 1);
+}
+
+// Fișă clientă: după alegerea din listă ieșim din câmp și afișăm fișa imediat (onchange vine abia la blur, nu mereu pe telefon)
+function peInputClientaFisa(ev) {
+  const el = ev.target;
+  actualizeazaStilSelect(el);
+  if (esteAlegereDinLista(el, ev) && gasesteClientaValida(el.value.trim())) {
+    el.blur();
+    afiseazaFisaClientaInstant();
+  }
+}
+
 function curataEroareCamp(el) {
   if (el) el.classList.remove('input-error');
 }
@@ -2145,32 +2163,217 @@ async function incarcaRolUtilizator() {
     // fără rețea: ultimul rol cunoscut pe acest dispozitiv
     rolUtilizator = localStorage.getItem('BFIT_ROL') === 'clienta' ? 'clienta' : 'antrenor';
   }
+  document.documentElement.setAttribute('data-rol', rolUtilizator); // ascunde din sertar ce e doar pentru antrenor
 }
 
-function randeazaEcranClienta(c) {
+// ---- Ecranul clientei: abonament + planurile ei; Profil și Setări vin din același sertar ca la antrenor ----
+let dateClienta = { fisa: null, planuri: [], planCurent: null };
+let timerSalvareProgres = null;
+
+function randeazaHomeClienta() {
+  const c = dateClienta.fisa;
+  dateClienta.planCurent = null;
+  document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   const prenume = (c.nume || '').trim().split(' ')[0];
-  document.getElementById('clientaSalut').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
+  document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
   const rand = (eticheta, valoare) => `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--text-muted); font-size:0.85rem;">${eticheta}</span><b>${escAttr(String(valoare))}</b></div>`;
-  document.getElementById('clientaContinut').innerHTML =
+  let html = htmlOnboardingClienta() + `<div class="card">
+    <div style="font-weight:800; color:var(--primary); margin-bottom:4px;">${tr('Abonamentul meu', 'My subscription')}</div>` +
     rand(tr('Abonament', 'Subscription'), traduceValoare(c.tipAbonament || '-')) +
     rand(tr('Ședințe rămase', 'Sessions left'), c.ramase ?? '-') +
     rand(tr('Ședințe efectuate', 'Sessions done'), `${c.efectuate ?? 0} ${tr('din', 'of')} ${c.incluse ?? 0}`) +
-    rand(tr('Valabil până la', 'Valid until'), c.dataExpirare || '-');
+    rand(tr('Valabil până la', 'Valid until'), c.dataExpirare || '-') + `</div>`;
+
+  html += `<div style="font-weight:800; color:var(--primary); margin:14px 2px 6px;">${tr('Planurile mele', 'My plans')}</div>`;
+  if (dateClienta.planuri.length === 0) {
+    html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Antrenorul tău nu ți-a trimis încă un plan.', 'Your trainer has not sent you a plan yet.')}</div>`;
+  } else {
+    dateClienta.planuri.forEach((p, i) => {
+      html += `<div class="card drawer-nav-card" style="margin-bottom:8px;" onclick="deschidePlanClienta(${i})">
+        <div class="drawer-nav-card-left"><div>
+          <div class="drawer-nav-title">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</div>
+          <div class="drawer-nav-desc">${escAttr(p.subtitlu || '')}</div>
+        </div></div>
+        <div class="drawer-nav-arrow">›</div>
+      </div>`;
+    });
+  }
+  document.getElementById('clientaContinut').innerHTML = html;
 }
+
+// Prima deschidere ca clientă: parolă (ca să se poată reconecta oricând, mai ales în aplicația instalată) + cum se instalează aplicația
+function cheieOnboardingClienta() {
+  return 'BFIT_ONBOARD_' + (utilizatorCurent ? utilizatorCurent.id : '');
+}
+
+function htmlOnboardingClienta() {
+  if (localStorage.getItem(cheieOnboardingClienta())) return '';
+  const instalata = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const instalare = instalata ? '' : `<div style="margin-top:12px; font-size:0.8rem; line-height:1.45;">
+      <b>${tr('Instalează aplicația', 'Install the app')}</b><br>
+      ${ios
+        ? tr('Apasă Partajează (pătratul cu săgeată) → „Adaugă pe ecranul principal”. După instalare te conectezi din nou, cu email și parolă.', 'Tap Share (the square with an arrow) → "Add to Home Screen". After installing, sign in again with email and password.')
+        : tr('Meniul ⋮ al browserului → „Instalează aplicația” sau „Adaugă pe ecranul principal”.', 'Browser menu ⋮ → "Install app" or "Add to Home screen".')}
+    </div>`;
+  return `<div class="card" id="clientaOnboarding">
+    <div style="font-weight:800; color:var(--primary);">${tr('Bine ai venit!', 'Welcome!')}</div>
+    <div id="onboardParola" style="margin-top:8px; font-size:0.8rem; line-height:1.45;">
+      <b>${tr('Setează o parolă', 'Set a password')}</b><br>
+      ${tr('Așa te poți conecta oricând cu email și parolă, inclusiv în aplicația instalată.', 'This lets you sign in any time with email and password, including in the installed app.')}
+      <div style="display:flex; gap:6px; margin-top:6px;">
+        <input type="password" id="onboardParolaInput" class="form-control" autocomplete="new-password" placeholder="${tr('Parolă nouă (min. 6 caractere)', 'New password (min. 6 characters)')}" style="flex:1; min-width:0;">
+        <button type="button" class="btn" style="white-space:nowrap;" onclick="seteazaParolaOnboarding()">${tr('Setează', 'Set')}</button>
+      </div>
+    </div>
+    ${instalare}
+    <button type="button" class="btn btn-clear" style="width:100%; margin-top:12px;" onclick="inchideOnboardingClienta()">${tr('Gata', 'Done')}</button>
+  </div>`;
+}
+
+async function seteazaParolaOnboarding() {
+  const inp = document.getElementById('onboardParolaInput');
+  const parola = inp ? inp.value : '';
+  if (parola.length < 6) {
+    showToast(t('authErrPassLength'), 'error');
+    return;
+  }
+  const { error } = await supabaseClient.auth.updateUser({ password: parola });
+  if (error) {
+    showToast(localizeazaEroareAuth(error.message), 'error');
+    return;
+  }
+  document.getElementById('onboardParola').innerHTML = `<b>${tr('Parola a fost setată ✓', 'Password set ✓')}</b>`;
+}
+
+function inchideOnboardingClienta() {
+  localStorage.setItem(cheieOnboardingClienta(), '1');
+  document.getElementById('clientaOnboarding')?.remove();
+}
+
+function clientaInapoi() {
+  salveazaProgresClienta();
+  randeazaHomeClienta();
+}
+
+function deschidePlanClienta(idx) {
+  dateClienta.planCurent = JSON.parse(JSON.stringify(dateClienta.planuri[idx]));
+  document.getElementById('clientaBtnInapoi').style.visibility = 'visible';
+  randeazaPlanClienta();
+}
+
+function randeazaPlanClienta() {
+  const p = dateClienta.planCurent;
+  const cj = p.continut_json || {};
+  document.getElementById('clientaTitlu').innerText = p.titlu || tr('Plan de antrenament', 'Workout plan');
+  const text = (sec) => `<div class="plan-info-box"><div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div><div class="plan-info-rendered-text">${escAttr(sec.continut)}</div></div>`;
+
+  let html = `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
+  (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
+
+  (cj.sesiuni || []).forEach((ses, s) => {
+    html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div></div>`;
+    (ses.exercitii || []).forEach((ex, e) => {
+      const st = ex.status || '';
+      const opt = (v, eticheta) => `<option value="${v}" ${st === v ? 'selected' : ''}>${eticheta}</option>`;
+      html += `<div style="padding:8px 10px; border-top:1px solid var(--border);">
+        <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}</div>
+        <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${escAttr(ex.seturi_repetari)}${ex.pauza ? ` • ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
+        ${ex.indicatii ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">${escAttr(ex.indicatii)}</div>` : ''}
+        <div class="plan-tracking-grid">
+          <div class="plan-tracking-field">
+            <span class="plan-tracking-label">${tr('Greutate (kg)', 'Weight (kg)')}</span>
+            <input type="text" inputmode="decimal" maxlength="20" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'greutate_kg', this.value)">
+          </div>
+          <div class="plan-tracking-field">
+            <span class="plan-tracking-label">${tr('Seturi făcute', 'Sets done')}</span>
+            <input type="text" inputmode="numeric" maxlength="20" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'seturi_finalizate', this.value)">
+          </div>
+          <div class="plan-tracking-field">
+            <span class="plan-tracking-label">Status</span>
+            <select class="pill-select plan-status-select ${getPillClass(st)}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); peModificareProgresClienta(${s}, ${e}, 'status', this.value)">
+              ${opt('', 'Status')}${opt('În așteptare', traduceValoare('În așteptare'))}${opt('Finalizat', traduceValoare('Finalizat'))}${opt('Sărit', traduceValoare('Sărit'))}
+            </select>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
+  if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
+  html += `<div id="clientaStareSalvare" style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:10px;">${tr('Modificările se salvează automat.', 'Changes are saved automatically.')}</div>`;
+  document.getElementById('clientaContinut').innerHTML = html;
+}
+
+function seteazaStareSalvareClienta(ro, en, eroare) {
+  const el = document.getElementById('clientaStareSalvare');
+  if (!el) return;
+  el.innerText = tr(ro, en);
+  el.style.color = eroare ? 'var(--color-absenta)' : 'var(--text-muted)';
+}
+
+function peModificareProgresClienta(s, e, camp, valoare) {
+  const ex = dateClienta.planCurent?.continut_json?.sesiuni?.[s]?.exercitii?.[e];
+  if (!ex) return;
+  ex[camp] = valoare;
+  seteazaStareSalvareClienta('Se salvează...', 'Saving...');
+  clearTimeout(timerSalvareProgres);
+  timerSalvareProgres = setTimeout(salveazaProgresClienta, 1200);
+}
+
+// Trimite doar greutatea, seturile și statusul; funcția din baza de date nu atinge restul planului
+async function salveazaProgresClienta() {
+  const p = dateClienta.planCurent;
+  if (timerSalvareProgres === null || !p) return;
+  clearTimeout(timerSalvareProgres);
+  timerSalvareProgres = null;
+  const progres = [];
+  (p.continut_json?.sesiuni || []).forEach((ses, s) => (ses.exercitii || []).forEach((ex, e) => {
+    progres.push({ s, e, greutate_kg: ex.greutate_kg || '', seturi_finalizate: ex.seturi_finalizate || '', status: ex.status || '' });
+  }));
+  const { data, error } = await supabaseClient.rpc('salveaza_progres_plan', { p_id: p.id, p_progres: progres });
+  if (error || data !== true) {
+    seteazaStareSalvareClienta('Nu s-a putut salva. Încearcă din nou.', 'Could not save. Try again.', true);
+    showToast(tr('Eroare sincronizare', 'Sync error'), 'error');
+    return;
+  }
+  const i = dateClienta.planuri.findIndex(x => x.id === p.id);
+  if (i >= 0) dateClienta.planuri[i] = JSON.parse(JSON.stringify(p));
+  seteazaStareSalvareClienta('Salvat ✓', 'Saved ✓');
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && timerSalvareProgres !== null) salveazaProgresClienta();
+});
 
 async function afiseazaEcranClienta() {
   document.getElementById('clientaScreen')?.classList.remove('auth-hidden');
   actualizeazaStareNoScrollBody();
-  const { data, error } = await supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1);
-  const c = data && data[0];
-  if (error || !c) {
+  const [resFisa, resPlanuri] = await Promise.all([
+    supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1),
+    supabaseClient.from('planuri_antrenament').select('*').order('updated_at', { ascending: false })
+  ]);
+  const c = resFisa.data && resFisa.data[0];
+  if (resFisa.error || !c) {
     document.getElementById('clientaContinut').innerText = tr('Nu am găsit abonamentul. Contactează antrenorul.', 'Subscription not found. Contact your trainer.');
     return;
   }
-  randeazaEcranClienta(c);
+  dateClienta.fisa = c;
+  dateClienta.planuri = resPlanuri.data || [];
+  randeazaHomeClienta();
+}
+
+// Link de acces expirat sau deja folosit: Supabase întoarce eroarea în adresă (#error_code=otp_expired). O citim și curățăm adresa.
+function citesteEroareLinkAuth() {
+  const parametri = new URLSearchParams(window.location.hash.replace(/^#/, '') || window.location.search);
+  if (!parametri.get('error') && !parametri.get('error_code')) return '';
+  history.replaceState(null, '', window.location.pathname);
+  return tr('Linkul a expirat sau a fost deja folosit. Conectează-te cu email și parolă, sau cere un link nou cu Magic Link.', 'The link has expired or was already used. Sign in with email and password, or request a new link with Magic Link.');
 }
 
 async function verificaSesiuneSupabase() {
+  const eroareLink = citesteEroareLinkAuth();
   const overlay = document.getElementById('authScreenOverlay');
   if (!supabaseClient) {
     if (overlay) overlay.classList.add('auth-hidden');
@@ -2189,6 +2392,7 @@ async function verificaSesiuneSupabase() {
   } else {
     utilizatorCurent = null;
     if (overlay) overlay.classList.remove('auth-hidden');
+    if (eroareLink) afiseazaMesajAuthFeedback(eroareLink);
     actualizeazaStareNoScrollBody();
     return false;
   }

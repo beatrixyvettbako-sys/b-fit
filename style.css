@@ -1036,6 +1036,60 @@ header {
   grid-column: 2 / span 2;
 }
 
+/* ECRANUL CLIENTEI (rol „clienta”): ecran propriu peste aplicație, sertarul (z-index 10001) rămâne deasupra */
+.clienta-app {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  overflow-y: auto;
+  background-color: var(--bg);
+  background-image: var(--bg-gradient);
+}
+
+.clienta-app.auth-hidden {
+  display: none;
+}
+
+.clienta-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: calc(6px + env(safe-area-inset-top, 0px)) 12px 6px;
+  background: var(--header-glass-bg);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1.05rem;
+}
+
+[data-theme="dark"] .clienta-header {
+  color: var(--text-soft);
+}
+
+.clienta-title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.clienta-body {
+  padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+html[data-rol="clienta"] .doar-antrenor {
+  display: none;
+}
+
 .accent-swatch {
   width: 15px;
   height: 15px;
@@ -1683,20 +1737,29 @@ details {
 .slot-input:-webkit-autofill,
 .slot-input:-webkit-autofill:hover,
 .slot-input:-webkit-autofill:focus,
-.slot-input:autofill {
+.slot-input:autofill,
+#selectClientaFisa:-webkit-autofill,
+#selectClientaFisa:-webkit-autofill:hover,
+#selectClientaFisa:-webkit-autofill:focus,
+#selectClientaFisa:autofill {
   -webkit-text-fill-color: var(--text);
   box-shadow: 0 0 0 1000px #ffffff inset;
   transition: background-color 9999s ease-out 0s;
 }
 
-[data-theme="dark"] .slot-input {
+[data-theme="dark"] .slot-input,
+[data-theme="dark"] #selectClientaFisa {
   color-scheme: dark;
 }
 
 [data-theme="dark"] .slot-input:-webkit-autofill,
 [data-theme="dark"] .slot-input:-webkit-autofill:hover,
 [data-theme="dark"] .slot-input:-webkit-autofill:focus,
-[data-theme="dark"] .slot-input:autofill {
+[data-theme="dark"] .slot-input:autofill,
+[data-theme="dark"] #selectClientaFisa:-webkit-autofill,
+[data-theme="dark"] #selectClientaFisa:-webkit-autofill:hover,
+[data-theme="dark"] #selectClientaFisa:-webkit-autofill:focus,
+[data-theme="dark"] #selectClientaFisa:autofill {
   box-shadow: 0 0 0 1000px var(--card-bg-solid) inset;
 }
 input::placeholder,
