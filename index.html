@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal74">
+  <link rel="stylesheet" href="style.css?v=fitFinal75">
 </head>
 <body>
 
@@ -810,6 +810,7 @@
         </summary>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
           <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și Prenume clientă">
+          <input type="tel" id="nouTelefonClienta" class="form-control" placeholder="Telefon (opțional)" data-en-placeholder="Phone (optional)" autocomplete="off">
           <select id="nouTipAbonament" class="form-control">
             <option value="8 sedinte">8 sedinte</option>
             <option value="10 sedinte">10 sedinte</option>
@@ -881,6 +882,18 @@
             </div>
           </div>
 
+          <!-- Contact: atingerea pornește apelul / emailul -->
+          <div class="fisa-contact">
+            <a id="fisaTelefon" class="fisa-contact-rand">
+              <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+              <span id="fisaTelefonText">—</span>
+            </a>
+            <a id="fisaEmail" class="fisa-contact-rand">
+              <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+              <span id="fisaEmailText">—</span>
+            </a>
+          </div>
+
           <div id="blocContClienta" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
               <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);" data-en="ACCOUNT IN THE APP">CONT ÎN APLICAȚIE</span>
@@ -904,6 +917,16 @@
               <div class="form-group">
                 <label id="labelEditNume">Nume Clientă (Redenumește peste tot)</label>
                 <input type="text" id="editNume" class="form-control" placeholder="Nume și Prenume" data-en-placeholder="Full name">
+              </div>
+
+              <div class="form-group">
+                <label data-en="Phone">Telefon</label>
+                <input type="tel" id="editTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="off">
+              </div>
+
+              <div class="form-group">
+                <label id="labelEditEmail">Email</label>
+                <input type="email" id="editEmail" class="form-control" placeholder="email@clienta.ro" autocomplete="off">
               </div>
 
               <div class="form-group">
@@ -974,7 +997,7 @@
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
               <input type="date" id="dataPrelungireManuala" class="form-control" style="padding: 6px; font-size: 0.85rem;">
-              <button class="btn" style="padding: 6px 10px; font-size: 0.8rem; background: #27ae60;" id="setManualDateBtn" onclick="seteazaDataManuala()">Setează</button>
+              <button class="btn" style="padding: 6px 10px; font-size: 0.8rem;" id="setManualDateBtn" onclick="seteazaDataManuala()">Setează</button>
             </div>
           </div>
 
@@ -1266,6 +1289,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal74"></script>
+  <script src="app.js?v=fitFinal75"></script>
 </body>
 </html>

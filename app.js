@@ -1252,6 +1252,7 @@ async function executaActiuneSupabase(actionName, payload) {
       status: c.status || "Activ",
       id: c.id || ("cli_" + c.row),
       emailInvitatie: (c.email_invitatie || "").trim(),
+      telefon: (c.telefon || "").trim(),
       contConectat: !!c.auth_user_id
     })).filter(c => c.nume !== "");
 
@@ -1629,7 +1630,7 @@ async function executaActiuneSupabase(actionName, payload) {
     const { data: ex } = await qEx.limit(1);
 
     if (ex && ex.length > 0) {
-      await sb.from('cliente').update({
+      const actualizare = {
         nume: numeNou,
         tipAbonament: payload.tip,
         incluse: Number(payload.incluse) || 0,
@@ -1637,24 +1638,28 @@ async function executaActiuneSupabase(actionName, payload) {
         ramase: Number(payload.ramase) || 0,
         dataStart: payload.dataStart,
         dataExpirare: payload.dataExp,
-        status: payload.status
-      }).eq('row', ex[0].row);
+        status: payload.status,
+        telefon: (payload.telefon || "").trim()
+      };
+      // Emailul e cel al invitației; cu cont conectat e emailul contului și nu se schimbă (legarea s-ar pierde)
+      if (!ex[0].auth_user_id) actualizare.email_invitatie = (payload.email || "").trim().toLowerCase();
+      await sb.from('cliente').update(actualizare).eq('row', ex[0].row);
 
+      // Numele se schimbă peste tot: după client_id (legătura sigură, prinde și nume rămase vechi din redenumiri anterioare)
+      // și după numele vechi (rândurile fără client_id). Planurile nu au client_id, doar nume.
+      const idClienta = ex[0].id || ("cli_" + ex[0].row);
+      const tabeleCuNume = [['orar', 'clienta'], ['prezente', 'clienta'], ['confirmari', 'nume'], ['incasari', 'clienta']];
+      const cereri = tabeleCuNume.map(([tabel, col]) => {
+        let q = sb.from(tabel).update({ [col]: numeNou }).eq('client_id', idClienta).neq(col, numeNou);
+        return uid ? q.eq('user_id', uid) : q;
+      });
       if (numeVechi.toLowerCase() !== numeNou.toLowerCase()) {
-        let qO = sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
-        let qP = sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
-        let qPl = sb.from('planuri_antrenament').update({ clienta: numeNou }).ilike('clienta', numeVechi);
-        let qPr = sb.from('confirmari').update({ nume: numeNou }).ilike('nume', numeVechi);
-        let qI = sb.from('incasari').update({ clienta: numeNou }).ilike('clienta', numeVechi);
-        if (uid) {
-          qO = qO.eq('user_id', uid);
-          qP = qP.eq('user_id', uid);
-          qPl = qPl.eq('user_id', uid);
-          qPr = qPr.eq('user_id', uid);
-          qI = qI.eq('user_id', uid);
-        }
-        await Promise.all([qO, qP, qPl, qPr, qI]);
+        tabeleCuNume.concat([['planuri_antrenament', 'clienta']]).forEach(([tabel, col]) => {
+          let q = sb.from(tabel).update({ [col]: numeNou }).ilike(col, numeVechi);
+          cereri.push(uid ? q.eq('user_id', uid) : q);
+        });
       }
+      await Promise.all(cereri);
       return { success: true, numeNou };
     }
     return { success: false, numeNou };
@@ -1670,7 +1675,8 @@ async function executaActiuneSupabase(actionName, payload) {
       ramase: incluse,
       dataStart: "-",
       dataExpirare: "-",
-      status: "Activ"
+      status: "Activ",
+      telefon: (payload.telefon || "").trim()
     };
     if (uid) rowDirect.user_id = uid;
 
@@ -4357,6 +4363,14 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('editEfectuate').value = client.efectuate;
   document.getElementById('editRamase').value = client.ramase;
   document.getElementById('editStatus').value = client.status;
+  document.getElementById('editTelefon').value = client.telefon || '';
+  // Emailul = cel al invitației; cu cont conectat e emailul contului, deci blocat
+  const elEmail = document.getElementById('editEmail');
+  elEmail.value = client.emailInvitatie || '';
+  elEmail.disabled = client.contConectat;
+  document.getElementById('labelEditEmail').innerText = client.contConectat ? tr('Email (cont)', 'Email (account)') : 'Email';
+  actualizeazaContactFisa(client);
+  valoriInitialeFisa = valoriEditareFisa();
 
   actualizeazaBlocContClienta(client);
   filtreazaIstoricFisaInstant();
@@ -4446,7 +4460,29 @@ function filtreazaIstoricFisaInstant() {
   }
 }
 
+// Telefon și email în fișă: atingerea pornește apelul / emailul; fără valoare apare „—”
+function actualizeazaContactFisa(client) {
+  const tel = client.telefon || '';
+  const email = client.emailInvitatie || '';
+  const elTel = document.getElementById('fisaTelefon');
+  const elEmail = document.getElementById('fisaEmail');
+  if (!elTel || !elEmail) return;
+  document.getElementById('fisaTelefonText').innerText = tel || '—';
+  document.getElementById('fisaEmailText').innerText = email || '—';
+  if (tel) elTel.href = 'tel:' + tel.replace(/[^\d+]/g, ''); else elTel.removeAttribute('href');
+  if (email) elEmail.href = 'mailto:' + email; else elEmail.removeAttribute('href');
+}
+
+// „Salvează Modificările” nu trimite nimic dacă formularul e identic cu datele fișei
+const CAMPURI_EDITARE_FISA = ['editNume', 'editTelefon', 'editEmail', 'editTip', 'editDataStart', 'editDataExpirare', 'editIncluse', 'editEfectuate', 'editRamase', 'editStatus'];
+let valoriInitialeFisa = '';
+
+function valoriEditareFisa() {
+  return CAMPURI_EDITARE_FISA.map(id => (document.getElementById(id)?.value || '').trim()).join('\u0001');
+}
+
 function salveazaEditareClienta() {
+  if (valoriEditareFisa() === valoriInitialeFisa) return;
   let sel = document.getElementById('selectClientaFisa');
   let numeVechi = sel ? sel.value.trim() : "";
   let numeNou = document.getElementById('editNume').value.trim();
@@ -4457,15 +4493,26 @@ function salveazaEditareClienta() {
   let ef = document.getElementById('editEfectuate').value;
   let ram = document.getElementById('editRamase').value;
   let st = document.getElementById('editStatus').value;
+  let telefon = document.getElementById('editTelefon').value.trim();
+  let email = document.getElementById('editEmail').value.trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    showToast(t('authInvalidEmailFormat'), 'error');
+    return;
+  }
+  // Formularul salvat devine noua referință: un al doilea click (dublu click) nu mai trimite nimic
+  const valoriAnterioare = valoriInitialeFisa;
+  valoriInitialeFisa = valoriEditareFisa();
 
   callBackend("actualizeazaDateClienta", {
     numeVechi: numeVechi, numeNou: numeNou, tip: tip, dataStart: dStart, dataExp: dExp,
-    incluse: inc, efectuate: ef, ramase: ram, status: st
+    incluse: inc, efectuate: ef, ramase: ram, status: st, telefon: telefon, email: email
   }, function(res) {
     showToast(t('toastDataUpdated'));
     // Planul deschis în memorie păstrează numele nou, altfel la salvare ar readuce numele vechi
     if (planActiv && (planActiv.clienta || '').trim().toLowerCase() === numeVechi.toLowerCase()) planActiv.clienta = numeNou;
     incarcaBazaDateSilencios(res && res.numeNou ? res.numeNou : numeNou);
+  }, function() {
+    valoriInitialeFisa = valoriAnterioare;
   });
 }
 
@@ -4473,11 +4520,13 @@ function creeazaClientaNouaDirect() {
   let inp = document.getElementById('nouNumeClienta');
   let nume = inp ? inp.value.trim() : "";
   let tip = document.getElementById('nouTipAbonament').value;
+  let inpTel = document.getElementById('nouTelefonClienta');
   if (!nume) { showToast(currentLang === 'en' ? "Enter name!" : "Introdu numele!", "error"); return; }
 
-  callBackend("adaugaClientaDirect", { nume: nume, tip: tip }, function() {
+  callBackend("adaugaClientaDirect", { nume: nume, tip: tip, telefon: inpTel ? inpTel.value : '' }, function() {
     showToast(t('toastClientAdded'));
     if (inp) inp.value = '';
+    if (inpTel) inpTel.value = '';
     incarcaBazaDateSilencios();
   });
 }
