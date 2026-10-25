@@ -1519,6 +1519,18 @@ nav button.active span {
   transition: all 0.15s ease;
 }
 
+/* Light: butoanele erau albe pe card alb, cu bordură albă; primesc o nuanță din accent */
+[data-theme="light"] .drawer-nav-btn {
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 1px 3px rgba(var(--primary-dark-rgb), 0.08);
+}
+
+[data-theme="light"] .drawer-btn-today {
+  background: rgba(var(--accent-rgb), 0.22);
+  border-color: rgba(var(--accent-rgb), 0.4);
+}
+
 .drawer-btn-today:active {
   transform: scale(0.97);
   background: var(--primary);

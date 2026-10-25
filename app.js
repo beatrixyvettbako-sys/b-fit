@@ -3541,6 +3541,21 @@ function randeazaOrarInstant() {
       });
     });
 
+    // Programări rămase neconfirmate (clientă trecută, fără bifă): se pot încă confirma (✓) sau șterge (✕)
+    (DB.orarSloturi || []).forEach(s => {
+      if (!s || s.bifat || !(s.clienta || '').trim()) return;
+      if (s.ziRaw !== tagZiCautat && !(ziCurentaCheie === "Marti" && s.ziRaw === (saptamanaCheie + "_Marți"))) return;
+      let rawOra = normalizeazaOraUi(s.ora);
+      if (!grupuriOreTrecute[rawOra]) grupuriOreTrecute[rawOra] = [];
+      grupuriOreTrecute[rawOra].push({
+        ora: rawOra,
+        clienta: s.clienta.trim(),
+        antrenament: s.antrenament || '',
+        bifat: false,
+        slotIndex: Number(s.slotIndex) || 0
+      });
+    });
+
     let oreSet = Object.keys(grupuriOreTrecute).sort((a, b) => a.localeCompare(b));
     if (oreSet.length === 0) {
       container.innerHTML = `<div style="color:var(--text-muted); padding:24px; text-align:center;">${t('noPresence')}</div>`;
@@ -3556,13 +3571,37 @@ function randeazaOrarInstant() {
         <div class="hour-block" data-ora="${ora}">
           <div class="hour-header">
             <div class="hour-title-wrap"><span>🕒 ${ora}</span></div>
-            <div class="hour-badge hour-badge-busy">${lista.length} / ${Math.max(setariOrar.locuri, lista.length)} ${efectuateText}</div>
+            ${(() => {
+              // Trecut: doar câte au fost confirmate (fără „/ locuri”); nimic dacă niciuna
+              const nrEfectuate = lista.filter(s => s.bifat).length;
+              const text = nrEfectuate === 1 ? tr('efectuată', 'completed') : efectuateText;
+              return nrEfectuate ? `<div class="hour-badge hour-badge-busy">${nrEfectuate} ${text}</div>` : '';
+            })()}
           </div>
           <div class="hour-slots-wrapper">
       `;
       lista.forEach((s, idx) => {
         let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === (s.antrenament || "").toLowerCase());
         let colorCls = cfg ? cfg.cls : "";
+
+        if (!s.bifat) {
+          // Aceleași ID-uri ca în orarul curent: bifeazaPrezentaSlot / anuleazaSlot citesc numele și antrenamentul din ele
+          let cheie = `${ora.replace(':', '')}_${s.slotIndex}`;
+          htmlTrecut += `
+          <div class="slot-row slot-occupied">
+            <div class="slot-num">${idx + 1}</div>
+            <div class="slot-info">
+              <input type="text" id="cli_${cheie}" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
+              <input type="text" id="ant_${cheie}" class="slot-input ${colorCls}" value="${escAttr(s.antrenament)}" placeholder="-" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+            </div>
+            <div style="display:flex; gap:4px;">
+              <button id="btn_save_${cheie}" class="btn btn-save-check" title="${tr('Confirmă prezența (scade o ședință)', 'Confirm attendance (deducts a session)')}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${s.slotIndex})">✓</button>
+              <button id="btn_clear_${cheie}" class="btn btn-clear" title="${tr('Nu a venit: șterge programarea', 'Did not come: remove booking')}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${s.slotIndex})">✕</button>
+            </div>
+          </div>
+        `;
+          return;
+        }
 
         htmlTrecut += `
           <div class="slot-row slot-occupied">
