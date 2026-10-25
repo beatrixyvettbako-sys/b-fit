@@ -1582,12 +1582,16 @@ async function executaActiuneSupabase(actionName, payload) {
         let qO = sb.from('orar').update({ clienta: numeNou }).ilike('clienta', numeVechi);
         let qP = sb.from('prezente').update({ clienta: numeNou }).ilike('clienta', numeVechi);
         let qPl = sb.from('planuri_antrenament').update({ clienta: numeNou }).ilike('clienta', numeVechi);
+        let qPr = sb.from('programari').update({ nume: numeNou }).ilike('nume', numeVechi);
+        let qI = sb.from('incasari').update({ clienta: numeNou }).ilike('clienta', numeVechi);
         if (uid) {
           qO = qO.eq('user_id', uid);
           qP = qP.eq('user_id', uid);
           qPl = qPl.eq('user_id', uid);
+          qPr = qPr.eq('user_id', uid);
+          qI = qI.eq('user_id', uid);
         }
-        await Promise.all([qO, qP, qPl]);
+        await Promise.all([qO, qP, qPl, qPr, qI]);
       }
       return { success: true, numeNou };
     }
@@ -2733,6 +2737,11 @@ function gestioneazaRevenireForeground() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
     gestioneazaRevenireForeground();
+    // La revenirea în aplicație aducem datele noi (ex. rezervări făcute de cliente), fără redeschidere
+    let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
+    if (utilizatorCurent && rolUtilizator !== 'clienta' && activeTag !== 'INPUT' && activeTag !== 'TEXTAREA' && activeTag !== 'SELECT') {
+      incarcaBazaDateSilencios();
+    }
   }
 });
 
@@ -2833,13 +2842,17 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, alinia
     filtreazaIstoricIncasariInstant();
     filtreazaIstoricOrarInstant();
 
+    let sel = document.getElementById('selectClientaFisa');
     if (clientaSelectataDupaActualizare) {
-      let sel = document.getElementById('selectClientaFisa');
       if (sel) {
         sel.value = clientaSelectataDupaActualizare;
         actualizeazaStilSelect(sel);
         afiseazaFisaClientaInstant();
       }
+    } else if (sel && sel.value.trim()) {
+      // Fișa deschisă reflectă și schimbările din alte tab-uri (prezență bifată, încasare); nu suprascriem un câmp în editare
+      let fisa = document.getElementById('tabFisa');
+      if (!fisa || !fisa.contains(document.activeElement)) afiseazaFisaClientaInstant();
     }
 
     if (tipTabCurent === 'orar') {
@@ -3909,12 +3922,22 @@ function randeazaProgramariInstant() {
 function schimbaPrezenta(row, selectEl) {
   let val = selectEl.value;
   selectEl.className = "pill-select " + getPillClass(val);
+  actualizeazaProgramareLocal(row, 'prezenta', val);
   callBackend("actualizeazaCampProgramare", { row: row, col: 3, val: val }, function() {
     showToast(currentLang === 'en' ? "✓ Status updated!" : "✓ Status actualizat!");
   });
 }
 
+// Memoria și cache-ul local rămân la zi, ca o re-randare (ex. schimbarea limbii) să nu readucă valoarea veche
+function actualizeazaProgramareLocal(row, camp, val) {
+  let item = (DB.progActive || []).concat(DB.progHold || []).find(p => p.row === row);
+  if (!item) return;
+  item[camp] = val;
+  try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+}
+
 function schimbaMentiune(row, val) {
+  actualizeazaProgramareLocal(row, 'mentiuni', val);
   callBackend("actualizeazaCampProgramare", { row: row, col: 4, val: val }, function() {});
 }
 
