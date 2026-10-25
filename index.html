@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal69">
+  <link rel="stylesheet" href="style.css?v=fitFinal70">
 </head>
 <body>
 
@@ -33,6 +33,11 @@
       </button>
     </header>
     <div class="clienta-body" id="clientaContinut"></div>
+    <div class="clienta-nav">
+      <button type="button" class="clienta-nav-btn active" id="clientaTab_acasa" onclick="clientaTab('acasa')" data-en="Home">Acasă</button>
+      <button type="button" class="clienta-nav-btn" id="clientaTab_orar" onclick="clientaTab('orar')" data-en="Schedule">Orar</button>
+      <button type="button" class="clienta-nav-btn" id="clientaTab_istoric" onclick="clientaTab('istoric')" data-en="History">Istoric</button>
+    </div>
   </div>
 
   <!-- ECRAN AUTENTIFICARE SUPABASE -->
@@ -1112,6 +1117,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal69"></script>
+  <script src="app.js?v=fitFinal70"></script>
 </body>
 </html>

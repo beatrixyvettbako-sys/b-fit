@@ -1204,7 +1204,9 @@ async function executaActiuneSupabase(actionName, payload) {
       blocat: !!o.blocat,
       motiv: (o.motiv || "").trim(),
       bifat: !!o.bifat,
-      slotIndex: Number(o.slotIndex) || 0
+      slotIndex: Number(o.slotIndex) || 0,
+      deschis: !!o.deschis,
+      rezervatOnline: !!o.rezervat_online
     }));
 
     const progActive = [];
@@ -1398,6 +1400,13 @@ async function executaActiuneSupabase(actionName, payload) {
       if (errIns) throw errIns;
     }
     return { success: true };
+  }
+
+  if (actionName === "seteazaSlotDeschis") {
+    const slot = await gasesteSauCreeazaSlotSupabase(payload.saptamanaCheie, payload.zi, payload.ora, payload.slotIndex, payload.row);
+    const { error } = await sb.from('orar').update({ deschis: !!payload.deschis }).eq('row', slot.row);
+    if (error) throw error;
+    return { success: true, row: slot.row };
   }
 
   if (actionName === "salveazaMotivOra") {
@@ -2349,6 +2358,191 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden' && timerSalvareProgres !== null) salveazaProgresClienta();
 });
 
+// ---- Orar (rezervări) și Istoric pentru clientă ----
+let clientaTabCurent = 'acasa';
+let rezervareInCurs = false;
+const ZILE_OFFSET_SLOT = { luni: 0, marti: 1, 'marți': 1, miercuri: 2, joi: 3, vineri: 4, sambata: 5, 'sâmbătă': 5, duminica: 6, 'duminică': 6 };
+
+// ziRaw „W_2026_10_26_Marți" + ora „09:00" -> data și ora slotului (aceeași regulă ca în baza de date)
+function dataSlot(ziRaw, ora) {
+  const p = (ziRaw || '').split('_');
+  const off = ZILE_OFFSET_SLOT[(p[4] || '').toLowerCase()];
+  if (off === undefined) return null;
+  const d = new Date(Number(p[1]), Number(p[2]) - 1, Number(p[3]) + off);
+  const [h, m] = (ora || '0:0').split(':');
+  d.setHours(Number(h), Number(m), 0, 0);
+  return d;
+}
+
+function etichetaZiSlot(d) {
+  const text = d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function oraSlot(d) {
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function clientaTab(tab) {
+  salveazaProgresClienta();
+  clientaTabCurent = tab;
+  ['acasa', 'orar', 'istoric'].forEach(t => document.getElementById('clientaTab_' + t)?.classList.toggle('active', t === tab));
+  document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
+  if (tab === 'orar') randeazaOrarClienta();
+  else if (tab === 'istoric') randeazaIstoricClienta();
+  else randeazaHomeClienta();
+}
+
+function mesajRezervare(cod) {
+  const mesaje = {
+    ocupat: ['Locul a fost luat între timp.', 'The spot was just taken.'],
+    inchis: ['Locul nu mai e deschis pentru rezervări.', 'This spot is no longer open for booking.'],
+    trecut: ['Ora a trecut deja.', 'This time has already passed.'],
+    in_afara_ferestrei: ['Poți rezerva doar în săptămâna curentă.', 'You can only book in the current week.'],
+    abonament_inactiv: ['Abonamentul tău nu e activ. Contactează antrenorul.', 'Your subscription is not active. Contact your trainer.'],
+    abonament_expirat: ['Abonamentul tău expiră înainte de această ședință.', 'Your subscription expires before this session.'],
+    fara_sedinte: ['Nu mai ai ședințe disponibile de rezervat.', 'You have no sessions left to book.'],
+    deja_rezervat: ['Ai deja o rezervare la această oră.', 'You already have a booking at this time.']
+  };
+  const m = mesaje[cod];
+  return m ? tr(m[0], m[1]) : tr('Nu s-a putut rezerva. Încearcă din nou.', 'Could not book. Try again.');
+}
+
+async function randeazaOrarClienta() {
+  document.getElementById('clientaTitlu').innerText = tr('Orar', 'Schedule');
+  const corp = document.getElementById('clientaContinut');
+  corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const [resDeschise, resRezervari] = await Promise.all([
+    supabaseClient.rpc('sloturi_deschise'),
+    supabaseClient.from('orar').select('*').eq('client_id', dateClienta.fisa.id)
+  ]);
+  if (clientaTabCurent !== 'orar') return;
+  if (resDeschise.error) {
+    corp.innerText = tr('Nu am putut încărca orarul.', 'Could not load the schedule.');
+    return;
+  }
+  const acum = new Date();
+  const mele = (resRezervari.data || []).filter(o => !o.bifat)
+    .map(o => ({ ...o, data: dataSlot(o.ziRaw, o.ora) }))
+    .filter(o => o.data && o.data > acum)
+    .sort((a, b) => a.data - b.data);
+
+  // Locurile libere dintr-o oră se strâng într-un singur rând; rezervarea încearcă pe rând locurile grupului
+  const grupuri = [];
+  (resDeschise.data || []).forEach(o => {
+    const data = dataSlot(o.ziRaw, o.ora);
+    if (!data || data <= acum) return;
+    let g = grupuri.find(x => x.data.getTime() === data.getTime());
+    if (!g) { g = { data, randuri: [] }; grupuri.push(g); }
+    g.randuri.push(o);
+  });
+  grupuri.sort((a, b) => a.data - b.data);
+  dateClienta.grupuri = grupuri;
+
+  const titlu = (txt) => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 6px;">${txt}</div>`;
+  let html = titlu(tr('Rezervările mele', 'My bookings'));
+  if (mele.length === 0) {
+    html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Nu ai nicio rezervare viitoare.', 'You have no upcoming bookings.')}</div>`;
+  }
+  mele.forEach(o => {
+    const poateAnula = o.rezervat_online && (o.data - acum) >= 24 * 3600 * 1000;
+    html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+      <div><div style="font-weight:800;">${escAttr(etichetaZiSlot(o.data))}</div>
+      <div style="font-size:0.82rem; color:var(--text-muted);">${oraSlot(o.data)}${o.antrenament ? ' • ' + escAttr(o.antrenament) : ''}</div></div>
+      ${poateAnula
+        ? `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="anuleazaRezervareClienta(${o.row})">${tr('Anulează', 'Cancel')}</button>`
+        : `<span style="font-size:0.72rem; color:var(--text-muted); text-align:right; max-width:90px;">${tr('Anulare prin antrenor', 'Cancel via trainer')}</span>`}
+    </div>`;
+  });
+
+  html += titlu(tr('Locuri deschise', 'Open spots'));
+  if (grupuri.length === 0) {
+    html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Momentan nu sunt locuri deschise pentru rezervări.', 'There are no open spots right now.')}</div>`;
+  }
+  let ziCurenta = '';
+  grupuri.forEach((g, i) => {
+    const zi = etichetaZiSlot(g.data);
+    if (zi !== ziCurenta) {
+      ziCurenta = zi;
+      html += `<div style="font-size:0.78rem; font-weight:800; color:var(--text-muted); margin:8px 2px 4px;">${escAttr(zi)}</div>`;
+    }
+    const n = g.randuri.length;
+    html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px;">
+      <div><b>${oraSlot(g.data)}</b> <span style="font-size:0.78rem; color:var(--text-muted);">• ${n} ${n === 1 ? tr('loc liber', 'spot left') : tr('locuri libere', 'spots left')}</span></div>
+      <button type="button" class="btn" style="white-space:nowrap;" onclick="rezervaClienta(${i})">${tr('Rezervă', 'Book')}</button>
+    </div>`;
+  });
+  html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Poți anula singură cu cel puțin 24 de ore înainte.', 'You can cancel on your own up to 24 hours before.')}</div>`;
+  corp.innerHTML = html;
+}
+
+async function rezervaClienta(i) {
+  const g = dateClienta.grupuri && dateClienta.grupuri[i];
+  if (!g || rezervareInCurs) return;
+  rezervareInCurs = true;
+  let rezultat = 'ocupat';
+  for (const r of g.randuri) {
+    const { data, error } = await supabaseClient.rpc('rezerva_slot', { p_row: r.row });
+    if (error) { rezultat = 'eroare'; break; }
+    rezultat = data;
+    if (data !== 'ocupat') break;
+  }
+  rezervareInCurs = false;
+  if (rezultat === 'ok') showToast(tr('Rezervat ✓', 'Booked ✓'));
+  else showToast(mesajRezervare(rezultat), 'error');
+  if (clientaTabCurent === 'orar') randeazaOrarClienta();
+}
+
+function anuleazaRezervareClienta(row) {
+  customConfirm(tr('Anulare rezervare', 'Cancel booking'), tr('Anulezi această rezervare?', 'Cancel this booking?'), async function() {
+    const { data, error } = await supabaseClient.rpc('anuleaza_rezervare', { p_row: row });
+    if (!error && data === 'ok') showToast(tr('Rezervare anulată', 'Booking cancelled'));
+    else if (data === 'prea_tarziu') showToast(tr('Prea târziu pentru anulare. Contactează antrenorul.', 'Too late to cancel. Contact your trainer.'), 'error');
+    else showToast(tr('Nu s-a putut anula.', 'Could not cancel.'), 'error');
+    if (clientaTabCurent === 'orar') randeazaOrarClienta();
+  });
+}
+
+async function randeazaIstoricClienta() {
+  document.getElementById('clientaTitlu').innerText = tr('Istoric', 'History');
+  const corp = document.getElementById('clientaContinut');
+  corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const { data, error } = await supabaseClient.from('prezente').select('*').eq('client_id', dateClienta.fisa.id);
+  if (clientaTabCurent !== 'istoric') return;
+  if (error) {
+    corp.innerText = tr('Nu am putut încărca istoricul.', 'Could not load the history.');
+    return;
+  }
+  const luniRo = ['Ianuarie', 'Februarie', 'Martie', 'Aprilie', 'Mai', 'Iunie', 'Iulie', 'August', 'Septembrie', 'Octombrie', 'Noiembrie', 'Decembrie'];
+  const luniEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const lista = (data || []).map(p => {
+    const [z, l, a] = (p.data || '').split('.').map(Number);
+    return { ...p, d: new Date(a, (l || 1) - 1, z || 1) };
+  }).filter(p => !isNaN(p.d)).sort((x, y) => y.d - x.d || (y.ora || '').localeCompare(x.ora || ''));
+
+  const acum = new Date();
+  const lunaAceasta = lista.filter(p => p.d.getMonth() === acum.getMonth() && p.d.getFullYear() === acum.getFullYear()).length;
+  const metrica = (valoare, eticheta) => `<div class="metric-box"><div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">${eticheta}</div><div class="metric-val">${valoare}</div></div>`;
+  let html = `<div class="metric-grid" style="grid-template-columns:repeat(3, 1fr);">${metrica(lunaAceasta, tr('Luna aceasta', 'This month'))}${metrica(lista.length, tr('Total ședințe', 'Total sessions'))}${metrica(dateClienta.fisa.ramase ?? '-', tr('Rămase', 'Left'))}</div>`;
+
+  if (lista.length === 0) {
+    html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem; margin-top:10px;">${tr('Încă nu ai ședințe înregistrate.', 'No sessions recorded yet.')}</div>`;
+  }
+  let lunaCurenta = '';
+  lista.forEach(p => {
+    const luna = (currentLang === 'en' ? luniEn : luniRo)[p.d.getMonth()] + ' ' + p.d.getFullYear();
+    if (luna !== lunaCurenta) {
+      lunaCurenta = luna;
+      html += `<div style="font-weight:800; color:var(--primary); margin:14px 2px 6px;">${luna}</div>`;
+    }
+    html += `<div class="card" style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
+      <div><b>${escAttr(p.data)}</b> <span style="font-size:0.8rem; color:var(--text-muted);">${escAttr(p.ora || '')}</span></div>
+      <div style="font-size:0.82rem; font-weight:700; color:var(--primary); text-align:right;">${escAttr(p.antrenament || '-')}</div>
+    </div>`;
+  });
+  corp.innerHTML = html;
+}
+
 async function afiseazaEcranClienta() {
   document.getElementById('clientaScreen')?.classList.remove('auth-hidden');
   actualizeazaStareNoScrollBody();
@@ -2363,7 +2557,7 @@ async function afiseazaEcranClienta() {
   }
   dateClienta.fisa = c;
   dateClienta.planuri = resPlanuri.data || [];
-  randeazaHomeClienta();
+  clientaTab('acasa');
 }
 
 // Link de acces expirat sau deja folosit: Supabase întoarce eroarea în adresă (#error_code=otp_expired). O citim și curățăm adresa.
@@ -3166,9 +3360,18 @@ function randeazaOrarInstant() {
       let clearBtnDisabledAttr = slotEsteCompletGol ? 'disabled' : '';
       let clearBtnClass = slotEsteCompletGol ? 'btn btn-clear btn-clear-disabled' : 'btn btn-clear';
 
+      // Loc liber: numărul e și comutator „deschis pentru rezervări"; loc rezervat de clientă: număr marcat
+      let slotNumHtml = `<div class="slot-num">${idx + 1}</div>`;
+      if (!isOccupied && !slot.bifat) {
+        let titluDeschis = slot.deschis ? tr('Deschis pentru rezervări (apasă ca să închizi)', 'Open for booking (tap to close)') : tr('Închis pentru rezervări (apasă ca să deschizi)', 'Closed for booking (tap to open)');
+        slotNumHtml = `<button type="button" class="slot-num slot-num-btn ${slot.deschis ? 'slot-deschis' : ''}" title="${titluDeschis}" onclick="comutaSlotDeschis('${ziCurentaCheie}', '${ora}', ${slotIdx})">${idx + 1}</button>`;
+      } else if (slot.rezervatOnline) {
+        slotNumHtml = `<div class="slot-num slot-num-online" title="${tr('Rezervat de clientă', 'Booked by the client')}">${idx + 1}</div>`;
+      }
+
       html += `
         <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
-          <div class="slot-num">${idx + 1}</div>
+          ${slotNumHtml}
           <div class="slot-info">
             <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
             ${selectAntHtml}
@@ -3185,6 +3388,28 @@ function randeazaOrarInstant() {
   });
 
   container.innerHTML = html;
+}
+
+// Deschide/închide un loc liber pentru rezervările clientelor. Locul se creează în baza de date dacă nu există încă.
+function comutaSlotDeschis(zi, ora, slotIdx) {
+  const saptamanaCheie = getSaptamanaCheie();
+  const oraNorm = normalizeazaOraUi(ora);
+  const tagZi = saptamanaCheie + '_' + zi;
+  let slot = (DB.orarSloturi || []).find(s => s && (s.ziRaw === tagZi || (zi === 'Marti' && s.ziRaw === saptamanaCheie + '_Marți')) && normalizeazaOraUi(s.ora) === oraNorm && (Number(s.slotIndex) || 0) === slotIdx);
+  const nou = !(slot && slot.deschis);
+  if (!slot) {
+    slot = { row: null, ziRaw: tagZi, ora: oraNorm, clienta: '', antrenament: '', blocat: false, bifat: false, slotIndex: slotIdx, deschis: false, rezervatOnline: false };
+    DB.orarSloturi.push(slot);
+  }
+  slot.deschis = nou;
+  randeazaOrarInstant();
+  callBackend("seteazaSlotDeschis", { saptamanaCheie: saptamanaCheie, zi: zi, ora: oraNorm, slotIndex: slotIdx, row: slot.row, deschis: nou }, function(res) {
+    if (res && res.row) slot.row = res.row;
+    try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+  }, function() {
+    slot.deschis = !nou;
+    randeazaOrarInstant();
+  });
 }
 
 // O blocare/deblocare în curs: o a doua atingere pe 🕒 ar putea crea rânduri duplicate în baza de date

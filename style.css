@@ -1080,8 +1080,44 @@ header {
   text-overflow: ellipsis;
 }
 
+.clienta-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  max-width: 616px;
+  margin: 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 18px;
+  background: var(--header-glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  z-index: 3;
+}
+
+.clienta-nav-btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 9px 4px;
+  border-radius: 13px;
+  cursor: pointer;
+}
+
+.clienta-nav-btn.active {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid2) 100%);
+  color: #fff;
+}
+
 .clienta-body {
-  padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px));
   max-width: 640px;
   margin: 0 auto;
 }
@@ -1707,6 +1743,36 @@ details {
   color: var(--text-muted);
   min-width: 14px;
   text-align: center;
+}
+
+/* Număr de loc: comutator „deschis pentru rezervări" (liber) sau marcaj „rezervat de clientă" */
+.slot-num-btn,
+.slot-num-online {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  border-radius: 50%;
+  line-height: 18px;
+  padding: 0;
+  font-family: inherit;
+}
+
+.slot-num-btn {
+  background: transparent;
+  border: 1.5px dashed var(--text-muted);
+  cursor: pointer;
+}
+
+.slot-num-btn.slot-deschis {
+  background: #15803d;
+  border: 1.5px solid #15803d;
+  color: #fff;
+}
+
+.slot-num-online {
+  background: var(--accent-purple);
+  border: 1.5px solid var(--accent-purple);
+  color: #fff;
 }
 
 .slot-info {
