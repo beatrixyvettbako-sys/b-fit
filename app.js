@@ -148,7 +148,7 @@ const i18n = {
 
     // Plan de Antrenament
     workoutPlanTitle: "Plan de Antrenament",
-    drawerWorkoutDesc: "Programe, export PDF & share cliente",
+    drawerWorkoutDesc: "Programe, export PDF, trimitere la cliente",
     planSelectLabel: "ALEGE PLAN",
     btnImportPlan: "Import",
     btnNewPlan: "Plan Nou",
@@ -698,6 +698,9 @@ function navigheazaSubMeniu(strat) {
   const layers = {
     main: document.getElementById('drawerMainView'),
     settings: document.getElementById('drawerSettingsView'),
+    settingsAppearance: document.getElementById('drawerSettingsAppearanceView'),
+    settingsLanguage: document.getElementById('drawerSettingsLanguageView'),
+    settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
     profile: document.getElementById('drawerProfileView')
   };
 
@@ -6023,9 +6026,26 @@ function seteazaTema(optiune, silent = false) {
     let btn = document.getElementById('themeBtnSystem');
     if (btn) btn.classList.add('active');
   }
+  actualizeazaRezumatSetari();
   if (!silent) {
     showToast(t('toastThemeUpdated'));
   }
+}
+
+// Valorile curente afișate sub cardurile din Setări (Aspect, Limbă, Orar)
+function actualizeazaRezumatSetari() {
+  let tema = localStorage.getItem('beatrix_theme') || 'system';
+  let accent = localStorage.getItem('beatrix_accent') || 'violet';
+  let elAspect = document.getElementById('setariRezumatAspect');
+  if (elAspect) elAspect.textContent = [
+    t(tema === 'light' ? 'lightTheme' : tema === 'dark' ? 'darkTheme' : 'systemTheme'),
+    t('accent' + accent.charAt(0).toUpperCase() + accent.slice(1))
+  ].join(' · ');
+  let elLimba = document.getElementById('setariRezumatLimba');
+  if (elLimba) elLimba.textContent = currentLang === 'en' ? 'English' : 'Română';
+  let elOrar = document.getElementById('setariRezumatOrar');
+  if (elOrar) elOrar.textContent = tr(`${setariOrar.locuri} locuri pe oră`, `${setariOrar.locuri} spots per hour`)
+    + ' · ' + (setariOrar.weekend ? tr('Luni – Duminică', 'Mon – Sun') : tr('Luni – Vineri', 'Mon – Fri'));
 }
 
 // Paleta de culori: mov (implicit, fără atribut) sau albastru (data-accent="blue")
@@ -6038,6 +6058,7 @@ function actualizeazaButoaneSetariOrar() {
   document.getElementById('btnLocuriPlus')?.toggleAttribute('disabled', setariOrar.locuri >= 8);
   document.getElementById('btnZileLucru')?.classList.toggle('active', !setariOrar.weekend);
   document.getElementById('btnZileWeekend')?.classList.toggle('active', setariOrar.weekend);
+  actualizeazaRezumatSetari();
 }
 
 function schimbaLocuriPeOra(pas) {
@@ -6084,6 +6105,7 @@ function seteazaAccent(optiune, silent = false) {
   });
   // Iconița din tab și cea de pe ecranul principal (iOS o citește la „Add to Home Screen”) urmează paleta
   document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.setAttribute('href', paleta === 'violet' ? 'icon.svg' : `icon-${paleta}.svg`));
+  actualizeazaRezumatSetari();
   if (!silent) showToast(t('toastThemeUpdated'));
 }
 
@@ -6096,6 +6118,7 @@ function seteazaLimba(lang, silent = false) {
   if (btnEn) btnEn.classList.toggle('active', lang === 'en');
   
   aplicaTraduceriInterfataStatic();
+  actualizeazaRezumatSetari();
   actualizeazaBaraZile();
   populeazaSelectoriCliente();
   populeazaSelectorLuni();
