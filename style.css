@@ -1412,6 +1412,27 @@ html[data-rol="clienta"] .doar-antrenor {
   font-weight: 700;
 }
 
+.cerere-potrivire {
+  margin-bottom: 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text);
+  background: var(--primary-light);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+}
+
+.cerere-potrivire span {
+  color: var(--text-muted);
+}
+
+.cerere-potrivire.nou {
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
 .cerere-accepta {
   background: #15803d !important;
   border-color: #15803d !important;
@@ -1666,6 +1687,167 @@ html[data-rol="clienta"] .doar-antrenor {
   margin-top: 2px;
   font-size: 0.8rem;
   line-height: 1.35;
+  color: var(--text-muted);
+}
+
+/* ISTORIC (client): seria de săptămâni și calendarul lunar al prezențelor */
+.serie-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.serie-icon {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5b041 0%, #ea580c 100%);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.3);
+}
+
+.serie-card.fara-serie .serie-icon {
+  background: var(--primary-light);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.serie-icon svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.serie-corp {
+  min-width: 0;
+}
+
+.serie-valoare {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.serie-valoare b {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--primary);
+  margin-right: 2px;
+}
+
+[data-theme="dark"] .serie-valoare b {
+  color: var(--text);
+}
+
+.serie-text {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.serie-record {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.cal-antet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cal-antet b {
+  font-size: 0.92rem;
+  color: var(--primary);
+}
+
+[data-theme="dark"] .cal-antet b {
+  color: var(--text);
+}
+
+.cal-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cal-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.cal-nav svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cal-grila {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.cal-grila span {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cal-zile-sapt span {
+  width: auto;
+  height: 22px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.cal-grila span.cu-sedinta {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
+  color: #fff;
+  font-weight: 800;
+}
+
+.cal-grila span.azi {
+  box-shadow: inset 0 0 0 2px var(--accent-purple);
+}
+
+.cal-grila span.cu-sedinta.azi {
+  box-shadow: 0 0 0 2px var(--card-bg), 0 0 0 4px var(--accent-purple);
+}
+
+.cal-total {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--text-muted);
 }
 

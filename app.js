@@ -1813,9 +1813,13 @@ async function executaActiuneSupabase(actionName, payload) {
   if (actionName === "acceptaCerereInscriere") {
     const cer = payload.cerere;
     const fisa = Object.assign({}, cer.raspunsuri, { limba: cer.limba, trimisLa: cer.created_at, consimtamantLa: cer.consimtamant_la });
-    let qEx = sb.from('cliente').select('*').ilike('nume', cer.nume.trim());
-    if (uid) qEx = qEx.eq('user_id', uid);
-    const { data: ex } = await qEx.limit(1);
+    // Clientul existent vine ales din aplicație (gasesteClientPentruCerere: telefon, email, nume); fără el se creează unul nou
+    let ex = null;
+    if (payload.clientId) {
+      let qEx = sb.from('cliente').select('*').eq('id', payload.clientId);
+      if (uid) qEx = qEx.eq('user_id', uid);
+      ({ data: ex } = await qEx.limit(1));
+    }
     let error;
     if (ex && ex.length > 0) {
       const actualizare = { fisa_inscriere: fisa };
@@ -3069,6 +3073,78 @@ function anuleazaRezervareClienta(row) {
   });
 }
 
+// ---- Istoric: seria de săptămâni consecutive cu cel puțin o ședință și calendarul lunar al prezențelor ----
+// Lunea săptămânii unei date, ca număr (ms), pentru comparații între săptămâni
+function lunaSaptamanii(d) {
+  const l = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  l.setDate(l.getDate() - ((l.getDay() + 6) % 7));
+  return l.getTime();
+}
+
+function htmlSerieClienta(lista) {
+  const saptamani = new Set(lista.map(p => lunaSaptamanii(p.d)));
+  const pas = d => { const x = new Date(d); x.setDate(x.getDate() - 7); return x.getTime(); };
+  const curenta = lunaSaptamanii(new Date());
+  const facutaAcum = saptamani.has(curenta);
+  // Săptămâna în curs nu rupe seria: dacă încă nu a venit, numărăm de la săptămâna trecută
+  let serie = 0;
+  for (let s = facutaAcum ? curenta : pas(curenta); saptamani.has(s); s = pas(s)) serie++;
+  let record = 0, sir = 0, anterior = null;
+  [...saptamani].sort((a, b) => a - b).forEach(s => {
+    sir = anterior !== null && pas(s) === anterior ? sir + 1 : 1;
+    record = Math.max(record, sir);
+    anterior = s;
+  });
+
+  const unitate = n => n === 1 ? tr('săptămână la rând', 'week in a row') : tr('săptămâni la rând', 'weeks in a row');
+  const text = serie === 0
+    ? tr('Vino săptămâna asta ca să începi o serie nouă.', 'Come this week to start a new streak.')
+    : facutaAcum
+      ? tr('Ai bifat și săptămâna asta. Ține-o tot așa!', 'This week is done too. Keep it up!')
+      : tr('Vino săptămâna asta ca să păstrezi seria.', 'Come this week to keep your streak.');
+  return `<div class="card serie-card${serie ? '' : ' fara-serie'}">
+      <div class="serie-icon"><svg viewBox="0 0 24 24"><path d="M12 2c1 3.5 5 6 5 11a5 5 0 0 1-10 0c0-2.2 1-3.8 2.3-5.2.2 1.7 1 2.9 2.2 3.4C11.2 8.7 11 5.3 12 2z"/></svg></div>
+      <div class="serie-corp">
+        <div class="serie-valoare"><b>${serie}</b> ${unitate(serie)}</div>
+        <div class="serie-text">${text}</div>
+        ${record > serie ? `<div class="serie-record">${tr('Recordul tău', 'Your best')}: ${record} ${record === 1 ? tr('săptămână', 'week') : tr('săptămâni', 'weeks')}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function htmlCalendarPrezente() {
+  const luna = dateClienta.lunaCalendar;
+  const an = luna.getFullYear(), l = luna.getMonth();
+  const azi = new Date();
+  const cuSedinta = new Set((dateClienta.istoric || []).filter(p => p.d.getFullYear() === an && p.d.getMonth() === l).map(p => p.d.getDate()));
+  const numeLuna = luna.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { month: 'long', year: 'numeric' });
+  const zileSapt = currentLang === 'en' ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['L', 'Ma', 'Mi', 'J', 'V', 'S', 'D'];
+  const primaZi = (new Date(an, l, 1).getDay() + 6) % 7;
+  const nrZile = new Date(an, l + 1, 0).getDate();
+  const esteLunaCurenta = an === azi.getFullYear() && l === azi.getMonth();
+  let celule = '';
+  for (let i = 0; i < primaZi; i++) celule += '<span></span>';
+  for (let z = 1; z <= nrZile; z++) {
+    const clase = [cuSedinta.has(z) ? 'cu-sedinta' : '', esteLunaCurenta && z === azi.getDate() ? 'azi' : ''].join(' ').trim();
+    celule += `<span class="${clase}">${z}</span>`;
+  }
+  const n = cuSedinta.size;
+  return `<div class="cal-antet">
+      <button type="button" class="cal-nav" onclick="schimbaLunaCalendar(-1)" aria-label="${tr('Luna anterioară', 'Previous month')}"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <b>${numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1)}</b>
+      <button type="button" class="cal-nav" onclick="schimbaLunaCalendar(1)" ${esteLunaCurenta ? 'disabled' : ''} aria-label="${tr('Luna următoare', 'Next month')}"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+    </div>
+    <div class="cal-grila cal-zile-sapt">${zileSapt.map(z => `<span>${z}</span>`).join('')}</div>
+    <div class="cal-grila">${celule}</div>
+    <div class="cal-total">${n === 0 ? tr('Nicio zi de antrenament în luna asta', 'No training days this month') : n === 1 ? tr('1 zi de antrenament', '1 training day') : tr(`${n} zile de antrenament`, `${n} training days`)}</div>`;
+}
+
+function schimbaLunaCalendar(directie) {
+  const l = dateClienta.lunaCalendar;
+  dateClienta.lunaCalendar = new Date(l.getFullYear(), l.getMonth() + directie, 1);
+  document.getElementById('calendarPrezente').innerHTML = htmlCalendarPrezente();
+}
+
 async function randeazaIstoricClienta() {
   document.getElementById('clientaTitlu').innerText = tr('Istoric', 'History');
   const corp = document.getElementById('clientaContinut');
@@ -3090,6 +3166,10 @@ async function randeazaIstoricClienta() {
   const lunaAceasta = lista.filter(p => p.d.getMonth() === acum.getMonth() && p.d.getFullYear() === acum.getFullYear()).length;
   const metrica = (valoare, eticheta) => `<div class="metric-box"><div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase;">${eticheta}</div><div class="metric-val">${valoare}</div></div>`;
   let html = `<div class="metric-grid" style="grid-template-columns:repeat(3, 1fr);">${metrica(lunaAceasta, tr('Luna aceasta', 'This month'))}${metrica(lista.length, tr('Total ședințe', 'Total sessions'))}${metrica(dateClienta.fisa.ramase ?? '-', tr('Rămase', 'Left'))}</div>`;
+
+  dateClienta.istoric = lista;
+  dateClienta.lunaCalendar = new Date(acum.getFullYear(), acum.getMonth(), 1);
+  html += htmlSerieClienta(lista) + `<div class="card calendar-prezente" id="calendarPrezente">${htmlCalendarPrezente()}</div>`;
 
   if (lista.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem; margin-top:10px;">${tr('Încă nu ai ședințe înregistrate.', 'No sessions recorded yet.')}</div>`;
@@ -5160,6 +5240,7 @@ function randeazaCerereDeschisa(el, i) {
   const contact = [c.telefon ? `<a href="tel:${escAttr(c.telefon.replace(/\s/g, ''))}">${escAttr(c.telefon)}</a>` : '',
     c.email ? `<a href="mailto:${escAttr(c.email)}">${escAttr(c.email)}</a>` : ''].filter(Boolean).join(' · ');
   corp.innerHTML = `${contact ? `<div class="cerere-contact">${contact}</div>` : ''}
+    ${htmlPotrivireCerere(c)}
     ${htmlRaspunsuriInscriere(c.raspunsuri)}
     <div class="inscriere-butoane">
       <button type="button" class="btn btn-clear cerere-refuza" onclick="refuzaCerereInscriere(${i})">${tr('Șterge', 'Delete')}</button>
@@ -5167,26 +5248,67 @@ function randeazaCerereDeschisa(el, i) {
     </div>`;
 }
 
+// Cu cine se leagă o cerere: același telefon, același email sau același nume (cuvintele în orice ordine, fără diacritice).
+// Un nume dintr-un singur cuvânt (ex. doar prenumele) nu ajunge pentru potrivire: e prea nesigur.
+function gasesteClientPentruCerere(c) {
+  const clienti = DB.clienti || [];
+  const cifre = s => (s || '').replace(/\D/g, '').slice(-9);
+  const tel = cifre(c.telefon);
+  if (tel.length === 9) {
+    const g = clienti.find(x => cifre(x.telefon) === tel);
+    if (g) return { client: g, motiv: tr('același telefon', 'same phone') };
+  }
+  const email = (c.email || '').trim().toLowerCase();
+  if (email) {
+    const g = clienti.find(x => (x.emailInvitatie || '').toLowerCase() === email);
+    if (g) return { client: g, motiv: tr('același email', 'same email') };
+  }
+  const cuvinte = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[\s-]+/).filter(Boolean);
+  const inclus = (a, b) => a.length >= 2 && a.every(w => b.includes(w));
+  const cn = cuvinte(c.nume);
+  const potriviri = clienti.filter(x => { const xn = cuvinte(x.nume); return inclus(xn, cn) || inclus(cn, xn); });
+  if (potriviri.length === 1) return { client: potriviri[0], motiv: tr('același nume', 'same name') };
+  return null;
+}
+
+function htmlPotrivireCerere(c) {
+  const p = gasesteClientPentruCerere(c);
+  return p
+    ? `<div class="cerere-potrivire">${tr('Se leagă de', 'Will be linked to')} <b>${escAttr(p.client.nume)}</b> <span>(${p.motiv}${p.client.fisaInscriere ? tr(', are deja fișă de obiective', ', already has a goal-setting form') : ''})</span></div>`
+    : `<div class="cerere-potrivire nou">${tr('Client nou: nu se potrivește cu niciun client existent', 'New client: no match with an existing client')}</div>`;
+}
+
 function acceptaCerereInscriere(i, btn) {
   const cerere = (DB.cereri || [])[i];
   if (!cerere) return;
-  btn.disabled = true;
-  callBackend("acceptaCerereInscriere", { cerere }, res => {
-    if (!res || !res.success) {
-      btn.disabled = false;
-      showToast(tr('Nu s-a putut accepta cererea.', 'Could not accept the request.'), 'error');
-      return;
-    }
-    showToast(tr(`✓ ${res.nume} e acum în lista de clienți`, `✓ ${res.nume} is now in your client list`));
-    incarcaBazaDateSilencios(res.nume);
-  }, () => { btn.disabled = false; });
+  const p = gasesteClientPentruCerere(cerere);
+  const trimite = () => {
+    btn.disabled = true;
+    callBackend("acceptaCerereInscriere", { cerere, clientId: p ? p.client.id : null }, res => {
+      if (!res || !res.success) {
+        btn.disabled = false;
+        showToast(tr('Nu s-a putut accepta cererea.', 'Could not accept the request.'), 'error');
+        return;
+      }
+      showToast(tr(`✓ ${res.nume} e acum în lista de clienți`, `✓ ${res.nume} is now in your client list`));
+      incarcaBazaDateSilencios(res.nume);
+    }, () => { btn.disabled = false; });
+  };
+  // Fișa existentă nu se înlocuiește fără întrebare
+  if (p && p.client.fisaInscriere) {
+    customConfirm(tr('Înlocuiești fișa de obiective?', 'Replace the goal-setting form?'),
+      tr(`${p.client.nume} are deja o fișă de obiective (completată pe ${p.client.fisaInscriere.data || '-'}). O înlocuiești cu răspunsurile noi?`,
+        `${p.client.nume} already has a goal-setting form (filled in on ${p.client.fisaInscriere.data || '-'}). Replace it with the new answers?`), trimite);
+    return;
+  }
+  trimite();
 }
 
 function refuzaCerereInscriere(i) {
   const cerere = (DB.cereri || [])[i];
   if (!cerere) return;
   customConfirm(tr('Ștergi cererea?', 'Delete the request?'),
-    tr(`Răspunsurile lui ${cerere.nume} se șterg definitiv.`, `The answers from ${cerere.nume} will be deleted permanently.`), () => {
+    tr(`Răspunsurile de la ${cerere.nume} se șterg definitiv.`, `The answers from ${cerere.nume} will be deleted permanently.`), () => {
       callBackend("refuzaCerereInscriere", { id: cerere.id }, res => {
         if (!res || !res.success) {
           showToast(tr('Nu s-a putut șterge cererea.', 'Could not delete the request.'), 'error');
