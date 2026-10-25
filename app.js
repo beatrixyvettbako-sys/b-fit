@@ -2840,10 +2840,11 @@ async function verificaSesiuneSupabase() {
     return true;
   } else {
     utilizatorCurent = null;
+    // Fără sesiune aplicația rămâne ascunsă (app-pornire): login-ul apare cu fade și orarul s-ar vedea prin el.
+    // Devine vizibilă abia la conectare (ascundeLogin din onAuthStateChange).
     if (overlay) overlay.classList.remove('auth-hidden');
     if (eroareLink) afiseazaMesajAuthFeedback(eroareLink);
     actualizeazaStareNoScrollBody();
-    terminaPornirea();
     return false;
   }
 }
@@ -2861,8 +2862,10 @@ window.onload = async function() {
     await initModClientaSharePlan(sharedPlanId);
     return;
   }
-  // Siguranță: dacă verificarea sesiunii se blochează (rețea), aplicația nu rămâne ascunsă
-  setTimeout(terminaPornirea, 5000);
+  // Siguranță: dacă verificarea sesiunii se blochează (rețea), aplicația nu rămâne ascunsă; sub login rămâne ascunsă
+  setTimeout(() => {
+    if (document.getElementById('authScreenOverlay')?.classList.contains('auth-hidden')) terminaPornirea();
+  }, 5000);
 
   let detOrar = document.getElementById('detailsIstoricOrar');
   if (detOrar) detOrar.open = false;
@@ -2894,6 +2897,7 @@ window.onload = async function() {
         const ascundeLogin = () => {
           if (overlay) overlay.classList.add('auth-hidden');
           actualizeazaStareNoScrollBody();
+          terminaPornirea();
         };
         if (eraNeconectat && sesiuneInitializata) {
           // Ecranul de login rămâne până se știe rolul, altfel o clientă vede o clipă orarul antrenorului
