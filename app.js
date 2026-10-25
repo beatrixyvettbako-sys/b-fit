@@ -33,7 +33,7 @@ let tabAnteriorPlan = 'orar';
 const tabsOrder = [
   { id: 'tabOrar', titleRo: 'Orar Săptămânal', titleEn: 'Weekly Schedule', tip: 'orar', idx: 0 },
   { id: 'tabProgramari', titleRo: 'Confirmări', titleEn: 'Check-in', tip: 'prog', idx: 1 },
-  { id: 'tabFisa', titleRo: 'Fișă Clientă', titleEn: 'Client Profile', tip: 'fisa', idx: 2 },
+  { id: 'tabFisa', titleRo: 'Fișă Client', titleEn: 'Client Profile', tip: 'fisa', idx: 2 },
   { id: 'tabIncasari', titleRo: 'Încasări', titleEn: 'Payments', tip: 'incasari', idx: 3 }
 ];
 
@@ -55,31 +55,31 @@ const i18n = {
     addExtraHour: "Adaugă oră suplimentară",
     addBtn: "+ Adaugă",
     historyOrarTitle: "Istoric Prezențe Orar",
-    filterClient: "Filtrează după clientă:",
+    filterClient: "Filtrează după client:",
     filterMonth: "Filtrează după lună:",
-    allClients: "Toate clientele",
+    allClients: "Toți clienții",
     allMonths: "Toate lunile",
     noPresence: "Nici o prezență înregistrată în această zi din trecut.",
     noPresenceFound: "Nici o prezență găsită.",
-    addClientPlaceholder: "+ Adaugă clientă",
+    addClientPlaceholder: "+ Adaugă client",
     activeSection: "Activ",
     holdSection: "Hold",
     noRecords: "Nici o înregistrare",
-    noClientsHold: "Nici o clientă în Hold",
-    addNewClientTitle: "Adaugă o Clientă Nouă în Aplicație",
-    clientNamePlaceholder: "Nume și Prenume clientă",
-    saveClientBtn: "Salvează Clienta",
-    selectClientLabel: "SELECTEAZĂ CLIENTA",
+    noClientsHold: "Niciun client în Hold",
+    addNewClientTitle: "Adaugă un Client Nou în Aplicație",
+    clientNamePlaceholder: "Nume și prenume client",
+    saveClientBtn: "Salvează Clientul",
+    selectClientLabel: "SELECTEAZĂ CLIENTUL",
     showArchived: "Arată și arhivate",
-    selectClientOption: "Alege clienta...",
-    emptyStateTitle: "Nici o clientă selectată",
-    emptyStateDesc: "Alege o clientă din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.",
+    selectClientOption: "Alege clientul...",
+    emptyStateTitle: "Niciun client selectat",
+    emptyStateDesc: "Alege un client din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.",
     sessionsRemaining: "ȘEDINȚE RĂMASE",
     statusLabel: "STATUS",
     validityLabel: "VALABILITATE PÂNĂ LA",
     sessionsDone: "ȘEDINȚE EFECTUATE",
-    editClientTitle: "Editează / Ajustează Datele Clientei",
-    renameClientLabel: "Nume Clientă (Redenumește peste tot)",
+    editClientTitle: "Editează / Ajustează Datele Clientului",
+    renameClientLabel: "Nume Client (Redenumește peste tot)",
     subTypeLabel: "Tip Abonament",
     startDateLabel: "Dată Start",
     expDateLabel: "Dată Expirare",
@@ -90,7 +90,7 @@ const i18n = {
     extendValidityTitle: "Prelungește Valabilitate Abonament",
     setBtn: "Setează",
     archiveBtn: "Arhivează / Ascunde din Liste",
-    reactivateBtn: "Reactivează Clienta (Arată în Liste)",
+    reactivateBtn: "Reactivează Clientul (Arată în Liste)",
     recentHistoryTitle: "Istoric Prezențe Recente",
     noPresenceYet: "Nici o prezență înregistrată încă.",
     newPaymentTitle: "Înregistrare Plată Nouă",
@@ -133,9 +133,9 @@ const i18n = {
     toastMovedHold: "✓ Mutată în Hold!",
     toastDeletedRecord: "✓ Înregistrare ștearsă!",
     toastDataUpdated: "✓ Date actualizate!",
-    toastClientAdded: "✓ Clientă adăugată!",
-    toastReactivated: "✓ Clientă reactivată!",
-    toastArchived: "✓ Clientă arhivată!",
+    toastClientAdded: "✓ Client adăugat!",
+    toastReactivated: "✓ Client reactivat!",
+    toastArchived: "✓ Client arhivat!",
     toastExtended: "✓ Prelungit până la ",
     toastValiditySet: "✓ Valabilitate setată la ",
     toastSubSaved: "✓ Abonament & Încasare salvate!",
@@ -148,7 +148,7 @@ const i18n = {
 
     // Plan de Antrenament
     workoutPlanTitle: "Plan de Antrenament",
-    drawerWorkoutDesc: "Programe, export PDF, trimitere la cliente",
+    drawerWorkoutDesc: "Programe, export PDF, trimitere la clienți",
     planSelectLabel: "ALEGE PLAN",
     btnImportPlan: "Import",
     btnNewPlan: "Plan Nou",
@@ -184,7 +184,7 @@ const i18n = {
     authSignupCheckEmail: "Cont creat! Verifică email-ul pentru confirmare.",
     authMagicLinkSent: "✓ Link-ul de conectare a fost trimis pe email!",
     authLogoutConfirmTitle: "Deconectare",
-    authLogoutConfirmText: "Ești sigură că vrei să ieși din cont?",
+    authLogoutConfirmText: "Sigur vrei să ieși din cont?",
 
     authErrInvalidCreds: "Date de autentificare incorecte (email sau parolă greșită).",
     authErrEmailNotConfirmed: "Adresa de email nu a fost încă confirmată.",
@@ -805,7 +805,7 @@ function distribuieLinkInscriere() {
 async function proceseazaSiUploadeazaAvatar(inputEl) {
   if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
   if (!supabaseClient || !utilizatorCurent) {
-    showToast(currentLang === 'en' ? 'You must be logged in to upload an avatar!' : 'Trebuie să fii conectată pentru a încărca poza!', 'error');
+    showToast(currentLang === 'en' ? 'You must be logged in to upload an avatar!' : 'Conectează-te ca să poți încărca poza!', 'error');
     return;
   }
 
@@ -3801,7 +3801,7 @@ function randeazaListaClienteFisa() {
         <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${escAttr(detalii)}</small></span>
         <span class="lista-stare ${s.tip}">${escAttr(s.text)}</span>
       </button>`;
-  }).join('') : `<div class="lista-gol">${tr('Nicio clientă găsită.', 'No client found.')}</div>`;
+  }).join('') : `<div class="lista-gol">${tr('Niciun client găsit.', 'No client found.')}</div>`;
   lista.innerHTML = html;
 }
 
@@ -4155,7 +4155,7 @@ function randeazaOrarInstant() {
       }
 
       let tipAntrenamentPlaceholder = currentLang === 'en' ? 'Workout type' : 'Tip antrenament';
-      let clientPlaceholder = currentLang === 'en' ? 'Choose existing client...' : 'Alege clientă existentă...';
+      let clientPlaceholder = currentLang === 'en' ? 'Choose existing client...' : 'Alege client existent...';
 
       let selectAntHtml = `<select id="ant_${slotDomKey}" class="slot-select-type ${antVal ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${ziCurentaCheie}', '${ora}', ${slotIdx})">`;
       selectAntHtml += `<option value="" ${!antVal ? 'selected' : ''}>${tipAntrenamentPlaceholder}</option>`;
@@ -4178,7 +4178,7 @@ function randeazaOrarInstant() {
         let titluDeschis = slot.deschis ? tr('Deschis pentru rezervări (apasă ca să închizi)', 'Open for booking (tap to close)') : tr('Închis pentru rezervări (apasă ca să deschizi)', 'Closed for booking (tap to open)');
         slotNumHtml = `<button type="button" class="slot-num slot-num-btn ${slot.deschis ? 'slot-deschis' : ''}" title="${titluDeschis}" onclick="comutaSlotDeschis('${ziCurentaCheie}', '${ora}', ${slotIdx})">${slotIdx + 1}</button>`;
       } else if (slot.rezervatOnline) {
-        slotNumHtml = `<div class="slot-num slot-num-online" title="${tr('Rezervat de clientă', 'Booked by the client')}">${slotIdx + 1}</div>`;
+        slotNumHtml = `<div class="slot-num slot-num-online" title="${tr('Rezervat de client', 'Booked by the client')}">${slotIdx + 1}</div>`;
       }
 
       html += `
@@ -4317,9 +4317,9 @@ function arataProgramareaExistenta(nume, slot, oraNoua, adaugaOricum) {
   const zi = ((getZileConfig().find(z => z.cheie === ziCurentaCheie) || {}).nume || '').toLowerCase();
   if (ora === oraNoua) {
     customConfirm(
-      tr('Deja programată la această oră', 'Already booked at this time'),
-      tr(`${nume} este deja programată ${zi} la ${ora}. Nu poate ocupa două locuri la aceeași oră.`,
-         `${nume} is already booked on ${zi} at ${ora}. She cannot take two spots at the same time.`),
+      tr('Are deja o programare la această oră', 'Already booked at this time'),
+      tr(`${nume} are deja o programare ${zi} la ${ora}. Nu poate ocupa două locuri la aceeași oră.`,
+         `${nume} is already booked on ${zi} at ${ora}. They cannot take two spots at the same time.`),
       function() { arataLocExistent(slot); }
     );
     document.getElementById('modalBtnConfirm').innerText = tr('Arată programarea', 'Show booking');
@@ -4327,8 +4327,8 @@ function arataProgramareaExistenta(nume, slot, oraNoua, adaugaOricum) {
   }
   customConfirm(
     tr('Încă o programare în aceeași zi', 'Another booking on the same day'),
-    tr(`${nume} are deja o programare ${zi} la ${ora}. O adaugi și la ${oraNoua}?`,
-       `${nume} already has a booking on ${zi} at ${ora}. Add her at ${oraNoua} too?`),
+    tr(`${nume} are deja o programare ${zi} la ${ora}. Adaugi o programare și la ${oraNoua}?`,
+       `${nume} already has a booking on ${zi} at ${ora}. Add them at ${oraNoua} too?`),
     function() {
       adaugaOricum();
       randeazaOrarInstant();
@@ -4492,7 +4492,7 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
   }
 
   if (!clientaGasita) {
-    showToast(currentLang === 'en' ? "Please choose an active existing client first!" : "Alege mai întâi o clientă activă existentă!", "error");
+    showToast(currentLang === 'en' ? "Please choose an active existing client first!" : "Alege mai întâi un client activ existent!", "error");
     if (elAnt) {
       elAnt.value = "";
       aplicaCuloareAntrenament(elAnt);
@@ -4541,7 +4541,7 @@ function bifeazaPrezentaSlot(zi, ora, slotIdx) {
   let clientaGasita = gasesteClientaValida(textIntrodus);
 
   if (!clientaGasita) {
-    showToast(currentLang === 'en' ? "Choose a valid client from the list!" : "Alege o clientă validă din listă!", "error");
+    showToast(currentLang === 'en' ? "Choose a valid client from the list!" : "Alege un client valid din listă!", "error");
     return;
   }
 
@@ -4606,7 +4606,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
   let confirmTitleText = currentLang === 'en' ? "Free slot" : "Eliberare slot";
   let confirmDescText = currentLang === 'en' ? 
     "Free this slot? The session will be restored to the client's profile if it was checked, and the entry will be removed from history." : 
-    "Eliberezi acest slot? Ședința va fi restituită în fișa clientei dacă a fost bifată, iar intrarea va fi ștearsă din istoric.";
+    "Eliberezi acest slot? Ședința va fi restituită în fișa clientului dacă a fost bifată, iar intrarea va fi ștearsă din istoric.";
 
   customConfirm(confirmTitleText, confirmDescText, function() {
     let dataCalendar = getDataCalendaristicaCurenta();
@@ -4833,7 +4833,7 @@ function adaugaClientaInProgramari() {
 }
 
 function mutaInHold(row) {
-  customConfirm(currentLang === 'en' ? "Move to Hold" : "Mutare în Hold", currentLang === 'en' ? "Move client to Hold section?" : "Mut clienta în secțiunea Hold?", function() {
+  customConfirm(currentLang === 'en' ? "Move to Hold" : "Mutare în Hold", currentLang === 'en' ? "Move client to Hold section?" : "Mut clientul în secțiunea Hold?", function() {
     callBackend("mutaInHold", { row: row }, function() {
       showToast(t('toastMovedHold'));
       incarcaBazaDateSilencios();
@@ -4964,7 +4964,7 @@ const ETICHETE_SCURTE_INSCRIERE = {
   somn: { ro: 'Somn', en: 'Sleep' },
   sportAnterior: { ro: 'Sport practicat', en: 'Past training' },
   termen: { ro: 'Termen pentru obiective', en: 'Goal deadline' },
-  consecventa: { ro: 'O ajută să fie consecventă', en: 'Helps her stay consistent' },
+  consecventa: { ro: 'Ce ajută la consecvență', en: 'What helps with consistency' },
   frecventa: { ro: 'Antrenamente pe săptămână', en: 'Sessions per week' },
   intervale: { ro: 'Intervale orare preferate', en: 'Preferred time slots' },
   asteptari: { ro: 'Așteptări de la antrenor', en: 'Expectations from the trainer' },
@@ -4972,7 +4972,7 @@ const ETICHETE_SCURTE_INSCRIERE = {
 };
 // În „Fișa mea” clienta își citește propriile răspunsuri: titlurile la persoana I
 const ETICHETE_CLIENTA_INSCRIERE = {
-  consecventa: { ro: 'Ce mă ajută să fiu consecventă', en: 'What helps me stay consistent' },
+  consecventa: { ro: 'Ce mă ajută să nu renunț', en: 'What keeps me going' },
   dataStart: { ro: 'Încep din', en: 'Starting from' }
 };
 
@@ -5177,7 +5177,7 @@ function acceptaCerereInscriere(i, btn) {
       showToast(tr('Nu s-a putut accepta cererea.', 'Could not accept the request.'), 'error');
       return;
     }
-    showToast(tr(`✓ ${res.nume} e acum în lista de cliente`, `✓ ${res.nume} is now in your client list`));
+    showToast(tr(`✓ ${res.nume} e acum în lista de clienți`, `✓ ${res.nume} is now in your client list`));
     incarcaBazaDateSilencios(res.nume);
   }, () => { btn.disabled = false; });
 }
@@ -5221,8 +5221,8 @@ async function incarcaProgresFisa() {
   const checkinuri = error ? [] : (data || []);
   corp.innerHTML = htmlProgres(client.fisaInscriere, checkinuri)
     + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
-      ? tr('Clienta nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
-      : tr('Check-in-ul săptămânal apare după ce clienta își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`);
+      ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
+      : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`);
 }
 
 function randeazaFisaInscriereDeschisa() {
@@ -5385,8 +5385,8 @@ function comutaArhivareClienta() {
 
   let confirmTitle = esteArhivat ? (currentLang === 'en' ? "Reactivation" : "Reactivare") : (currentLang === 'en' ? "Archiving" : "Arhivare");
   let confirmText = esteArhivat ? 
-    (currentLang === 'en' ? `Reactivate client ${nume}?` : `Reactivezi clienta ${nume}?`) : 
-    (currentLang === 'en' ? `Archive client ${nume} from lists?` : `Arhivezi clienta ${nume} din liste?`);
+    (currentLang === 'en' ? `Reactivate client ${nume}?` : `Reactivezi clientul ${nume}?`) : 
+    (currentLang === 'en' ? `Archive client ${nume} from lists?` : `Arhivezi clientul ${nume} din liste?`);
 
   customConfirm(confirmTitle, confirmText, function() {
     callBackend("seteazaStatusClienta", { nume: nume, statusNou: nouStatus }, function() {
@@ -5553,7 +5553,7 @@ function salveazaIncasare() {
   let dataStart = document.getElementById('incasareDataStart').value;
 
   if (!nume) {
-    showToast(currentLang === 'en' ? "Complete client name!" : "Completează numele clientei!", "error");
+    showToast(currentLang === 'en' ? "Complete client name!" : "Completează numele clientului!", "error");
     if (inp) inp.focus();
     return;
   }
@@ -5678,7 +5678,7 @@ function salveazaModificareIncasare() {
 
   if (!row) return;
   if (!clienta) {
-    showToast(currentLang === 'en' ? "Complete client name!" : "Completează numele clientei!", "error");
+    showToast(currentLang === 'en' ? "Complete client name!" : "Completează numele clientului!", "error");
     document.getElementById('editIncClienta').focus();
     return;
   }
@@ -6165,7 +6165,7 @@ function randeazaPlanAntrenamentUI() {
       <div class="plan-header-block">
         <div style="font-size:1.3rem; font-weight:800; color:var(--primary); line-height:1.25;">${escAttr(planActiv.titlu)}</div>
         <div style="font-size:0.83rem; font-weight:600; color:var(--text-muted); margin-top:4px;">${escAttr(planActiv.subtitlu)}</div>
-        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Clientă', 'Client')}: ${escAttr(planActiv.clienta)}</div>` : ''}
+        ${planActiv.clienta ? `<div style="margin-top:6px; font-size:0.78rem; font-weight:700; color:var(--primary);"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Client', 'Client')}: ${escAttr(planActiv.clienta)}</div>` : ''}
       </div>
     `;
   } else {
@@ -6174,8 +6174,8 @@ function randeazaPlanAntrenamentUI() {
         <input type="text" class="plan-doc-title-input" value="${escAttr(planActiv.titlu)}" placeholder="${tr('Titlu program (ex: Program de forță generală)', 'Program title (e.g. General strength program)')}" oninput="planActiv.titlu = this.value">
         <input type="text" class="plan-doc-subtitle-input" value="${escAttr(planActiv.subtitlu)}" placeholder="${tr('Subtitlu / detalii (ex: 3 sesiuni pe săptămână)', 'Subtitle / details (e.g. 3 sessions per week)')}" oninput="planActiv.subtitlu = this.value">
         <div class="plan-meta-client-row no-print">
-          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Clientă', 'Client')}:</span>
-          <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="${tr('Alege clientă sau lasă liber pentru șablon', 'Choose a client or leave empty for a template')}" list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
+          <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Client', 'Client')}:</span>
+          <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="${tr('Alege clientul sau lasă liber pentru șablon', 'Choose a client or leave empty for a template')}" list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
         </div>
       </div>
     `;
@@ -6429,7 +6429,7 @@ function adaugaSesiunePlan() {
 }
 
 function stergeSesiunePlan(sesIdx) {
-  customConfirm(tr("Ștergere sesiune", "Delete session"), tr("Ești sigură că vrei să ștergi această sesiune și exercițiile ei?", "Are you sure you want to delete this session and its exercises?"), function() {
+  customConfirm(tr("Ștergere sesiune", "Delete session"), tr("Sigur vrei să ștergi această sesiune și exercițiile ei?", "Are you sure you want to delete this session and its exercises?"), function() {
     planActiv.continut_json.sesiuni.splice(sesIdx, 1);
     randeazaPlanAntrenamentUI();
   });
@@ -6455,7 +6455,7 @@ function adaugaExercitiuPlan(sesIdx) {
 function stergeExercitiuPlan(sesIdx, exIdx) {
   const ses = planActiv?.continut_json?.sesiuni?.[sesIdx];
   if (!ses || !Array.isArray(ses.exercitii)) return;
-  customConfirm(tr("Ștergere exercițiu", "Delete exercise"), tr("Ești sigură că vrei să ștergi acest exercițiu?", "Are you sure you want to delete this exercise?"), function() {
+  customConfirm(tr("Ștergere exercițiu", "Delete exercise"), tr("Sigur vrei să ștergi acest exercițiu?", "Are you sure you want to delete this exercise?"), function() {
     ses.exercitii.splice(exIdx, 1);
     ses.exercitii.forEach((e, i) => { e.nr = i + 1; });
     randeazaPlanAntrenamentUI();
@@ -6532,7 +6532,7 @@ async function salveazaPlanCurentInBaza(silent = false) {
     }
 
     if (progresPreluat) {
-      showToast(tr('Plan salvat; am preluat și progresul completat de clientă.', 'Plan saved; client progress was kept too.'));
+      showToast(tr('Plan salvat; am preluat și progresul completat de client.', 'Plan saved; client progress was kept too.'));
       randeazaPlanAntrenamentUI();
     } else if (!silent) {
       showToast(t('toastPlanSaved'));
@@ -6891,10 +6891,10 @@ const SECTIUNI_INSCRIERE = [
     { id: 'inaltime', tip: 'numar', ob: true, ro: 'Înălțimea (cm)', en: 'Height (cm)' },
     { id: 'greutate', tip: 'numar', ob: true, ro: 'Greutatea actuală (kg)', en: 'Current weight (kg)' },
     { id: 'telefon', tip: 'tel', ob: true, ro: 'Nr. telefon', en: 'Phone number' },
-    { id: 'email', tip: 'email', ob: true, ro: 'E-mail pe care poți fi contactată', en: 'Email where you can be reached' },
+    { id: 'email', tip: 'email', ob: true, ro: 'E-mail de contact', en: 'Email where you can be reached' },
     { id: 'domeniu', tip: 'text', ob: true, ro: 'În ce domeniu lucrezi? (ex.: IT, medicină, educație etc.)', en: 'What field do you work in? (e.g. IT, medicine, education)' },
-    { id: 'angajament', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești dispusă să te angajezi într-un program de antrenament pe minimum 3 luni?', en: 'Are you willing to commit to a training program for at least 3 months?' },
-    { id: 'feedback', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești dispusă să oferi periodic feedback și poze de progres pe parcursul programului de antrenament?', en: 'Are you willing to give regular feedback and progress photos during the program?' }
+    { id: 'angajament', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Îți poți asuma un program de antrenament de minimum 3 luni?', en: 'Are you willing to commit to a training program for at least 3 months?' },
+    { id: 'feedback', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești de acord să trimiți periodic feedback și poze de progres pe parcursul programului?', en: 'Are you willing to give regular feedback and progress photos during the program?' }
   ] },
   { ro: 'Istoric medical & sănătate', en: 'Medical history & health', intrebari: [
     { id: 'afectiuni', tip: 'danu', ob: true, ro: 'Suferi de afecțiuni medicale? (ex: probleme cardiace, respiratorii, diabet, scolioză, hipertensiune etc.)', en: 'Do you have any medical conditions? (e.g. heart or breathing problems, diabetes, scoliosis, high blood pressure)' },
@@ -6908,7 +6908,7 @@ const SECTIUNI_INSCRIERE = [
     { id: 'activitate', tip: 'alegere', optiuni: [
       { id: 'sedentar', ro: 'Sedentar', en: 'Sedentary' }, { id: 'moderat', ro: 'Moderat activ', en: 'Moderately active' },
       { id: 'activ', ro: 'Activ', en: 'Active' }, { id: 'foarteActiv', ro: 'Foarte activ', en: 'Very active' }
-    ], ro: 'Cât de activă ești zilnic?', en: 'How active are you day to day?' }
+    ], ro: 'Cât de mult te miști zilnic?', en: 'How active are you day to day?' }
   ] },
   { ro: 'Obiective personale & motivație', en: 'Personal goals & motivation', intrebari: [
     { id: 'obiective', tip: 'multi', ob: true, optiuni: [
@@ -6924,7 +6924,7 @@ const SECTIUNI_INSCRIERE = [
       { id: 'bland', ro: 'Blând și răbdător', en: 'Gentle and patient' }, { id: 'motivant', ro: 'Motivant și energic', en: 'Motivating and energetic' },
       { id: 'ferm', ro: 'Ferm și disciplinat', en: 'Firm and disciplined' }, { id: 'combinatie', ro: 'O combinație', en: 'A mix' }
     ], ro: 'Preferi un antrenor:', en: 'You prefer a trainer who is:' },
-    { id: 'consecventa', tip: 'paragraf', ro: 'Ce te ajută cel mai mult să fii consecventă?', en: 'What helps you most to stay consistent?' }
+    { id: 'consecventa', tip: 'paragraf', ro: 'Ce te ajută cel mai mult să nu renunți?', en: 'What helps you most to keep going?' }
   ] },
   { ro: 'Disponibilitate', en: 'Availability', intrebari: [
     { id: 'dataStart', tip: 'data', ob: true, ro: 'Care este data estimată de la care îți poți începe antrenamentele?', en: 'From what date can you start training?' },

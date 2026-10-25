@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal81">
+  <link rel="stylesheet" href="style.css?v=fitFinal82">
 </head>
 <body>
 
@@ -126,7 +126,7 @@
         <button type="button" class="auth-tab-btn active" id="authTabLogin" onclick="comutaTabAuth('login')">Intră în cont</button>
         <button type="button" class="auth-tab-btn" id="authTabSignup" onclick="comutaTabAuth('signup')">Creează cont</button>
       </div>
-      <div class="auth-nota-antrenor" id="authNotaAntrenor" hidden data-en="New accounts are for trainers. Are you a client? Use the link from your trainer.">Contul nou e pentru antrenori. Ești clientă? Folosește link-ul primit de la antrenorul tău.</div>
+      <div class="auth-nota-antrenor" id="authNotaAntrenor" hidden data-en="New accounts are for trainers. Are you a client? Use the link from your trainer.">Contul nou e pentru antrenori. Ești client? Folosește link-ul primit de la antrenorul tău.</div>
 
       <!-- Formular Email & Parolă -->
       <form id="authForm" novalidate onsubmit="gestioneazaSubmitAuth(event)" style="display:flex; flex-direction:column; gap:10px;">
@@ -188,7 +188,7 @@
   <div id="customModalBackdrop">
     <div class="custom-modal-card">
       <div class="custom-modal-title" id="modalTitle">Confirmare</div>
-      <div class="custom-modal-text" id="modalText">Ești sigură că vrei să continui?</div>
+      <div class="custom-modal-text" id="modalText">Sigur vrei să continui?</div>
       <input type="text" id="modalInput" class="form-control" style="display:none; margin-bottom:14px;" maxlength="120" autocomplete="off">
       <div class="custom-modal-actions">
         <button class="btn btn-clear" style="flex:1;" id="modalBtnCancel" onclick="closeCustomModal(false)">Renunță</button>
@@ -203,19 +203,19 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
         <div style="display:flex; align-items:center; gap:7px; font-weight: 800; font-size: 1.02rem; color: var(--primary);">
           <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
-          <span id="sharePlanModalTitle" data-en="Share Plan with Client">Distribuie Planul Clientei</span>
+          <span id="sharePlanModalTitle" data-en="Share Plan with Client">Distribuie Planul Clientului</span>
         </div>
         <button type="button" onclick="inchideModalSharePlan()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
           <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </div>
 
-      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="sharePlanModalDesc" data-en="The client can open the link without an account and see her exercises.">
-        Clienta poate deschide link-ul fără cont și își poate vedea exercițiile.
+      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="sharePlanModalDesc" data-en="The client can open the link without an account and see their exercises.">
+        Clientul poate deschide link-ul fără cont și își poate vedea exercițiile.
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
-        <label id="sharePlanLinkLabel" data-en="Link for client">Link pentru clientă</label>
+        <label id="sharePlanLinkLabel" data-en="Link for client">Link pentru client</label>
         <div style="display:flex; gap:6px;">
           <input type="text" id="inputSharePlanUrl" class="form-control" readonly style="font-size:0.78rem; font-weight:600;">
           <button type="button" class="btn" style="white-space:nowrap; padding:6px 10px; font-size:0.78rem;" onclick="copiazaLinkSharePlan()" id="btnCopyShareLink">
@@ -255,7 +255,7 @@
       <input type="hidden" id="editIncRow">
 
       <div class="form-group">
-        <label data-en="Client">Clientă</label>
+        <label data-en="Client">Client</label>
         <input type="text" id="editIncClienta" class="form-control" list="listaClienteVizibile">
       </div>
 
@@ -352,7 +352,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuWorkoutTitle">Plan de Antrenament</div>
-              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc" hidden>Programe, export PDF, trimitere la cliente</div>
+              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc" hidden>Programe, export PDF, trimitere la clienți</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -472,7 +472,7 @@
 
       <div class="drawer-body">
         <div class="drawer-section">
-          <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; margin-bottom:10px;" data-en="Put this link on Instagram. New clients fill in the goal-setting form, and you accept them in Client Profile.">Pune link-ul pe Instagram. Clientele noi completează fișa de obiective, iar tu le accepți din Fișă Clientă.</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; margin-bottom:10px;" data-en="Put this link on Instagram. New clients fill in the goal-setting form, and you accept them in Client Profile.">Pune link-ul pe Instagram. Clienții noi completează fișa de obiective, iar tu îi accepți din Fișă Client.</div>
           <div class="drawer-section-title" data-en="Your name in the link">Numele tău în link</div>
           <div style="display:flex; gap:6px;">
             <input type="text" id="setariCodInscriere" class="form-control" autocomplete="off" autocapitalize="off" maxlength="30" style="flex:1; min-width:0;">
@@ -663,9 +663,9 @@
 
         <!-- Telefonul pe care îl văd clientele (Sună / WhatsApp pe cardul de reînnoire) -->
         <div class="form-group doar-antrenor" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:6px;">
-          <label data-en="Phone for clients">Telefon pentru cliente</label>
+          <label data-en="Phone for clients">Telefon pentru clienți</label>
           <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel">
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Clients can call you or message you on WhatsApp when their subscription runs out.">Clientele te pot suna sau îți pot scrie pe WhatsApp când li se termină abonamentul.</div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Clients can call you or message you on WhatsApp when their subscription runs out.">Clienții te pot suna sau îți pot scrie pe WhatsApp când li se termină abonamentul.</div>
           <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" onclick="salveazaTelefonContact()" data-en="Save Phone">Salvează Telefon</button>
         </div>
 
@@ -818,8 +818,8 @@
         <div style="margin-top: 10px;">
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
             <div class="form-group" style="margin-bottom:0;">
-              <label id="labelFiltruCliOrar">Filtrează după clientă:</label>
-              <input type="text" id="filtruClientaOrar" class="form-control" placeholder="Toate clientele" data-en-placeholder="All clients" data-en-placeholder="All clients" list="listaClienteVizibile" oninput="filtreazaIstoricOrarInstant()" onchange="filtreazaIstoricOrarInstant()">
+              <label id="labelFiltruCliOrar">Filtrează după client:</label>
+              <input type="text" id="filtruClientaOrar" class="form-control" placeholder="Toți clienții" data-en-placeholder="All clients" data-en-placeholder="All clients" list="listaClienteVizibile" oninput="filtreazaIstoricOrarInstant()" onchange="filtreazaIstoricOrarInstant()">
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label id="labelFiltruLunaOrar">Filtrează după lună:</label>
@@ -833,7 +833,7 @@
               <tr>
                 <th style="width:28%;" data-en="Date">Data</th>
                 <th style="width:18%;" data-en="Time">Ora</th>
-                <th style="width:30%;" data-en="Client">Clientă</th>
+                <th style="width:30%;" data-en="Client">Client</th>
                 <th style="width:24%;" data-en="Workout">Antrenament</th>
               </tr>
             </thead>
@@ -849,7 +849,7 @@
     <div id="tabProgramari" class="tab-content">
       <div class="card" style="padding: 10px 12px; margin-bottom: 10px;">
         <div style="display: flex; gap: 6px;">
-          <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem; flex:1; min-width:0;" placeholder="+ Adaugă clientă" list="listaClienteVizibile">
+          <input type="text" id="progNouNume" class="form-control" style="padding:6px 8px; font-size:0.85rem; flex:1; min-width:0;" placeholder="+ Adaugă client" list="listaClienteVizibile">
           <select id="progNouSectiune" class="form-control">
             <option value="Activ">Activ</option>
             <option value="Hold">Hold</option>
@@ -871,7 +871,7 @@
 
       <div class="hold-header" id="holdHeaderTitle">HOLD</div>
       <div class="prog-table-container" style="border-radius: 0 0 11px 11px; border-top: none;">
-        <div id="progHoldList" class="loader">Se preiau clientele din Hold...</div>
+        <div id="progHoldList" class="loader">Se preiau clienții din Hold...</div>
       </div>
     </div>
 
@@ -883,12 +883,12 @@
         <summary class="summary-toggle-clean">
           <span class="icon-history-title">
             <svg class="icon-history-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            <span id="addClientSummaryText">Adaugă o Clientă Nouă în Aplicație</span>
+            <span id="addClientSummaryText">Adaugă un Client Nou în Aplicație</span>
           </span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
         <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-          <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și Prenume clientă">
+          <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și prenume client">
           <input type="tel" id="nouTelefonClienta" class="form-control" placeholder="Telefon (opțional)" data-en-placeholder="Phone (optional)" autocomplete="off">
           <select id="nouTipAbonament" class="form-control">
             <option value="8 sedinte">8 sedinte</option>
@@ -900,19 +900,19 @@
             <option value="Sedinta Individuala">sedinta individuala</option>
             <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
-          <button class="btn" id="saveClientDirectBtn" onclick="creeazaClientaNouaDirect()">Salvează Clienta</button>
+          <button class="btn" id="saveClientDirectBtn" onclick="creeazaClientaNouaDirect()">Salvează Clientul</button>
         </div>
       </details>
 
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin:0;" id="labelSelectClientFisa">SELECTEAZĂ CLIENTA</label>
+          <label style="font-size:0.8rem; font-weight:700; color:var(--text-muted); margin:0;" id="labelSelectClientFisa">SELECTEAZĂ CLIENTUL</label>
           <label style="font-size:0.75rem; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin:0;">
             <input type="checkbox" id="checkArataArhivate" onchange="populeazaSelectoriCliente()" style="margin:0;">
             <span id="spanArataArhivate">Arată și arhivate</span>
           </label>
         </div>
-        <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege clienta..." data-en-placeholder="Choose client..." list="listaClienteVizibile" autocomplete="off" oninput="peInputClientaFisa(event)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
+        <input type="text" id="selectClientaFisa" class="form-control select-faded" placeholder="Alege clientul..." data-en-placeholder="Choose client..." list="listaClienteVizibile" autocomplete="off" oninput="peInputClientaFisa(event)" onchange="actualizeazaStilSelect(this); afiseazaFisaClientaInstant()">
 
         <div id="fisaEmptyState" class="empty-state-card">
           <div class="empty-state-icon-wrap">
@@ -921,9 +921,9 @@
               <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
             </svg>
           </div>
-          <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);" id="emptyStateTitleText">Nici o clientă selectată</div>
+          <div style="font-weight: 800; font-size: 1.05rem; color: var(--primary);" id="emptyStateTitleText">Niciun client selectat</div>
           <div style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; max-width: 290px; line-height: 1.35;" id="emptyStateDescText">
-            Alege o clientă din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.
+            Alege un client din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.
           </div>
         </div>
 
@@ -933,7 +933,7 @@
         <div id="detaliiFisa" style="display: none;">
           <button type="button" class="lista-inapoi" onclick="inapoiLaListaClienteFisa()">
             <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <span data-en="All clients">Toate clientele</span>
+            <span data-en="All clients">Toți clienții</span>
           </button>
           <div style="margin: 14px 0 10px; background: var(--card-bg); padding: 12px; border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
@@ -990,7 +990,7 @@
             </div>
             <!-- Invitația: doar cât clienta nu are cont conectat (actualizeazaBlocContClienta) -->
             <div class="fisa-cont-invitatie" id="fisaContInvitatie">
-              <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@clienta.ro" autocomplete="off">
+              <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@exemplu.ro" autocomplete="off">
               <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()">Trimite invitația</button>
             </div>
           </div>
@@ -1023,13 +1023,13 @@
             <summary class="summary-toggle-clean">
               <span class="icon-history-title">
                 <svg class="icon-history-svg" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                <span id="editClientSummaryText">Editează / Ajustează Datele Clientei</span>
+                <span id="editClientSummaryText">Editează / Ajustează Datele Clientului</span>
               </span>
               <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
             </summary>
             <div style="margin-top: 10px;">
               <div class="form-group">
-                <label id="labelEditNume">Nume Clientă (Redenumește peste tot)</label>
+                <label id="labelEditNume">Nume Client (Redenumește peste tot)</label>
                 <input type="text" id="editNume" class="form-control" placeholder="Nume și Prenume" data-en-placeholder="Full name">
               </div>
 
@@ -1040,7 +1040,7 @@
 
               <div class="form-group">
                 <label id="labelEditEmail">Email</label>
-                <input type="email" id="editEmail" class="form-control" placeholder="email@clienta.ro" autocomplete="off">
+                <input type="email" id="editEmail" class="form-control" placeholder="email@exemplu.ro" autocomplete="off">
               </div>
 
               <div class="form-group">
@@ -1165,7 +1165,7 @@
         </h3>
         
         <div class="form-group">
-          <label id="labelIncNume">Nume Clientă (Existentă sau Nouă)</label>
+          <label id="labelIncNume">Nume Client (Existent sau Nou)</label>
           <input type="text" id="incasareNume" class="form-control" placeholder="Alege din listă sau scrie nume nou" list="listaClienteVizibile">
           <datalist id="listaClienteVizibile"></datalist>
         </div>
@@ -1245,8 +1245,8 @@
           
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
             <div class="form-group" style="margin-bottom:0;">
-              <label id="labelFiltruCliInc">Filtrează clientă:</label>
-              <input type="text" id="filtruClientaIncasari" class="form-control" placeholder="Toate clientele" data-en-placeholder="All clients" data-en-placeholder="All clients" list="listaClienteVizibile" oninput="filtreazaIstoricIncasariInstant()" onchange="filtreazaIstoricIncasariInstant()">
+              <label id="labelFiltruCliInc">Filtrează client:</label>
+              <input type="text" id="filtruClientaIncasari" class="form-control" placeholder="Toți clienții" data-en-placeholder="All clients" data-en-placeholder="All clients" list="listaClienteVizibile" oninput="filtreazaIstoricIncasariInstant()" onchange="filtreazaIstoricIncasariInstant()">
             </div>
             <div class="form-group" style="margin-bottom:0;">
               <label id="labelFiltruLunaInc">Filtrează lună:</label>
@@ -1268,7 +1268,7 @@
             <thead>
               <tr>
                 <th style="width:19%;" data-en="Date">Data</th>
-                <th style="width:27%;" data-en="Client">Clientă</th>
+                <th style="width:27%;" data-en="Client">Client</th>
                 <th style="width:17%;" data-en="Amount">Sumă</th>
                 <th style="width:16%; text-align:center;" data-en="Method">Metodă</th>
                 <th style="width:15%;" data-en="Plan">Abonam.</th>
@@ -1381,7 +1381,7 @@
       <span id="navTextProg">Confirmări</span>
     </button>
 
-    <button onclick="comutaTab('tabFisa', 'Fișă Clientă', this, 'fisa', 2)" id="navBtnFisa">
+    <button onclick="comutaTab('tabFisa', 'Fișă Client', this, 'fisa', 2)" id="navBtnFisa">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
           <rect x="3" y="3" width="18" height="18" rx="3"></rect>
@@ -1406,6 +1406,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal81"></script>
+  <script src="app.js?v=fitFinal82"></script>
 </body>
 </html>
