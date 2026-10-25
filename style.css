@@ -1,4 +1,5 @@
 :root {
+  --drawer-footer-h: 66px; /* subsolul meniului: Powered by + © / versiune + linkuri legale */
   --primary: #5c4d7d;
   --primary-dark: #43355d;
   --primary-light: rgba(236, 231, 244, 0.78);
@@ -325,6 +326,34 @@ body.no-scroll {
   overflow: hidden !important;
   height: 100dvh !important;
   touch-action: none;
+}
+
+/* La pornire, până se știe dacă urmează login, ecranul clientei sau al antrenorului: fără ecrane „fantomă” */
+html.app-pornire #mainAppHeader,
+html.app-pornire .container,
+html.app-pornire #bottomNav {
+  visibility: hidden;
+}
+
+/* „Ai uitat parola?” sub câmpul de parolă din login */
+.auth-link-parola {
+  display: block;
+  margin: 5px 0 0 auto;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-link-parola[hidden] {
+  display: none;
+}
+
+[data-theme="dark"] .auth-link-parola {
+  color: var(--accent-purple-light);
 }
 
 /* CÂMPURI PAROLĂ CU OCHIȘOR */
@@ -732,7 +761,7 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 42px;
+  bottom: var(--drawer-footer-h);
   display: flex;
   flex-direction: column;
   background: inherit;
@@ -1080,40 +1109,30 @@ header {
   text-overflow: ellipsis;
 }
 
-.clienta-nav {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  max-width: 616px;
-  margin: 0 auto;
-  display: flex;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 18px;
-  background: var(--header-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
-  z-index: 3;
+/* Bara clientei folosește stilurile „nav” ale antrenorului; bula are lățimea unei treimi (3 butoane, nu 4) */
+#clientaNav .nav-mercury-pill {
+  width: calc(33.333% - 2.67px);
 }
 
-.clienta-nav-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 700;
-  font-size: 0.82rem;
-  padding: 9px 4px;
-  border-radius: 13px;
-  cursor: pointer;
-}
-
-.clienta-nav-btn.active {
-  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid2) 100%);
+/* Bulina cu numărul de ore cu locuri deschise, pe iconița Orar */
+.nav-bulina {
+  position: absolute;
+  top: -4px;
+  left: calc(50% + 6px);
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #b91c1c;
   color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+}
+
+.nav-bulina[hidden] {
+  display: none;
 }
 
 .clienta-body {
@@ -1139,8 +1158,8 @@ html[data-rol="clienta"] .doar-antrenor {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 42px;
-  padding: 8px 16px;
+  height: var(--drawer-footer-h);
+  padding: 6px 12px;
   border-top: 1px solid var(--border);
   text-align: center;
   font-size: 0.78rem;
@@ -1148,10 +1167,22 @@ html[data-rol="clienta"] .doar-antrenor {
   color: var(--text-muted);
   background: var(--card-bg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 2px;
   z-index: 10;
+}
+
+.drawer-footer-legal {
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.drawer-footer-legal a {
+  color: inherit;
+  text-decoration: underline;
 }
 
 .rock-hand {
@@ -1552,6 +1583,44 @@ nav button.active span {
   font-size: 0.66rem;
   opacity: 0.82;
   font-weight: 500;
+}
+
+/* Ecranul clientei: zilele din fereastra de rezervare (aceleași butoane ca la antrenor), cu scroll orizontal doar în bară */
+.zile-clienta {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 2px 2px 8px;
+  margin-bottom: 4px;
+}
+
+.zile-clienta::-webkit-scrollbar {
+  display: none;
+}
+
+.zile-clienta .day-btn {
+  flex: 1 0 auto;
+  min-width: 50px;
+}
+
+.zile-clienta .day-btn.zi-fara-locuri:not(.active) {
+  opacity: 0.45;
+}
+
+/* 7 zile (weekend activ din Setări): butoane mai înguste, să încapă toate pe 360px */
+.day-selector.sapte-zile {
+  gap: 3px;
+}
+
+.day-selector.sapte-zile .day-btn {
+  min-width: 0;
+  padding: 5px 1px;
+}
+
+.day-selector.sapte-zile .day-date-sub {
+  font-size: 0.6rem;
+  white-space: nowrap;
 }
 
 /* Ziua selectată arată ca tab-ul activ din bara de jos: bulă mov transparentă, text mov */

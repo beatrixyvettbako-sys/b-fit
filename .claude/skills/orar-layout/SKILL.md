@@ -8,11 +8,12 @@ description: Reguli pentru tab-ul Orar din B-Fit Studio - structura orelor și s
 ## Structură date și randare (`randeazaOrarInstant` în `app.js`)
 
 - Ore standard: `06:00` ... `18:00` (13 ore). Se pot adăuga ore custom (`adaugaOraCustom`).
-- **Fiecare oră are exact 3 sloturi, `slotIndex` 0, 1, 2.** Randarea completează până la 3 și taie (`splice(3)`) ce e peste. Orice cod nou trebuie să respecte limita, inclusiv la insert în Supabase.
+- **Numărul de locuri pe oră vine din Setări (`setariOrar.locuri`, 1-8, implicit 3)**; `slotIndex` 0 … N-1. Randarea pune exact un loc pe fiecare index (completează lipsurile, la dubluri păstrează locul ocupat); locurile de peste N rămân vizibile cât au clientă, prezență sau sunt deschise. Insert-urile în Supabase (`comutaBlocareOra`, `adaugaOraCustom`) creează N rânduri.
+- **Zilele din bară** vin din `getZileActive()`: Luni–Vineri, plus `Sambata`/`Duminica` când `setariOrar.weekend` e activ (bara primește clasa `sapte-zile`, nume scurte). Ziua implicită: `getZiImplicitaAzi()`. `setariOrar` se salvează în `user_metadata.setari_orar` (Supabase Auth) + `localStorage["beatrix_setari_orar"]`.
 - Ziua e identificată prin `ziRaw` = `W_YYYY_MM_DD_Zi` (cheia săptămânii + ziua), construit cu `construiesteTagZiLocal`. Atenție la cazul special `Marti` / `Marți`: ambele variante sunt căutate.
 - Orele se normalizează mereu cu `normalizeazaOraUi` (format `HH:mm`).
 - Săptămâna trecută se randează din `DB.prezente` (read-only, „✓ Istoric”), nu din `DB.orarSloturi`.
-- Blocarea unei ore (`comutaBlocareOra`) se aplică pe toate cele 3 sloturi.
+- Blocarea unei ore (`comutaBlocareOra`) se aplică pe toate sloturile orei.
 
 ## Scroll automat la ora curentă
 

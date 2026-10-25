@@ -8,7 +8,7 @@ Comunică cu utilizatoarea în română, concis și tehnic, fără introduceri s
 - **Frontend:** SPA / PWA vanilla (fără framework, fără build). Folosită în principal ca aplicație instalată pe telefon; trebuie să meargă identic în browser mobil și desktop.
   - `index.html`: markup, `style.css`: stiluri, `app.js`: toată logica (~4.600 linii), `sw.js`: service worker, `manifest.json`, `icon.svg`.
 - **Backend:** Supabase (`app.js`, sus: `SUPABASE_URL`, `SUPABASE_KEY` publishable).
-  - Date: tabelele `cliente`, `orar`, `programari`, `incasari`, `prezente`, `planuri_antrenament`, prin `executaActiuneSupabase()` apelată din `callBackend()`.
+  - Date: tabelele `cliente`, `orar`, `confirmari` (fostul `programari`; tab-ul Confirmări), `incasari`, `prezente`, `planuri_antrenament`, prin `executaActiuneSupabase()` apelată din `callBackend()`.
   - Autentificare: Supabase Auth (email/parolă, magic link, OAuth). Avatare: Storage, bucket `avatars`.
   - Detalii despre tabele și reguli → skill-ul `supabase-date`.
 - Google Sheets / Apps Script (`Code.gs`) a fost backend-ul vechi; a fost scos complet din cod. Nu-l reintroduce.

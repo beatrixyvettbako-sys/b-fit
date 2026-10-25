@@ -1,6 +1,6 @@
 ---
 name: supabase-date
-description: Contractul de date B-Fit Studio cu Supabase - tabelele cliente, orar, programari, incasari, prezente, planuri_antrenament, coloanele folosite și regulile de business (bifare, anulare, abonamente). Folosește la orice modificare care citește sau scrie date, în executaActiuneSupabase sau callBackend.
+description: Contractul de date B-Fit Studio cu Supabase - tabelele cliente, orar, confirmari, incasari, prezente, planuri_antrenament, coloanele folosite și regulile de business (bifare, anulare, abonamente). Folosește la orice modificare care citește sau scrie date, în executaActiuneSupabase sau callBackend.
 ---
 
 # Date în Supabase
@@ -16,8 +16,8 @@ Majoritatea tabelelor păstrează forma din vechiul Google Sheets: cheia de rân
 | Tabel | Coloane folosite |
 |---|---|
 | `cliente` | `row`, `id` (`cli_<row>`), `nume`, `tipAbonament`, `incluse`, `efectuate`, `ramase`, `dataStart`, `dataExpirare`, `status` (`Activ` / `Finalizat` / ...), `user_id` |
-| `orar` | `row`, `ziRaw` (`W_YYYY_MM_DD_Zi`), `ora` (`HH:mm`), `clienta`, `antrenament`, `blocat` (bool), `bifat` (bool), `slotIndex` (0-2), `client_id`, `user_id` |
-| `programari` | `row`, `sectiune` (`Activ` / `Hold`), `nume`, `prezenta`, `mentiuni`, `client_id`, `user_id` |
+| `orar` | `row`, `ziRaw` (`W_YYYY_MM_DD_Zi`), `ora` (`HH:mm`), `clienta`, `antrenament`, `blocat` (bool), `bifat` (bool), `slotIndex` (0 … locuri-1, din Setări; implicit 0-2), `client_id`, `user_id` |
+| `confirmari` (fostul `programari`, tab-ul Confirmări) | `row`, `sectiune` (`Activ` / `Hold`), `nume`, `prezenta`, `mentiuni`, `client_id`, `user_id` |
 | `incasari` | `row`, `data` (`dd.mm.yyyy`), `clienta`, `suma` (text, fără „RON”), `metoda`, `tip`, `luna` (nume lună RO), `client_id`, `user_id` |
 | `prezente` | `row`, `data`, `zi`, `ora`, `clienta`, `antrenament`, `client_id`, `user_id` |
 | `planuri_antrenament` | `id`, `user_id`, `clienta`, `titlu`, `subtitlu`, `continut_json`, `updated_at` |
