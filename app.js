@@ -715,6 +715,25 @@ function navigheazaSubMeniu(strat) {
     layers[strat].classList.add('active');
   }
   if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
+  if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
+}
+
+// ---- Telefonul antrenorului pentru cliente (profiles.telefon_contact) ----
+async function incarcaTelefonContact() {
+  const inp = document.getElementById('profileInputTelefon');
+  if (!supabaseClient || !utilizatorCurent || !inp || document.activeElement === inp) return;
+  const { data, error } = await supabaseClient.from('profiles').select('telefon_contact').eq('id', utilizatorCurent.id).maybeSingle();
+  if (!error) inp.value = (data && data.telefon_contact) || '';
+}
+
+async function salveazaTelefonContact() {
+  const tel = (document.getElementById('profileInputTelefon').value || '').trim();
+  const { data, error } = await supabaseClient.rpc('seteaza_telefon_contact', { p_telefon: tel });
+  if (error || data !== 'ok') {
+    showToast(data === 'invalid' ? tr('Număr de telefon invalid.', 'Invalid phone number.') : tr('Nu s-a putut salva.', 'Could not save.'), 'error');
+    return;
+  }
+  showToast(tr('✓ Telefon salvat', '✓ Phone saved'));
 }
 
 // ---- Link de înscriere al antrenorului (?inscriere=<cod>); codul stă în profiles.cod_inscriere ----
@@ -2385,6 +2404,54 @@ async function incarcaRolUtilizator() {
 let dateClienta = { fisa: null, planuri: [], planCurent: null };
 let timerSalvareProgres = null;
 
+// Cardul de sus de pe Acasă: abonamentul se termină (≤ 7 zile sau ≤ 2 ședințe), s-a terminat sau încă nu există.
+// Aceleași praguri ca eticheta „De urmărit” din lista antrenorului (stareAbonamentClienta).
+function htmlReinnoireClienta(c) {
+  const ramase = Number(c.ramase) || 0;
+  const s = stareAbonamentClienta(Object.assign({}, c, { incluse: Number(c.incluse) || 0, ramase }));
+  let titlu, text;
+  if (s.tip === 'curand') {
+    titlu = s.zile !== undefined
+      ? (s.zile === 0 ? tr('Abonamentul tău expiră azi', 'Your subscription expires today')
+        : tr(`Abonamentul tău expiră în ${s.zile} ${s.zile === 1 ? 'zi' : 'zile'}`, `Your subscription expires in ${s.zile} ${s.zile === 1 ? 'day' : 'days'}`))
+      : (ramase === 1 ? tr('Mai ai o ședință din abonament', 'You have 1 session left') : tr(`Mai ai ${ramase} ședințe din abonament`, `You have ${ramase} sessions left`));
+    text = tr('Vorbește cu antrenorul tău despre reînnoire, ca să-ți păstrezi ritmul și locul în orar.', 'Talk to your trainer about renewing, to keep your rhythm and your spot in the schedule.');
+  } else if (s.tip === 'expirat') {
+    titlu = ramase <= 0 && (c.status || '').toLowerCase() !== 'expirat'
+      ? tr('Ai folosit toate ședințele', 'You’ve used all your sessions')
+      : tr('Abonamentul tău a expirat', 'Your subscription has expired');
+    text = tr('Reînnoiește abonamentul cu antrenorul tău ca să poți rezerva în continuare.', 'Renew with your trainer to keep booking sessions.');
+  } else if (s.tip === 'nou') {
+    titlu = tr('Încă nu ai un abonament activ', 'You don’t have an active subscription yet');
+    text = tr('După prima plată, aici îți vezi ședințele și valabilitatea.', 'After your first payment, your sessions and validity show up here.');
+  } else {
+    return '';
+  }
+  // Sună / WhatsApp, doar dacă antrenorul și-a pus telefonul în Profil (contact_antrenor)
+  const contact = dateClienta.contact;
+  let butoane = '';
+  if (contact && contact.telefon) {
+    let cifre = contact.telefon.replace(/[^\d]/g, '');
+    if (cifre.startsWith('0')) cifre = '40' + cifre.slice(1); // număr românesc → format internațional pentru WhatsApp
+    const prenumeAntrenor = (contact.nume_antrenor || '').trim().split(' ')[0];
+    const mesaj = tr(`Bună${prenumeAntrenor ? ', ' + prenumeAntrenor : ''}! Aș vrea să-mi reînnoiesc abonamentul.`, `Hi${prenumeAntrenor ? ' ' + prenumeAntrenor : ''}! I'd like to renew my subscription.`);
+    butoane = `<div class="reinnoire-butoane">
+        <a class="btn reinnoire-btn" href="tel:${escAttr(contact.telefon.replace(/[^\d+]/g, ''))}">
+          <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>
+          ${tr('Sună', 'Call')}
+        </a>
+        <a class="btn reinnoire-btn reinnoire-whatsapp" href="https://wa.me/${cifre}?text=${encodeURIComponent(mesaj)}" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>
+          WhatsApp
+        </a>
+      </div>`;
+  }
+  return `<div class="card reinnoire-card ${s.tip}">
+      <div class="reinnoire-icon"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg></div>
+      <div class="reinnoire-corp"><div class="reinnoire-titlu">${titlu}</div><div class="reinnoire-text">${text}</div>${butoane}</div>
+    </div>`;
+}
+
 function randeazaHomeClienta() {
   const c = dateClienta.fisa;
   dateClienta.planCurent = null;
@@ -2392,7 +2459,7 @@ function randeazaHomeClienta() {
   const prenume = (c.nume || '').trim().split(' ')[0];
   document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
   const rand = (eticheta, valoare) => `<div style="display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--border);"><span style="color:var(--text-muted); font-size:0.85rem;">${eticheta}</span><b>${escAttr(String(valoare))}</b></div>`;
-  let html = htmlOnboardingClienta() + `<div class="card">
+  let html = htmlReinnoireClienta(c) + htmlOnboardingClienta() + `<div class="card">
     <div style="font-weight:800; color:var(--primary); margin-bottom:4px;">${tr('Abonamentul meu', 'My subscription')}</div>` +
     rand(tr('Abonament', 'Subscription'), traduceValoare(c.tipAbonament || '-')) +
     rand(tr('Ședințe rămase', 'Sessions left'), c.ramase ?? '-') +
@@ -3067,6 +3134,11 @@ async function afiseazaEcranClienta() {
     return;
   }
   document.getElementById('clientaNav').style.display = '';
+  // Telefonul antrenorului pentru butoanele de pe cardul de reînnoire; vine separat, fără să întârzie ecranul
+  supabaseClient.rpc('contact_antrenor').maybeSingle().then(({ data }) => {
+    dateClienta.contact = data || null;
+    if (data && data.telefon && clientaTabCurent === 'acasa' && !dateClienta.planCurent) randeazaHomeClienta();
+  });
   dateClienta.fisa = c;
   dateClienta.planuri = resPlanuri.data || [];
   dateClienta.areParola = await verificaParolaClienta();
@@ -3684,7 +3756,7 @@ function stareAbonamentClienta(c) {
   if (st === 'expirat' || (zile !== null && zile < 0)) return { tip: 'expirat', text: tr('Expirat', 'Expired'), urmarit: true };
   if (st === 'finalizat' || c.ramase <= 0) return { tip: 'expirat', text: tr('Fără ședințe', 'No sessions left'), urmarit: true };
   if (zile !== null && zile <= 7) {
-    return { tip: 'curand', urmarit: true, text: zile === 0 ? tr('Expiră azi', 'Expires today')
+    return { tip: 'curand', urmarit: true, zile, text: zile === 0 ? tr('Expiră azi', 'Expires today')
       : tr(`Expiră în ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `Expires in ${zile} ${zile === 1 ? 'day' : 'days'}`) };
   }
   if (c.ramase <= 2) return { tip: 'curand', urmarit: true, text: tr(`${c.ramase} ${c.ramase === 1 ? 'ședință' : 'ședințe'}`, `${c.ramase} ${c.ramase === 1 ? 'session' : 'sessions'} left`) };

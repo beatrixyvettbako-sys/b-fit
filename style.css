@@ -1560,6 +1560,115 @@ html[data-rol="clienta"] .doar-antrenor {
   overflow-wrap: anywhere;
 }
 
+/* Cardul de reînnoire de pe Acasă la clientă: portocaliu (se termină), roșu (s-a terminat), neutru (fără abonament) */
+.card.reinnoire-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-left: 4px solid #f5b041 !important;
+}
+
+.reinnoire-card.expirat {
+  border-left-color: #b91c1c !important;
+}
+
+.reinnoire-card.nou {
+  border-left-color: var(--accent-purple) !important;
+}
+
+.reinnoire-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 176, 65, 0.18);
+  color: #9a6408;
+}
+
+.reinnoire-card.expirat .reinnoire-icon {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.reinnoire-card.nou .reinnoire-icon {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .reinnoire-icon { color: #f5b041; }
+[data-theme="dark"] .reinnoire-card.expirat .reinnoire-icon { color: #f87171; }
+[data-theme="dark"] .reinnoire-card.nou .reinnoire-icon { color: var(--text); }
+
+.reinnoire-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.reinnoire-corp {
+  flex: 1;
+  min-width: 0;
+}
+
+.reinnoire-butoane {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.reinnoire-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.reinnoire-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.btn.reinnoire-whatsapp {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important;
+  border-color: #128c7e !important;
+  color: #fff !important;
+}
+
+.reinnoire-titlu {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--primary);
+}
+
+[data-theme="dark"] .reinnoire-titlu {
+  color: var(--text);
+}
+
+.reinnoire-text {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
 /* PROGRES: greutatea curentă, graficul și check-in-urile (la clientă și în fișa antrenorului) */
 .progres-erou {
   display: flex;
@@ -1714,8 +1823,8 @@ html[data-rol="clienta"] .doar-antrenor {
 }
 
 /* Cardul de check-in al clientei */
-.checkin-card {
-  border: 1.5px solid var(--accent-purple);
+.card.checkin-card {
+  border: 1.5px solid var(--accent-purple) !important;
 }
 
 .checkin-titlu {

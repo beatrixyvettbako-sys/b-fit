@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal80">
+  <link rel="stylesheet" href="style.css?v=fitFinal81">
 </head>
 <body>
 
@@ -659,6 +659,14 @@
           <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" id="btnSalveazaNumeProfil" onclick="salveazaNumeProfil()" data-en="Save Name">
             Salvează Nume
           </button>
+        </div>
+
+        <!-- Telefonul pe care îl văd clientele (Sună / WhatsApp pe cardul de reînnoire) -->
+        <div class="form-group doar-antrenor" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:6px;">
+          <label data-en="Phone for clients">Telefon pentru cliente</label>
+          <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel">
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Clients can call you or message you on WhatsApp when their subscription runs out.">Clientele te pot suna sau îți pot scrie pe WhatsApp când li se termină abonamentul.</div>
+          <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" onclick="salveazaTelefonContact()" data-en="Save Phone">Salvează Telefon</button>
         </div>
 
         <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
@@ -1398,6 +1406,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal80"></script>
+  <script src="app.js?v=fitFinal81"></script>
 </body>
 </html>
