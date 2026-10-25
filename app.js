@@ -155,7 +155,7 @@ const i18n = {
     btnSavePlan: "Salvează",
     btnPreviewPdfMode: "Mod PDF",
     btnEditMode: "Editare",
-    btnSharePlan: "Share",
+    btnSharePlan: "Distribuie",
     toastPlanSaved: "✓ Planul de antrenament a fost salvat!",
     toastPlanDeleted: "✓ Planul a fost șters!",
     toastPlanImported: "✓ Fișierul a fost importat cu succes!",
@@ -493,6 +493,8 @@ function comutaTabAuth(mod) {
   const subTitle = document.getElementById('authSubtitleText');
   const uitatParola = document.getElementById('authUitatParolaBtn');
   if (uitatParola) uitatParola.hidden = mod !== 'login';
+  const notaAntrenor = document.getElementById('authNotaAntrenor');
+  if (notaAntrenor) notaAntrenor.hidden = mod === 'login';
 
   if (mod === 'login') {
     if (tabLogin) tabLogin.classList.add('active');
@@ -701,6 +703,7 @@ function navigheazaSubMeniu(strat) {
     settingsAppearance: document.getElementById('drawerSettingsAppearanceView'),
     settingsLanguage: document.getElementById('drawerSettingsLanguageView'),
     settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
+    settingsSignup: document.getElementById('drawerSettingsSignupView'),
     profile: document.getElementById('drawerProfileView')
   };
 
@@ -710,6 +713,73 @@ function navigheazaSubMeniu(strat) {
 
   if (layers[strat]) {
     layers[strat].classList.add('active');
+  }
+  if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
+}
+
+// ---- Link de înscriere al antrenorului (?inscriere=<cod>); codul stă în profiles.cod_inscriere ----
+let codInscriereAntrenor = null;
+
+function linkInscriere(cod) {
+  return `${URL_APLICATIE}?inscriere=${cod}`;
+}
+
+function afiseazaCodInscriere() {
+  const cod = codInscriereAntrenor || '';
+  const inp = document.getElementById('setariCodInscriere');
+  if (inp && document.activeElement !== inp) inp.value = cod;
+  document.getElementById('setariLinkInscriereBloc').hidden = !cod;
+  document.getElementById('setariLinkInscriere').textContent = cod ? linkInscriere(cod) : '';
+  actualizeazaRezumatSetari();
+}
+
+async function incarcaCodInscriere() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const { data, error } = await supabaseClient.from('profiles').select('cod_inscriere').eq('id', utilizatorCurent.id).maybeSingle();
+  if (error) return;
+  codInscriereAntrenor = (data && data.cod_inscriere) || null;
+  if (!codInscriereAntrenor) {
+    // propunere: prenumele, fără diacritice
+    const meta = utilizatorCurent.user_metadata || {};
+    const inp = document.getElementById('setariCodInscriere');
+    if (inp && !inp.value) inp.value = (meta.full_name || meta.name || '').trim().split(' ')[0]
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  }
+  afiseazaCodInscriere();
+}
+
+async function salveazaCodInscriere() {
+  const cod = (document.getElementById('setariCodInscriere').value || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]{3,30}$/.test(cod)) {
+    showToast(tr('Doar litere mici, cifre și cratimă, 3–30 de caractere.', 'Only lowercase letters, digits and dashes, 3–30 characters.'), 'error');
+    return;
+  }
+  const { data, error } = await supabaseClient.rpc('seteaza_cod_inscriere', { p_cod: cod });
+  if (error || data !== 'ok') {
+    showToast(data === 'ocupat'
+      ? tr('Numele acesta e deja folosit. Alege altul.', 'This name is already taken. Choose another.')
+      : tr('Nu s-a putut salva.', 'Could not save.'), 'error');
+    return;
+  }
+  codInscriereAntrenor = cod;
+  afiseazaCodInscriere();
+  showToast(tr('Link salvat', 'Link saved'));
+}
+
+function copiazaLinkInscriere() {
+  if (!codInscriereAntrenor) return;
+  navigator.clipboard.writeText(linkInscriere(codInscriereAntrenor)).then(() => showToast(tr('✓ Link copiat', '✓ Link copied')));
+}
+
+function distribuieLinkInscriere() {
+  if (!codInscriereAntrenor) return;
+  const url = linkInscriere(codInscriereAntrenor);
+  // Meniul nativ de share (telefon, Windows); unde browserul nu-l are, link-ul se copiază
+  if (navigator.share) {
+    navigator.share({ title: 'B-Fit', text: tr('Completează fișa de obiective:', 'Fill in the goal-setting form:'), url })
+      .catch(e => { if (e.name !== 'AbortError') copiazaLinkInscriere(); });
+  } else {
+    copiazaLinkInscriere();
   }
 }
 
@@ -1227,8 +1297,10 @@ async function executaActiuneSupabase(actionName, payload) {
     let qInc = sb.from('incasari').select('*').order('row', { ascending: false });
     let qPrez = sb.from('prezente').select('*').order('row', { ascending: false });
     let qPlanuri = sb.from('planuri_antrenament').select('*').order('updated_at', { ascending: false });
+    let qCereri = sb.from('cereri_inscriere').select('*').eq('stare', 'noua').order('created_at', { ascending: false });
 
     if (uid) {
+      qCereri = qCereri.eq('user_id', uid);
       qCli = qCli.eq('user_id', uid);
       qOrar = qOrar.eq('user_id', uid);
       qProg = qProg.eq('user_id', uid);
@@ -1236,8 +1308,8 @@ async function executaActiuneSupabase(actionName, payload) {
       qPrez = qPrez.eq('user_id', uid);
     }
 
-    const [resCli, resOrar, resProg, resInc, resPrez, resPlan] = await Promise.all([
-      qCli, qOrar, qProg, qInc, qPrez, qPlanuri
+    const [resCli, resOrar, resProg, resInc, resPrez, resPlan, resCereri] = await Promise.all([
+      qCli, qOrar, qProg, qInc, qPrez, qPlanuri, qCereri
     ]);
 
     const clienti = (resCli.data || []).map(c => ({
@@ -1253,7 +1325,8 @@ async function executaActiuneSupabase(actionName, payload) {
       id: c.id || ("cli_" + c.row),
       emailInvitatie: (c.email_invitatie || "").trim(),
       telefon: (c.telefon || "").trim(),
-      contConectat: !!c.auth_user_id
+      contConectat: !!c.auth_user_id,
+      fisaInscriere: c.fisa_inscriere || null
     })).filter(c => c.nume !== "");
 
     clienti.sort((a, b) => a.nume.localeCompare(b.nume));
@@ -1320,7 +1393,10 @@ async function executaActiuneSupabase(actionName, payload) {
       updated_at: pl.updated_at
     }));
 
-    return { clienti, orarSloturi, progActive, progHold, incasari, prezente, planuri };
+    // Fără tabelul cereri_inscriere (scriptul SQL nerulat) lista rămâne goală
+    const cereri = resCereri.error ? [] : (resCereri.data || []);
+
+    return { clienti, orarSloturi, progActive, progHold, incasari, prezente, planuri, cereri };
   }
 
   if (actionName === "salveazaSlotAuto") {
@@ -1710,6 +1786,49 @@ async function executaActiuneSupabase(actionName, payload) {
     if (uid) q = q.eq('user_id', uid);
     const { error } = await q;
     return { success: !error };
+  }
+
+  // Cererea din formular devine fișă: clienta nouă (fără abonament încă) sau, dacă numele există, răspunsurile se adaugă la fișa ei
+  if (actionName === "acceptaCerereInscriere") {
+    const cer = payload.cerere;
+    const fisa = Object.assign({}, cer.raspunsuri, { limba: cer.limba, trimisLa: cer.created_at, consimtamantLa: cer.consimtamant_la });
+    let qEx = sb.from('cliente').select('*').ilike('nume', cer.nume.trim());
+    if (uid) qEx = qEx.eq('user_id', uid);
+    const { data: ex } = await qEx.limit(1);
+    let error;
+    if (ex && ex.length > 0) {
+      const actualizare = { fisa_inscriere: fisa };
+      if (!ex[0].telefon && cer.telefon) actualizare.telefon = cer.telefon;
+      if (!ex[0].auth_user_id && !ex[0].email_invitatie && cer.email) actualizare.email_invitatie = cer.email;
+      ({ error } = await sb.from('cliente').update(actualizare).eq('row', ex[0].row));
+    } else {
+      const rowNou = {
+        nume: cer.nume.trim(),
+        tipAbonament: "-",
+        incluse: 0,
+        efectuate: 0,
+        ramase: 0,
+        dataStart: "-",
+        dataExpirare: "-",
+        status: "Activ",
+        telefon: cer.telefon || "",
+        email_invitatie: cer.email || null,
+        fisa_inscriere: fisa
+      };
+      if (uid) rowNou.user_id = uid;
+      const res = await sb.from('cliente').insert([rowNou]).select().single();
+      error = res.error;
+      if (res.data) await sb.from('cliente').update({ id: "cli_" + res.data.row }).eq('row', res.data.row);
+    }
+    if (error) return { success: false };
+    await sb.from('cereri_inscriere').delete().eq('id', cer.id);
+    return { success: true, nume: (ex && ex.length > 0) ? ex[0].nume : cer.nume.trim() };
+  }
+
+  // Refuzul păstrează doar emailul, ca persoana refuzată să afle la login că cererea nu a fost acceptată
+  if (actionName === "refuzaCerereInscriere") {
+    const { data, error } = await sb.rpc('refuza_cerere_inscriere', { p_id: payload.id });
+    return { success: !error && data === true };
   }
 
   return { success: false };
@@ -2246,6 +2365,11 @@ async function incarcaRolUtilizator() {
     } else {
       const { data: legat } = await supabaseClient.rpc('leaga_cont_clienta');
       if (legat === true) rolUtilizator = 'clienta';
+      else {
+        // Cont făcut din formularul de înscriere, cererea neacceptată (în așteptare sau refuzată): nu e antrenor
+        const { data: stareCerere } = await supabaseClient.rpc('stare_cerere_inscriere');
+        if (stareCerere) rolUtilizator = 'clienta';
+      }
     }
     localStorage.setItem('BFIT_ROL', rolUtilizator);
   } catch (e) {
@@ -2818,9 +2942,22 @@ async function afiseazaEcranClienta() {
   ]);
   const c = resFisa.data && resFisa.data[0];
   if (resFisa.error || !c) {
-    document.getElementById('clientaContinut').innerText = tr('Nu am găsit abonamentul. Contactează antrenorul.', 'Subscription not found. Contact your trainer.');
+    document.getElementById('clientaNav').style.display = 'none';
+    const { data: stareCerere } = resFisa.error ? { data: null } : await supabaseClient.rpc('stare_cerere_inscriere');
+    const mesajCerere = (titlu, text) => `<div class="card inscriere-final">
+        <div style="font-weight:800; color:var(--primary);">${titlu}</div>
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">${text}</div>
+      </div>`;
+    document.getElementById('clientaContinut').innerHTML = stareCerere === 'noua'
+      ? mesajCerere(tr('Cererea ta a fost trimisă', 'Your request has been sent'),
+          tr('După ce antrenorul o acceptă, aici îți vezi abonamentul, programările și planurile. Revino puțin mai târziu.', 'Once your trainer accepts it, you will see your subscription, bookings and plans here. Check back a little later.'))
+      : stareCerere === 'refuzata'
+        ? mesajCerere(tr('Cererea ta nu a fost acceptată', 'Your request was not accepted'),
+            tr('Pentru detalii, contactează antrenorul.', 'For details, contact your trainer.'))
+        : `<div class="card">${tr('Nu am găsit abonamentul. Contactează antrenorul.', 'Subscription not found. Contact your trainer.')}</div>`;
     return;
   }
+  document.getElementById('clientaNav').style.display = '';
   dateClienta.fisa = c;
   dateClienta.planuri = resPlanuri.data || [];
   dateClienta.areParola = await verificaParolaClienta();
@@ -2885,6 +3022,12 @@ window.onload = async function() {
   if (sharedPlanId) {
     terminaPornirea();
     await initModClientaSharePlan(sharedPlanId);
+    return;
+  }
+  const codInscriere = urlParams.get('inscriere');
+  if (codInscriere) {
+    terminaPornirea();
+    await initInscriere(codInscriere);
     return;
   }
   // Siguranță: dacă verificarea sesiunii se blochează (rețea), aplicația nu rămâne ascunsă; sub login rămâne ascunsă
@@ -3414,6 +3557,7 @@ function populeazaSelectoriCliente() {
       datalist.appendChild(optL);
     }
   });
+  randeazaCereriInscriere();
 }
 
 function curataNumeLuna(str) {
@@ -4501,6 +4645,9 @@ function afiseazaFisaClientaInstant() {
   valoriInitialeFisa = valoriEditareFisa();
 
   actualizeazaBlocContClienta(client);
+  const detInscriere = document.getElementById('detailsFisaInscriere');
+  detInscriere.hidden = !client.fisaInscriere;
+  randeazaFisaInscriereDeschisa();
   filtreazaIstoricFisaInstant();
 }
 
@@ -4516,6 +4663,174 @@ function actualizeazaBlocContClienta(client) {
   stare.innerText = client.contConectat
     ? tr('Cont conectat', 'Account linked')
     : (client.emailInvitatie ? tr('Așteaptă conectarea', 'Waiting to sign in') : tr('Fără cont', 'No account'));
+}
+
+// ---- Formularul de înscriere la antrenor: cererile noi și răspunsurile din fișă ----
+// Titluri scurte pentru afișarea răspunsurilor (întrebările întregi rămân în formular)
+const ETICHETE_SCURTE_INSCRIERE = {
+  afectiuni: { ro: 'Afecțiuni medicale', en: 'Medical conditions' },
+  dureri: { ro: 'Dureri / accidentări', en: 'Pain / injuries' },
+  restrictii: { ro: 'Restricții de la medic', en: 'Doctor’s restrictions' },
+  angajament: { ro: 'Program de 3 luni', en: '3-month program' },
+  feedback: { ro: 'Feedback și poze', en: 'Feedback & photos' },
+  domeniu: { ro: 'Domeniu de lucru', en: 'Line of work' },
+  energie: { ro: 'Nivel de energie', en: 'Energy level' },
+  somn: { ro: 'Somn', en: 'Sleep' },
+  sportAnterior: { ro: 'Sport practicat', en: 'Past training' },
+  termen: { ro: 'Termen pentru obiective', en: 'Goal deadline' },
+  consecventa: { ro: 'O ajută să fie consecventă', en: 'Helps her stay consistent' },
+  frecventa: { ro: 'Antrenamente pe săptămână', en: 'Sessions per week' },
+  intervale: { ro: 'Intervale orare preferate', en: 'Preferred time slots' },
+  asteptari: { ro: 'Așteptări de la antrenor', en: 'Expectations from the trainer' },
+  deStiut: { ro: 'De știut înainte de început', en: 'Good to know before starting' }
+};
+
+// Fișa de obiective ca rezumat: cifre, alertă medicală, etichete, apoi textele libere.
+// Numele, telefonul și emailul nu se repetă (sunt deja în fișă / în antetul cererii).
+function htmlRaspunsuriInscriere(r) {
+  if (!r) return '';
+  const intrebari = {};
+  SECTIUNI_INSCRIERE.forEach(s => s.intrebari.forEach(q => { intrebari[q.id] = q; }));
+  const areValoare = v => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : String(v).trim() !== '');
+  const textOptiune = (id, val) => {
+    const o = (intrebari[id].optiuni || OPTIUNI_DA_NU).find(x => x.id === val);
+    return o ? textInscriere(o) : val;
+  };
+  const eticheta = id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
+  const afisate = new Set(['nume', 'telefon', 'email']);
+  let html = '';
+
+  // 1. Cifrele
+  const metrica = (id, titlu, unitate) => {
+    afisate.add(id);
+    return `<div class="metric-box"><div class="obiective-metrica-eticheta">${titlu}</div>
+      <div class="metric-val">${areValoare(r[id]) ? escAttr(r[id]) : '-'}<small>${unitate}</small></div></div>`;
+  };
+  html += `<div class="metric-grid obiective-metrici">${metrica('varsta', tr('Vârstă', 'Age'), tr(' ani', ' yrs'))}${metrica('inaltime', tr('Înălțime', 'Height'), ' cm')}${metrica('greutate', tr('Greutate', 'Weight'), ' kg')}</div>`;
+
+  // 2. Sănătatea: alertă roșie dacă a răspuns „Da” la oricare întrebare medicală
+  const medicale = ['afectiuni', 'dureri', 'restrictii'];
+  medicale.forEach(id => afisate.add(id));
+  const probleme = medicale.filter(id => r[id] === 'da');
+  if (probleme.length) {
+    html += `<div class="obiective-alerta">
+        <div class="obiective-alerta-titlu">⚠ ${tr('Atenție la sănătate', 'Health notes')}</div>
+        ${probleme.map(id => `<div class="obiective-alerta-rand"><b>${escAttr(eticheta(id))}</b>${r[id + 'Detalii'] ? `<span>${escAttr(r[id + 'Detalii'])}</span>` : ''}</div>`).join('')}
+      </div>`;
+  } else if (medicale.every(id => r[id] === 'nu')) {
+    html += `<div class="obiective-ok">✓ ${tr('Fără afecțiuni, dureri sau restricții declarate', 'No conditions, pain or restrictions reported')}</div>`;
+  }
+
+  // 3. Etichete: obiective, stil, activitate, început, angajament
+  const grup = (titlu, continut) => continut ? `<div class="obiective-grup"><div class="obiective-grup-titlu">${titlu}</div><div class="obiective-chips">${continut}</div></div>` : '';
+  const chip = (text, tip = '') => `<span class="obiective-chip ${tip}">${escAttr(text)}</span>`;
+  ['obiective', 'stilAntrenor', 'activitate', 'dataStart', 'angajament', 'feedback'].forEach(id => afisate.add(id));
+  html += grup(tr('Obiective', 'Goals'), (r.obiective || []).map(id => chip(textOptiune('obiective', id))).join(''));
+  html += grup(tr('Stil preferat', 'Preferred style'), r.stilAntrenor ? chip(textOptiune('stilAntrenor', r.stilAntrenor)) : '');
+  html += grup(tr('Activitate zilnică', 'Daily activity'), r.activitate ? chip(textOptiune('activitate', r.activitate)) : '');
+  const dataStart = /^\d{4}-\d{2}-\d{2}$/.test(r.dataStart || '') ? r.dataStart.split('-').reverse().join('.') : r.dataStart;
+  html += grup(tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
+  html += grup(tr('Angajament', 'Commitment'), ['angajament', 'feedback'].filter(id => r[id])
+    .map(id => chip(`${r[id] === 'da' ? '✓' : '✕'} ${eticheta(id)}`, r[id] === 'da' ? 'da' : 'nu')).join(''));
+
+  // 4. Textele libere (și orice întrebare nouă care nu e mai sus)
+  let randuri = '';
+  Object.keys(intrebari).forEach(id => {
+    if (afisate.has(id) || !areValoare(r[id])) return;
+    const q = intrebari[id];
+    const text = q.tip === 'multi' ? r[id].map(v => textOptiune(id, v)).join(', ')
+      : (q.tip === 'alegere' || q.tip === 'danu') ? textOptiune(id, r[id]) : String(r[id]);
+    randuri += `<div class="raspuns-rand"><div class="raspuns-intrebare">${escAttr(eticheta(id))}</div><div class="raspuns-valoare">${escAttr(text)}</div></div>`;
+  });
+  if (randuri) html += `<div class="obiective-texte">${randuri}</div>`;
+
+  if (r.data) html += `<div class="raspuns-data">${tr('Completată pe', 'Filled in on')} ${escAttr(r.data)}</div>`;
+  return html;
+}
+
+function randeazaCereriInscriere() {
+  const bloc = document.getElementById('cereriInscriereBloc');
+  if (!bloc) return;
+  const cereri = DB.cereri || [];
+  if (cereri.length === 0) {
+    bloc.innerHTML = '';
+    return;
+  }
+  bloc.innerHTML = `<details class="cereri-inscriere" open>
+      <summary class="summary-toggle-clean">
+        <span class="icon-history-title">
+          <svg class="icon-history-svg" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          <span>${tr('Cereri noi de înscriere', 'New sign-up requests')}</span>
+          <b class="cereri-numar">${cereri.length}</b>
+        </span>
+        <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
+      </summary>
+      ${cereri.map((c, i) => `<details class="cerere-item" ontoggle="randeazaCerereDeschisa(this, ${i})">
+          <summary><b>${escAttr(c.nume)}</b><small>${escAttr(formateazaDataRoLocal(new Date(c.created_at)))}</small></summary>
+          <div class="cerere-corp"></div>
+        </details>`).join('')}
+    </details>`;
+}
+
+function randeazaCerereDeschisa(el, i) {
+  const corp = el.querySelector('.cerere-corp');
+  const c = (DB.cereri || [])[i];
+  if (!el.open || !c) {
+    corp.innerHTML = '';
+    return;
+  }
+  const contact = [c.telefon ? `<a href="tel:${escAttr(c.telefon.replace(/\s/g, ''))}">${escAttr(c.telefon)}</a>` : '',
+    c.email ? `<a href="mailto:${escAttr(c.email)}">${escAttr(c.email)}</a>` : ''].filter(Boolean).join(' · ');
+  corp.innerHTML = `${contact ? `<div class="cerere-contact">${contact}</div>` : ''}
+    ${htmlRaspunsuriInscriere(c.raspunsuri)}
+    <div class="inscriere-butoane">
+      <button type="button" class="btn btn-clear cerere-refuza" onclick="refuzaCerereInscriere(${i})">${tr('Refuză', 'Decline')}</button>
+      <button type="button" class="btn cerere-accepta" onclick="acceptaCerereInscriere(${i}, this)">${tr('Acceptă', 'Accept')}</button>
+    </div>`;
+}
+
+function acceptaCerereInscriere(i, btn) {
+  const cerere = (DB.cereri || [])[i];
+  if (!cerere) return;
+  btn.disabled = true;
+  callBackend("acceptaCerereInscriere", { cerere }, res => {
+    if (!res || !res.success) {
+      btn.disabled = false;
+      showToast(tr('Nu s-a putut accepta cererea.', 'Could not accept the request.'), 'error');
+      return;
+    }
+    showToast(tr(`✓ ${res.nume} a fost adăugată`, `✓ ${res.nume} was added`));
+    incarcaBazaDateSilencios(res.nume);
+  }, () => { btn.disabled = false; });
+}
+
+function refuzaCerereInscriere(i) {
+  const cerere = (DB.cereri || [])[i];
+  if (!cerere) return;
+  customConfirm(tr('Refuzi cererea?', 'Decline the request?'),
+    tr(`Răspunsurile lui ${cerere.nume} se șterg definitiv.`, `The answers from ${cerere.nume} will be deleted permanently.`), () => {
+      callBackend("refuzaCerereInscriere", { id: cerere.id }, res => {
+        if (!res || !res.success) {
+          showToast(tr('Nu s-a putut șterge cererea.', 'Could not delete the request.'), 'error');
+          return;
+        }
+        DB.cereri = (DB.cereri || []).filter(c => c.id !== cerere.id);
+        try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+        randeazaCereriInscriere();
+        showToast(tr('Cerere ștearsă', 'Request deleted'));
+      });
+    });
+}
+
+function clientaFisaCurenta() {
+  const nume = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
+  return (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume);
+}
+
+function randeazaFisaInscriereDeschisa() {
+  const det = document.getElementById('detailsFisaInscriere');
+  const client = clientaFisaCurenta();
+  document.getElementById('fisaInscriereContinut').innerHTML = det.open && client ? htmlRaspunsuriInscriere(client.fisaInscriere) : '';
 }
 
 // Emailul se salvează întâi în fișă (leaga_cont_clienta îl caută la login), apoi se trimite link-ul de acces
@@ -6166,6 +6481,367 @@ async function initModClientaSharePlan(planId) {
   }
 }
 
+// ==========================================
+// FORMULAR DE ÎNSCRIERE (?inscriere=<cod>)
+// ==========================================
+// Răspunsurile la variante se salvează ca id-uri (ex. 'slabire'), afișate apoi în limba celui care citește.
+const OPTIUNI_DA_NU = [{ id: 'da', ro: 'Da', en: 'Yes' }, { id: 'nu', ro: 'Nu', en: 'No' }];
+const SECTIUNI_INSCRIERE = [
+  { ro: 'Date personale', en: 'Personal details', intrebari: [
+    { id: 'nume', tip: 'text', ob: true, ro: 'Nume și prenume', en: 'Full name' },
+    { id: 'varsta', tip: 'numar', ob: true, ro: 'Vârsta', en: 'Age' },
+    { id: 'inaltime', tip: 'numar', ob: true, ro: 'Înălțimea (cm)', en: 'Height (cm)' },
+    { id: 'greutate', tip: 'numar', ob: true, ro: 'Greutatea actuală (kg)', en: 'Current weight (kg)' },
+    { id: 'telefon', tip: 'tel', ob: true, ro: 'Nr. telefon', en: 'Phone number' },
+    { id: 'email', tip: 'email', ob: true, ro: 'E-mail pe care poți fi contactată', en: 'Email where you can be reached' },
+    { id: 'domeniu', tip: 'text', ob: true, ro: 'În ce domeniu lucrezi? (ex.: IT, medicină, educație etc.)', en: 'What field do you work in? (e.g. IT, medicine, education)' },
+    { id: 'angajament', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești dispusă să te angajezi într-un program de antrenament pe minimum 3 luni?', en: 'Are you willing to commit to a training program for at least 3 months?' },
+    { id: 'feedback', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești dispusă să oferi periodic feedback și poze de progres pe parcursul programului de antrenament?', en: 'Are you willing to give regular feedback and progress photos during the program?' }
+  ] },
+  { ro: 'Istoric medical & sănătate', en: 'Medical history & health', intrebari: [
+    { id: 'afectiuni', tip: 'danu', ob: true, ro: 'Suferi de afecțiuni medicale? (ex: probleme cardiace, respiratorii, diabet, scolioză, hipertensiune etc.)', en: 'Do you have any medical conditions? (e.g. heart or breathing problems, diabetes, scoliosis, high blood pressure)' },
+    { id: 'dureri', tip: 'danu', ob: true, ro: 'Ai dureri articulare sau accidentări anterioare? (genunchi, umeri, zona lombară etc.)', en: 'Do you have joint pain or previous injuries? (knees, shoulders, lower back etc.)' },
+    { id: 'restrictii', tip: 'danu', ob: true, ro: 'Ai restricții de efort fizic recomandate de medic?', en: 'Has a doctor recommended any limits on physical effort?' },
+    { id: 'energie', tip: 'paragraf', ro: 'Cum ai descrie nivelul tău general de energie?', en: 'How would you describe your general energy level?' },
+    { id: 'somn', tip: 'paragraf', ro: 'Calitatea somnului (ore/noapte, dificultăți)', en: 'Sleep quality (hours per night, difficulties)' }
+  ] },
+  { ro: 'Nivel actual de activitate fizică', en: 'Current activity level', intrebari: [
+    { id: 'sportAnterior', tip: 'paragraf', ro: 'Ai mai făcut sport? Ce tip de antrenamente?', en: 'Have you exercised before? What kind of training?' },
+    { id: 'activitate', tip: 'alegere', optiuni: [
+      { id: 'sedentar', ro: 'Sedentar', en: 'Sedentary' }, { id: 'moderat', ro: 'Moderat activ', en: 'Moderately active' },
+      { id: 'activ', ro: 'Activ', en: 'Active' }, { id: 'foarteActiv', ro: 'Foarte activ', en: 'Very active' }
+    ], ro: 'Cât de activă ești zilnic?', en: 'How active are you day to day?' }
+  ] },
+  { ro: 'Obiective personale & motivație', en: 'Personal goals & motivation', intrebari: [
+    { id: 'obiective', tip: 'multi', ob: true, optiuni: [
+      { id: 'slabire', ro: 'Slăbire', en: 'Weight loss' }, { id: 'masaMusculara', ro: 'Creștere masă musculară', en: 'Muscle gain' },
+      { id: 'tonifiere', ro: 'Tonifiere', en: 'Toning' }, { id: 'forta', ro: 'Forță / putere', en: 'Strength / power' },
+      { id: 'rezistenta', ro: 'Rezistență', en: 'Endurance' }, { id: 'mobilitate', ro: 'Recuperare / mobilitate', en: 'Recovery / mobility' },
+      { id: 'stilSanatos', ro: 'Stil de viață sănătos', en: 'Healthy lifestyle' }
+    ], ro: 'Care este obiectivul tău principal?', en: 'What is your main goal?' },
+    { id: 'termen', tip: 'paragraf', ro: 'Ai un termen în care ți-ai propus să atingi aceste obiective?', en: 'Is there a deadline by which you want to reach these goals?' }
+  ] },
+  { ro: 'Evaluare psihologică soft', en: 'Coaching style', intrebari: [
+    { id: 'stilAntrenor', tip: 'alegere', ob: true, optiuni: [
+      { id: 'bland', ro: 'Blând și răbdător', en: 'Gentle and patient' }, { id: 'motivant', ro: 'Motivant și energic', en: 'Motivating and energetic' },
+      { id: 'ferm', ro: 'Ferm și disciplinat', en: 'Firm and disciplined' }, { id: 'combinatie', ro: 'O combinație', en: 'A mix' }
+    ], ro: 'Preferi un antrenor:', en: 'You prefer a trainer who is:' },
+    { id: 'consecventa', tip: 'paragraf', ro: 'Ce te ajută cel mai mult să fii consecventă?', en: 'What helps you most to stay consistent?' }
+  ] },
+  { ro: 'Disponibilitate', en: 'Availability', intrebari: [
+    { id: 'dataStart', tip: 'data', ob: true, ro: 'Care este data estimată de la care îți poți începe antrenamentele?', en: 'From what date can you start training?' },
+    { id: 'frecventa', tip: 'paragraf', ro: 'De câte ori pe săptămână poți veni la antrenamente?', en: 'How many times a week can you come to training?' },
+    { id: 'intervale', tip: 'paragraf', ro: 'Intervalele orare preferate', en: 'Preferred time slots' }
+  ] },
+  { ro: 'Așteptări & angajament', en: 'Expectations & commitment', intrebari: [
+    { id: 'asteptari', tip: 'paragraf', ro: 'Ce aștepți de la mine ca antrenor personal?', en: 'What do you expect from me as your personal trainer?' },
+    { id: 'deStiut', tip: 'paragraf', ro: 'Există ceva ce ar trebui să știu înainte să începem?', en: 'Is there anything I should know before we start?' }
+  ] }
+];
+
+let stareInscriere = { cod: '', pas: 0, r: {}, antrenor: null, areSesiune: false, trimitere: false };
+
+function cheieCiornaInscriere() {
+  return 'BFIT_INSCRIERE_' + stareInscriere.cod;
+}
+
+function salveazaCiornaInscriere() {
+  try { localStorage.setItem(cheieCiornaInscriere(), JSON.stringify({ pas: stareInscriere.pas, r: stareInscriere.r })); } catch (e) {}
+}
+
+async function initInscriere(cod) {
+  stareInscriere.cod = cod.trim().toLowerCase();
+  document.getElementById('inscriereScreen').classList.remove('auth-hidden');
+  document.body.classList.add('no-scroll');
+  try {
+    const ciorna = JSON.parse(localStorage.getItem(cheieCiornaInscriere()) || 'null');
+    if (ciorna && typeof ciorna.pas === 'number') { stareInscriere.pas = ciorna.pas; stareInscriere.r = ciorna.r || {}; }
+  } catch (e) {}
+
+  const continut = document.getElementById('inscriereContinut');
+  continut.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  if (!supabaseClient) {
+    continut.innerHTML = `<div class="card">${tr('Nu ne putem conecta. Verifică internetul și reîncearcă.', 'We cannot connect. Check your internet and try again.')}</div>`;
+    return;
+  }
+  const [{ data, error }, { data: sesiune }] = await Promise.all([
+    supabaseClient.rpc('antrenor_inscriere', { p_cod: stareInscriere.cod }).maybeSingle(),
+    supabaseClient.auth.getSession()
+  ]);
+  stareInscriere.areSesiune = !!(sesiune && sesiune.session);
+  if (error || !data) {
+    stareInscriere.antrenor = null;
+    randeazaAntetInscriere();
+    continut.innerHTML = `<div class="card">${tr('Link-ul de înscriere nu este valid. Cere-i antrenorului tău link-ul corect.', 'This sign-up link is not valid. Ask your trainer for the correct link.')}</div>`;
+    return;
+  }
+  stareInscriere.antrenor = data;
+  randeazaInscriere();
+}
+
+function randeazaAntetInscriere() {
+  const a = stareInscriere.antrenor;
+  const avatar = a && a.avatar
+    ? `<img src="${escAttr(a.avatar)}" alt="">`
+    : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
+  document.getElementById('inscriereAntrenor').innerHTML = `<span class="inscriere-avatar">${avatar}</span>
+    <span class="inscriere-antet-text"><b>${tr('Fișa de obiective', 'Goal-setting form')}</b>${a ? `<small>${escAttr(a.nume_antrenor || '')}</small>` : ''}</span>`;
+  document.getElementById('inscriereLangRo').classList.toggle('active', currentLang !== 'en');
+  document.getElementById('inscriereLangEn').classList.toggle('active', currentLang === 'en');
+}
+
+function schimbaLimbaInscriere(lang) {
+  currentLang = lang;
+  localStorage.setItem('beatrix_lang', lang);
+  document.documentElement.lang = lang;
+  if (stareInscriere.antrenor) randeazaInscriere();
+  else randeazaAntetInscriere();
+}
+
+function textInscriere(ob) {
+  return currentLang === 'en' ? ob.en : ob.ro;
+}
+
+function htmlIntrebareInscriere(q) {
+  const v = stareInscriere.r[q.id];
+  const eticheta = `<label class="inscriere-eticheta" for="insc_${q.id}">${escAttr(textInscriere(q))}${q.ob ? ' <span class="inscriere-obligatoriu">*</span>' : ''}</label>`;
+  const chip = (text, activ, onclick) => `<button type="button" class="inscriere-chip${activ ? ' active' : ''}" onclick="${onclick}">${escAttr(text)}</button>`;
+  let camp = '';
+  if (q.tip === 'paragraf') {
+    camp = `<textarea id="insc_${q.id}" class="form-control" rows="2" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">${escAttr(v || '')}</textarea>`;
+  } else if (q.tip === 'alegere' || q.tip === 'multi' || q.tip === 'danu') {
+    const optiuni = q.optiuni || OPTIUNI_DA_NU;
+    const multi = q.tip === 'multi';
+    camp = `<div class="inscriere-chips">${optiuni.map(o => chip(textInscriere(o),
+      multi ? (v || []).includes(o.id) : v === o.id,
+      `alegeOptiuneInscriere('${q.id}', '${o.id}', ${multi})`)).join('')}</div>`;
+    if (q.tip === 'danu' && v === 'da') {
+      const det = stareInscriere.r[q.id + 'Detalii'] || '';
+      camp += `<textarea class="form-control" rows="2" style="margin-top:6px;" placeholder="${escAttr(tr('Spune-mi câteva detalii', 'Tell me a few details'))}" oninput="seteazaRaspunsInscriere('${q.id}Detalii', this.value)">${escAttr(det)}</textarea>`;
+    }
+  } else {
+    const tipuri = { numar: 'number', tel: 'tel', email: 'email', data: 'date', text: 'text' };
+    const extra = q.tip === 'numar' ? ' inputmode="decimal"' : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '';
+    camp = `<input id="insc_${q.id}" type="${tipuri[q.tip]}" class="form-control"${extra} value="${escAttr(v || '')}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">`;
+  }
+  return `<div class="inscriere-intrebare" id="inscQ_${q.id}">${eticheta}${camp}</div>`;
+}
+
+function randeazaInscriere() {
+  randeazaAntetInscriere();
+  const continut = document.getElementById('inscriereContinut');
+  const total = SECTIUNI_INSCRIERE.length + 1; // ultimul pas: consimțământul
+  const pas = stareInscriere.pas;
+
+  if (pas === 'trimis') {
+    continut.innerHTML = htmlFinalInscriere();
+    return;
+  }
+
+  const bara = `<div class="inscriere-progres">
+      <span>${tr('Pasul', 'Step')} ${pas + 1} ${tr('din', 'of')} ${total}</span>
+      <div class="progress-wrapper"><div class="progress-fill" style="width:${Math.round(((pas + 1) / total) * 100)}%"></div></div>
+    </div>`;
+  let corp;
+  if (pas < SECTIUNI_INSCRIERE.length) {
+    const s = SECTIUNI_INSCRIERE[pas];
+    corp = `<div class="inscriere-sectiune">${escAttr(textInscriere(s))}</div>` + s.intrebari.map(htmlIntrebareInscriere).join('');
+  } else {
+    const acord = !!stareInscriere.r.consimtamant;
+    corp = `<div class="inscriere-sectiune">${tr('Consimțământ', 'Consent')}</div>
+      <label class="inscriere-acord" id="inscQ_consimtamant">
+        <input type="checkbox" ${acord ? 'checked' : ''} onchange="seteazaRaspunsInscriere('consimtamant', this.checked)">
+        <span>${tr('Confirm că informațiile oferite sunt reale și îmi dau acordul pentru prelucrarea lor în scopul serviciilor de antrenament personal.',
+          'I confirm that the information I gave is true and I agree to it being processed for personal training services.')}
+          <a href="confidentialitate.html" target="_blank" rel="noopener">${tr('Politica de confidențialitate', 'Privacy policy')}</a></span>
+      </label>
+      <input type="text" id="inscriereWebsite" class="inscriere-capcana" tabindex="-1" autocomplete="off" aria-hidden="true">`;
+  }
+  const ultim = pas === total - 1;
+  const butoane = `<div class="inscriere-butoane">
+      ${pas > 0 ? `<button type="button" class="btn btn-clear" onclick="pasInscriere(-1)">${tr('Înapoi', 'Back')}</button>` : ''}
+      <button type="button" class="btn" id="btnInscriereUrmator" onclick="${ultim ? 'trimiteInscriere()' : 'pasInscriere(1)'}"${stareInscriere.trimitere ? ' disabled' : ''}>${ultim ? tr('Trimite', 'Send') : tr('Continuă', 'Continue')}</button>
+    </div>`;
+  continut.innerHTML = `<div class="card">${bara}${corp}${butoane}</div>`;
+}
+
+function seteazaRaspunsInscriere(id, valoare) {
+  stareInscriere.r[id] = valoare;
+  document.getElementById('inscQ_' + id)?.classList.remove('inscriere-eroare');
+  salveazaCiornaInscriere();
+}
+
+function alegeOptiuneInscriere(id, optiune, multi) {
+  const r = stareInscriere.r;
+  if (multi) {
+    const lista = Array.isArray(r[id]) ? r[id] : [];
+    r[id] = lista.includes(optiune) ? lista.filter(x => x !== optiune) : lista.concat(optiune);
+  } else {
+    r[id] = optiune;
+  }
+  salveazaCiornaInscriere();
+  randeazaInscriere();
+}
+
+// Întoarce id-ul primei întrebări obligatorii necompletate (sau completate greșit) din pasul curent
+function verificaPasInscriere() {
+  const r = stareInscriere.r;
+  if (stareInscriere.pas >= SECTIUNI_INSCRIERE.length) return r.consimtamant ? null : 'consimtamant';
+  const gol = v => Array.isArray(v) ? v.length === 0 : !String(v ?? '').trim();
+  for (const q of SECTIUNI_INSCRIERE[stareInscriere.pas].intrebari) {
+    if (q.ob && gol(r[q.id])) return q.id;
+    if (q.tip === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r[q.id]).trim())) return q.id;
+  }
+  return null;
+}
+
+function pasInscriere(directie) {
+  if (directie > 0) {
+    const lipsa = verificaPasInscriere();
+    if (lipsa) {
+      const el = document.getElementById('inscQ_' + lipsa);
+      el?.classList.add('inscriere-eroare');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast(lipsa === 'email' ? t('authInvalidEmailFormat') : tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *'), 'error');
+      return;
+    }
+  }
+  stareInscriere.pas = Math.max(0, stareInscriere.pas + directie);
+  salveazaCiornaInscriere();
+  randeazaInscriere();
+  document.getElementById('inscriereScreen').scrollTop = 0;
+}
+
+async function trimiteInscriere() {
+  if (verificaPasInscriere()) {
+    pasInscriere(1);
+    return;
+  }
+  const r = stareInscriere.r;
+  const finalizeaza = () => {
+    stareInscriere.pas = 'trimis';
+    try { localStorage.removeItem(cheieCiornaInscriere()); } catch (e) {}
+    randeazaInscriere();
+    document.getElementById('inscriereScreen').scrollTop = 0;
+  };
+  // Câmpul ascuns completat = robot: pare trimis, dar nu ajunge nimic la antrenor
+  if (document.getElementById('inscriereWebsite')?.value) {
+    finalizeaza();
+    return;
+  }
+  stareInscriere.trimitere = true;
+  randeazaInscriere();
+  const raspunsuri = Object.assign({}, r, { data: formateazaDataRoLocal(new Date()) });
+  delete raspunsuri.consimtamant;
+  const { data, error } = await supabaseClient.rpc('trimite_inscriere', {
+    p_cod: stareInscriere.cod,
+    p_nume: (r.nume || '').trim(),
+    p_telefon: (r.telefon || '').trim(),
+    p_email: (r.email || '').trim().toLowerCase(),
+    p_limba: currentLang,
+    p_raspunsuri: raspunsuri,
+    p_consimtamant: true
+  });
+  stareInscriere.trimitere = false;
+  if (!error && data === 'ok') {
+    finalizeaza();
+    return;
+  }
+  randeazaInscriere();
+  showToast(data === 'prea_multe'
+    ? tr('Prea multe cereri în ultima oră. Încearcă mai târziu.', 'Too many requests in the last hour. Try again later.')
+    : tr('Nu s-a putut trimite. Verifică internetul și reîncearcă.', 'Could not send. Check your internet and try again.'), 'error');
+}
+
+function htmlFinalInscriere() {
+  const prenume = (stareInscriere.r.nume || '').trim().split(' ')[0];
+  let html = `<div class="card inscriere-final">
+      <div class="inscriere-final-icon">✓</div>
+      <div style="font-weight:800; font-size:1.05rem; color:var(--primary);">${tr('Mulțumesc', 'Thank you')}${prenume ? ', ' + escAttr(prenume) : ''}!</div>
+      <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">${tr('Fișa ta a fost trimisă. Te contactez în curând.', 'Your form has been sent. I will get in touch soon.')}</div>
+    </div>`;
+  if (stareInscriere.areSesiune) return html;
+  html += `<div class="card" id="inscriereCont">
+      <div style="font-weight:800; color:var(--primary);">${tr('Fă-ți și cont (recomandat)', 'Create an account too (recommended)')}</div>
+      <div style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 10px;">${tr('După ce îți accept cererea, îți vezi abonamentul, programările și planurile de antrenament în aplicație.', 'Once I accept your request, you can see your subscription, bookings and workout plans in the app.')}</div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" class="form-control" value="${escAttr(stareInscriere.r.email || '')}" disabled>
+      </div>
+      <div class="form-group">
+        <label>${tr('Alege o parolă (minim 6 caractere)', 'Choose a password (at least 6 characters)')}</label>
+        ${htmlCampParolaInscriere('inscriereParola')}
+      </div>
+      <div class="form-group">
+        <label>${tr('Confirmă parola', 'Confirm password')}</label>
+        ${htmlCampParolaInscriere('inscriereParolaConfirmare')}
+      </div>
+      <div class="inscriere-butoane">
+        <button type="button" class="btn btn-clear" onclick="document.getElementById('inscriereCont').remove()">${tr('Nu acum', 'Not now')}</button>
+        <button type="button" class="btn" id="btnInscriereCont" onclick="creeazaContInscriere()">${tr('Creează contul', 'Create account')}</button>
+      </div>
+      <div class="inscriere-am-cont">${tr('Ai deja cont?', 'Already have an account?')} <a href="${location.pathname}">${tr('Intră în cont', 'Sign in')}</a></div>
+    </div>`;
+  return html;
+}
+
+// Același câmp cu ochișor ca pe ecranul de login (comutaVizibilitateParola)
+function htmlCampParolaInscriere(id) {
+  return `<div class="password-field-wrap">
+      <input type="password" id="${id}" class="form-control" autocomplete="new-password">
+      <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('${id}', this)" tabindex="-1" aria-label="${tr('Arată/Ascunde parola', 'Show/Hide password')}">
+        <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+        <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+      </button>
+    </div>`;
+}
+
+// Emailul are deja cont: cererea a ajuns oricum la antrenor, clienta intră cu parola ei
+function htmlAreDejaContInscriere() {
+  return `<div style="font-weight:800; color:var(--primary);">${tr('Ai deja cont cu acest email', 'You already have an account with this email')}</div>
+    <div style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 10px;">${tr('Cererea ta a ajuns la antrenor. Intră în aplicație cu parola pe care o ai deja. Dacă nu o mai știi, apasă „Ai uitat parola?” pe ecranul de conectare.', 'Your request has reached your trainer. Sign in to the app with your existing password. If you forgot it, tap “Forgot password?” on the sign-in screen.')}</div>
+    <a class="btn" style="display:block; text-align:center; text-decoration:none;" href="${location.pathname}">${tr('Intră în cont', 'Sign in')}</a>`;
+}
+
+// Contul primește rolul de clientă abia după acceptare (leaga_cont_clienta găsește emailul în fișă la login)
+async function creeazaContInscriere() {
+  const parola = document.getElementById('inscriereParola').value;
+  if (parola.length < 6) {
+    showToast(t('authErrPassLength'), 'error');
+    return;
+  }
+  if (parola !== document.getElementById('inscriereParolaConfirmare').value) {
+    showToast(tr('Parolele nu coincid.', 'Passwords do not match.'), 'error');
+    return;
+  }
+  const btn = document.getElementById('btnInscriereCont');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.auth.signUp({
+    email: (stareInscriere.r.email || '').trim().toLowerCase(),
+    password: parola,
+    options: { emailRedirectTo: URL_APLICATIE, data: { full_name: (stareInscriere.r.nume || '').trim() } }
+  });
+  const mesaj = ((error && error.message) || '').toLowerCase();
+  // Cu confirmarea pe email activă, Supabase nu dă eroare pentru un email existent, ci un utilizator fără identități
+  const areDejaCont = /already (registered|exists|been registered)/.test(mesaj)
+    || (!error && data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+  if (areDejaCont) {
+    document.getElementById('inscriereCont').innerHTML = htmlAreDejaContInscriere();
+    return;
+  }
+  if (error) {
+    btn.disabled = false;
+    showToast(localizeazaEroareAuth(error.message), 'error');
+    return;
+  }
+  document.getElementById('inscriereCont').innerHTML = data && data.session
+    ? `<div style="font-weight:800; color:var(--primary);">${tr('Contul e gata', 'Your account is ready')}</div>
+       <div style="font-size:0.82rem; color:var(--text-muted); margin:4px 0 10px;">${tr('Intră oricând în aplicație cu emailul și parola ta.', 'Sign in to the app anytime with your email and password.')}</div>
+       <a class="btn" style="display:block; text-align:center; text-decoration:none;" href="${location.pathname}">${tr('Deschide aplicația', 'Open the app')}</a>`
+    : `<div style="font-weight:800; color:var(--primary);">${tr('Verifică emailul', 'Check your email')}</div>
+       <div style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">${tr('Ți-am trimis un link de confirmare. Apasă pe el ca să-ți activezi contul.', 'We sent you a confirmation link. Tap it to activate your account.')}</div>`;
+}
+
 const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 function aplicaTemaSistemDinamica() {
@@ -6209,7 +6885,7 @@ function seteazaTema(optiune, silent = false) {
   }
 }
 
-// Valorile curente afișate sub cardurile din Setări (Aspect, Limbă, Orar)
+// Valorile curente afișate sub cardurile din Setări (Aspect, Limbă, Orar, Link de înscriere)
 function actualizeazaRezumatSetari() {
   let tema = localStorage.getItem('beatrix_theme') || 'system';
   let accent = localStorage.getItem('beatrix_accent') || 'violet';
@@ -6223,6 +6899,10 @@ function actualizeazaRezumatSetari() {
   let elOrar = document.getElementById('setariRezumatOrar');
   if (elOrar) elOrar.textContent = tr(`${setariOrar.locuri} locuri pe oră`, `${setariOrar.locuri} spots per hour`)
     + ' · ' + (setariOrar.weekend ? tr('Luni – Duminică', 'Mon – Sun') : tr('Luni – Vineri', 'Mon – Fri'));
+  let elInscriere = document.getElementById('setariRezumatInscriere');
+  if (elInscriere) elInscriere.textContent = codInscriereAntrenor
+    ? linkInscriere(codInscriereAntrenor).replace(/^https?:\/\//, '')
+    : tr('Nesetat', 'Not set');
 }
 
 // Paleta de culori: mov (implicit, fără atribut) sau albastru (data-accent="blue")

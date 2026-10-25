@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal78">
+  <link rel="stylesheet" href="style.css?v=fitFinal79">
 </head>
 <body>
 
@@ -67,6 +67,18 @@
     </nav>
   </div>
 
+  <!-- FORMULAR DE ÎNSCRIERE (?inscriere=<cod>): fără cont, pentru clientele noi -->
+  <div id="inscriereScreen" class="clienta-app auth-hidden">
+    <header class="clienta-header">
+      <div class="inscriere-antrenor" id="inscriereAntrenor"></div>
+      <div class="inscriere-lang">
+        <button type="button" class="auth-lang-btn" id="inscriereLangRo" onclick="schimbaLimbaInscriere('ro')">RO</button>
+        <button type="button" class="auth-lang-btn" id="inscriereLangEn" onclick="schimbaLimbaInscriere('en')">EN</button>
+      </div>
+    </header>
+    <div class="clienta-body" id="inscriereContinut"></div>
+  </div>
+
   <!-- ECRAN AUTENTIFICARE SUPABASE -->
   <div id="authScreenOverlay" class="auth-overlay auth-hidden">
     <div class="auth-card">
@@ -108,6 +120,7 @@
         <button type="button" class="auth-tab-btn active" id="authTabLogin" onclick="comutaTabAuth('login')">Intră în cont</button>
         <button type="button" class="auth-tab-btn" id="authTabSignup" onclick="comutaTabAuth('signup')">Creează cont</button>
       </div>
+      <div class="auth-nota-antrenor" id="authNotaAntrenor" hidden data-en="New accounts are for trainers. Are you a client? Use the link from your trainer.">Contul nou e pentru antrenori. Ești clientă? Folosește link-ul primit de la antrenorul tău.</div>
 
       <!-- Formular Email & Parolă -->
       <form id="authForm" novalidate onsubmit="gestioneazaSubmitAuth(event)" style="display:flex; flex-direction:column; gap:10px;">
@@ -207,7 +220,7 @@
       </div>
 
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px; background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);" onclick="trimiteShareNativPlan()">
+        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px;" onclick="trimiteShareNativPlan()">
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg> <span id="btnNativeShareText" data-en="Send Link...">Trimite Link...</span>
         </button>
         <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextFormatatPlan()">
@@ -319,7 +332,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuProfileTitle" data-en="Profile">Profil</div>
-              <div class="drawer-nav-desc" id="drawerMenuProfileDesc" data-en="Avatar, name, password">Avatar, nume, parolă</div>
+              <div class="drawer-nav-desc" id="drawerMenuProfileDesc" data-en="Avatar, name, password" hidden>Avatar, nume, parolă</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -328,14 +341,12 @@
         <!-- 2. Card Navigare Plan de Antrenament (Liquid Glass Mov Minimalist) -->
         <div class="drawer-nav-card doar-antrenor" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
           <div class="drawer-nav-card-left">
-            <div class="drawer-nav-icon" style="background: rgba(var(--accent-rgb), 0.18); border: 1px solid rgba(var(--accent-rgb), 0.35);">
-              <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--accent-purple); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;">
-                <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"/>
-              </svg>
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="4" height="14" rx="1.5"/><rect x="16.5" y="5" width="4" height="14" rx="1.5"/><path d="M7.5 12h9M1.5 9v6M22.5 9v6"/></svg>
             </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuWorkoutTitle">Plan de Antrenament</div>
-              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc">Programe, export PDF, trimitere la cliente</div>
+              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc" hidden>Programe, export PDF, trimitere la cliente</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -349,7 +360,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuSettingsTitle" data-en="App Settings">Setări Aplicație</div>
-              <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Appearance, language, schedule">Aspect, limbă, orar</div>
+              <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Appearance, language, schedule" hidden>Aspect, limbă, orar</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -419,6 +430,58 @@
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <div class="drawer-nav-card doar-antrenor" onclick="navigheazaSubMeniu('settingsSignup')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Sign-up link">Link de înscriere</div>
+              <div class="drawer-nav-desc" id="setariRezumatInscriere"></div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATUL 2d: SETĂRI › LINK DE ÎNSCRIERE -->
+    <div id="drawerSettingsSignupView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('settings')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Sign-up link">Link de înscriere</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div style="font-size:0.8rem; color:var(--text-muted); line-height:1.4; margin-bottom:10px;" data-en="Put this link on Instagram. New clients fill in the goal-setting form, and you accept them in Client Profile.">Pune link-ul pe Instagram. Clientele noi completează fișa de obiective, iar tu le accepți din Fișă Clientă.</div>
+          <div class="drawer-section-title" data-en="Your name in the link">Numele tău în link</div>
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="setariCodInscriere" class="form-control" autocomplete="off" autocapitalize="off" maxlength="30" style="flex:1; min-width:0;">
+            <button type="button" class="btn" id="btnSalveazaCodInscriere" onclick="salveazaCodInscriere()" style="white-space:nowrap;" data-en="Save">Salvează</button>
+          </div>
+          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Lowercase letters, digits and dashes, 3–30 characters.">Litere mici, cifre și cratimă, 3–30 de caractere.</div>
+        </div>
+
+        <div class="drawer-section" id="setariLinkInscriereBloc" style="margin-top:14px;" hidden>
+          <div class="drawer-section-title" data-en="Your link">Link-ul tău</div>
+          <div class="inscriere-link-afisat" id="setariLinkInscriere"></div>
+          <div class="theme-selector-grid" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+            <button class="theme-option-btn" onclick="copiazaLinkInscriere()" data-en="Copy">Copiază</button>
+            <button class="theme-option-btn" onclick="distribuieLinkInscriere()" data-en="Share">Distribuie</button>
+          </div>
         </div>
       </div>
     </div>
@@ -800,6 +863,8 @@
 
     <!-- 3. FIȘĂ CLIENTĂ -->
     <div id="tabFisa" class="tab-content">
+      <!-- Cereri noi din formularul de înscriere (randeazaCereriInscriere) -->
+      <div id="cereriInscriereBloc"></div>
       <details id="detailsDetailsAdaugareClienta" style="margin-bottom: 12px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px;">
         <summary class="summary-toggle-clean">
           <span class="icon-history-title">
@@ -904,6 +969,18 @@
               <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()" style="white-space: nowrap;">Trimite invitația</button>
             </div>
           </div>
+
+          <!-- Răspunsurile din formularul de înscriere; se randează la deschidere -->
+          <details id="detailsFisaInscriere" hidden ontoggle="randeazaFisaInscriereDeschisa()" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
+            <summary class="summary-toggle-clean">
+              <span class="icon-history-title">
+                <svg class="icon-history-svg" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                <span data-en="Goal-setting form">Fișa de obiective</span>
+              </span>
+              <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
+            </summary>
+            <div id="fisaInscriereContinut" style="margin-top: 10px;"></div>
+          </details>
 
           <details id="detailsEditareFisa" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
             <summary class="summary-toggle-clean">
@@ -1207,7 +1284,7 @@
           </button>
           <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="deschideModalSharePlan()">
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>
-            <span id="btnSharePlanText">Share</span>
+            <span id="btnSharePlanText">Distribuie</span>
           </button>
           <button type="button" class="btn" style="padding:0 10px; height:31px; line-height:1; color:#ff4d4d;" id="btnStergePlan" onclick="stergePlanCurent()" title="Șterge planul" data-en-title="Delete plan">
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -1289,6 +1366,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal78"></script>
+  <script src="app.js?v=fitFinal79"></script>
 </body>
 </html>
