@@ -1259,6 +1259,21 @@ html[data-rol="clienta"] .doar-antrenor {
   cursor: pointer;
 }
 
+/* Scala 1–5 (energie, somn): cercuri, ca la check-in */
+.inscriere-scala .inscriere-chip {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 800;
+}
+
+.inscriere-hint {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .inscriere-chip.active {
   background: var(--primary);
   border-color: var(--primary);

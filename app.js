@@ -5038,12 +5038,18 @@ const ETICHETE_SCURTE_INSCRIERE = {
   dureri: { ro: 'Dureri / accidentări', en: 'Pain / injuries' },
   restrictii: { ro: 'Restricții de la medic', en: 'Doctor’s restrictions' },
   angajament: { ro: 'Program de 3 luni', en: '3-month program' },
-  feedback: { ro: 'Feedback și poze', en: 'Feedback & photos' },
+  feedback: { ro: 'Feedback', en: 'Feedback' },
+  pozeProgres: { ro: 'Poze de progres', en: 'Progress photos' },
+  medicatie: { ro: 'Medicație / tratament', en: 'Medication / treatment' },
+  sarcina: { ro: 'Sarcină sau naștere în ultimele 12 luni', en: 'Pregnancy or birth in the last 12 months' },
+  urgenta: { ro: 'Contact pentru urgențe', en: 'Emergency contact' },
   domeniu: { ro: 'Domeniu de lucru', en: 'Line of work' },
   energie: { ro: 'Nivel de energie', en: 'Energy level' },
   somn: { ro: 'Somn', en: 'Sleep' },
   sportAnterior: { ro: 'Sport practicat', en: 'Past training' },
   termen: { ro: 'Termen pentru obiective', en: 'Goal deadline' },
+  intervaleNota: { ro: 'Detalii despre program', en: 'Schedule details' },
+  deUnde: { ro: 'De unde a aflat', en: 'Heard about you from' },
   consecventa: { ro: 'Ce ajută la consecvență', en: 'What helps with consistency' },
   frecventa: { ro: 'Antrenamente pe săptămână', en: 'Sessions per week' },
   intervale: { ro: 'Intervale orare preferate', en: 'Preferred time slots' },
@@ -5053,7 +5059,8 @@ const ETICHETE_SCURTE_INSCRIERE = {
 // În „Fișa mea” clienta își citește propriile răspunsuri: titlurile la persoana I
 const ETICHETE_CLIENTA_INSCRIERE = {
   consecventa: { ro: 'Ce mă ajută să nu renunț', en: 'What keeps me going' },
-  dataStart: { ro: 'Încep din', en: 'Starting from' }
+  dataStart: { ro: 'Încep din', en: 'Starting from' },
+  deUnde: { ro: 'Am aflat din', en: 'I heard from' }
 };
 
 // Fișa de obiective ca rezumat: cifre, alertă medicală, etichete, apoi textele libere.
@@ -5062,11 +5069,14 @@ function htmlRaspunsuriInscriere(r, pentruClienta = false) {
   if (!r) return '';
   const intrebari = {};
   SECTIUNI_INSCRIERE.forEach(s => s.intrebari.forEach(q => { intrebari[q.id] = q; }));
+  INTREBARI_VECHI_INSCRIERE.forEach(q => { intrebari[q.id] = q; });
   const areValoare = v => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : String(v).trim() !== '');
+  // Răspunsurile vechi scrise liber (ex. „Mediu”, „2-3”) nu sunt id-uri de opțiuni: se arată ca atare
   const textOptiune = (id, val) => {
     const o = (intrebari[id].optiuni || OPTIUNI_DA_NU).find(x => x.id === val);
     return o ? textInscriere(o) : val;
   };
+  const esteScala = v => /^[1-5]$/.test(String(v || ''));
   const eticheta = id => textInscriere((pentruClienta && ETICHETE_CLIENTA_INSCRIERE[id]) || ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
   const afisate = new Set(['nume', 'telefon', 'email']);
   let html = '';
@@ -5079,29 +5089,52 @@ function htmlRaspunsuriInscriere(r, pentruClienta = false) {
   };
   html += `<div class="metric-grid obiective-metrici">${metrica('varsta', tr('Vârstă', 'Age'), tr(' ani', ' yrs'))}${metrica('inaltime', tr('Înălțime', 'Height'), ' cm')}${metrica('greutate', tr('Greutate', 'Weight'), ' kg')}</div>`;
 
-  // 2. Sănătatea: alertă roșie dacă a răspuns „Da” la oricare întrebare medicală
-  const medicale = ['afectiuni', 'dureri', 'restrictii'];
-  medicale.forEach(id => afisate.add(id));
-  const probleme = medicale.filter(id => r[id] === 'da');
+  // 2. Sănătatea: alertă roșie dacă a răspuns „Da” la oricare întrebare medicală (sau sarcină / naștere recentă)
+  const medicale = ['afectiuni', 'dureri', 'restrictii', 'medicatie'];
+  medicale.concat('sarcina').forEach(id => afisate.add(id));
+  const probleme = medicale.filter(id => r[id] === 'da').concat(r.sarcina === 'da' ? ['sarcina'] : []);
   if (probleme.length) {
     html += `<div class="obiective-alerta">
         <div class="obiective-alerta-titlu">⚠ ${tr('Atenție la sănătate', 'Health notes')}</div>
         ${probleme.map(id => `<div class="obiective-alerta-rand"><b>${escAttr(eticheta(id))}</b>${r[id + 'Detalii'] ? `<span>${escAttr(r[id + 'Detalii'])}</span>` : ''}</div>`).join('')}
       </div>`;
-  } else if (medicale.every(id => r[id] === 'nu')) {
+  } else if (['afectiuni', 'dureri', 'restrictii'].every(id => r[id] === 'nu')) {
     html += `<div class="obiective-ok">✓ ${tr('Fără afecțiuni, dureri sau restricții declarate', 'No conditions, pain or restrictions reported')}</div>`;
   }
 
-  // 3. Etichete: obiective, stil, activitate, început, angajament
+  // 3. Etichete: obiective, energie și somn, stil, activitate, disponibilitate, angajament
   const grup = (titlu, continut) => continut ? `<div class="obiective-grup"><div class="obiective-grup-titlu">${titlu}</div><div class="obiective-chips">${continut}</div></div>` : '';
   const chip = (text, tip = '') => `<span class="obiective-chip ${tip}">${escAttr(text)}</span>`;
-  ['obiective', 'stilAntrenor', 'activitate', 'dataStart', 'angajament', 'feedback'].forEach(id => afisate.add(id));
-  html += grup(tr('Obiective', 'Goals'), (r.obiective || []).map(id => chip(textOptiune('obiective', id))).join(''));
+  const lista = v => Array.isArray(v) ? v : [];
+  ['obiectivPrincipal', 'obiective', 'greutateTinta', 'stilAntrenor', 'activitate', 'dataStart', 'angajament', 'feedback', 'pozeProgres', 'somnOre'].forEach(id => afisate.add(id));
+  if (r.obiectivPrincipal) {
+    html += grup(tr('Obiectiv principal', 'Main goal'), chip(textOptiune('obiectivPrincipal', r.obiectivPrincipal)));
+    html += grup(tr('Alte obiective', 'Other goals'), lista(r.obiective).map(id => chip(textOptiune('obiective', id))).join(''));
+  } else {
+    html += grup(tr('Obiective', 'Goals'), lista(r.obiective).map(id => chip(textOptiune('obiective', id))).join(''));
+  }
+  const tinta = parseFloat(String(r.greutateTinta || '').replace(',', '.'));
+  const acum = parseFloat(String(r.greutate || '').replace(',', '.'));
+  if (!isNaN(tinta)) {
+    const dif = !isNaN(acum) && Math.abs(tinta - acum) >= 0.1 ? ` (${tinta < acum ? '−' : '+'}${formatKg(Math.abs(tinta - acum))} kg)` : '';
+    html += grup(tr('Greutate țintă', 'Target weight'), chip(`${formatKg(tinta)} kg${dif}`));
+  }
+  // Energie și somn pe scala 1–5 (ca la check-in); răspunsurile vechi scrise liber rămân la texte, mai jos
+  const energieSomn = [];
+  if (esteScala(r.energie)) { afisate.add('energie'); energieSomn.push(chip(`${tr('Energie', 'Energy')} ${r.energie}/5`)); }
+  if (r.somnOre) energieSomn.push(chip(`${tr('Somn', 'Sleep')} ${textOptiune('somnOre', r.somnOre)}`));
+  if (esteScala(r.somnCalitate)) { afisate.add('somnCalitate'); energieSomn.push(chip(`${tr('Calitate somn', 'Sleep quality')} ${r.somnCalitate}/5`)); }
+  html += grup(tr('Energie și somn', 'Energy & sleep'), energieSomn.join(''));
   html += grup(tr('Stil preferat', 'Preferred style'), r.stilAntrenor ? chip(textOptiune('stilAntrenor', r.stilAntrenor)) : '');
   html += grup(tr('Activitate zilnică', 'Daily activity'), r.activitate ? chip(textOptiune('activitate', r.activitate)) : '');
   const dataStart = /^\d{4}-\d{2}-\d{2}$/.test(r.dataStart || '') ? r.dataStart.split('-').reverse().join('.') : r.dataStart;
   html += grup(pentruClienta ? eticheta('dataStart') : tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
-  html += grup(tr('Angajament', 'Commitment'), ['angajament', 'feedback'].filter(id => r[id])
+  // Disponibilitatea ca etichete doar în formatul nou (butoane); textele vechi rămân mai jos
+  const disponibil = [];
+  if (intrebari.frecventa.optiuni.some(o => o.id === r.frecventa)) { afisate.add('frecventa'); disponibil.push(chip(`${textOptiune('frecventa', r.frecventa)} ${tr('pe săptămână', 'per week')}`)); }
+  if (Array.isArray(r.intervale)) { afisate.add('intervale'); r.intervale.forEach(id => disponibil.push(chip(textOptiune('intervale', id)))); }
+  html += grup(tr('Disponibilitate', 'Availability'), disponibil.join(''));
+  html += grup(tr('Angajament', 'Commitment'), ['angajament', 'feedback', 'pozeProgres'].filter(id => r[id])
     .map(id => chip(`${r[id] === 'da' ? '✓' : '✕'} ${eticheta(id)}`, r[id] === 'da' ? 'da' : 'nu')).join(''));
 
   // 4. Textele libere (și orice întrebare nouă care nu e mai sus)
@@ -5109,8 +5142,9 @@ function htmlRaspunsuriInscriere(r, pentruClienta = false) {
   Object.keys(intrebari).forEach(id => {
     if (afisate.has(id) || !areValoare(r[id])) return;
     const q = intrebari[id];
-    const text = q.tip === 'multi' ? r[id].map(v => textOptiune(id, v)).join(', ')
-      : (q.tip === 'alegere' || q.tip === 'danu') ? textOptiune(id, r[id]) : String(r[id]);
+    const text = q.tip === 'multi' ? (Array.isArray(r[id]) ? r[id].map(v => textOptiune(id, v)).join(', ') : String(r[id]))
+      : (q.tip === 'alegere' || q.tip === 'danu') ? textOptiune(id, r[id])
+      : q.tip === 'scala' && esteScala(r[id]) ? `${r[id]} / 5` : String(r[id]);
     randuri += `<div class="obiective-grup"><div class="obiective-grup-titlu">${escAttr(eticheta(id))}</div><div class="obiective-text">${escAttr(text)}</div></div>`;
   });
   html += randuri;
@@ -7006,24 +7040,42 @@ async function initModClientaSharePlan(planId) {
 // ==========================================
 // Răspunsurile la variante se salvează ca id-uri (ex. 'slabire'), afișate apoi în limba celui care citește.
 const OPTIUNI_DA_NU = [{ id: 'da', ro: 'Da', en: 'Yes' }, { id: 'nu', ro: 'Nu', en: 'No' }];
+// Scala 1–5, aceeași ca la check-in-ul săptămânal (energie, somn), ca valorile de start să fie comparabile
+const OPTIUNI_SCALA = ['1', '2', '3', '4', '5'].map(n => ({ id: n, ro: n, en: n }));
+const OPTIUNI_OBIECTIVE = [
+  { id: 'slabire', ro: 'Slăbire', en: 'Weight loss' }, { id: 'masaMusculara', ro: 'Creștere masă musculară', en: 'Muscle gain' },
+  { id: 'tonifiere', ro: 'Tonifiere', en: 'Toning' }, { id: 'forta', ro: 'Forță / putere', en: 'Strength / power' },
+  { id: 'rezistenta', ro: 'Rezistență', en: 'Endurance' }, { id: 'mobilitate', ro: 'Recuperare / mobilitate', en: 'Recovery / mobility' },
+  { id: 'stilSanatos', ro: 'Stil de viață sănătos', en: 'Healthy lifestyle' }
+];
 const SECTIUNI_INSCRIERE = [
   { ro: 'Date personale', en: 'Personal details', intrebari: [
     { id: 'nume', tip: 'text', ob: true, ro: 'Nume și prenume', en: 'Full name' },
-    { id: 'varsta', tip: 'numar', ob: true, ro: 'Vârsta', en: 'Age' },
-    { id: 'inaltime', tip: 'numar', ob: true, ro: 'Înălțimea (cm)', en: 'Height (cm)' },
-    { id: 'greutate', tip: 'numar', ob: true, ro: 'Greutatea actuală (kg)', en: 'Current weight (kg)' },
+    { id: 'varsta', tip: 'numar', ob: true, min: 12, max: 100, ro: 'Vârsta', en: 'Age' },
+    { id: 'inaltime', tip: 'numar', ob: true, min: 120, max: 220, ro: 'Înălțimea (cm)', en: 'Height (cm)' },
+    { id: 'greutate', tip: 'numar', ob: true, min: 30, max: 250, ro: 'Greutatea actuală (kg)', en: 'Current weight (kg)' },
     { id: 'telefon', tip: 'tel', ob: true, ro: 'Nr. telefon', en: 'Phone number' },
     { id: 'email', tip: 'email', ob: true, ro: 'E-mail de contact', en: 'Email where you can be reached' },
     { id: 'domeniu', tip: 'text', ob: true, ro: 'În ce domeniu lucrezi? (ex.: IT, medicină, educație etc.)', en: 'What field do you work in? (e.g. IT, medicine, education)' },
     { id: 'angajament', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Îți poți asuma un program de antrenament de minimum 3 luni?', en: 'Are you willing to commit to a training program for at least 3 months?' },
-    { id: 'feedback', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești de acord să trimiți periodic feedback și poze de progres pe parcursul programului?', en: 'Are you willing to give regular feedback and progress photos during the program?' }
+    { id: 'feedback', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești de acord să trimiți periodic feedback despre cum te simți și cum progresezi?', en: 'Are you willing to give regular feedback on how you feel and progress?' },
+    { id: 'pozeProgres', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești de acord să faci poze de progres? Le văd doar eu, ca antrenor, și nu le folosesc în alt scop.', en: 'Do you agree to take progress photos? Only I, as your trainer, see them, and they are not used for anything else.' },
+    { id: 'urgenta', tip: 'text', ro: 'Contact pentru urgențe (nume și telefon)', en: 'Emergency contact (name and phone)' }
   ] },
   { ro: 'Istoric medical & sănătate', en: 'Medical history & health', intrebari: [
     { id: 'afectiuni', tip: 'danu', ob: true, ro: 'Suferi de afecțiuni medicale? (ex: probleme cardiace, respiratorii, diabet, scolioză, hipertensiune etc.)', en: 'Do you have any medical conditions? (e.g. heart or breathing problems, diabetes, scoliosis, high blood pressure)' },
     { id: 'dureri', tip: 'danu', ob: true, ro: 'Ai dureri articulare sau accidentări anterioare? (genunchi, umeri, zona lombară etc.)', en: 'Do you have joint pain or previous injuries? (knees, shoulders, lower back etc.)' },
     { id: 'restrictii', tip: 'danu', ob: true, ro: 'Ai restricții de efort fizic recomandate de medic?', en: 'Has a doctor recommended any limits on physical effort?' },
-    { id: 'energie', tip: 'paragraf', ro: 'Cum ai descrie nivelul tău general de energie?', en: 'How would you describe your general energy level?' },
-    { id: 'somn', tip: 'paragraf', ro: 'Calitatea somnului (ore/noapte, dificultăți)', en: 'Sleep quality (hours per night, difficulties)' }
+    { id: 'medicatie', tip: 'danu', ob: true, ro: 'Iei medicamente sau urmezi un tratament în prezent?', en: 'Are you currently taking medication or following a treatment?' },
+    { id: 'sarcina', tip: 'alegere', optiuni: [
+      { id: 'da', ro: 'Da', en: 'Yes' }, { id: 'nu', ro: 'Nu', en: 'No' }, { id: 'nuECazul', ro: 'Nu e cazul', en: 'Not applicable' }
+    ], ro: 'Sarcină sau naștere în ultimele 12 luni?', en: 'Pregnancy or giving birth in the last 12 months?' },
+    { id: 'energie', tip: 'scala', ro: 'Cum ți-ai nota nivelul general de energie?', en: 'How would you rate your general energy level?', hint: { ro: '1 = foarte scăzut · 5 = foarte ridicat', en: '1 = very low · 5 = very high' } },
+    { id: 'somnOre', tip: 'alegere', optiuni: [
+      { id: 'sub6', ro: 'Sub 6 ore', en: 'Under 6 h' }, { id: '6-7', ro: '6–7 ore', en: '6–7 h' },
+      { id: '7-8', ro: '7–8 ore', en: '7–8 h' }, { id: 'peste8', ro: 'Peste 8 ore', en: 'Over 8 h' }
+    ], ro: 'Câte ore dormi pe noapte, de obicei?', en: 'How many hours do you usually sleep?' },
+    { id: 'somnCalitate', tip: 'scala', ro: 'Cum ți-ai nota calitatea somnului?', en: 'How would you rate your sleep quality?', hint: { ro: '1 = foarte slabă · 5 = excelentă', en: '1 = very poor · 5 = excellent' } }
   ] },
   { ro: 'Nivel actual de activitate fizică', en: 'Current activity level', intrebari: [
     { id: 'sportAnterior', tip: 'paragraf', ro: 'Ai mai făcut sport? Ce tip de antrenamente?', en: 'Have you exercised before? What kind of training?' },
@@ -7033,13 +7085,14 @@ const SECTIUNI_INSCRIERE = [
     ], ro: 'Cât de mult te miști zilnic?', en: 'How active are you day to day?' }
   ] },
   { ro: 'Obiective personale & motivație', en: 'Personal goals & motivation', intrebari: [
-    { id: 'obiective', tip: 'multi', ob: true, optiuni: [
-      { id: 'slabire', ro: 'Slăbire', en: 'Weight loss' }, { id: 'masaMusculara', ro: 'Creștere masă musculară', en: 'Muscle gain' },
-      { id: 'tonifiere', ro: 'Tonifiere', en: 'Toning' }, { id: 'forta', ro: 'Forță / putere', en: 'Strength / power' },
-      { id: 'rezistenta', ro: 'Rezistență', en: 'Endurance' }, { id: 'mobilitate', ro: 'Recuperare / mobilitate', en: 'Recovery / mobility' },
-      { id: 'stilSanatos', ro: 'Stil de viață sănătos', en: 'Healthy lifestyle' }
-    ], ro: 'Care este obiectivul tău principal?', en: 'What is your main goal?' },
-    { id: 'termen', tip: 'paragraf', ro: 'Ai un termen în care ți-ai propus să atingi aceste obiective?', en: 'Is there a deadline by which you want to reach these goals?' }
+    { id: 'obiectivPrincipal', tip: 'alegere', ob: true, optiuni: OPTIUNI_OBIECTIVE, ro: 'Care este obiectivul tău principal? (alege unul)', en: 'What is your main goal? (pick one)' },
+    // „obiective” = alte obiective; în fișele mai vechi conține toate obiectivele bifate
+    { id: 'obiective', tip: 'multi', optiuni: OPTIUNI_OBIECTIVE, ro: 'Alte obiective (opțional)', en: 'Other goals (optional)' },
+    { id: 'greutateTinta', tip: 'numar', min: 30, max: 250, ro: 'Ai o greutate țintă? (kg, opțional)', en: 'Do you have a target weight? (kg, optional)' },
+    { id: 'termen', tip: 'alegere', optiuni: [
+      { id: '1luna', ro: '1 lună', en: '1 month' }, { id: '3luni', ro: '3 luni', en: '3 months' }, { id: '6luni', ro: '6 luni', en: '6 months' },
+      { id: '1an', ro: '1 an', en: '1 year' }, { id: 'fara', ro: 'Fără termen', en: 'No deadline' }
+    ], ro: 'În cât timp ți-ai propus să atingi obiectivul?', en: 'By when do you want to reach your goal?' }
   ] },
   { ro: 'Evaluare psihologică soft', en: 'Coaching style', intrebari: [
     { id: 'stilAntrenor', tip: 'alegere', ob: true, optiuni: [
@@ -7050,13 +7103,27 @@ const SECTIUNI_INSCRIERE = [
   ] },
   { ro: 'Disponibilitate', en: 'Availability', intrebari: [
     { id: 'dataStart', tip: 'data', ob: true, ro: 'Care este data estimată de la care îți poți începe antrenamentele?', en: 'From what date can you start training?' },
-    { id: 'frecventa', tip: 'paragraf', ro: 'De câte ori pe săptămână poți veni la antrenamente?', en: 'How many times a week can you come to training?' },
-    { id: 'intervale', tip: 'paragraf', ro: 'Intervalele orare preferate', en: 'Preferred time slots' }
+    { id: 'frecventa', tip: 'alegere', optiuni: [
+      { id: '1', ro: '1', en: '1' }, { id: '2', ro: '2', en: '2' }, { id: '3', ro: '3', en: '3' }, { id: '4', ro: '4+', en: '4+' }
+    ], ro: 'De câte ori pe săptămână poți veni la antrenamente?', en: 'How many times a week can you come to training?' },
+    { id: 'intervale', tip: 'multi', optiuni: [
+      { id: 'dimineata', ro: 'Dimineața', en: 'Morning' }, { id: 'pranz', ro: 'Prânz', en: 'Midday' },
+      { id: 'dupaAmiaza', ro: 'După-amiaza', en: 'Afternoon' }, { id: 'seara', ro: 'Seara', en: 'Evening' }
+    ], ro: 'Intervalele orare preferate', en: 'Preferred time slots' },
+    { id: 'intervaleNota', tip: 'paragraf', ro: 'Detalii despre program (opțional, ex.: lucrez în ture)', en: 'Schedule details (optional, e.g. I work shifts)' }
   ] },
   { ro: 'Așteptări & angajament', en: 'Expectations & commitment', intrebari: [
     { id: 'asteptari', tip: 'paragraf', ro: 'Ce aștepți de la mine ca antrenor personal?', en: 'What do you expect from me as your personal trainer?' },
-    { id: 'deStiut', tip: 'paragraf', ro: 'Există ceva ce ar trebui să știu înainte să începem?', en: 'Is there anything I should know before we start?' }
+    { id: 'deStiut', tip: 'paragraf', ro: 'Există ceva ce ar trebui să știu înainte să începem?', en: 'Is there anything I should know before we start?' },
+    { id: 'deUnde', tip: 'alegere', optiuni: [
+      { id: 'instagram', ro: 'Instagram', en: 'Instagram' }, { id: 'recomandare', ro: 'Recomandare', en: 'Recommendation' },
+      { id: 'google', ro: 'Google', en: 'Google' }, { id: 'altceva', ro: 'Altceva', en: 'Other' }
+    ], ro: 'Cum ai aflat de mine?', en: 'How did you hear about me?' }
   ] }
+];
+// Întrebări care nu mai sunt în formular, dar apar în fișele completate înainte (doar pentru afișare)
+const INTREBARI_VECHI_INSCRIERE = [
+  { id: 'somn', tip: 'paragraf', ro: 'Calitatea somnului (ore/noapte, dificultăți)', en: 'Sleep quality (hours per night, difficulties)' }
 ];
 
 let stareInscriere = { cod: '', pas: 0, r: {}, antrenor: null, areSesiune: false, trimitere: false };
@@ -7134,19 +7201,22 @@ function htmlIntrebareInscriere(q) {
   let camp = '';
   if (q.tip === 'paragraf') {
     camp = `<textarea id="insc_${q.id}" class="form-control" rows="2" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">${escAttr(v || '')}</textarea>`;
-  } else if (q.tip === 'alegere' || q.tip === 'multi' || q.tip === 'danu') {
-    const optiuni = q.optiuni || OPTIUNI_DA_NU;
+  } else if (q.tip === 'alegere' || q.tip === 'multi' || q.tip === 'danu' || q.tip === 'scala') {
+    let optiuni = q.tip === 'scala' ? OPTIUNI_SCALA : (q.optiuni || OPTIUNI_DA_NU);
+    // „Alte obiective” nu repetă obiectivul principal
+    if (q.id === 'obiective') optiuni = optiuni.filter(o => o.id !== stareInscriere.r.obiectivPrincipal);
     const multi = q.tip === 'multi';
-    camp = `<div class="inscriere-chips">${optiuni.map(o => chip(textInscriere(o),
-      multi ? (v || []).includes(o.id) : v === o.id,
+    camp = `<div class="inscriere-chips${q.tip === 'scala' ? ' inscriere-scala' : ''}">${optiuni.map(o => chip(textInscriere(o),
+      multi ? (Array.isArray(v) ? v : []).includes(o.id) : v === o.id,
       `alegeOptiuneInscriere('${q.id}', '${o.id}', ${multi})`)).join('')}</div>`;
+    if (q.hint) camp += `<div class="inscriere-hint">${escAttr(textInscriere(q.hint))}</div>`;
     if (q.tip === 'danu' && v === 'da') {
       const det = stareInscriere.r[q.id + 'Detalii'] || '';
       camp += `<textarea class="form-control" rows="2" style="margin-top:6px;" placeholder="${escAttr(tr('Spune-mi câteva detalii', 'Tell me a few details'))}" oninput="seteazaRaspunsInscriere('${q.id}Detalii', this.value)">${escAttr(det)}</textarea>`;
     }
   } else {
     const tipuri = { numar: 'number', tel: 'tel', email: 'email', data: 'date', text: 'text' };
-    const extra = q.tip === 'numar' ? ' inputmode="decimal"' : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '';
+    const extra = q.tip === 'numar' ? ` inputmode="decimal" min="${q.min}" max="${q.max}" step="any"` : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '';
     camp = `<input id="insc_${q.id}" type="${tipuri[q.tip]}" class="form-control"${extra} value="${escAttr(v || '')}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">`;
     // Câmp de dată gol: eticheta „Alege data” în locul șablonului zz.ll.aaaa al browserului
     if (q.tip === 'data') camp = `<div class="camp-data">${camp.replace('<input ', '<input required onclick="deschideCalendarData(this)" ')}<span class="camp-data-eticheta">${tr('Alege data', 'Pick a date')}</span></div>`;
@@ -7205,6 +7275,8 @@ function alegeOptiuneInscriere(id, optiune, multi) {
     r[id] = lista.includes(optiune) ? lista.filter(x => x !== optiune) : lista.concat(optiune);
   } else {
     r[id] = optiune;
+    // obiectivul principal nu rămâne și printre „alte obiective”
+    if (id === 'obiectivPrincipal' && Array.isArray(r.obiective)) r.obiective = r.obiective.filter(x => x !== optiune);
   }
   salveazaCiornaInscriere();
   randeazaInscriere();
@@ -7218,8 +7290,15 @@ function verificaPasInscriere() {
   for (const q of SECTIUNI_INSCRIERE[stareInscriere.pas].intrebari) {
     if (q.ob && gol(r[q.id])) return q.id;
     if (q.tip === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r[q.id]).trim())) return q.id;
+    if (q.tip === 'numar' && !gol(r[q.id]) && !numarInInterval(q, r[q.id])) return q.id;
   }
   return null;
+}
+
+// Cifre între limitele întrebării (ex. înălțimea în cm, nu în metri); acceptă și virgulă zecimală
+function numarInInterval(q, valoare) {
+  const n = parseFloat(String(valoare).replace(',', '.'));
+  return !isNaN(n) && n >= q.min && n <= q.max;
 }
 
 function pasInscriere(directie) {
@@ -7229,7 +7308,11 @@ function pasInscriere(directie) {
       const el = document.getElementById('inscQ_' + lipsa);
       el?.classList.add('inscriere-eroare');
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      showToast(lipsa === 'email' ? t('authInvalidEmailFormat') : tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *'), 'error');
+      const q = (SECTIUNI_INSCRIERE[stareInscriere.pas]?.intrebari || []).find(x => x.id === lipsa);
+      const valoare = String(stareInscriere.r[lipsa] ?? '').trim();
+      showToast(lipsa === 'email' ? t('authInvalidEmailFormat')
+        : q && q.tip === 'numar' && valoare ? tr(`Verifică valoarea: între ${q.min} și ${q.max}.`, `Check the value: between ${q.min} and ${q.max}.`)
+        : tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *'), 'error');
       return;
     }
   }
