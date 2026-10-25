@@ -1699,6 +1699,16 @@ details {
   animation: pulseOraCurenta 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
+/* „Arată programarea”: același puls ca la ora curentă, pe un singur loc. Cardul taie ce iese în afară, deci conturul e pe interior. */
+@keyframes pulseLocExistent {
+  0% { box-shadow: inset 0 0 0 3px rgba(var(--accent-rgb), 0.7); }
+  100% { box-shadow: inset 0 0 0 3px rgba(var(--accent-rgb), 0); }
+}
+
+.slot-row.slot-evidentiat {
+  animation: pulseLocExistent 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
 .hour-header {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.13) 0%, rgba(var(--accent-rgb), 0.07) 100%);
   padding: 5px 9px;

@@ -2571,20 +2571,20 @@ function mesajRezervare(cod) {
     abonament_inactiv: ['Abonamentul tău nu e activ. Contactează antrenorul.', 'Your subscription is not active. Contact your trainer.'],
     abonament_expirat: ['Abonamentul tău expiră înainte de această ședință.', 'Your subscription expires before this session.'],
     fara_sedinte: ['Nu mai ai ședințe disponibile pentru programare.', 'You have no sessions left to book.'],
-    deja_rezervat: ['Ai deja o programare la această oră.', 'You already have a booking at this time.']
+    deja_rezervat: ['Ai deja o programare în această zi. Pentru o programare nouă, anuleaz-o întâi pe cea existentă sau contactează antrenorul.', 'You already have a booking on this day. To book another, first cancel the existing one or contact your trainer.']
   };
   const m = mesaje[cod];
   return m ? tr(m[0], m[1]) : tr('Nu te-am putut programa. Încearcă din nou.', 'Could not book. Try again.');
 }
 
 // Locurile libere dintr-o oră se strâng într-un singur rând; rezervarea încearcă pe rând locurile grupului.
-// Orele la care clienta are deja o rezervare nu se mai oferă (serverul ar răspunde „deja_rezervat”).
-function grupeazaSloturiDeschise(lista, oreRezervate = new Set()) {
+// O singură programare pe zi: în zilele în care clienta are deja una nu se mai oferă ore.
+function grupeazaSloturiDeschise(lista, zileProgramate = new Map()) {
   const acum = new Date();
   const grupuri = [];
   (lista || []).forEach(o => {
     const data = dataSlot(o.ziRaw, o.ora);
-    if (!data || data <= acum || oreRezervate.has(data.getTime())) return;
+    if (!data || data <= acum || zileProgramate.has(cheieZiClienta(data))) return;
     let g = grupuri.find(x => x.data.getTime() === data.getTime());
     if (!g) { g = { data, randuri: [] }; grupuri.push(g); }
     g.randuri.push(o);
@@ -2600,9 +2600,13 @@ function seteazaBulinaOrar(nr) {
   b.hidden = !nr;
 }
 
-// Momentele (ms) la care clienta are deja o rezervare viitoare
-function oreRezervateClienta(randuri) {
-  return new Set((randuri || []).filter(o => !o.bifat).map(o => dataSlot(o.ziRaw, o.ora)).filter(Boolean).map(d => d.getTime()));
+// Zilele în care clienta are deja o programare (inclusiv una deja efectuată azi): cheie zi -> data și ora programării
+function programariPeZiClienta(randuri) {
+  const zile = new Map();
+  (randuri || []).map(o => dataSlot(o.ziRaw, o.ora)).filter(Boolean).sort((a, b) => a - b).forEach(d => {
+    if (!zile.has(cheieZiClienta(d))) zile.set(cheieZiClienta(d), d);
+  });
+  return zile;
 }
 
 async function actualizeazaBulinaOrar() {
@@ -2610,7 +2614,7 @@ async function actualizeazaBulinaOrar() {
     supabaseClient.rpc('sloturi_deschise'),
     supabaseClient.from('orar').select('ziRaw, ora, bifat').eq('client_id', dateClienta.fisa.id)
   ]);
-  if (!resDeschise.error) seteazaBulinaOrar(grupeazaSloturiDeschise(resDeschise.data, oreRezervateClienta(resRezervari.data)).length);
+  if (!resDeschise.error) seteazaBulinaOrar(grupeazaSloturiDeschise(resDeschise.data, programariPeZiClienta(resRezervari.data)).length);
 }
 
 // faraIncarcare: actualizare în fundal (timp real), fără „Se încarcă...” peste lista existentă
@@ -2633,7 +2637,8 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     .filter(o => o.data && o.data > acum)
     .sort((a, b) => a.data - b.data);
 
-  const grupuri = grupeazaSloturiDeschise(resDeschise.data, oreRezervateClienta(resRezervari.data));
+  dateClienta.zileProgramate = programariPeZiClienta(resRezervari.data);
+  const grupuri = grupeazaSloturiDeschise(resDeschise.data, dateClienta.zileProgramate);
   dateClienta.grupuri = grupuri;
   seteazaBulinaOrar(grupuri.length);
 
@@ -2712,7 +2717,13 @@ function htmlZileSiOreClienta(grupuri) {
   });
   html += `</div>`;
   const indici = peZi[dateClienta.ziSelectata] || [];
-  if (indici.length === 0) {
+  const programataAzi = dateClienta.zileProgramate && dateClienta.zileProgramate.get(dateClienta.ziSelectata);
+  if (programataAzi) {
+    // O singură programare pe zi
+    html += `<div class="card" style="font-size:0.85rem; line-height:1.4;">${escAttr(tr(
+      `Ai deja o programare ${etichetaZiSlot(programataAzi).toLowerCase()} la ${oraSlot(programataAzi)}. Pentru o programare nouă, anuleaz-o întâi pe cea existentă sau contactează antrenorul.`,
+      `You already have a booking on ${etichetaZiSlot(programataAzi)} at ${oraSlot(programataAzi)}. To book another, first cancel the existing one or contact your trainer.`))}</div>`;
+  } else if (indici.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${grupuri.length ? tr('Nicio oră liberă în această zi.', 'No open spots on this day.') : tr('Momentan nu sunt locuri deschise pentru rezervări.', 'There are no open spots right now.')}</div>`;
   }
   indici.forEach(i => {
@@ -3798,6 +3809,45 @@ function peSchimbareMotivOra(zi, ora) {
 }
 
 let debounceTimerNume = null;
+
+// „Arată programarea”: locul existent ajunge în mijlocul ecranului și pulsează ca ora curentă
+function arataLocExistent(slot) {
+  const ora = normalizeazaOraUi(slot.ora);
+  const rand = document.getElementById('cli_' + ora.replace(':', '') + '_' + (Number(slot.slotIndex) || 0))?.closest('.slot-row');
+  if (!rand) return;
+  rand.scrollIntoView({ behavior: 'auto', block: 'center' });
+  rand.classList.remove('slot-evidentiat');
+  void rand.offsetWidth;
+  rand.classList.add('slot-evidentiat');
+  setTimeout(() => rand.classList.remove('slot-evidentiat'), DURATA_HIGHLIGHT_ORA + 100);
+}
+
+// Clienta are deja un loc în ziua afișată. Aceeași oră: blocat (cu „Arată programarea”).
+// Altă oră: avertizare, iar „Adaugă oricum” salvează (adaugaOricum).
+function arataProgramareaExistenta(nume, slot, oraNoua, adaugaOricum) {
+  const ora = normalizeazaOraUi(slot.ora);
+  const zi = ((getZileConfig().find(z => z.cheie === ziCurentaCheie) || {}).nume || '').toLowerCase();
+  if (ora === oraNoua) {
+    customConfirm(
+      tr('Deja programată la această oră', 'Already booked at this time'),
+      tr(`${nume} este deja programată ${zi} la ${ora}. Nu poate ocupa două locuri la aceeași oră.`,
+         `${nume} is already booked on ${zi} at ${ora}. She cannot take two spots at the same time.`),
+      function() { arataLocExistent(slot); }
+    );
+    document.getElementById('modalBtnConfirm').innerText = tr('Arată programarea', 'Show booking');
+    return;
+  }
+  customConfirm(
+    tr('Încă o programare în aceeași zi', 'Another booking on the same day'),
+    tr(`${nume} are deja o programare ${zi} la ${ora}. O adaugi și la ${oraNoua}?`,
+       `${nume} already has a booking on ${zi} at ${ora}. Add her at ${oraNoua} too?`),
+    function() {
+      adaugaOricum();
+      randeazaOrarInstant();
+    }
+  );
+  document.getElementById('modalBtnConfirm').innerText = tr('Adaugă oricum', 'Add anyway');
+}
 function seteazaStilSlotOcupat(elCli, ocupat) {
   let rand = elCli ? elCli.closest('.slot-row') : null;
   if (!rand) return;
@@ -3885,6 +3935,23 @@ function peSchimbareNumeClienta(zi, ora, slotIdx, ev) {
     if (!clientaGasita) return;
 
     let numeExact = clientaGasita.nume;
+
+    // Aceeași clientă în aceeași zi: la aceeași oră e blocat; la altă oră se poate, după avertizare
+    let dubluri = (DB.orarSloturi || []).filter(s => s &&
+      (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === (saptamanaCheie + "_Marți"))) &&
+      (s.clienta || '').trim().toLowerCase() === numeExact.toLowerCase() &&
+      !(normalizeazaOraUi(s.ora) === oraNorm && Number(s.slotIndex) === Number(slotIdx)))
+      .sort((a, b) => normalizeazaOraUi(a.ora).localeCompare(normalizeazaOraUi(b.ora)));
+    let dublura = dubluri.find(s => normalizeazaOraUi(s.ora) === oraNorm) || dubluri[0];
+    if (dublura) {
+      if (elCli) elCli.blur();
+      randeazaOrarInstant(); // locul revine la ce era salvat; se completează doar dacă antrenorul confirmă
+      arataProgramareaExistenta(numeExact, dublura, oraNorm, salveazaInSlot);
+      return;
+    }
+    salveazaInSlot();
+
+    function salveazaInSlot() {
     if (elCli && elCli.value !== numeExact) {
       elCli.value = numeExact;
     }
@@ -3915,6 +3982,7 @@ function peSchimbareNumeClienta(zi, ora, slotIdx, ev) {
       }
       incarcaBazaDateSilencios();
     });
+    }
   }, 400);
 }
 
