@@ -1109,10 +1109,7 @@ header {
   text-overflow: ellipsis;
 }
 
-/* Bara clientei folosește stilurile „nav” ale antrenorului; bula are lățimea unei treimi (3 butoane, nu 4) */
-#clientaNav .nav-mercury-pill {
-  width: calc(33.333% - 2.67px);
-}
+/* Bara clientei folosește stilurile „nav” ale antrenorului, tot cu 4 butoane (bula de 25%) */
 
 /* Bulina cu numărul de ore cu locuri deschise, pe iconița Orar */
 .nav-bulina {
@@ -1360,6 +1357,13 @@ html[data-rol="clienta"] .doar-antrenor {
   text-align: center;
 }
 
+.cereri-nota {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
 .cerere-item {
   margin-top: 8px;
   border-top: 1px solid var(--border);
@@ -1540,28 +1544,307 @@ html[data-rol="clienta"] .doar-antrenor {
   color: #f87171;
 }
 
-.obiective-texte {
-  margin-top: 12px;
-  border-top: 1px solid var(--border);
+/* Răspunsurile scrise liber: aceeași etichetă ca grupurile de sus, textul într-o casetă ca etichetele */
+.obiective-text {
+  width: fit-content;
+  max-width: 100%;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
-.raspuns-rand {
+/* PROGRES: greutatea curentă, graficul și check-in-urile (la clientă și în fișa antrenorului) */
+.progres-erou {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.progres-erou-val {
+  font-size: 1.7rem;
+  font-weight: 900;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.progres-erou-val small {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.progres-erou-dif {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.progres-gol {
+  font-size: 0.82rem;
+  color: var(--text-muted);
   padding: 6px 0;
+}
+
+.grafic-greutate {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.grafic-grila {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.grafic-axa {
+  font-size: 9px;
+  fill: var(--text-muted);
+}
+
+.grafic-linie {
+  fill: none;
+  stroke: var(--accent-purple);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.grafic-tinta {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.grafic-marca {
+  fill: var(--accent-purple);
+  stroke: var(--card-bg);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.grafic-punct.activ .grafic-marca {
+  r: 6;
+}
+
+.grafic-valoare {
+  font-size: 10px;
+  font-weight: 800;
+  fill: var(--text);
+  pointer-events: none;
+}
+
+.grafic-detaliu {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+.checkin-rand {
+  padding: 8px 0;
   border-bottom: 1px solid var(--border);
 }
 
-.raspuns-intrebare {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.3;
+.checkin-rand:last-child {
+  border-bottom: none;
 }
 
-.raspuns-valoare {
-  font-size: 0.86rem;
-  font-weight: 700;
-  margin-top: 2px;
+.checkin-rand-sus {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.checkin-rand-sus span {
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.checkin-scoruri {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.checkin-scor {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--primary-light);
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+}
+
+.checkin-scor span {
+  margin-right: 4px;
+}
+
+.checkin-scor b {
+  color: var(--text);
+}
+
+/* Notița clientei pentru antrenor: casetă ca răspunsurile din fișa de obiective, cu bară de accent în stânga */
+.checkin-nota {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 7px 11px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-left: 3px solid var(--accent-purple);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Cardul de check-in al clientei */
+.checkin-card {
+  border: 1.5px solid var(--accent-purple);
+}
+
+.checkin-titlu {
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.checkin-subtitlu,
+.checkin-facut {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 3px 0 10px;
+}
+
+.checkin-facut {
+  font-weight: 700;
+  color: #15803d;
+}
+
+[data-theme="dark"] .checkin-facut {
+  color: #4ade80;
+}
+
+.checkin-btn {
+  width: 100%;
+  padding: 9px;
+  font-weight: 800;
+}
+
+.checkin-intrebare {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.checkin-note {
+  display: flex;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.checkin-nota-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--input-glass-bg);
+  color: var(--text);
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.checkin-nota-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.checkin-greutate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.checkin-greutate input {
+  width: 90px;
+  font-family: inherit;
+}
+
+.checkin-nota-text {
+  font-family: inherit;
+  resize: vertical;
+}
+
+/* Câmp de dată gol: în locul șablonului „zz.ll.aaaa” apare o etichetă (câmpul are `required`, deci gol = :invalid) */
+.camp-data {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.camp-data input {
+  font-family: inherit;
+}
+
+.camp-data-eticheta {
+  position: absolute;
+  left: 10px;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.camp-data input {
+  cursor: pointer;
+}
+
+/* Cât câmpul e gol, eticheta rămâne și la apăsare (calendarul se deschide direct, vezi deschideCalendarData);
+   șablonul browserului (zz/ll/aaaa, cu fontul lui) nu apare deloc */
+.camp-data input:valid + .camp-data-eticheta {
+  display: none;
+}
+
+.camp-data input:invalid::-webkit-datetime-edit,
+.camp-data input:invalid::-webkit-datetime-edit-text,
+.camp-data input:invalid::-webkit-datetime-edit-day-field,
+.camp-data input:invalid::-webkit-datetime-edit-month-field,
+.camp-data input:invalid::-webkit-datetime-edit-year-field {
+  color: transparent;
+  background: transparent;
+}
+
+/* Browserele fără ::-webkit-datetime-edit (Firefox) păstrează șablonul lor */
+@supports not selector(::-webkit-datetime-edit) {
+  .camp-data-eticheta {
+    display: none;
+  }
 }
 
 .inscriere-link-afisat {
@@ -2191,16 +2474,59 @@ details {
   letter-spacing: 0.2px;
 }
 
+/* Ceasul din antetul orei: bulă mică în stilul butonului de calendar din header (inel = apăsabil) */
 .btn-lock-hour {
-  background: transparent;
-  border: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-right: 3px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  border: 1px solid rgba(var(--accent-pale-rgb), 0.85);
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.25),
+              0 2px 6px rgba(var(--accent-rgb), 0.35),
+              inset 0 1px 1px rgba(255, 255, 255, 0.45);
   cursor: pointer;
-  padding: 1px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  transition: transform 0.15s ease;
+}
+
+.btn-lock-hour:active {
+  transform: scale(0.9);
+}
+
+.btn-lock-hour svg,
+.hour-icon-static svg {
+  width: 14px;
+  height: 14px;
+  stroke: #fff;
+  pointer-events: none;
+}
+
+/* Ora blocată: lacăt pe roșu, ca marginea cardului */
+.hour-block-blocked .btn-lock-hour {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  border-color: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25),
+              0 2px 6px rgba(185, 28, 28, 0.35),
+              inset 0 1px 1px rgba(255, 255, 255, 0.45);
+}
+
+/* Săptămâna trecută: același ceas, dar fără inel (nu se poate apăsa) */
+.hour-icon-static {
+  width: 22px;
+  height: 22px;
+  margin-right: 3px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
+  opacity: 0.55;
 }
 
 .hour-badge {
@@ -2226,19 +2552,6 @@ details {
   background: rgba(220, 252, 231, 0.9);
   color: #166534;
   border: 1px solid rgba(134, 239, 172, 0.6);
-}
-
-.hour-badge-blocked {
-  background: rgba(254, 226, 226, 0.92);
-  color: #b91c1c;
-  font-weight: 800;
-  border: 1px solid rgba(252, 165, 165, 0.6);
-}
-
-[data-theme="dark"] .hour-badge-blocked {
-  background: rgba(153, 27, 27, 0.5);
-  color: #fca5a5;
-  border-color: rgba(248, 113, 113, 0.4);
 }
 
 .hour-block-blocked {
@@ -2425,6 +2738,97 @@ select.slot-select-type {
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   margin-top: 16px;
+}
+
+/* „Cont în aplicație”: același card ca rândurile de contact, cu starea ca etichetă */
+.fisa-cont {
+  margin-top: 6px;
+  padding: 9px 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.fisa-cont-sus {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.fisa-cont-titlu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.fisa-cont-titlu svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fisa-cont-stare {
+  flex-shrink: 0;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fisa-cont-stare.conectat {
+  color: #15803d;
+  background: rgba(21, 128, 61, 0.1);
+  border: 1px solid rgba(21, 128, 61, 0.3);
+}
+
+.fisa-cont-stare.asteapta {
+  color: #9a6408;
+  background: rgba(245, 176, 65, 0.16);
+  border: 1px solid rgba(245, 176, 65, 0.5);
+}
+
+.fisa-cont-stare.fara {
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] .fisa-cont-stare.conectat {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .fisa-cont-stare.asteapta {
+  color: #f5b041;
+}
+
+.fisa-cont-invitatie {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.fisa-cont-invitatie[hidden] {
+  display: none;
+}
+
+.fisa-cont-invitatie input {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.fisa-cont-invitatie .btn {
+  white-space: nowrap;
 }
 
 .fisa-contact-rand {
@@ -2650,6 +3054,187 @@ select.slot-select-type {
 }
 
 /* EMPTY STATE FIȘĂ CLIENTĂ */
+/* Fișă fără clientă aleasă: filtre + lista clientelor (avatar cu inițiale, abonament, starea ca etichetă) */
+.lista-filtre {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0 8px;
+}
+
+.lista-filtru {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lista-filtru span {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.2);
+  font-size: 0.72rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+.lista-filtru.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.lista-filtru.active span {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.lista-clienta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.lista-clienta:active {
+  transform: scale(0.98);
+}
+
+.lista-avatar {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.lista-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.lista-info b,
+.lista-info small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lista-info b {
+  font-size: 0.9rem;
+  color: var(--primary);
+}
+
+[data-theme="dark"] .lista-info b {
+  color: var(--text);
+}
+
+.lista-info small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.lista-stare {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lista-stare.activ {
+  color: #15803d;
+  background: rgba(21, 128, 61, 0.1);
+  border: 1px solid rgba(21, 128, 61, 0.3);
+}
+
+.lista-stare.curand {
+  color: #9a6408;
+  background: rgba(245, 176, 65, 0.16);
+  border: 1px solid rgba(245, 176, 65, 0.5);
+}
+
+.lista-stare.expirat {
+  color: #b91c1c;
+  background: rgba(185, 28, 28, 0.08);
+  border: 1px solid rgba(185, 28, 28, 0.3);
+}
+
+.lista-stare.nou,
+.lista-stare.arhivat {
+  color: var(--text-muted);
+  background: rgba(148, 163, 184, 0.15);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] .lista-stare.activ { color: #4ade80; }
+[data-theme="dark"] .lista-stare.curand { color: #f5b041; }
+[data-theme="dark"] .lista-stare.expirat { color: #f87171; }
+
+.lista-inapoi {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lista-inapoi svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-theme="dark"] .lista-inapoi {
+  color: var(--text);
+}
+
+.lista-gol {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
 .empty-state-card {
   padding: 30px 16px;
   text-align: center;
@@ -3911,34 +4496,23 @@ select.slot-select-type {
   opacity: 0.8 !important;
 }
 
-/* Ora blocată: sloturile rămân la locul lor, sub un blur puternic; peste ele stă notița (motiv / reminder) */
-.hour-block-blocked .hour-slots-wrapper {
-  position: relative;
+/* Ora blocată: cardul se strânge la antet + un rând de notiță (motiv / reminder).
+   Sloturile rămân în pagină, ascunse, și reapar la deblocare. */
+.hour-block-blocked .slot-row {
+  display: none;
 }
 
 .hour-motiv-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(9px);
-  -webkit-backdrop-filter: blur(9px);
+  padding: 6px 9px;
   pointer-events: auto;
 }
 
-[data-theme="dark"] .hour-motiv-overlay {
-  background: rgba(18, 16, 26, 0.45);
-}
-
 .hour-motiv-input {
+  display: block;
   width: 100%;
-  height: 100%;
-  min-height: 52px;
-  max-height: 100%;
+  min-height: 34px;
+  max-height: 120px;
+  field-sizing: content;
   resize: none;
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.45);

@@ -1161,6 +1161,8 @@ function peInputClientaFisa(ev) {
   if (esteAlegereDinLista(el, ev) && gasesteClientaValida(el.value.trim())) {
     el.blur();
     afiseazaFisaClientaInstant();
+  } else if (document.getElementById('detaliiFisa').style.display === 'none') {
+    randeazaListaClienteFisa(); // lista de sub căutare se filtrează pe măsură ce scrii
   }
 }
 
@@ -1825,7 +1827,7 @@ async function executaActiuneSupabase(actionName, payload) {
     return { success: true, nume: (ex && ex.length > 0) ? ex[0].nume : cer.nume.trim() };
   }
 
-  // Refuzul păstrează doar emailul, ca persoana refuzată să afle la login că cererea nu a fost acceptată
+  // Ștergerea cererii păstrează doar emailul, ca persoana să afle la login că cererea nu mai e activă
   if (actionName === "refuzaCerereInscriere") {
     const { data, error } = await sb.rpc('refuza_cerere_inscriere', { p_id: payload.id });
     return { success: !error && data === true };
@@ -2663,7 +2665,7 @@ function oraSlot(d) {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
-const TABURI_CLIENTA = ['acasa', 'orar', 'istoric'];
+const TABURI_CLIENTA = ['acasa', 'orar', 'istoric', 'fisa'];
 
 function clientaTab(tab) {
   salveazaProgresClienta();
@@ -2683,7 +2685,114 @@ function clientaTab(tab) {
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   if (tab === 'orar') randeazaOrarClienta();
   else if (tab === 'istoric') randeazaIstoricClienta();
+  else if (tab === 'fisa') randeazaFisaMeaClienta();
   else randeazaHomeClienta();
+}
+
+// „Fișa mea”: check-in-ul săptămânii, progresul (greutate + check-in-uri) și fișa de obiective (doar de citit)
+let checkinuriClienta = [];
+let checkinFormular = null; // valorile din formularul de check-in deschis; null = formular închis
+
+// Lunea săptămânii curente, 'YYYY-MM-DD' (ca în salveaza_checkin)
+function lunaSaptamaniiCurente() {
+  const d = new Date();
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function randeazaFisaMeaClienta() {
+  document.getElementById('clientaTitlu').innerText = tr('Fișa mea', 'My profile');
+  const corp = document.getElementById('clientaContinut');
+  corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const { data, error } = await supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', dateClienta.fisa.id);
+  if (clientaTabCurent !== 'fisa') return;
+  checkinuriClienta = error ? [] : (data || []);
+  checkinFormular = null;
+  afiseazaFisaMeaClienta();
+}
+
+function afiseazaFisaMeaClienta() {
+  const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
+  const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
+  let html = `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
+  html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta)}</div>`;
+  html += titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
+    ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}</div>`
+    : `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. Cere-i antrenorului tău link-ul formularului.', 'You don’t have a goal-setting form yet. Ask your trainer for the form link.')}</div>`);
+  document.getElementById('clientaContinut').innerHTML = html;
+}
+
+const INTREBARI_CHECKIN = [
+  { id: 'energie', ro: 'Energie', en: 'Energy' },
+  { id: 'somn', ro: 'Somn', en: 'Sleep' },
+  { id: 'stare', ro: 'Stare generală', en: 'Overall mood' }
+];
+
+function htmlCheckinClienta() {
+  const saptamana = lunaSaptamaniiCurente();
+  const facut = checkinuriClienta.find(c => c.saptamana === saptamana);
+  const antet = `<div class="checkin-titlu">${tr('Check-in-ul săptămânii', 'This week’s check-in')}</div>`;
+  if (!checkinFormular) {
+    if (facut) {
+      return `${antet}<div class="checkin-facut">✓ ${tr('Făcut. Antrenorul tău îl vede în fișa ta.', 'Done. Your trainer can see it in your profile.')}</div>
+        <button type="button" class="btn btn-clear checkin-btn" onclick="deschideCheckin()">${tr('Modifică', 'Edit')}</button>`;
+    }
+    return `${antet}<div class="checkin-subtitlu">${tr('10 secunde: cum a fost săptămâna ta?', '10 seconds: how was your week?')}</div>
+      <button type="button" class="btn checkin-btn" onclick="deschideCheckin()">${tr('Fă check-in-ul', 'Do the check-in')}</button>`;
+  }
+  const f = checkinFormular;
+  const randuri = INTREBARI_CHECKIN.map(q => `<div class="checkin-intrebare">
+      <span>${textInscriere(q)}</span>
+      <div class="checkin-note">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="checkin-nota-btn${f[q.id] === n ? ' active' : ''}" onclick="alegeNotaCheckin('${q.id}', ${n})">${n}</button>`).join('')}</div>
+    </div>`).join('');
+  return `${antet}<div class="checkin-subtitlu">${tr('1 = foarte slab · 5 = excelent', '1 = very poor · 5 = excellent')}</div>
+    ${randuri}
+    <div class="checkin-intrebare">
+      <span>${tr('Greutate (opțional)', 'Weight (optional)')}</span>
+      <div class="checkin-greutate"><input type="number" inputmode="decimal" step="0.1" min="30" max="300" class="form-control" value="${f.greutate ?? ''}" oninput="checkinFormular.greutate = this.value"><span>kg</span></div>
+    </div>
+    <textarea class="form-control checkin-nota-text" rows="2" maxlength="500" placeholder="${tr('Ceva de spus antrenorului? (opțional)', 'Anything to tell your trainer? (optional)')}" oninput="checkinFormular.nota = this.value">${escAttr(f.nota || '')}</textarea>
+    <div class="inscriere-butoane">
+      <button type="button" class="btn btn-clear" onclick="checkinFormular = null; afiseazaFisaMeaClienta()">${tr('Renunță', 'Cancel')}</button>
+      <button type="button" class="btn" id="btnSalveazaCheckin" onclick="salveazaCheckinClienta()">${tr('Salvează', 'Save')}</button>
+    </div>`;
+}
+
+function deschideCheckin() {
+  const facut = checkinuriClienta.find(c => c.saptamana === lunaSaptamaniiCurente());
+  checkinFormular = facut
+    ? { energie: facut.energie, somn: facut.somn, stare: facut.stare, greutate: facut.greutate, nota: facut.nota }
+    : {};
+  afiseazaFisaMeaClienta();
+}
+
+function alegeNotaCheckin(id, n) {
+  checkinFormular[id] = n;
+  document.querySelector('.checkin-card').innerHTML = htmlCheckinClienta();
+}
+
+async function salveazaCheckinClienta() {
+  const f = checkinFormular;
+  if (!f.energie || !f.somn || !f.stare) {
+    showToast(tr('Alege o notă de la 1 la 5 la fiecare întrebare.', 'Pick a score from 1 to 5 for each question.'), 'error');
+    return;
+  }
+  const kg = String(f.greutate ?? '').trim() === '' ? null : parseFloat(String(f.greutate).replace(',', '.'));
+  if (kg !== null && !(kg >= 30 && kg <= 300)) {
+    showToast(tr('Greutatea trebuie să fie între 30 și 300 kg.', 'Weight must be between 30 and 300 kg.'), 'error');
+    return;
+  }
+  document.getElementById('btnSalveazaCheckin').disabled = true;
+  const { data, error } = await supabaseClient.rpc('salveaza_checkin', {
+    p_greutate: kg, p_energie: f.energie, p_somn: f.somn, p_stare: f.stare, p_nota: (f.nota || '').trim()
+  });
+  if (error || data !== 'ok') {
+    document.getElementById('btnSalveazaCheckin').disabled = false;
+    showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
+    return;
+  }
+  showToast(tr('✓ Check-in salvat', '✓ Check-in saved'));
+  randeazaFisaMeaClienta();
 }
 
 function mesajRezervare(cod) {
@@ -2952,8 +3061,8 @@ async function afiseazaEcranClienta() {
       ? mesajCerere(tr('Cererea ta a fost trimisă', 'Your request has been sent'),
           tr('După ce antrenorul o acceptă, aici îți vezi abonamentul, programările și planurile. Revino puțin mai târziu.', 'Once your trainer accepts it, you will see your subscription, bookings and plans here. Check back a little later.'))
       : stareCerere === 'refuzata'
-        ? mesajCerere(tr('Cererea ta nu a fost acceptată', 'Your request was not accepted'),
-            tr('Pentru detalii, contactează antrenorul.', 'For details, contact your trainer.'))
+        ? mesajCerere(tr('Cererea ta nu mai este activă', 'Your request is no longer active'),
+            tr('Contactează antrenorul sau completează din nou formularul.', 'Contact your trainer or fill in the form again.'))
         : `<div class="card">${tr('Nu am găsit abonamentul. Contactează antrenorul.', 'Subscription not found. Contact your trainer.')}</div>`;
     return;
   }
@@ -3558,6 +3667,88 @@ function populeazaSelectoriCliente() {
     }
   });
   randeazaCereriInscriere();
+  if (document.getElementById('detaliiFisa')?.style.display === 'none') randeazaListaClienteFisa();
+}
+
+// ---- Fișă fără clientă aleasă: lista clientelor, cu starea abonamentului și filtrul „De urmărit” ----
+let filtruListaFisa = 'toate';
+
+// Starea abonamentului pentru listă; `urmarit` = are nevoie de atenție (reînnoire, expirat, fără abonament)
+function stareAbonamentClienta(c) {
+  const st = (c.status || '').toLowerCase();
+  if (st === 'arhivat' || st === 'archived') return { tip: 'arhivat', text: tr('Arhivată', 'Archived'), urmarit: false };
+  if (!c.incluse || !c.tipAbonament || c.tipAbonament === '-') return { tip: 'nou', text: tr('Fără abonament', 'No subscription'), urmarit: true };
+  const exp = parseazaDataOraRo(c.dataExpirare);
+  const azi = new Date(); azi.setHours(0, 0, 0, 0);
+  const zile = exp ? Math.round((new Date(exp).setHours(0, 0, 0, 0) - azi) / 86400000) : null;
+  if (st === 'expirat' || (zile !== null && zile < 0)) return { tip: 'expirat', text: tr('Expirat', 'Expired'), urmarit: true };
+  if (st === 'finalizat' || c.ramase <= 0) return { tip: 'expirat', text: tr('Fără ședințe', 'No sessions left'), urmarit: true };
+  if (zile !== null && zile <= 7) {
+    return { tip: 'curand', urmarit: true, text: zile === 0 ? tr('Expiră azi', 'Expires today')
+      : tr(`Expiră în ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `Expires in ${zile} ${zile === 1 ? 'day' : 'days'}`) };
+  }
+  if (c.ramase <= 2) return { tip: 'curand', urmarit: true, text: tr(`${c.ramase} ${c.ramase === 1 ? 'ședință' : 'ședințe'}`, `${c.ramase} ${c.ramase === 1 ? 'session' : 'sessions'} left`) };
+  return { tip: 'activ', text: tr(`${c.ramase} rămase`, `${c.ramase} left`), urmarit: false };
+}
+
+function randeazaListaClienteFisa() {
+  const lista = document.getElementById('listaClienteFisa');
+  const emptyState = document.getElementById('fisaEmptyState');
+  if (!lista) return;
+  const arataArhivate = document.getElementById('checkArataArhivate')?.checked;
+  const cauta = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
+  const toate = (DB.clienti || [])
+    .map(c => ({ c, s: stareAbonamentClienta(c) }))
+    .filter(x => arataArhivate || x.s.tip !== 'arhivat');
+
+  // Fără nicio clientă (antrenor nou): rămâne cardul gol, cu explicația
+  if (toate.length === 0) {
+    lista.hidden = true;
+    if (emptyState) emptyState.style.display = 'flex';
+    return;
+  }
+  if (emptyState) emptyState.style.display = 'none';
+  lista.hidden = false;
+
+  const deUrmarit = toate.filter(x => x.s.urmarit).length;
+  if (deUrmarit === 0) filtruListaFisa = 'toate';
+  const ordine = { expirat: 0, curand: 1, nou: 2, activ: 3, arhivat: 4 };
+  const vizibile = toate
+    .filter(x => filtruListaFisa === 'toate' || x.s.urmarit)
+    .filter(x => !cauta || x.c.nume.toLowerCase().includes(cauta))
+    .sort((a, b) => (ordine[a.s.tip] - ordine[b.s.tip]) || a.c.nume.localeCompare(b.c.nume));
+
+  const filtru = (id, text, n) => `<button type="button" class="lista-filtru${filtruListaFisa === id ? ' active' : ''}" onclick="filtruListaFisa='${id}'; randeazaListaClienteFisa()">${text}<span>${n}</span></button>`;
+  const initiale = nume => nume.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+  let html = `<div class="lista-filtre">${filtru('toate', tr('Toate', 'All'), toate.length)}${deUrmarit ? filtru('urmarit', tr('De urmărit', 'Needs attention'), deUrmarit) : ''}</div>`;
+  html += vizibile.length ? vizibile.map(({ c, s }) => {
+    const detalii = s.tip === 'nou' ? tr('Abonamentul se adaugă din Încasări', 'Add the subscription in Payments')
+      : [traduceValoare(c.tipAbonament), c.dataExpirare && c.dataExpirare !== '-' ? tr('până la ', 'until ') + c.dataExpirare : ''].filter(Boolean).join(' · ');
+    return `<button type="button" class="lista-clienta" data-nume="${escAttr(c.nume)}" onclick="deschideClientaDinLista(this.dataset.nume)">
+        <span class="lista-avatar">${escAttr(initiale(c.nume))}</span>
+        <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${escAttr(detalii)}</small></span>
+        <span class="lista-stare ${s.tip}">${escAttr(s.text)}</span>
+      </button>`;
+  }).join('') : `<div class="lista-gol">${tr('Nicio clientă găsită.', 'No client found.')}</div>`;
+  lista.innerHTML = html;
+}
+
+// Din fișa deschisă înapoi la lista tuturor clientelor
+function inapoiLaListaClienteFisa() {
+  const sel = document.getElementById('selectClientaFisa');
+  sel.value = '';
+  actualizeazaStilSelect(sel);
+  filtruListaFisa = 'toate';
+  afiseazaFisaClientaInstant();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deschideClientaDinLista(nume) {
+  const sel = document.getElementById('selectClientaFisa');
+  sel.value = nume;
+  actualizeazaStilSelect(sel);
+  afiseazaFisaClientaInstant();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function curataNumeLuna(str) {
@@ -3680,6 +3871,16 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   }
 }
 
+// Iconițele din antetul orei: ceas (ora deschisă, apăsarea o blochează) și lacăt (ora blocată)
+const ICON_CEAS_ORA = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICON_LACAT_ORA = '<svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+// Eticheta din antetul orei: „3 libere”, „1 liber”, „Complet”
+function textLocuriLibere(libere) {
+  if (libere <= 0) return tr('Complet', 'Full');
+  return `${libere} ${libere === 1 ? tr('liber', 'free') : tr('libere', 'free')}`;
+}
+
 function randeazaOrarInstant() {
   let container = document.getElementById('sloturiContainer');
   if (!container) return;
@@ -3735,7 +3936,7 @@ function randeazaOrarInstant() {
       htmlTrecut += `
         <div class="hour-block" data-ora="${ora}">
           <div class="hour-header">
-            <div class="hour-title-wrap"><span>🕒 ${ora}</span></div>
+            <div class="hour-title-wrap"><span class="hour-icon-static">${ICON_CEAS_ORA}</span><span>${ora}</span></div>
             ${(() => {
               // Trecut: doar câte au fost confirmate (fără „/ locuri”); nimic dacă niciuna
               const nrEfectuate = lista.filter(s => s.bifat).length;
@@ -3831,14 +4032,14 @@ function randeazaOrarInstant() {
     let ocupate = sloturiOra.filter(s => s && s.clienta && s.clienta.trim() !== "").length;
     let total = sloturiOra.length;
 
+    // Eticheta arată locurile libere; ora blocată (lacăt + chenar roșu) o are doar dacă are deja cliente programate
     let badgeHtml = '';
     let clientsBadgeHtml = '';
-    let occupiedText = currentLang === 'en' ? 'occupied' : 'ocupate';
+    let libere = Math.max(0, total - ocupate);
     if (esteBlocat) {
-      badgeHtml = `<div class="hour-badge hour-badge-blocked">${currentLang === 'en' ? 'Hour Blocked!' : 'Ora Blocată!'}</div>`;
-      if (ocupate > 0) clientsBadgeHtml = `<div class="hour-badge hour-badge-busy">${ocupate} / ${total} ${occupiedText}</div>`;
+      if (ocupate > 0) clientsBadgeHtml = `<div class="hour-badge hour-badge-busy">${ocupate} ${ocupate === 1 ? tr('programare', 'booking') : tr('programări', 'bookings')}</div>`;
     } else {
-      badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${ocupate} / ${total} ${occupiedText}</div>`;
+      badgeHtml = `<div class="hour-badge ${ocupate > 0 ? 'hour-badge-busy' : 'hour-badge-free'}">${textLocuriLibere(libere)}</div>`;
     }
 
     let lockTitle = esteBlocat ? (currentLang === 'en' ? 'Unlock hour' : 'Deblochează ora') : (currentLang === 'en' ? 'Block hour' : 'Blochează ora');
@@ -3847,8 +4048,8 @@ function randeazaOrarInstant() {
       <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}" data-ora="${ora}">
         <div class="hour-header">
           <div class="hour-title-wrap">
-            <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${ziCurentaCheie}', '${ora}', ${!esteBlocat})" title="${lockTitle}">
-              🕒
+            <button class="btn-lock-hour" onclick="comutaBlocareOraInstant('${ziCurentaCheie}', '${ora}', ${!esteBlocat})" title="${lockTitle}" aria-label="${lockTitle}">
+              ${esteBlocat ? ICON_LACAT_ORA : ICON_CEAS_ORA}
             </button>
             <span>${ora}</span>
           </div>
@@ -3862,7 +4063,7 @@ function randeazaOrarInstant() {
       let motivCurent = (sloturiOra.find(s => s && s.motiv) || {}).motiv || '';
       html += `
         <div class="hour-motiv-overlay">
-          <textarea class="hour-motiv-input" id="motiv_${ora.replace(':', '')}" rows="2" maxlength="300" placeholder="${tr('Motiv / notiță (ex: programare)', 'Reason / note (e.g. appointment)')}" oninput="peSchimbareMotivOra('${ziCurentaCheie}', '${ora}')">${escAttr(motivCurent)}</textarea>
+          <textarea class="hour-motiv-input" id="motiv_${ora.replace(':', '')}" rows="1" maxlength="300" placeholder="${tr('Motiv / notiță (ex: programare)', 'Reason / note (e.g. appointment)')}" oninput="peSchimbareMotivOra('${ziCurentaCheie}', '${ora}')">${escAttr(motivCurent)}</textarea>
         </div>
       `;
     }
@@ -3927,6 +4128,16 @@ function randeazaOrarInstant() {
   });
 
   container.innerHTML = html;
+  container.querySelectorAll('.hour-motiv-input').forEach(potrivesteInaltimeNotita);
+}
+
+// Notița orei blocate crește cu textul. Unde CSS nu are `field-sizing` (Safari mai vechi), înălțimea se pune din JS,
+// imediat după randare, ca să fie măsurată corect de calibreazaLayoutEcran
+const ARE_FIELD_SIZING = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('field-sizing', 'content');
+function potrivesteInaltimeNotita(el) {
+  if (ARE_FIELD_SIZING || !el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight + 2, 120) + 'px';
 }
 
 // Deschide/închide un loc liber pentru rezervările clientelor. Locul se creează în baza de date dacă nu există încă.
@@ -3951,7 +4162,7 @@ function comutaSlotDeschis(zi, ora, slotIdx) {
   });
 }
 
-// O blocare/deblocare în curs: o a doua atingere pe 🕒 ar putea crea rânduri duplicate în baza de date
+// O blocare/deblocare în curs: o a doua atingere pe ceas/lacăt ar putea crea rânduri duplicate în baza de date
 let blocareOraInCurs = false;
 
 function comutaBlocareOraInstant(zi, ora, blocatNou) {
@@ -3997,6 +4208,7 @@ function peSchimbareMotivOra(zi, ora) {
   let oraNorm = normalizeazaOraUi(ora);
   let el = document.getElementById('motiv_' + oraNorm.replace(':', ''));
   if (!el) return;
+  potrivesteInaltimeNotita(el);
   let saptamanaCheie = getSaptamanaCheie();
   let tagZiCautat = saptamanaCheie + "_" + zi;
   let motiv = el.value.trim();
@@ -4064,7 +4276,7 @@ function seteazaStilSlotOcupat(elCli, ocupat) {
   let inputs = bloc.querySelectorAll('.slot-input');
   let nr = 0;
   inputs.forEach(inp => { if (gasesteClientaValida(inp.value.trim())) nr++; });
-  badge.textContent = `${nr} / ${inputs.length} ${currentLang === 'en' ? 'occupied' : 'ocupate'}`;
+  badge.textContent = textLocuriLibere(inputs.length - nr);
   badge.classList.toggle('hour-badge-busy', nr > 0);
   badge.classList.toggle('hour-badge-free', nr === 0);
 }
@@ -4573,20 +4785,15 @@ function afiseazaFisaClientaInstant() {
   if (!sel || !container) return;
   let nume = sel.value.trim();
 
-  if (!nume) {
-    container.style.display = 'none';
-    if (emptyState) emptyState.style.display = 'flex';
-    return;
-  }
-
-  let client = (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase());
+  let client = nume ? (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase()) : null;
   if (!client) {
     container.style.display = 'none';
-    if (emptyState) emptyState.style.display = 'flex';
+    randeazaListaClienteFisa();
     return;
   }
 
   if (emptyState) emptyState.style.display = 'none';
+  document.getElementById('listaClienteFisa').hidden = true;
   container.style.display = 'block';
 
   document.getElementById('fisaSedinteRamase').innerText = client.ramase;
@@ -4648,6 +4855,9 @@ function afiseazaFisaClientaInstant() {
   const detInscriere = document.getElementById('detailsFisaInscriere');
   detInscriere.hidden = !client.fisaInscriere;
   randeazaFisaInscriereDeschisa();
+  // Progresul are sens doar cu cont (check-in-ul îl face clienta) sau cu greutatea din formular
+  document.getElementById('detailsProgresClienta').hidden = !(client.contConectat || client.fisaInscriere);
+  incarcaProgresFisa();
   filtreazaIstoricFisaInstant();
 }
 
@@ -4658,11 +4868,15 @@ function actualizeazaBlocContClienta(client) {
   if (!inp || !stare || !btn) return;
   inp.value = client.emailInvitatie || '';
   inp.disabled = client.contConectat;
-  btn.style.display = client.contConectat ? 'none' : '';
-  btn.innerText = client.emailInvitatie ? tr('Retrimite invitația', 'Resend invitation') : tr('Trimite invitația', 'Send invitation');
+  // Cu cont conectat emailul e deja în contact, sus: rămâne doar starea
+  document.getElementById('fisaContInvitatie').hidden = client.contConectat;
+  // Venită din formular: emailul e pus din formular, nu dintr-o invitație trimisă, deci încă „Fără cont”
+  const invitata = client.emailInvitatie && !client.fisaInscriere;
+  btn.innerText = invitata ? tr('Retrimite invitația', 'Resend invitation') : tr('Trimite invitația', 'Send invitation');
   stare.innerText = client.contConectat
-    ? tr('Cont conectat', 'Account linked')
-    : (client.emailInvitatie ? tr('Așteaptă conectarea', 'Waiting to sign in') : tr('Fără cont', 'No account'));
+    ? '✓ ' + tr('Conectat', 'Linked')
+    : (invitata ? tr('Așteaptă conectarea', 'Waiting to sign in') : tr('Fără cont', 'No account'));
+  stare.className = 'fisa-cont-stare ' + (client.contConectat ? 'conectat' : invitata ? 'asteapta' : 'fara');
 }
 
 // ---- Formularul de înscriere la antrenor: cererile noi și răspunsurile din fișă ----
@@ -4684,10 +4898,15 @@ const ETICHETE_SCURTE_INSCRIERE = {
   asteptari: { ro: 'Așteptări de la antrenor', en: 'Expectations from the trainer' },
   deStiut: { ro: 'De știut înainte de început', en: 'Good to know before starting' }
 };
+// În „Fișa mea” clienta își citește propriile răspunsuri: titlurile la persoana I
+const ETICHETE_CLIENTA_INSCRIERE = {
+  consecventa: { ro: 'Ce mă ajută să fiu consecventă', en: 'What helps me stay consistent' },
+  dataStart: { ro: 'Încep din', en: 'Starting from' }
+};
 
 // Fișa de obiective ca rezumat: cifre, alertă medicală, etichete, apoi textele libere.
 // Numele, telefonul și emailul nu se repetă (sunt deja în fișă / în antetul cererii).
-function htmlRaspunsuriInscriere(r) {
+function htmlRaspunsuriInscriere(r, pentruClienta = false) {
   if (!r) return '';
   const intrebari = {};
   SECTIUNI_INSCRIERE.forEach(s => s.intrebari.forEach(q => { intrebari[q.id] = q; }));
@@ -4696,7 +4915,7 @@ function htmlRaspunsuriInscriere(r) {
     const o = (intrebari[id].optiuni || OPTIUNI_DA_NU).find(x => x.id === val);
     return o ? textInscriere(o) : val;
   };
-  const eticheta = id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
+  const eticheta = id => textInscriere((pentruClienta && ETICHETE_CLIENTA_INSCRIERE[id]) || ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
   const afisate = new Set(['nume', 'telefon', 'email']);
   let html = '';
 
@@ -4729,7 +4948,7 @@ function htmlRaspunsuriInscriere(r) {
   html += grup(tr('Stil preferat', 'Preferred style'), r.stilAntrenor ? chip(textOptiune('stilAntrenor', r.stilAntrenor)) : '');
   html += grup(tr('Activitate zilnică', 'Daily activity'), r.activitate ? chip(textOptiune('activitate', r.activitate)) : '');
   const dataStart = /^\d{4}-\d{2}-\d{2}$/.test(r.dataStart || '') ? r.dataStart.split('-').reverse().join('.') : r.dataStart;
-  html += grup(tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
+  html += grup(pentruClienta ? eticheta('dataStart') : tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
   html += grup(tr('Angajament', 'Commitment'), ['angajament', 'feedback'].filter(id => r[id])
     .map(id => chip(`${r[id] === 'da' ? '✓' : '✕'} ${eticheta(id)}`, r[id] === 'da' ? 'da' : 'nu')).join(''));
 
@@ -4740,11 +4959,97 @@ function htmlRaspunsuriInscriere(r) {
     const q = intrebari[id];
     const text = q.tip === 'multi' ? r[id].map(v => textOptiune(id, v)).join(', ')
       : (q.tip === 'alegere' || q.tip === 'danu') ? textOptiune(id, r[id]) : String(r[id]);
-    randuri += `<div class="raspuns-rand"><div class="raspuns-intrebare">${escAttr(eticheta(id))}</div><div class="raspuns-valoare">${escAttr(text)}</div></div>`;
+    randuri += `<div class="obiective-grup"><div class="obiective-grup-titlu">${escAttr(eticheta(id))}</div><div class="obiective-text">${escAttr(text)}</div></div>`;
   });
-  if (randuri) html += `<div class="obiective-texte">${randuri}</div>`;
+  html += randuri;
 
   if (r.data) html += `<div class="raspuns-data">${tr('Completată pe', 'Filled in on')} ${escAttr(r.data)}</div>`;
+  return html;
+}
+
+// ---- Progres: check-in săptămânal (tabelul checkin_saptamanal) și graficul greutății ----
+// Punctele graficului: greutatea din formularul de înscriere (start) + greutățile din check-in-uri
+function puncteGreutate(fisaInscriere, checkinuri) {
+  const puncte = [];
+  if (fisaInscriere && parseFloat(fisaInscriere.greutate) && fisaInscriere.trimisLa) {
+    puncte.push({ d: new Date(fisaInscriere.trimisLa), kg: parseFloat(fisaInscriere.greutate) });
+  }
+  // Data reală a salvării (updated_at), nu lunea săptămânii: altfel un check-in din săptămâna formularului ar ieși înaintea startului
+  (checkinuri || []).forEach(c => { if (c.greutate != null) puncte.push({ d: new Date(c.updated_at || (c.saptamana + 'T12:00:00')), kg: Number(c.greutate) }); });
+  return puncte.sort((a, b) => a.d - b.d);
+}
+
+const formatKg = kg => kg.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 });
+const formatZiLuna = d => d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'short' });
+
+// Grafic cu o singură serie (fără legendă; titlul o numește): linie 2px, puncte cu inel de suprafață,
+// etichete doar pe primul și ultimul punct; atingerea unui punct îi arată valoarea dedesubt
+function htmlGraficGreutate(puncte) {
+  if (puncte.length < 2) {
+    return `<div class="progres-gol">${tr('Graficul apare de la a doua greutate înregistrată.', 'The chart appears from the second recorded weight.')}</div>`;
+  }
+  const L = 320, H = 150, st = 30, dr = 14, sus = 18, jos = 26;
+  const kg = puncte.map(p => p.kg);
+  let min = Math.min(...kg), max = Math.max(...kg);
+  if (max - min < 2) { min -= 1; max += 1; }
+  const t0 = puncte[0].d.getTime(), t1 = puncte[puncte.length - 1].d.getTime();
+  const x = d => st + (t1 === t0 ? (L - st - dr) / 2 : (d.getTime() - t0) / (t1 - t0) * (L - st - dr));
+  const y = v => sus + (max - v) / (max - min) * (H - sus - jos);
+  const linii = [max, (max + min) / 2, min].map(v => `<line x1="${st}" x2="${L - dr}" y1="${y(v)}" y2="${y(v)}" class="grafic-grila"/><text x="${st - 6}" y="${y(v) + 3}" class="grafic-axa" text-anchor="end">${formatKg(Math.round(v * 10) / 10)}</text>`).join('');
+  const traseu = puncte.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
+  const cercuri = puncte.map((p, i) => {
+    const eticheta = `${formatZiLuna(p.d)}: ${formatKg(p.kg)} kg`;
+    // Valoarea doar pe primul și ultimul punct, aliniată spre interior (nu peste cifrele axei sau peste margine)
+    const capat = i === 0 ? 'start' : i === puncte.length - 1 ? 'end' : '';
+    return `<g class="grafic-punct" onclick="arataPunctGrafic(this)" data-text="${escAttr(eticheta)}">
+        <circle cx="${x(p.d)}" cy="${y(p.kg)}" r="14" class="grafic-tinta"/>
+        <circle cx="${x(p.d)}" cy="${y(p.kg)}" r="4.5" class="grafic-marca"/>
+        ${capat ? `<text x="${x(p.d) + (capat === 'start' ? -2 : 2)}" y="${y(p.kg) - 9}" class="grafic-valoare" text-anchor="${capat}">${formatKg(p.kg)}</text>` : ''}
+        <title>${escAttr(eticheta)}</title>
+      </g>`;
+  }).join('');
+  return `<svg class="grafic-greutate" viewBox="0 0 ${L} ${H}" role="img" aria-label="${tr('Greutatea în timp', 'Weight over time')}">
+      ${linii}
+      <path d="${traseu}" class="grafic-linie"/>
+      ${cercuri}
+      <text x="${st}" y="${H - 6}" class="grafic-axa">${formatZiLuna(puncte[0].d)}</text>
+      <text x="${L - dr}" y="${H - 6}" class="grafic-axa" text-anchor="end">${formatZiLuna(puncte[puncte.length - 1].d)}</text>
+    </svg>
+    <div class="grafic-detaliu">${tr('Atinge un punct pentru detalii', 'Tap a point for details')}</div>`;
+}
+
+function arataPunctGrafic(el) {
+  const svg = el.closest('svg');
+  svg.querySelectorAll('.grafic-punct.activ').forEach(p => p.classList.remove('activ'));
+  el.classList.add('activ');
+  svg.nextElementSibling.textContent = el.getAttribute('data-text');
+}
+
+// Greutatea curentă + diferența față de început, graficul și ultimele check-in-uri
+function htmlProgres(fisaInscriere, checkinuri) {
+  const puncte = puncteGreutate(fisaInscriere, checkinuri);
+  let html = '';
+  if (puncte.length) {
+    const ultim = puncte[puncte.length - 1].kg, dif = ultim - puncte[0].kg;
+    const textDif = puncte.length < 2 || Math.abs(dif) < 0.05 ? tr('fără schimbare', 'no change')
+      : `${dif > 0 ? '+' : '−'}${formatKg(Math.abs(dif))} kg ${tr('de la început', 'since the start')}`;
+    html += `<div class="progres-erou"><span class="progres-erou-val">${formatKg(ultim)}<small> kg</small></span><span class="progres-erou-dif">${textDif}</span></div>`;
+  }
+  html += htmlGraficGreutate(puncte);
+
+  const lista = (checkinuri || []).slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana)).slice(0, 8);
+  if (lista.length) {
+    const scor = (eticheta, v) => v ? `<span class="checkin-scor"><span>${eticheta}</span><b>${v}</b>/5</span>` : '';
+    html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Check-in-uri', 'Check-ins')}</div>` + lista.map(c => `
+      <div class="checkin-rand">
+        <div class="checkin-rand-sus">
+          <b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b>
+          ${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}
+        </div>
+        <div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), c.energie)}${scor(tr('Somn', 'Sleep'), c.somn)}${scor(tr('Stare', 'Mood'), c.stare)}</div>
+        ${c.nota ? `<div class="checkin-nota">${escAttr(c.nota)}</div>` : ''}
+      </div>`).join('');
+  }
   return html;
 }
 
@@ -4765,6 +5070,7 @@ function randeazaCereriInscriere() {
         </span>
         <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
       </summary>
+      <div class="cereri-nota">${tr('Acceptă cererea când persoana vine la prima ședință. Dacă nu mai vine, șterge cererea.', 'Accept the request when the person comes to the first session. If they don’t come, delete the request.')}</div>
       ${cereri.map((c, i) => `<details class="cerere-item" ontoggle="randeazaCerereDeschisa(this, ${i})">
           <summary><b>${escAttr(c.nume)}</b><small>${escAttr(formateazaDataRoLocal(new Date(c.created_at)))}</small></summary>
           <div class="cerere-corp"></div>
@@ -4784,7 +5090,7 @@ function randeazaCerereDeschisa(el, i) {
   corp.innerHTML = `${contact ? `<div class="cerere-contact">${contact}</div>` : ''}
     ${htmlRaspunsuriInscriere(c.raspunsuri)}
     <div class="inscriere-butoane">
-      <button type="button" class="btn btn-clear cerere-refuza" onclick="refuzaCerereInscriere(${i})">${tr('Refuză', 'Decline')}</button>
+      <button type="button" class="btn btn-clear cerere-refuza" onclick="refuzaCerereInscriere(${i})">${tr('Șterge', 'Delete')}</button>
       <button type="button" class="btn cerere-accepta" onclick="acceptaCerereInscriere(${i}, this)">${tr('Acceptă', 'Accept')}</button>
     </div>`;
 }
@@ -4799,7 +5105,7 @@ function acceptaCerereInscriere(i, btn) {
       showToast(tr('Nu s-a putut accepta cererea.', 'Could not accept the request.'), 'error');
       return;
     }
-    showToast(tr(`✓ ${res.nume} a fost adăugată`, `✓ ${res.nume} was added`));
+    showToast(tr(`✓ ${res.nume} e acum în lista de cliente`, `✓ ${res.nume} is now in your client list`));
     incarcaBazaDateSilencios(res.nume);
   }, () => { btn.disabled = false; });
 }
@@ -4807,7 +5113,7 @@ function acceptaCerereInscriere(i, btn) {
 function refuzaCerereInscriere(i) {
   const cerere = (DB.cereri || [])[i];
   if (!cerere) return;
-  customConfirm(tr('Refuzi cererea?', 'Decline the request?'),
+  customConfirm(tr('Ștergi cererea?', 'Delete the request?'),
     tr(`Răspunsurile lui ${cerere.nume} se șterg definitiv.`, `The answers from ${cerere.nume} will be deleted permanently.`), () => {
       callBackend("refuzaCerereInscriere", { id: cerere.id }, res => {
         if (!res || !res.success) {
@@ -4825,6 +5131,26 @@ function refuzaCerereInscriere(i) {
 function clientaFisaCurenta() {
   const nume = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
   return (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume);
+}
+
+// Check-in-urile se citesc din Supabase doar când secțiunea „Progres” e deschisă (nu intră în cache-ul DB)
+async function incarcaProgresFisa() {
+  const det = document.getElementById('detailsProgresClienta');
+  const corp = document.getElementById('progresFisaContinut');
+  const client = clientaFisaCurenta();
+  if (!det.open || !client) {
+    corp.innerHTML = '';
+    return;
+  }
+  // Fișa se redesenează și la reîmprospătarea datelor: fără „Se încarcă” peste un progres deja afișat
+  if (!corp.innerHTML) corp.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const { data, error } = await supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', client.id);
+  if (clientaFisaCurenta() !== client || !det.open) return;
+  const checkinuri = error ? [] : (data || []);
+  corp.innerHTML = htmlProgres(client.fisaInscriere, checkinuri)
+    + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
+      ? tr('Clienta nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
+      : tr('Check-in-ul săptămânal apare după ce clienta își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`);
 }
 
 function randeazaFisaInscriereDeschisa() {
@@ -6598,6 +6924,11 @@ function schimbaLimbaInscriere(lang) {
   else randeazaAntetInscriere();
 }
 
+// Câmp de dată (.camp-data): la apăsare se deschide direct calendarul, nu editarea pe bucăți zz/ll/aaaa
+function deschideCalendarData(el) {
+  try { el.showPicker(); } catch (e) {}
+}
+
 function textInscriere(ob) {
   return currentLang === 'en' ? ob.en : ob.ro;
 }
@@ -6623,6 +6954,8 @@ function htmlIntrebareInscriere(q) {
     const tipuri = { numar: 'number', tel: 'tel', email: 'email', data: 'date', text: 'text' };
     const extra = q.tip === 'numar' ? ' inputmode="decimal"' : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '';
     camp = `<input id="insc_${q.id}" type="${tipuri[q.tip]}" class="form-control"${extra} value="${escAttr(v || '')}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">`;
+    // Câmp de dată gol: eticheta „Alege data” în locul șablonului zz.ll.aaaa al browserului
+    if (q.tip === 'data') camp = `<div class="camp-data">${camp.replace('<input ', '<input required onclick="deschideCalendarData(this)" ')}<span class="camp-data-eticheta">${tr('Alege data', 'Pick a date')}</span></div>`;
   }
   return `<div class="inscriere-intrebare" id="inscQ_${q.id}">${eticheta}${camp}</div>`;
 }

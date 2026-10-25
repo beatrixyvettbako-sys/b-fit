@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal79">
+  <link rel="stylesheet" href="style.css?v=fitFinal80">
 </head>
 <body>
 
@@ -63,6 +63,12 @@
           <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg>
         </div>
         <span data-en="History">Istoric</span>
+      </button>
+      <button type="button" id="clientaTab_fisa" onclick="clientaTab('fisa')">
+        <div class="nav-icon">
+          <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+        </div>
+        <span data-en="My profile">Fișa mea</span>
       </button>
     </nav>
   </div>
@@ -913,7 +919,14 @@
           </div>
         </div>
 
+        <!-- Fără clientă aleasă: lista clientelor cu starea abonamentului (randeazaListaClienteFisa) -->
+        <div id="listaClienteFisa" hidden></div>
+
         <div id="detaliiFisa" style="display: none;">
+          <button type="button" class="lista-inapoi" onclick="inapoiLaListaClienteFisa()">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span data-en="All clients">Toate clientele</span>
+          </button>
           <div style="margin: 14px 0 10px; background: var(--card-bg); padding: 12px; border: 1px solid var(--border); border-radius: 10px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700;">
               <span id="graficProgresText">Progres: 0 din 0 ședințe</span>
@@ -959,16 +972,32 @@
             </a>
           </div>
 
-          <div id="blocContClienta" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px;">
-              <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted);" data-en="ACCOUNT IN THE APP">CONT ÎN APLICAȚIE</span>
-              <span style="font-size: 0.75rem; font-weight: 700; color: var(--primary);" id="fisaContStatus">-</span>
+          <div id="blocContClienta" class="fisa-cont">
+            <div class="fisa-cont-sus">
+              <span class="fisa-cont-titlu">
+                <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
+                <span data-en="Account in the app">Cont în aplicație</span>
+              </span>
+              <span class="fisa-cont-stare" id="fisaContStatus">-</span>
             </div>
-            <div style="display: flex; gap: 6px;">
-              <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@clienta.ro" autocomplete="off" style="flex: 1; min-width: 0;">
-              <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()" style="white-space: nowrap;">Trimite invitația</button>
+            <!-- Invitația: doar cât clienta nu are cont conectat (actualizeazaBlocContClienta) -->
+            <div class="fisa-cont-invitatie" id="fisaContInvitatie">
+              <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@clienta.ro" autocomplete="off">
+              <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()">Trimite invitația</button>
             </div>
           </div>
+
+          <!-- Progresul clientei: greutate + check-in-uri; se încarcă la deschidere -->
+          <details id="detailsProgresClienta" hidden ontoggle="incarcaProgresFisa()" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
+            <summary class="summary-toggle-clean">
+              <span class="icon-history-title">
+                <svg class="icon-history-svg" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+                <span data-en="Progress">Progres</span>
+              </span>
+              <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
+            </summary>
+            <div id="progresFisaContinut" style="margin-top: 10px;"></div>
+          </details>
 
           <!-- Răspunsurile din formularul de înscriere; se randează la deschidere -->
           <details id="detailsFisaInscriere" hidden ontoggle="randeazaFisaInscriereDeschisa()" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
@@ -1073,7 +1102,10 @@
               <button class="btn" style="flex: 1; padding: 6px; font-size: 0.8rem;" onclick="adaugaZile(30)" data-en="+30 days">+30 zile</button>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
-              <input type="date" id="dataPrelungireManuala" class="form-control" style="padding: 6px; font-size: 0.85rem;">
+              <div class="camp-data">
+                <input type="date" id="dataPrelungireManuala" class="form-control" required onclick="deschideCalendarData(this)" style="padding: 6px; font-size: 0.85rem;">
+                <span class="camp-data-eticheta" data-en="Pick a new expiry date">Alege noua dată de expirare</span>
+              </div>
               <button class="btn" style="padding: 6px 10px; font-size: 0.8rem;" id="setManualDateBtn" onclick="seteazaDataManuala()">Setează</button>
             </div>
           </div>
@@ -1366,6 +1398,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal79"></script>
+  <script src="app.js?v=fitFinal80"></script>
 </body>
 </html>
