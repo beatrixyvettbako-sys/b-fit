@@ -2643,7 +2643,9 @@ async function randeazaOrarClienta(faraIncarcare = false) {
   seteazaBulinaOrar(grupuri.length);
 
   const titlu = (txt) => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 6px;">${txt}</div>`;
-  let html = titlu(tr('Programările mele', 'My bookings'));
+  // Sus: bara de zile și orele libere din ziua aleasă; dedesubt, programările ei
+  let html = htmlZileSiOreClienta(grupuri);
+  html += titlu(tr('Programările mele', 'My bookings'));
   if (mele.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Nu ai nicio programare viitoare.', 'You have no upcoming bookings.')}</div>`;
   }
@@ -2662,9 +2664,9 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     </div>`;
   });
 
-  html += titlu(tr('Locuri deschise', 'Open spots')) + htmlZileSiOreClienta(grupuri);
   html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Programările făcute de tine aici le poți anula singură cu cel puțin 24 de ore înainte.', 'Bookings you make here can be cancelled on your own up to 24 hours before.')}</div>`;
   corp.innerHTML = html;
+  ajusteazaNumeZile(document.getElementById('clientaZile'));
   document.querySelector('#clientaZile .day-btn.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
@@ -2693,6 +2695,7 @@ function selecteazaZiClienta(cheie) {
   dateClienta.ziSelectata = cheie;
   const corp = document.getElementById('clientaZileSiOre');
   if (corp) corp.outerHTML = htmlZileSiOreClienta(dateClienta.grupuri || []);
+  ajusteazaNumeZile(document.getElementById('clientaZile'));
   document.querySelector('#clientaZile .day-btn.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 }
 
@@ -2709,13 +2712,15 @@ function htmlZileSiOreClienta(grupuri) {
   let html = `<div id="clientaZileSiOre"><div class="zile-clienta" id="clientaZile">`;
   zile.forEach(d => {
     const cheie = cheieZiClienta(d);
-    const numeZi = d.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '');
+    const numeLung = d.toLocaleDateString(locale, { weekday: 'long' });
+    const numeScurt = d.toLocaleDateString(locale, { weekday: 'short' }).replace('.', '');
+    const mare = s => s.charAt(0).toUpperCase() + s.slice(1);
     html += `<button type="button" class="day-btn ${cheie === dateClienta.ziSelectata ? 'active' : ''} ${peZi[cheie] ? '' : 'zi-fara-locuri'}" onclick="selecteazaZiClienta('${cheie}')">
-      <span>${escAttr(numeZi.charAt(0).toUpperCase() + numeZi.slice(1))}</span>
+      <span data-nume-lung="${escAttr(mare(numeLung))}" data-nume-scurt="${escAttr(mare(numeScurt))}">${escAttr(mare(numeLung))}</span>
       <span class="day-date-sub">${d.getDate()} ${escAttr(d.toLocaleDateString(locale, { month: 'short' }).replace('.', ''))}</span>
     </button>`;
   });
-  html += `</div>`;
+  html += `</div><div style="font-weight:800; color:var(--primary); margin:6px 2px 6px;">${tr('Locuri deschise', 'Open spots')}</div>`;
   const indici = peZi[dateClienta.ziSelectata] || [];
   const programataAzi = dateClienta.zileProgramate && dateClienta.zileProgramate.get(dateClienta.ziSelectata);
   if (programataAzi) {
@@ -2989,6 +2994,8 @@ let ultimaLatimeFereastra = window.innerWidth;
 window.addEventListener('resize', () => {
   if (window.innerWidth === ultimaLatimeFereastra) return;
   ultimaLatimeFereastra = window.innerWidth;
+  ajusteazaNumeZile(document.getElementById('dayButtonsContainer'));
+  ajusteazaNumeZile(document.getElementById('clientaZile'));
 
   let activeTag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : '';
   if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') {
@@ -3334,7 +3341,7 @@ function actualizeazaBaraZile() {
 
   let container = document.getElementById('dayButtonsContainer');
   if (!container) return;
-  // Cu 7 zile numele se scurtează (Lun, Mar...), ca toate să încapă pe telefon fără scroll
+  // Cu 7 zile butoanele sunt mai înguste; numele se scurtează (Lun, Mar...) doar dacă cele întregi nu încap
   let sapteZile = zile.length > 5;
   container.classList.toggle('sapte-zile', sapteZile);
   let html = '';
@@ -3342,12 +3349,25 @@ function actualizeazaBaraZile() {
     let activeCls = (z.cheie === ziCurentaCheie) ? 'active' : '';
     html += `
       <button class="day-btn ${activeCls}" onclick="schimbaZiInstant('${z.cheie}')">
-        <span>${sapteZile ? z.nume.slice(0, 3) : z.nume}</span>
+        <span data-nume-lung="${z.nume}" data-nume-scurt="${z.nume.slice(0, 3)}">${z.nume}</span>
         <span class="day-date-sub">${z.dataDate.getDate()} ${z.monthName}</span>
       </button>
     `;
   });
   container.innerHTML = html;
+  ajusteazaNumeZile(container);
+}
+
+// Numele întregi ale zilelor când încap toate în bară, pe un rând; altfel prescurtate (Lun, Mar...).
+// O bară ascunsă (alt tab) nu se poate măsura: rămâne cu numele întregi până la următoarea afișare.
+function ajusteazaNumeZile(container) {
+  if (!container || !container.offsetWidth) return;
+  const etichete = [...container.querySelectorAll('[data-nume-lung]')];
+  etichete.forEach(e => { e.textContent = e.dataset.numeLung; });
+  // Nu încap: bara derulează, un nume se rupe pe două rânduri sau iese din butonul lui (butoanele de 7 zile sunt înguste)
+  const nuIncap = container.scrollWidth > container.clientWidth + 1 ||
+    etichete.some(e => e.getClientRects().length > 1 || e.offsetWidth > e.parentElement.clientWidth - 2);
+  if (nuIncap) etichete.forEach(e => { e.textContent = e.dataset.numeScurt; });
 }
 
 function schimbaZiInstant(ziCheie) {
@@ -3509,6 +3529,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (detIstFisa) detIstFisa.open = false;
 
   if (tipTab === 'orar') {
+    ajusteazaNumeZile(document.getElementById('dayButtonsContainer'));
     autoScrollLaOraCurenta();
   } else {
     window.scrollTo({ top: 0, behavior: 'auto' });
