@@ -322,6 +322,13 @@ body {
   min-height: 100dvh;
 }
 
+/* Câmpurile (inclusiv cele de dată) nu moștenesc singure fontul; fără asta browserul pune Arial / monospace */
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 body.no-scroll {
   overflow: hidden !important;
   height: 100dvh !important;
@@ -1685,6 +1692,34 @@ html[data-rol="clienta"] .doar-antrenor {
   cursor: pointer;
 }
 
+/* × de ascundere, peste colțul din dreapta-jos al notificării */
+.notificare-rand {
+  position: relative;
+}
+
+.notificare-rand .notificare {
+  padding-right: 34px;
+}
+
+.notificare-x {
+  position: absolute;
+  right: 4px;
+  bottom: 10px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notificare-x:active {
+  background: var(--border);
+}
+
 .notificare.necitita {
   border-color: rgba(var(--accent-rgb), 0.5);
   background: var(--primary-light);
@@ -2427,8 +2462,8 @@ html[data-rol="clienta"] .doar-antrenor {
   right: 34px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-size: 0.8rem;
+  color: var(--placeholder-fade);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2437,6 +2472,25 @@ html[data-rol="clienta"] .doar-antrenor {
 
 .camp-data input {
   cursor: pointer;
+}
+
+/* Iconiță de calendar proprie: pe telefon câmpul de dată gol nu are una */
+.camp-data-icona {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--text-muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+.camp-data-cu-icona input::-webkit-calendar-picker-indicator {
+  opacity: 0;
 }
 
 /* Cât câmpul e gol, eticheta rămâne și la apăsare (calendarul se deschide direct, vezi deschideCalendarData);
@@ -3341,6 +3395,16 @@ select.slot-select-type {
 .select-faded {
   color: var(--placeholder-fade) !important;
   font-weight: normal !important;
+}
+
+/* Lista goală din formulare arată ca un placeholder: aceeași mărime ca input::placeholder.
+   Înălțimea rândului e fixă, ca lista să nu-și schimbe înălțimea când se alege o valoare. */
+.form-control.select-faded {
+  font-size: 0.8rem;
+}
+
+select.form-control {
+  line-height: 1.2rem;
 }
 
 .select-active {
@@ -4433,8 +4497,15 @@ select.slot-select-type {
 
 .custom-modal-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
+}
+
+/* A treia variantă (aratButonAlternativModal): rând întreg deasupra celorlalte */
+#modalBtnAlt {
+  flex-basis: 100%;
+  padding: 8px 11px;
 }
 
 #modalEditareIncasareBackdrop {
