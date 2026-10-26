@@ -1379,10 +1379,16 @@ html[data-rol="clienta"] .doar-antrenor {
   color: var(--text-muted);
 }
 
+/* Fiecare cerere e un card propriu (details are chenar din stilul general): spațiu interior, ca textul să nu stea pe margine */
 .cerere-item {
   margin-top: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--input-glass-bg);
+}
+
+.cerere-item[open] {
+  padding-bottom: 14px;
 }
 
 .cerere-item > summary {
@@ -2019,6 +2025,91 @@ html[data-rol="clienta"] .doar-antrenor {
   overflow-wrap: anywhere;
 }
 
+.checkin-text {
+  margin-top: 8px;
+}
+
+.checkin-text > span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.checkin-poze {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.checkin-poze a {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+}
+
+/* Formularul de check-in: câmpuri ca în formularul Google, scala 0–10 / 1–10 pe un rând */
+.checkin-camp {
+  margin-top: 12px;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.checkin-eticheta {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.checkin-detalii {
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+  margin: 2px 0 6px;
+}
+
+.checkin-scala {
+  display: grid;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.checkin-scala-btn {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--input-glass-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checkin-scala-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.checkin-bifa {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.checkin-bifa input {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
 /* Cardul de check-in al clientei */
 .card.checkin-card {
   border: 1.5px solid var(--accent-purple) !important;
@@ -2051,39 +2142,6 @@ html[data-rol="clienta"] .doar-antrenor {
   font-weight: 800;
 }
 
-.checkin-intrebare {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
-  font-size: 0.85rem;
-  font-weight: 700;
-}
-
-.checkin-note {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
-}
-
-.checkin-nota-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--input-glass-bg);
-  color: var(--text);
-  font-weight: 800;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.checkin-nota-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
-}
 
 .checkin-greutate {
   display: flex;

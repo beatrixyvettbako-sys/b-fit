@@ -1756,6 +1756,14 @@ async function executaActiuneSupabase(actionName, payload) {
           cereri.push(uid ? q.eq('user_id', uid) : q);
         });
       }
+      // Rândurile vechi fără client_id, cu numele salvat ușor diferit (ex. spațiu la final): vin alese din aplicație
+      // după numele afișat (payload.randuri). Primesc numele nou și legătura client_id, ca redenumirile viitoare să le prindă.
+      Object.entries(payload.randuri || {}).forEach(([tabel, randuri]) => {
+        const col = (tabeleCuNume.find(([t]) => t === tabel) || [])[1];
+        if (!col || !randuri.length) return;
+        let q = sb.from(tabel).update({ [col]: numeNou, client_id: idClienta }).in('row', randuri);
+        cereri.push(uid ? q.eq('user_id', uid) : q);
+      });
       await Promise.all(cereri);
       return { success: true, numeNou };
     }
@@ -2793,10 +2801,24 @@ function afiseazaFisaMeaClienta() {
   document.getElementById('clientaContinut').innerHTML = html;
 }
 
+// Check-in-ul săptămânal: aceleași întrebări ca formularul Google al antrenorului (fără poze, care vin separat).
+// Greutatea se salvează în coloana proprie (graficul), restul în `raspunsuri`.
+const OPTIUNI_PERFORMANTA = [
+  { id: 'progres', ro: 'S-au depășit greutățile/repetările pe exercițiile principale', en: 'Weights/reps went up on the main exercises' },
+  { id: 'mentinere', ro: 'Menținere', en: 'Maintained' }
+];
 const INTREBARI_CHECKIN = [
-  { id: 'energie', ro: 'Energie', en: 'Energy' },
-  { id: 'somn', ro: 'Somn', en: 'Sleep' },
-  { id: 'stare', ro: 'Stare generală', en: 'Overall mood' }
+  { id: 'energie', tip: 'scala', min: 1, max: 10, ob: true, ro: 'Febră musculară și energie', en: 'Muscle soreness and energy',
+    detalii: { ro: 'Cum te-ai simțit în timpul antrenamentelor (energie scăzută, dureri articulare)', en: 'How you felt during workouts (low energy, joint pain)' } },
+  { id: 'somn', tip: 'scala', min: 1, max: 10, ob: true, ro: 'Somn', en: 'Sleep',
+    detalii: { ro: 'Numărul mediu de ore pe noapte și calitatea somnului (1–10)', en: 'Average hours per night and sleep quality (1–10)' } },
+  { id: 'performanta', tip: 'multi', ob: true, optiuni: OPTIUNI_PERFORMANTA, ro: 'Performanță în antrenament', en: 'Training performance' },
+  { id: 'mese', tip: 'text', ob: true, ro: 'Mese neplanificate în această săptămână', en: 'Unplanned meals this week' },
+  { id: 'victorie', tip: 'text', ob: true, ro: 'Cea mai mare victorie a săptămânii', en: 'Biggest win of the week',
+    detalii: { ro: 'ex.: „am avut mai multă energie”, „am refuzat un desert”', en: 'e.g. “I had more energy”, “I said no to a dessert”' } },
+  { id: 'provocare', tip: 'text', ro: 'Cea mai mare provocare', en: 'Biggest challenge',
+    detalii: { ro: 'ex.: ce te-a împiedicat să dai 100%? (dacă e cazul)', en: 'e.g. what kept you from giving 100%? (if anything)' } },
+  { id: 'intrebari', tip: 'text', ro: 'Întrebări / nelămuriri', en: 'Questions / doubts' }
 ];
 
 function htmlCheckinClienta() {
@@ -2808,32 +2830,40 @@ function htmlCheckinClienta() {
       return `${antet}<div class="checkin-facut">✓ ${tr('Făcut. Antrenorul tău îl vede în fișa ta.', 'Done. Your trainer can see it in your profile.')}</div>
         <button type="button" class="btn btn-clear checkin-btn" onclick="deschideCheckin()">${tr('Modifică', 'Edit')}</button>`;
     }
-    return `${antet}<div class="checkin-subtitlu">${tr('10 secunde: cum a fost săptămâna ta?', '10 seconds: how was your week?')}</div>
-      <button type="button" class="btn checkin-btn" onclick="deschideCheckin()">${tr('Fă check-in-ul', 'Do the check-in')}</button>`;
+    return `${antet}<div class="checkin-subtitlu">${tr('Cum a fost săptămâna ta?', 'How was your week?')}</div>
+      <button type="button" class="btn checkin-btn" onclick="deschideCheckin()">${tr('Check-in săptămânal', 'Weekly check-in')}</button>`;
   }
   const f = checkinFormular;
-  const randuri = INTREBARI_CHECKIN.map(q => `<div class="checkin-intrebare">
-      <span>${textInscriere(q)}</span>
-      <div class="checkin-note">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="checkin-nota-btn${f[q.id] === n ? ' active' : ''}" onclick="alegeNotaCheckin('${q.id}', ${n})">${n}</button>`).join('')}</div>
-    </div>`).join('');
-  return `${antet}<div class="checkin-subtitlu">${tr('1 = foarte slab · 5 = excelent', '1 = very poor · 5 = excellent')}</div>
-    ${randuri}
-    <div class="checkin-intrebare">
-      <span>${tr('Greutate (opțional)', 'Weight (optional)')}</span>
+  const eticheta = q => `<div class="checkin-eticheta">${escAttr(textInscriere(q))}${q.ob ? ' <span class="inscriere-obligatoriu">*</span>' : ''}</div>
+    ${q.detalii ? `<div class="checkin-detalii">${escAttr(textInscriere(q.detalii))}</div>` : ''}`;
+  const camp = q => {
+    if (q.tip === 'scala') {
+      const note = [];
+      for (let n = q.min; n <= q.max; n++) note.push(`<button type="button" class="checkin-scala-btn${f[q.id] === n ? ' active' : ''}" onclick="alegeNotaCheckin('${q.id}', ${n})">${n}</button>`);
+      return `<div class="checkin-scala" style="grid-template-columns: repeat(${q.max - q.min + 1}, 1fr);">${note.join('')}</div>`;
+    }
+    if (q.tip === 'multi') {
+      return q.optiuni.map(o => `<label class="checkin-bifa"><input type="checkbox" ${(f[q.id] || []).includes(o.id) ? 'checked' : ''} onchange="bifeazaCheckin('${q.id}', '${o.id}', this.checked)"><span>${escAttr(textInscriere(o))}</span></label>`).join('');
+    }
+    return `<textarea class="form-control checkin-nota-text" rows="1" maxlength="600" oninput="checkinFormular['${q.id}'] = this.value">${escAttr(f[q.id] || '')}</textarea>`;
+  };
+  return `${antet}
+    <div class="checkin-camp" id="checkinQ_greutate">
+      <div class="checkin-eticheta">${tr('Greutatea corporală', 'Body weight')} <span class="inscriere-obligatoriu">*</span></div>
+      <div class="checkin-detalii">${tr('Media săptămânală (cântărit dimineața, pe stomacul gol) e mai relevantă decât o singură cântărire', 'The weekly average (weighed in the morning, on an empty stomach) tells more than a single weigh-in')}</div>
       <div class="checkin-greutate"><input type="number" inputmode="decimal" step="0.1" min="30" max="300" class="form-control" value="${f.greutate ?? ''}" oninput="checkinFormular.greutate = this.value"><span>kg</span></div>
     </div>
-    <textarea class="form-control checkin-nota-text" rows="2" maxlength="500" placeholder="${tr('Ceva de spus antrenorului? (opțional)', 'Anything to tell your trainer? (optional)')}" oninput="checkinFormular.nota = this.value">${escAttr(f.nota || '')}</textarea>
+    ${INTREBARI_CHECKIN.map(q => `<div class="checkin-camp" id="checkinQ_${q.id}">${eticheta(q)}${camp(q)}</div>`).join('')}
     <div class="inscriere-butoane">
       <button type="button" class="btn btn-clear" onclick="checkinFormular = null; afiseazaFisaMeaClienta()">${tr('Renunță', 'Cancel')}</button>
-      <button type="button" class="btn" id="btnSalveazaCheckin" onclick="salveazaCheckinClienta()">${tr('Salvează', 'Save')}</button>
+      <button type="button" class="btn" id="btnSalveazaCheckin" onclick="salveazaCheckinClienta()">${tr('Trimite', 'Send')}</button>
     </div>`;
 }
 
 function deschideCheckin() {
   const facut = checkinuriClienta.find(c => c.saptamana === lunaSaptamaniiCurente());
-  checkinFormular = facut
-    ? { energie: facut.energie, somn: facut.somn, stare: facut.stare, greutate: facut.greutate, nota: facut.nota }
-    : {};
+  // Check-in-ul săptămânii în formatul nou se poate modifica; unul în formatul vechi (note 1–5) pornește de la zero
+  checkinFormular = facut && facut.raspunsuri ? Object.assign({ greutate: facut.greutate }, facut.raspunsuri) : {};
   afiseazaFisaMeaClienta();
 }
 
@@ -2842,27 +2872,41 @@ function alegeNotaCheckin(id, n) {
   document.querySelector('.checkin-card').innerHTML = htmlCheckinClienta();
 }
 
+function bifeazaCheckin(id, optiune, bifat) {
+  const lista = (checkinFormular[id] || []).filter(x => x !== optiune);
+  checkinFormular[id] = bifat ? lista.concat(optiune) : lista;
+}
+
 async function salveazaCheckinClienta() {
   const f = checkinFormular;
-  if (!f.energie || !f.somn || !f.stare) {
-    showToast(tr('Alege o notă de la 1 la 5 la fiecare întrebare.', 'Pick a score from 1 to 5 for each question.'), 'error');
-    return;
+  const arata = (id, mesaj) => {
+    const el = document.getElementById('checkinQ_' + id);
+    el?.classList.add('inscriere-eroare');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast(mesaj, 'error');
+  };
+  document.querySelectorAll('.checkin-camp.inscriere-eroare').forEach(el => el.classList.remove('inscriere-eroare'));
+  const kg = parseFloat(String(f.greutate ?? '').replace(',', '.'));
+  if (!(kg >= 30 && kg <= 300)) return arata('greutate', tr('Scrie greutatea, între 30 și 300 kg.', 'Enter your weight, between 30 and 300 kg.'));
+  for (const q of INTREBARI_CHECKIN) {
+    const v = f[q.id];
+    const gol = Array.isArray(v) ? v.length === 0 : (q.tip === 'scala' ? typeof v !== 'number' : !String(v ?? '').trim());
+    if (q.ob && gol) return arata(q.id, tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *'));
   }
-  const kg = String(f.greutate ?? '').trim() === '' ? null : parseFloat(String(f.greutate).replace(',', '.'));
-  if (kg !== null && !(kg >= 30 && kg <= 300)) {
-    showToast(tr('Greutatea trebuie să fie între 30 și 300 kg.', 'Weight must be between 30 and 300 kg.'), 'error');
-    return;
-  }
-  document.getElementById('btnSalveazaCheckin').disabled = true;
-  const { data, error } = await supabaseClient.rpc('salveaza_checkin', {
-    p_greutate: kg, p_energie: f.energie, p_somn: f.somn, p_stare: f.stare, p_nota: (f.nota || '').trim()
+  const raspunsuri = {};
+  INTREBARI_CHECKIN.forEach(q => {
+    const v = f[q.id];
+    if (q.tip === 'text') { if (String(v ?? '').trim()) raspunsuri[q.id] = String(v).trim(); }
+    else if (v !== undefined && !(Array.isArray(v) && !v.length)) raspunsuri[q.id] = v;
   });
+  document.getElementById('btnSalveazaCheckin').disabled = true;
+  const { data, error } = await supabaseClient.rpc('salveaza_checkin_raspunsuri', { p_greutate: kg, p_raspunsuri: raspunsuri });
   if (error || data !== 'ok') {
     document.getElementById('btnSalveazaCheckin').disabled = false;
     showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
     return;
   }
-  showToast(tr('✓ Check-in salvat', '✓ Check-in saved'));
+  showToast(tr('✓ Check-in trimis', '✓ Check-in sent'));
   randeazaFisaMeaClienta();
 }
 
@@ -5225,15 +5269,34 @@ function htmlProgres(fisaInscriere, checkinuri) {
 
   const lista = (checkinuri || []).slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana)).slice(0, 8);
   if (lista.length) {
-    const scor = (eticheta, v) => v ? `<span class="checkin-scor"><span>${eticheta}</span><b>${v}</b>/5</span>` : '';
+    const scor = (eticheta, v, max) => (v || v === 0) ? `<span class="checkin-scor"><span>${eticheta}</span><b>${v}</b>/${max}</span>` : '';
+    // Formatul nou (răspunsuri ca în formularul Google) sau cel vechi (energie / somn / stare 1–5 + notă)
+    const corp = c => {
+      const r = c.raspunsuri;
+      if (!r) {
+        return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), c.energie, 5)}${scor(tr('Somn', 'Sleep'), c.somn, 5)}${scor(tr('Stare', 'Mood'), c.stare, 5)}</div>
+          ${c.nota ? `<div class="checkin-nota">${escAttr(c.nota)}</div>` : ''}`;
+      }
+      const perf = (Array.isArray(r.performanta) ? r.performanta : []).map(id => {
+        const o = OPTIUNI_PERFORMANTA.find(x => x.id === id);
+        return `<span class="checkin-scor">${escAttr(o ? (id === 'progres' ? tr('↑ Greutăți / repetări', '↑ Weights / reps') : textInscriere(o)) : id)}</span>`;
+      }).join('');
+      const texte = ['mese', 'victorie', 'provocare', 'intrebari'].filter(id => r[id]).map(id => {
+        const q = INTREBARI_CHECKIN.find(x => x.id === id);
+        return `<div class="checkin-text"><span>${escAttr(textInscriere(q))}</span><div class="checkin-nota">${escAttr(r[id])}</div></div>`;
+      }).join('');
+      // Pozele importate din Google Forms rămân link-uri către Drive-ul antrenorului
+      const poze = Array.isArray(r.poze) && r.poze.length
+        ? `<div class="checkin-poze">${r.poze.map((u, i) => `<a href="${escAttr(u)}" target="_blank" rel="noopener">${tr('Poza', 'Photo')} ${i + 1}</a>`).join('')}</div>` : '';
+      return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), r.energie, 10)}${scor(tr('Somn', 'Sleep'), r.somn, 10)}${perf}</div>${texte}${poze}`;
+    };
     html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Check-in-uri', 'Check-ins')}</div>` + lista.map(c => `
       <div class="checkin-rand">
         <div class="checkin-rand-sus">
           <b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b>
           ${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}
         </div>
-        <div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), c.energie)}${scor(tr('Somn', 'Sleep'), c.somn)}${scor(tr('Stare', 'Mood'), c.stare)}</div>
-        ${c.nota ? `<div class="checkin-nota">${escAttr(c.nota)}</div>` : ''}
+        ${corp(c)}
       </div>`).join('');
   }
   return html;
@@ -5500,9 +5563,19 @@ function salveazaEditareClienta() {
   const valoriAnterioare = valoriInitialeFisa;
   valoriInitialeFisa = valoriEditareFisa();
 
+  // Rândurile care pe ecran poartă numele vechi (numele sunt afișate fără spații în plus), ca să fie redenumite
+  // și cele salvate cu mici diferențe de scriere în baza de date
+  const acelasiNume = n => (n || '').replace(/\s+/g, ' ').trim().toLowerCase() === numeVechi.replace(/\s+/g, ' ').toLowerCase();
+  const randuri = {
+    confirmari: (DB.progActive || []).concat(DB.progHold || []).filter(p => acelasiNume(p.nume)).map(p => p.row),
+    orar: (DB.orarSloturi || []).filter(s => acelasiNume(s.clienta)).map(s => s.row),
+    prezente: (DB.prezente || []).filter(p => acelasiNume(p.clienta)).map(p => p.row),
+    incasari: (DB.incasari || []).filter(i => acelasiNume(i.clienta)).map(i => i.row)
+  };
+
   callBackend("actualizeazaDateClienta", {
     numeVechi: numeVechi, numeNou: numeNou, tip: tip, dataStart: dStart, dataExp: dExp,
-    incluse: inc, efectuate: ef, ramase: ram, status: st, telefon: telefon, email: email
+    incluse: inc, efectuate: ef, ramase: ram, status: st, telefon: telefon, email: email, randuri: randuri
   }, function(res) {
     showToast(t('toastDataUpdated'));
     // Planul deschis în memorie păstrează numele nou, altfel la salvare ar readuce numele vechi
