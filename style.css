@@ -1155,6 +1155,14 @@ html[data-rol="clienta"] .doar-antrenor {
   display: none;
 }
 
+/* Contul de client are doar ecranul lui: aplicația antrenorului de dedesubt nu se mai randează,
+   altfel pe telefon pagina ei (mii de pixeli) se poate derula în spate și apare o bară de scroll fără rost */
+html[data-rol="clienta"] #mainAppHeader,
+html[data-rol="clienta"] body > .container,
+html[data-rol="clienta"] #bottomNav {
+  display: none;
+}
+
 /* FORMULARUL DE ÎNSCRIERE (?inscriere=<cod>) */
 .inscriere-antrenor {
   display: flex;
@@ -5087,6 +5095,11 @@ select.form-control {
   text-transform: uppercase;
 }
 
+/* Butonul de status e centrat în coloană: eticheta lui la fel */
+.plan-tracking-status .plan-tracking-label {
+  text-align: center;
+}
+
 .plan-footer-note {
   margin-top: 14px;
   padding-top: 8px;
@@ -5116,6 +5129,28 @@ select.form-control {
     padding: 3px 0;
     border: none;
   }
+  /* Modul PDF pe telefon: fără capul de tabel, fiecare valoare își poartă eticheta */
+  /* (nu și în PDF-ul exportat, care e tabel complet, cu eticheta în capul de coloană) */
+  .plan-pdf-sheet:not(.pdf-export) .plan-exercises-table td[data-eticheta] {
+    text-align: left !important;
+    white-space: normal !important;
+  }
+  .plan-pdf-sheet:not(.pdf-export) .plan-exercises-table td[data-eticheta]::before {
+    content: attr(data-eticheta) ": ";
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+}
+
+/* Cum se citește planul: deasupra sesiunilor, în aplicație și în PDF */
+.plan-legenda {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--primary-light);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text);
 }
 
 /* REGULI DE PRINT / EXPORT PDF */
@@ -5220,6 +5255,10 @@ select.form-control {
     background: var(--print-head-bg) !important;
     color: var(--print-head-text) !important;
     font-weight: 800 !important;
+  }
+
+  .plan-exercises-table td[data-eticheta]::before {
+    content: none !important;
   }
 }
 /* EXPORT PDF CA FIȘIER (html2pdf) - aceleași reguli ca la print, aplicate pe clona randată */
@@ -5420,6 +5459,18 @@ select.form-control {
 
 .nota-antrenor-card {
   border-left: 4px solid var(--accent-purple) !important;
+}
+
+/* × de închidere în colțul din dreapta-sus; titlul și data se opresc înaintea lui */
+.card.nota-antrenor-card {
+  position: relative;
+  padding-right: 36px;
+}
+
+.nota-antrenor-card .nota-antrenor-x {
+  top: 6px;
+  bottom: auto;
+  padding: 0;
 }
 
 .nota-antrenor-titlu {

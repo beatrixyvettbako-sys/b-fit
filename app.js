@@ -2715,6 +2715,11 @@ function deschidePlanClienta(idx) {
   randeazaPlanClienta();
 }
 
+// Cum se citește un plan: aceeași explicație la antrenor, la client și în PDF
+function htmlLegendaPlan() {
+  return `<div class="plan-legenda">${tr('<b>4×12</b> = 4 serii a câte 12 repetări. <b>Pauza</b> = odihna dintre serii.', '<b>4×12</b> = 4 sets of 12 reps. <b>Rest</b> = the break between sets.')}</div>`;
+}
+
 function randeazaPlanClienta() {
   const p = dateClienta.planCurent;
   const cj = p.continut_json || {};
@@ -2723,6 +2728,7 @@ function randeazaPlanClienta() {
 
   let html = `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
   (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
+  html += htmlLegendaPlan();
 
   (cj.sesiuni || []).forEach((ses, s) => {
     html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div></div>`;
@@ -2731,7 +2737,7 @@ function randeazaPlanClienta() {
       const opt = (v, eticheta) => `<option value="${v}" ${st === v ? 'selected' : ''}>${eticheta}</option>`;
       html += `<div style="padding:8px 10px; border-top:1px solid var(--border);">
         <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}</div>
-        <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${escAttr(ex.seturi_repetari)}${ex.pauza ? ` • ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
+        <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${ex.seturi_repetari ? `${tr('Serii × repetări', 'Sets × reps')}: ${escAttr(ex.seturi_repetari)}` : ''}${ex.seturi_repetari && ex.pauza ? ' • ' : ''}${ex.pauza ? `${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
         ${ex.indicatii ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">${escAttr(ex.indicatii)}</div>` : ''}
         <div class="plan-tracking-grid">
           <div class="plan-tracking-field">
@@ -2739,10 +2745,10 @@ function randeazaPlanClienta() {
             <input type="text" inputmode="decimal" maxlength="20" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'greutate_kg', this.value)">
           </div>
           <div class="plan-tracking-field">
-            <span class="plan-tracking-label">${tr('Seturi făcute', 'Sets done')}</span>
+            <span class="plan-tracking-label">${tr('Serii făcute', 'Sets done')}</span>
             <input type="text" inputmode="numeric" maxlength="20" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'seturi_finalizate', this.value)">
           </div>
-          <div class="plan-tracking-field">
+          <div class="plan-tracking-field plan-tracking-status">
             <span class="plan-tracking-label">Status</span>
             <select class="pill-select plan-status-select ${getPillClass(st)}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); peModificareProgresClienta(${s}, ${e}, 'status', this.value)">
               ${opt('', 'Status')}${opt('În așteptare', traduceValoare('În așteptare'))}${opt('Finalizat', traduceValoare('Finalizat'))}${opt('Sărit', traduceValoare('Sărit'))}
@@ -5645,12 +5651,23 @@ async function salveazaNotaClient() {
     : tr('✓ Nota a fost ștearsă', '✓ Note removed'));
 }
 
+// Nota închisă cu × nu mai apare pe acest dispozitiv; o notă nouă (alt text sau altă dată) apare din nou
+const cheieNotaAscunsa = () => 'BFIT_NOTA_ASCUNSA_' + (utilizatorCurent ? utilizatorCurent.id : '');
+const semnaturaNota = c => (c.nota_client_la || '') + '|' + (c.nota_client || '');
+
 function htmlNotaAntrenor(c) {
   if (!(c.nota_client || '').trim()) return '';
+  try { if (localStorage.getItem(cheieNotaAscunsa()) === semnaturaNota(c)) return ''; } catch (e) {}
   return `<div class="card nota-antrenor-card">
       <div class="nota-antrenor-titlu">${tr('Nota antrenorului', 'Note from your trainer')}${c.nota_client_la ? `<small>${formatZiLuna(new Date(c.nota_client_la))}</small>` : ''}</div>
       <div class="nota-antrenor-text">${escAttr(c.nota_client)}</div>
+      <button type="button" class="notificare-x nota-antrenor-x" onclick="ascundeNotaAntrenor()" aria-label="${tr('Închide nota', 'Close note')}">×</button>
     </div>`;
+}
+
+function ascundeNotaAntrenor() {
+  try { localStorage.setItem(cheieNotaAscunsa(), semnaturaNota(dateClienta.fisa || {})); } catch (e) {}
+  randeazaHomeClienta();
 }
 
 // Întrebările medicale cu „Da” (și sarcină / naștere recentă) din fișa de obiective
@@ -7516,6 +7533,8 @@ function randeazaPlanAntrenamentUI() {
     `;
   }
 
+  html += htmlLegendaPlan();
+
   cjson.sesiuni.forEach((ses, sesIdx) => {
     const listaEx = ses.exercitii || [];
 
@@ -7533,11 +7552,11 @@ function randeazaPlanAntrenamentUI() {
           <thead>
             <tr>
               <th style="width:22%;">${tr('Exercițiu', 'Exercise')}</th>
-              <th style="width:12%;">${tr('Serii x Rep.', 'Sets x Reps')}</th>
+              <th style="width:12%;">${tr('Serii × repetări', 'Sets × reps')}</th>
               <th style="width:10%;">${tr('Pauză', 'Rest')}</th>
               <th style="width:28%;">${tr('Cum se execută / Indicații', 'How to perform / Notes')}</th>
-              <th style="width:9%;">Kg</th>
-              <th style="width:9%;">${tr('Seturi', 'Sets')}</th>
+              <th style="width:9%;">${tr('Greutate (kg)', 'Weight (kg)')}</th>
+              <th style="width:9%;">${tr('Serii făcute', 'Sets done')}</th>
               <th style="width:10%;">Status</th>
               ${!doarCitireStructura ? `<th class="no-print" style="width:28px;"></th>` : ''}
             </tr>
@@ -7554,11 +7573,11 @@ function randeazaPlanAntrenamentUI() {
         html += `
           <tr>
             <td style="font-weight:700;">${nrAfisat}. ${escAttr(ex.exercitiu)}</td>
-            <td style="font-weight:700; white-space:nowrap;">${escAttr(ex.seturi_repetari)}</td>
-            <td style="white-space:nowrap;">${escAttr(ex.pauza || '-')}</td>
-            <td>${escAttr(ex.indicatii)}</td>
-            <td style="text-align:center; font-weight:700;">${escAttr(ex.greutate_kg || '')}</td>
-            <td style="text-align:center; font-weight:700;">${escAttr(ex.seturi_finalizate || '')}</td>
+            <td style="font-weight:700; white-space:nowrap;" data-eticheta="${tr('Serii × repetări', 'Sets × reps')}">${escAttr(ex.seturi_repetari)}</td>
+            <td style="white-space:nowrap;" data-eticheta="${tr('Pauză', 'Rest')}">${escAttr(ex.pauza || '-')}</td>
+            <td data-eticheta="${tr('Indicații', 'Notes')}">${escAttr(ex.indicatii)}</td>
+            <td style="text-align:center; font-weight:700;" data-eticheta="${tr('Greutate (kg)', 'Weight (kg)')}">${escAttr(ex.greutate_kg || '')}</td>
+            <td style="text-align:center; font-weight:700;" data-eticheta="${tr('Serii făcute', 'Sets done')}">${escAttr(ex.seturi_finalizate || '')}</td>
             <td style="text-align:center; font-weight:700;">${escAttr(traduceValoare(stVal))}</td>
           </tr>
         `;
@@ -7568,7 +7587,7 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${nrAfisat}. ${escAttr(ex.exercitiu)}</div>
               <div style="font-size:0.75rem; font-weight:700; color:var(--text); margin-top:2px;">
-                <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5"/></svg> ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}
+                <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5"/></svg> ${tr('Serii × repetări', 'Sets × reps')}: ${escAttr(ex.seturi_repetari)} ${ex.pauza ? ` • <svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> ${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}
               </div>
               <div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">
                 ${escAttr(ex.indicatii)}
@@ -7579,10 +7598,10 @@ function randeazaPlanAntrenamentUI() {
                   <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" readonly>
                 </div>
                 <div class="plan-tracking-field">
-                  <span class="plan-tracking-label">${tr('Seturi făcute', 'Sets done')}</span>
+                  <span class="plan-tracking-label">${tr('Serii făcute', 'Sets done')}</span>
                   <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" readonly>
                 </div>
-                <div class="plan-tracking-field">
+                <div class="plan-tracking-field plan-tracking-status">
                   <span class="plan-tracking-label">Status</span>
                   <select class="pill-select plan-status-select ${pillCls}" disabled>
                     <option value="" ${stVal === "" ? "selected" : ""}>Status</option>
@@ -7603,20 +7622,20 @@ function randeazaPlanAntrenamentUI() {
                 <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value">
               </div>
             </td>
-            <td>
-              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_repetari)}" placeholder="${tr('Seturi x rep/sec', 'Sets x reps/sec')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_repetari = this.value">
+            <td data-eticheta="${tr('Serii × repetări', 'Sets × reps')}">
+              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_repetari)}" placeholder="${tr('ex. 4×12 sau 3×30 sec', 'e.g. 4×12 or 3×30 sec')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_repetari = this.value">
             </td>
-            <td>
+            <td data-eticheta="${tr('Pauză', 'Rest')}">
               <input type="text" class="plan-ex-input" value="${escAttr(ex.pauza)}" placeholder="${tr('Pauză (sec)', 'Rest (sec)')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].pauza = this.value">
             </td>
-            <td>
+            <td data-eticheta="${tr('Indicații', 'Notes')}">
               <textarea class="plan-ex-textarea" placeholder="${tr('Indicații tehnice / cum se execută...', 'Technique notes / how to perform...')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].indicatii = this.value">${escAttr(ex.indicatii)}</textarea>
             </td>
-            <td>
+            <td data-eticheta="${tr('Greutate (kg)', 'Weight (kg)')}">
               <input type="text" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="Kg" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].greutate_kg = this.value">
             </td>
-            <td>
-              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="${tr('Seturi', 'Sets')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_finalizate = this.value">
+            <td data-eticheta="${tr('Serii făcute', 'Sets done')}">
+              <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="${tr('Serii', 'Sets')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_finalizate = this.value">
             </td>
             <td>
               <select class="pill-select plan-status-select ${pillCls}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].status = this.value">
