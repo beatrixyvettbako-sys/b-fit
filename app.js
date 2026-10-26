@@ -3,6 +3,8 @@ const SUPABASE_URL = "https://qfnhluyczxugyqkbyvmc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz";
 let USE_SUPABASE = true;
 const URL_APLICATIE = "https://app.beatrixyvett.com/";
+// Worker-ul Cloudflare pentru pozele de progres (R2); gol = pozele nu apar în aplicație
+const URL_POZE = "https://bfit-poze.beatrixyvett-bako.workers.dev";
 // Citit înainte ca Supabase să curețe adresa: venim din emailul „Am uitat parola”
 const ESTE_LINK_RESETARE_PAROLA = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash);
 const supabaseClient = (typeof window !== 'undefined' && window.supabase)
@@ -2785,7 +2787,10 @@ async function randeazaFisaMeaClienta() {
   document.getElementById('clientaTitlu').innerText = tr('Fișa mea', 'My profile');
   const corp = document.getElementById('clientaContinut');
   corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
-  const { data, error } = await supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', dateClienta.fisa.id);
+  const [{ data, error }] = await Promise.all([
+    supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', dateClienta.fisa.id),
+    incarcaListaPoze(dateClienta.fisa.id)
+  ]);
   if (clientaTabCurent !== 'fisa') return;
   checkinuriClienta = error ? [] : (data || []);
   checkinFormular = null;
@@ -2802,6 +2807,7 @@ function afiseazaFisaMeaClienta() {
     ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}</div>`
     : `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. Cere-i antrenorului tău link-ul formularului.', 'You don’t have a goal-setting form yet. Ask your trainer for the form link.')}</div>`);
   document.getElementById('clientaContinut').innerHTML = html;
+  umplePoze(document.getElementById('clientaContinut'));
 }
 
 // Check-in-ul săptămânal: aceleași întrebări ca formularul Google al antrenorului (fără poze, care vin separat).
@@ -2857,6 +2863,7 @@ function htmlCheckinClienta() {
       <div class="checkin-greutate"><input type="number" inputmode="decimal" step="0.1" min="30" max="300" class="form-control" value="${f.greutate ?? ''}" oninput="checkinFormular.greutate = this.value"><span>kg</span></div>
     </div>
     ${INTREBARI_CHECKIN.map(q => `<div class="checkin-camp" id="checkinQ_${q.id}">${eticheta(q)}${camp(q)}</div>`).join('')}
+    ${htmlPozeCheckin()}
     <div class="inscriere-butoane">
       <button type="button" class="btn btn-clear" onclick="checkinFormular = null; afiseazaFisaMeaClienta()">${tr('Renunță', 'Cancel')}</button>
       <button type="button" class="btn" id="btnSalveazaCheckin" onclick="salveazaCheckinClienta()">${tr('Trimite', 'Send')}</button>
@@ -2872,7 +2879,189 @@ function deschideCheckin() {
 
 function alegeNotaCheckin(id, n) {
   checkinFormular[id] = n;
-  document.querySelector('.checkin-card').innerHTML = htmlCheckinClienta();
+  redeseneazaCheckin();
+}
+
+function redeseneazaCheckin() {
+  const card = document.querySelector('.checkin-card');
+  card.innerHTML = htmlCheckinClienta();
+  umplePoze(card);
+}
+
+// Pozele de progres din check-in (opțional): față / profil / spate, câte una pe săptămână.
+// Cele noi se încarcă la „Trimite”, înainte de check-in; cele scoase se șterg tot atunci.
+const UNGHIURI_POZE = [
+  { id: 'fata', ro: 'Față', en: 'Front' },
+  { id: 'profil', ro: 'Profil', en: 'Side' },
+  { id: 'spate', ro: 'Spate', en: 'Back' }
+];
+
+function htmlPozeCheckin() {
+  if (!URL_POZE) return '';
+  const f = checkinFormular;
+  const saptamana = lunaSaptamaniiCurente();
+  const existente = checkinLink ? [] : pozeCurente.lista.filter(p => p.s === saptamana && !(f.pozeSterse || []).some(x => x.u === p.u));
+  const cadre = UNGHIURI_POZE.map(o => {
+    const noua = (f.pozeNoi || {})[o.id];
+    const veche = existente.find(p => p.u === o.id);
+    const img = noua ? `<img src="${noua.url}" alt="">`
+      : veche ? `<img data-poza="${escAttr(pozeCurente.client)}|${veche.s}|${veche.u}|${veche.t}" alt="">` : '';
+    const scoate = img ? `<button type="button" class="poza-scoate" onclick="scoatePozaCheckin('${o.id}')" aria-label="${tr('Scoate poza', 'Remove photo')}">×</button>` : '';
+    return `<div class="poza-cadru${img ? ' are-poza' : ''}">
+        <label>
+          <input type="file" accept="image/*" hidden onchange="alegePozaCheckin('${o.id}', this)">
+          ${img || `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`}
+        </label>
+        ${scoate}
+        <span>${tr(o.ro, o.en)}</span>
+      </div>`;
+  }).join('');
+  return `<div class="checkin-camp" id="checkinQ_poze">
+      <div class="checkin-eticheta">${tr('Poze de progres', 'Progress photos')}</div>
+      <div class="checkin-detalii">${tr('Opțional. Le vedeți doar tu și antrenorul tău.', 'Optional. Only you and your trainer can see them.')}</div>
+      <div class="poze-alege">${cadre}</div>
+    </div>`;
+}
+
+// Poza se micșorează în telefon (max. 1600 px, JPEG) înainte de încărcare: câteva sute de KB în loc de câțiva MB
+async function alegePozaCheckin(unghi, input) {
+  const fisier = input.files && input.files[0];
+  input.value = '';
+  if (!fisier) return;
+  try {
+    const bmp = await createImageBitmap(fisier);
+    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * k);
+    canvas.height = Math.round(bmp.height * k);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.82));
+    if (!blob) throw new Error('toBlob');
+    const f = checkinFormular;
+    f.pozeNoi = f.pozeNoi || {};
+    if (f.pozeNoi[unghi]) URL.revokeObjectURL(f.pozeNoi[unghi].url);
+    f.pozeNoi[unghi] = { blob, url: URL.createObjectURL(blob) };
+    redeseneazaCheckin();
+  } catch (e) {
+    showToast(tr('Poza nu a putut fi citită. Încearcă alta.', 'The photo could not be read. Try another one.'), 'error');
+  }
+}
+
+// Încarcă pozele noi și le șterge pe cele scoase; false dacă una nu a reușit (cele reușite rămân salvate)
+async function trimitePozeCheckin(f) {
+  const noi = Object.entries(f.pozeNoi || {});
+  if (!noi.length && !(f.pozeSterse || []).length) return true;
+  const btn = document.getElementById('btnSalveazaCheckin');
+  if (btn) btn.textContent = tr('Se încarcă pozele...', 'Uploading photos...');
+  const client = checkinLink ? null : dateClienta.fisa.id;
+  for (const [u, p] of noi) {
+    const r = await cerePoze('PUT', '/poza', { client, u }, p.blob);
+    if (!r || !r.ok) return false;
+    URL.revokeObjectURL(p.url);
+    delete f.pozeNoi[u];
+  }
+  for (const p of f.pozeSterse || []) {
+    const r = await cerePoze('DELETE', '/poza', { client, s: p.s, u: p.u });
+    if (!r || !r.ok) return false;
+  }
+  f.pozeSterse = [];
+  return true;
+}
+
+function scoatePozaCheckin(unghi) {
+  const f = checkinFormular;
+  if (f.pozeNoi && f.pozeNoi[unghi]) {
+    URL.revokeObjectURL(f.pozeNoi[unghi].url);
+    delete f.pozeNoi[unghi];
+  } else {
+    const veche = pozeCurente.lista.find(p => p.s === lunaSaptamaniiCurente() && p.u === unghi);
+    if (veche) f.pozeSterse = (f.pozeSterse || []).concat(veche);
+  }
+  redeseneazaCheckin();
+}
+
+// ---- Pozele de progres: cereri către Worker-ul R2 și afișare ----
+let pozeCurente = { client: null, lista: [] }; // pozele clientului afișat: [{ s: lunea săptămânii, u: unghi, t: încărcată la }]
+const cachePoze = new Map(); // `client|s|u|t` -> Promise<object URL>
+
+async function cerePoze(metoda, cale, param, corp) {
+  const antete = {};
+  if (checkinLink) antete['X-Checkin-Token'] = checkinLink.token;
+  else {
+    const { data } = await supabaseClient.auth.getSession();
+    if (!data.session) return null;
+    antete.Authorization = 'Bearer ' + data.session.access_token;
+  }
+  if (corp) antete['Content-Type'] = corp.type;
+  const q = new URLSearchParams(Object.entries(param).filter(([, v]) => v));
+  return fetch(`${URL_POZE}${cale}?${q}`, { method: metoda, headers: antete, body: corp }).catch(() => null);
+}
+
+async function incarcaListaPoze(clientId) {
+  pozeCurente = { client: clientId, lista: [] };
+  if (!URL_POZE || !clientId) return;
+  const r = await cerePoze('GET', '/poze', { client: clientId });
+  const lista = r && r.ok ? await r.json().catch(() => []) : [];
+  if (pozeCurente.client === clientId) pozeCurente.lista = Array.isArray(lista) ? lista : [];
+}
+
+// Imaginile <img data-poza="client|s|u|t"> se aduc cu autentificare (nu pot fi link-uri publice)
+function umplePoze(radacina) {
+  radacina.querySelectorAll('img[data-poza]').forEach(async img => {
+    const cheie = img.dataset.poza;
+    if (!cachePoze.has(cheie)) {
+      const [client, s, u] = cheie.split('|');
+      cachePoze.set(cheie, cerePoze('GET', '/poza', { client, s, u })
+        .then(r => r && r.ok ? r.blob() : null)
+        .then(b => b ? URL.createObjectURL(b) : ''));
+    }
+    const src = await cachePoze.get(cheie);
+    if (src) img.src = src;
+    else {
+      cachePoze.delete(cheie);
+      img.closest('.poza-cadru, .poza-mare')?.classList.add('poza-lipsa');
+    }
+  });
+}
+
+function deschidePanouPoze(saptamana) {
+  document.getElementById('panouPozeTitlu').textContent = `${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(saptamana + 'T12:00:00'))}`;
+  document.getElementById('panouPoze').dataset.s = saptamana;
+  document.getElementById('panouPoze').classList.remove('auth-hidden');
+  randeazaPanouPoze();
+}
+
+function inchidePanouPoze() {
+  document.getElementById('panouPoze').classList.add('auth-hidden');
+}
+
+function randeazaPanouPoze() {
+  const s = document.getElementById('panouPoze').dataset.s;
+  const corp = document.getElementById('panouPozeContinut');
+  const poze = UNGHIURI_POZE.map(o => ({ o, p: pozeCurente.lista.find(p => p.s === s && p.u === o.id) })).filter(x => x.p);
+  corp.innerHTML = poze.length ? poze.map(({ o, p }) => `
+    <div class="poza-mare">
+      <div class="poza-mare-sus">
+        <b>${tr(o.ro, o.en)}</b>
+        <button type="button" class="btn btn-clear" onclick="stergePozaProgres('${s}', '${o.id}')">${tr('Șterge', 'Delete')}</button>
+      </div>
+      <img data-poza="${escAttr(pozeCurente.client)}|${p.s}|${p.u}|${p.t}" alt="${tr(o.ro, o.en)}">
+    </div>`).join('')
+    : `<div class="notificari-gol">${tr('Nicio poză în această săptămână.', 'No photos this week.')}</div>`;
+  umplePoze(corp);
+}
+
+// Ștergerea e definitivă: dispare și la antrenor, și la client
+function stergePozaProgres(s, u) {
+  customConfirm(tr('Ștergi poza?', 'Delete the photo?'), tr('Poza se șterge definitiv, și la antrenor, și la client.', 'The photo is deleted for good, for both trainer and client.'), async () => {
+    const r = await cerePoze('DELETE', '/poza', { client: pozeCurente.client, s, u });
+    if (!r || !r.ok) return showToast(tr('Nu s-a putut șterge. Verifică internetul și reîncearcă.', 'Could not delete. Check your internet and try again.'), 'error');
+    pozeCurente.lista = pozeCurente.lista.filter(p => !(p.s === s && p.u === u));
+    showToast(tr('✓ Poză ștearsă', '✓ Photo deleted'));
+    randeazaPanouPoze();
+    if (rolUtilizator === 'clienta') afiseazaFisaMeaClienta();
+    else incarcaProgresFisa();
+  });
 }
 
 function bifeazaCheckin(id, optiune, bifat) {
@@ -2902,12 +3091,20 @@ async function salveazaCheckinClienta() {
     if (q.tip === 'text') { if (String(v ?? '').trim()) raspunsuri[q.id] = String(v).trim(); }
     else if (v !== undefined && !(Array.isArray(v) && !v.length)) raspunsuri[q.id] = v;
   });
-  document.getElementById('btnSalveazaCheckin').disabled = true;
+  const btn = document.getElementById('btnSalveazaCheckin');
+  btn.disabled = true;
+  if (!(await trimitePozeCheckin(f))) {
+    btn.disabled = false;
+    btn.textContent = tr('Trimite', 'Send');
+    showToast(tr('Pozele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'The photos could not be uploaded. Check your internet and try again.'), 'error');
+    return;
+  }
   const { data, error } = checkinLink
     ? await supabaseClient.rpc('salveaza_checkin_prin_link', { p_token: checkinLink.token, p_greutate: kg, p_raspunsuri: raspunsuri })
     : await supabaseClient.rpc('salveaza_checkin_raspunsuri', { p_greutate: kg, p_raspunsuri: raspunsuri });
   if (error || data !== 'ok') {
-    document.getElementById('btnSalveazaCheckin').disabled = false;
+    btn.disabled = false;
+    btn.textContent = tr('Trimite', 'Send');
     showToast(data === 'link_invalid'
       ? tr('Link-ul nu mai e valid. Cere-i antrenorului link-ul nou.', 'This link is no longer valid. Ask your trainer for the new link.')
       : tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
@@ -5348,16 +5545,19 @@ function htmlProgres(fisaInscriere, checkinuri) {
         const q = INTREBARI_CHECKIN.find(x => x.id === id);
         return `<div class="checkin-text"><span>${escAttr(textInscriere(q))}</span><div class="checkin-nota">${escAttr(r[id])}</div></div>`;
       }).join('');
-      // Pozele importate din Google Forms rămân link-uri către Drive-ul antrenorului
-      const poze = Array.isArray(r.poze) && r.poze.length
-        ? `<div class="checkin-poze">${r.poze.map((u, i) => `<a href="${escAttr(u)}" target="_blank" rel="noopener">${tr('Poza', 'Photo')} ${i + 1}</a>`).join('')}</div>` : '';
-      return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), r.energie, 10)}${scor(tr('Somn', 'Sleep'), r.somn, 10)}${perf}</div>${texte}${poze}`;
+      return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), r.energie, 10)}${scor(tr('Somn', 'Sleep'), r.somn, 10)}${perf}</div>${texte}`;
+    };
+    // Pozele din R2 ale săptămânii (pozeCurente e încărcat de cel care afișează progresul)
+    const butonPoze = s => {
+      const n = pozeCurente.lista.filter(p => p.s === s).length;
+      return n ? `<button type="button" class="checkin-poze-btn" onclick="deschidePanouPoze('${s}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>${n}</button>` : '';
     };
     html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Check-in-uri', 'Check-ins')}</div>` + lista.map(c => `
       <div class="checkin-rand">
         <div class="checkin-rand-sus">
           <b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b>
-          ${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}
+          <span class="checkin-rand-dreapta">${butonPoze(c.saptamana)}${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}</span>
         </div>
         ${corp(c)}
       </div>`).join('');
@@ -5690,7 +5890,10 @@ async function incarcaProgresFisa() {
   }
   // Fișa se redesenează și la reîmprospătarea datelor: fără „Se încarcă” peste un progres deja afișat
   if (!corp.innerHTML) corp.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
-  const { data, error } = await supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', client.id);
+  const [{ data, error }] = await Promise.all([
+    supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', client.id),
+    incarcaListaPoze(client.id)
+  ]);
   if (clientaFisaCurenta() !== client || !det.open) return;
   const checkinuri = error ? [] : (data || []);
   corp.innerHTML = htmlProgres(client.fisaInscriere, checkinuri)

@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal86">
+  <link rel="stylesheet" href="style.css?v=fitFinal87">
 </head>
 <body>
 
@@ -87,6 +87,18 @@
       <span style="width:36px; flex-shrink:0;"></span>
     </header>
     <div class="clienta-body" id="notificariContinut"></div>
+  </div>
+
+  <!-- POZELE DE PROGRES ale unei săptămâni (Cloudflare R2, prin Worker-ul bfit-poze) -->
+  <div id="panouPoze" class="clienta-app panou-notificari auth-hidden">
+    <header class="clienta-header">
+      <button type="button" class="header-icon-bubble-btn" onclick="inchidePanouPoze()" title="Înapoi" data-en-title="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="clienta-title" id="panouPozeTitlu"></div>
+      <span style="width:36px; flex-shrink:0;"></span>
+    </header>
+    <div class="clienta-body" id="panouPozeContinut"></div>
   </div>
 
   <!-- FORMULAR DE ÎNSCRIERE (?inscriere=<cod>): fără cont, pentru clientele noi -->
@@ -1441,6 +1453,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal86"></script>
+  <script src="app.js?v=fitFinal87"></script>
 </body>
 </html>

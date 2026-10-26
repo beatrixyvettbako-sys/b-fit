@@ -2164,17 +2164,121 @@ html[data-rol="clienta"] .doar-antrenor {
   color: var(--text-muted);
 }
 
-.checkin-poze {
+/* Pozele de progres (R2): butonul din rândul check-in-ului, alegerea în formular, panoul săptămânii */
+.checkin-rand-dreapta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  align-items: center;
+  gap: 8px;
 }
 
-.checkin-poze a {
-  font-size: 0.78rem;
-  font-weight: 700;
+.checkin-poze-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card-bg);
   color: var(--accent-purple);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.checkin-poze-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.poze-alege {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.poza-cadru {
+  position: relative;
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.poza-cadru label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 3 / 4;
+  margin-bottom: 4px;
+  overflow: hidden;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  color: var(--accent-purple);
+  cursor: pointer;
+}
+
+.poza-cadru.are-poza label {
+  border-style: solid;
+}
+
+.poza-cadru label svg {
+  width: 26px;
+  height: 26px;
+}
+
+.poza-cadru img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.poza-scoate {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 1rem;
+  line-height: 26px;
+  cursor: pointer;
+}
+
+.poza-mare {
+  margin-bottom: 14px;
+}
+
+.poza-mare-sus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  color: var(--primary);
+}
+
+.poza-mare-sus .btn {
+  width: auto;
+  min-height: 32px;
+  padding: 4px 12px;
+  color: #b91c1c;
+}
+
+.poza-mare img {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.poza-lipsa img {
+  visibility: hidden;
 }
 
 /* Formularul de check-in: câmpuri ca în formularul Google, scala 0–10 / 1–10 pe un rând */
