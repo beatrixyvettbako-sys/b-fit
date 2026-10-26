@@ -3150,6 +3150,18 @@ details {
   border: 1px solid rgba(134, 239, 172, 0.6);
 }
 
+/* Săptămâna trecută: programări rămase neconfirmate (portocaliul Hold) */
+.hour-badge-neconfirmat {
+  background: rgba(245, 176, 65, 0.18);
+  color: #9a5b00;
+  border: 1px solid rgba(245, 176, 65, 0.6);
+}
+
+[data-theme="dark"] .hour-badge-neconfirmat {
+  background: rgba(253, 230, 138, 0.92);
+  color: #7c4a00;
+}
+
 .hour-block-blocked {
   border: 2px solid #ef4444 !important;
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;

@@ -1932,9 +1932,16 @@ function comutaExpandareBaraCalendar(event) {
     
     if (seDeschide) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (scrollLaInchidereCalendar) {
+      // Am ajuns cu săgețile la săptămâna curentă: saltul la ora curentă vine abia acum, la închidere
+      scrollLaInchidereCalendar = false;
+      if (esteSaptamanaActiva()) autoScrollLaOraCurenta();
     }
   }
 }
+
+// Săgețile din selector nu închid sertarul; saltul la ora curentă se face la închiderea lui
+let scrollLaInchidereCalendar = false;
 
 function getTopOffsetSubZile() {
   let headerEl = document.getElementById('mainAppHeader');
@@ -1995,6 +2002,7 @@ let momentHighlightOra = 0;
 const DURATA_HIGHLIGHT_ORA = 1800;
 
 function autoScrollLaOraCurenta(faraHighlight = false) {
+  scrollLaInchidereCalendar = false;
   // Saltul la ora curentă se calculează pentru bara de jos la mărime normală
   const navJos = document.getElementById('bottomNav');
   if (navJos) navJos.classList.remove('nav-compact');
@@ -3929,11 +3937,19 @@ function schimbaSaptamanaAnimat(directie) {
   setTimeout(() => {
     dataReferintaLuni.setDate(dataReferintaLuni.getDate() + (directie * 7));
 
+    let calCard = document.getElementById('calendarExpandableCard');
+    scrollLaInchidereCalendar = false;
     if (esteSaptamanaActiva()) {
       ziCurentaCheie = getZiImplicitaAzi();
       actualizeazaBaraZile();
       randeazaOrarInstant();
-      autoScrollLaOraCurenta();
+      if (calCard && calCard.classList.contains('is-expanded')) {
+        scrollLaInchidereCalendar = true;
+        calibreazaLayoutEcran("", null);
+        window.scrollTo({ top: 0, behavior: 'auto' });
+      } else {
+        autoScrollLaOraCurenta();
+      }
     } else {
       ziCurentaCheie = "Luni";
       actualizeazaBaraZile();
@@ -4387,17 +4403,15 @@ function randeazaOrarInstant() {
     let htmlTrecut = '';
     oreSet.forEach(ora => {
       let lista = grupuriOreTrecute[ora];
-      let efectuateText = currentLang === 'en' ? 'completed' : 'efectuate';
       let historyText = currentLang === 'en' ? '✓ History' : '✓ Istoric';
       htmlTrecut += `
         <div class="hour-block" data-ora="${ora}">
           <div class="hour-header">
             <div class="hour-title-wrap"><span class="hour-icon-static">${ICON_CEAS_ORA}</span><span>${ora}</span></div>
             ${(() => {
-              // Trecut: doar câte au fost confirmate (fără „/ locuri”); nimic dacă niciuna
-              const nrEfectuate = lista.filter(s => s.bifat).length;
-              const text = nrEfectuate === 1 ? tr('efectuată', 'completed') : efectuateText;
-              return nrEfectuate ? `<div class="hour-badge hour-badge-busy">${nrEfectuate} ${text}</div>` : '';
+              // Trecut: eticheta apare doar unde a rămas ceva neconfirmat (rândurile confirmate au deja „✓ Istoric”)
+              const neconfirmate = lista.filter(s => !s.bifat).length;
+              return neconfirmate ? `<div class="hour-badge hour-badge-neconfirmat">${neconfirmate} ${neconfirmate === 1 ? tr('neconfirmată', 'unconfirmed') : tr('neconfirmate', 'unconfirmed')}</div>` : '';
             })()}
           </div>
           <div class="hour-slots-wrapper">
