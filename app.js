@@ -1347,6 +1347,7 @@ async function executaActiuneSupabase(actionName, payload) {
       emailInvitatie: (c.email_invitatie || "").trim(),
       telefon: (c.telefon || "").trim(),
       contConectat: !!c.auth_user_id,
+      checkinToken: c.checkin_token || null,
       fisaInscriere: c.fisa_inscriere || null
     })).filter(c => c.nume !== "");
 
@@ -2410,6 +2411,7 @@ async function incarcaRolUtilizator() {
     rolUtilizator = localStorage.getItem('BFIT_ROL') === 'clienta' ? 'clienta' : 'antrenor';
   }
   document.documentElement.setAttribute('data-rol', rolUtilizator); // ascunde din sertar ce e doar pentru antrenor
+  incarcaNotificari();
 }
 
 // ---- Ecranul clientei: abonament + planurile ei; Profil și Setări vin din același sertar ca la antrenor ----
@@ -2791,6 +2793,7 @@ async function randeazaFisaMeaClienta() {
 }
 
 function afiseazaFisaMeaClienta() {
+  if (checkinLink) return afiseazaCheckinLink();
   const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
   const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
   let html = `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
@@ -2900,14 +2903,68 @@ async function salveazaCheckinClienta() {
     else if (v !== undefined && !(Array.isArray(v) && !v.length)) raspunsuri[q.id] = v;
   });
   document.getElementById('btnSalveazaCheckin').disabled = true;
-  const { data, error } = await supabaseClient.rpc('salveaza_checkin_raspunsuri', { p_greutate: kg, p_raspunsuri: raspunsuri });
+  const { data, error } = checkinLink
+    ? await supabaseClient.rpc('salveaza_checkin_prin_link', { p_token: checkinLink.token, p_greutate: kg, p_raspunsuri: raspunsuri })
+    : await supabaseClient.rpc('salveaza_checkin_raspunsuri', { p_greutate: kg, p_raspunsuri: raspunsuri });
   if (error || data !== 'ok') {
     document.getElementById('btnSalveazaCheckin').disabled = false;
-    showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
+    showToast(data === 'link_invalid'
+      ? tr('Link-ul nu mai e valid. Cere-i antrenorului link-ul nou.', 'This link is no longer valid. Ask your trainer for the new link.')
+      : tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
     return;
   }
   showToast(tr('✓ Check-in trimis', '✓ Check-in sent'));
+  if (checkinLink) {
+    checkinLink.trimis = true;
+    checkinFormular = null;
+    afiseazaCheckinLink();
+    return;
+  }
   randeazaFisaMeaClienta();
+}
+
+// ---- Pagina publică ?checkin=<cod>: check-in-ul săptămânal fără cont, prin link-ul personal al clientului ----
+let checkinLink = null; // { token, prenume, nume_antrenor, trimis }
+
+async function initCheckinLink(token) {
+  document.getElementById('inscriereScreen').classList.remove('auth-hidden');
+  document.body.classList.add('no-scroll');
+  const continut = document.getElementById('inscriereContinut');
+  continut.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  if (!supabaseClient) {
+    continut.innerHTML = `<div class="card">${tr('Nu ne putem conecta. Verifică internetul și reîncearcă.', 'We cannot connect. Check your internet and try again.')}</div>`;
+    return;
+  }
+  const { data, error } = await supabaseClient.rpc('info_checkin_link', { p_token: token }).maybeSingle();
+  if (error || !data) {
+    randeazaAntetCheckinLink();
+    continut.innerHTML = `<div class="card">${tr('Link-ul de check-in nu este valid. Cere-i antrenorului tău link-ul corect.', 'This check-in link is not valid. Ask your trainer for the correct link.')}</div>`;
+    return;
+  }
+  checkinLink = Object.assign({ token, trimis: false }, data);
+  // Săptămâna deja trimisă: arată „Făcut” (cu opțiunea de a-l retrimite); altfel deschide direct formularul
+  checkinuriClienta = data.facut_saptamana ? [{ saptamana: lunaSaptamaniiCurente() }] : [];
+  checkinFormular = data.facut_saptamana ? null : {};
+  afiseazaCheckinLink();
+}
+
+function randeazaAntetCheckinLink() {
+  document.getElementById('inscriereAntrenor').innerHTML = `<span class="inscriere-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg></span>
+    <span class="inscriere-antet-text"><b>${tr('Check-in săptămânal', 'Weekly check-in')}</b>${checkinLink ? `<small>${escAttr(checkinLink.nume_antrenor || '')}</small>` : ''}</span>`;
+  document.getElementById('inscriereLangRo').classList.toggle('active', currentLang !== 'en');
+  document.getElementById('inscriereLangEn').classList.toggle('active', currentLang === 'en');
+}
+
+function afiseazaCheckinLink() {
+  randeazaAntetCheckinLink();
+  const salut = `<div class="checkin-link-salut">${tr('Salut', 'Hi')}, ${escAttr(checkinLink.prenume || '')}!</div>`;
+  document.getElementById('inscriereContinut').innerHTML = checkinLink.trimis
+    ? `<div class="card inscriere-final">
+        <div class="inscriere-final-icon">✓</div>
+        <div style="font-weight:800; font-size:1.05rem; color:var(--primary);">${tr('Mulțumesc', 'Thank you')}, ${escAttr(checkinLink.prenume || '')}!</div>
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">${tr('Check-in-ul a ajuns la antrenor. Săptămâna viitoare îl trimiți din același link.', 'Your check-in reached your trainer. Next week, send it from the same link.')}</div>
+      </div>`
+    : `${salut}<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
 }
 
 function mesajRezervare(cod) {
@@ -3327,6 +3384,12 @@ window.onload = async function() {
   if (sharedPlanId) {
     terminaPornirea();
     await initModClientaSharePlan(sharedPlanId);
+    return;
+  }
+  const codCheckin = urlParams.get('checkin');
+  if (codCheckin) {
+    terminaPornirea();
+    await initCheckinLink(codCheckin);
     return;
   }
   const codInscriere = urlParams.get('inscriere');
@@ -5051,8 +5114,8 @@ function afiseazaFisaClientaInstant() {
   const detInscriere = document.getElementById('detailsFisaInscriere');
   detInscriere.hidden = !client.fisaInscriere;
   randeazaFisaInscriereDeschisa();
-  // Progresul are sens doar cu cont (check-in-ul îl face clienta) sau cu greutatea din formular
-  document.getElementById('detailsProgresClienta').hidden = !(client.contConectat || client.fisaInscriere);
+  // Progresul apare la toți: check-in-urile pot fi și importate (ex. din Google Forms), fără cont sau fișă de obiective
+  document.getElementById('detailsProgresClienta').hidden = false;
   incarcaProgresFisa();
   filtreazaIstoricFisaInstant();
 }
@@ -5422,6 +5485,198 @@ function refuzaCerereInscriere(i) {
 function clientaFisaCurenta() {
   const nume = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
   return (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume);
+}
+
+// ---- Link personal de check-in (fără cont): antrenorul îl trimite clientului, de ex. pe WhatsApp ----
+async function trimiteLinkCheckin(nou) {
+  const client = clientaFisaCurenta();
+  if (!client) return;
+  const genereaza = async () => {
+    const { data: cod, error } = await supabaseClient.rpc('genereaza_link_checkin', { p_client_id: client.id, p_nou: nou });
+    if (error || !cod) {
+      showToast(tr('Nu s-a putut crea link-ul.', 'Could not create the link.'), 'error');
+      return;
+    }
+    client.checkinToken = cod;
+    partajeaza(tr(`Bună, ${client.nume.split(' ')[0]}! Check-in-ul tău săptămânal:`, `Hi ${client.nume.split(' ')[0]}! Your weekly check-in:`),
+      `${URL_APLICATIE}?checkin=${cod}`);
+    if (nou) showToast(tr('✓ Link nou creat. Cel vechi nu mai merge.', '✓ New link created. The old one no longer works.'));
+  };
+  if (nou) {
+    customConfirm(tr('Link nou de check-in?', 'New check-in link?'),
+      tr(`Link-ul trimis până acum lui ${client.nume} nu va mai funcționa. Continui?`, `The link sent so far to ${client.nume} will stop working. Continue?`), genereaza);
+    return;
+  }
+  genereaza();
+}
+
+function copiazaText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast(tr('✓ Link copiat', '✓ Link copied')));
+}
+
+// Partajare prin meniul nativ al telefonului (WhatsApp, SMS, email...); pe calculator, copiere
+function partajeaza(text, url) {
+  if (navigator.share) {
+    navigator.share({ title: 'B-Fit', text, url }).catch(e => { if (e.name !== 'AbortError') copiazaText(url ? `${text} ${url}` : text); });
+  } else {
+    copiazaText(url ? `${text} ${url}` : text);
+  }
+}
+
+// ---- Notificări (tabelul notificari): clopoțelul din antet, panoul, actualizare pe loc prin Realtime ----
+// Baza salvează doar tipul și datele; textul se compune aici, în limba aleasă.
+let notificari = [];
+let canalNotificari = null;
+
+async function incarcaNotificari() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const { data, error } = await supabaseClient.from('notificari').select('*')
+    .eq('user_id', utilizatorCurent.id).order('created_at', { ascending: false }).limit(60);
+  if (error) return; // tabelul nu există încă (scriptul SQL nerulat): fără clopoțel
+  notificari = data || [];
+  document.querySelectorAll('.btn-notificari').forEach(b => { b.hidden = false; });
+  actualizeazaBulinaNotificari();
+  if (!canalNotificari) {
+    canalNotificari = supabaseClient.channel('notificari-' + utilizatorCurent.id)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificari', filter: `user_id=eq.${utilizatorCurent.id}` }, payload => {
+        notificari.unshift(payload.new);
+        actualizeazaBulinaNotificari();
+        if (!document.getElementById('panouNotificari').classList.contains('auth-hidden')) randeazaNotificari();
+      })
+      .subscribe();
+  }
+}
+
+function actualizeazaBulinaNotificari() {
+  const necitite = notificari.filter(n => !n.citit).length;
+  document.querySelectorAll('.notificari-bulina').forEach(b => {
+    b.hidden = necitite === 0;
+    b.textContent = necitite > 9 ? '9+' : necitite;
+  });
+}
+
+function textNotificare(n) {
+  const d = n.date || {};
+  const zi = d.zi ? formatZiLuna(new Date(d.zi + 'T12:00:00')) : '';
+  const plural = (nr, unu, multe) => nr === 1 ? unu : multe;
+  // `nume` e text la notificările despre un client și listă la „abonamente care expiră”
+  const listaNume = Array.isArray(d.nume) ? d.nume.join(', ') : '';
+  const t = {
+    cerere_noua: [tr('Cerere nouă de înscriere', 'New sign-up request'), tr(`${d.nume || ''} a completat fișa de obiective.`, `${d.nume || ''} filled in the goal-setting form.`)],
+    checkin_nou: [tr('Check-in nou', 'New check-in'), tr(`${d.nume || ''} a trimis check-in-ul săptămânal.`, `${d.nume || ''} sent the weekly check-in.`)],
+    rezervare: [tr('Rezervare nouă', 'New booking'), tr(`${d.nume || ''} a rezervat ${zi}, ora ${d.ora || ''}.`, `${d.nume || ''} booked ${zi} at ${d.ora || ''}.`)],
+    anulare: [tr('Rezervare anulată', 'Booking cancelled'), tr(`${d.nume || ''} a anulat ${zi}, ora ${d.ora || ''}.`, `${d.nume || ''} cancelled ${zi} at ${d.ora || ''}.`)],
+    lipsa_checkin: [tr('Check-in-uri lipsă', 'Missing check-ins'), tr(`${d.nr} ${plural(d.nr, 'client n-a', 'clienți n-au')} trimis check-in-ul săptămânii trecute. Trimite-le un memento.`, `${d.nr} ${plural(d.nr, 'client', 'clients')} didn’t send last week’s check-in. Send them a reminder.`)],
+    abonamente_expira: [tr('Abonamente care expiră', 'Subscriptions ending'), tr(`${d.nr} ${plural(d.nr, 'abonament expiră', 'abonamente expiră')} săptămâna asta: ${listaNume}${d.nr > 3 ? '…' : ''}`, `${d.nr} ${plural(d.nr, 'subscription ends', 'subscriptions end')} this week: ${listaNume}${d.nr > 3 ? '…' : ''}`)],
+    plan_nou: [tr('Plan nou de antrenament', 'New workout plan'), tr(`Antrenorul ți-a trimis „${d.titlu || ''}”.`, `Your trainer sent you “${d.titlu || ''}”.`)],
+    checkin_memento: [tr('Check-in săptămânal', 'Weekly check-in'), tr('E timpul pentru check-in-ul săptămânal. Durează un minut.', 'Time for your weekly check-in. It takes a minute.')],
+    abonament_expira: d.zile === 1
+      ? [tr('Abonamentul expiră mâine', 'Subscription ends tomorrow'), tr('Vorbește cu antrenorul despre reînnoire.', 'Talk to your trainer about renewing.')]
+      : [tr('Abonamentul expiră curând', 'Subscription ending soon'), tr(`Abonamentul tău expiră pe ${d.data || ''}.`, `Your subscription ends on ${d.data || ''}.`)],
+    sedinte_putine: [tr(`Mai ai ${d.ramase} ședințe`, `${d.ramase} sessions left`), tr('Vorbește cu antrenorul despre reînnoire.', 'Talk to your trainer about renewing.')],
+    programare_maine: [tr('Antrenament mâine', 'Workout tomorrow'), tr(`Mâine la ${d.ora || ''} ai antrenament.`, `You have a workout tomorrow at ${d.ora || ''}.`)]
+  }[n.tip];
+  return t || [tr('Notificare', 'Notification'), ''];
+}
+
+function cand(dataIso) {
+  const min = Math.round((Date.now() - new Date(dataIso)) / 60000);
+  if (min < 1) return tr('acum', 'now');
+  if (min < 60) return tr(`acum ${min} min`, `${min} min ago`);
+  const ore = Math.round(min / 60);
+  if (ore < 24) return tr(`acum ${ore} h`, `${ore} h ago`);
+  return formatZiLuna(new Date(dataIso));
+}
+
+async function deschidePanouNotificari() {
+  document.getElementById('panouNotificari').classList.remove('auth-hidden');
+  randeazaNotificari();
+  // Deschiderea panoului le marchează pe toate ca citite (bulina dispare)
+  const necitite = notificari.filter(n => !n.citit).map(n => n.id);
+  if (necitite.length) {
+    notificari.forEach(n => { n.citit = true; });
+    actualizeazaBulinaNotificari();
+    await supabaseClient.from('notificari').update({ citit: true }).in('id', necitite);
+  }
+}
+
+function inchidePanouNotificari() {
+  document.getElementById('panouNotificari').classList.add('auth-hidden');
+}
+
+function randeazaNotificari() {
+  const corp = document.getElementById('notificariContinut');
+  if (!notificari.length) {
+    corp.innerHTML = `<div class="card notificari-gol">${tr('Nu ai notificări încă.', 'No notifications yet.')}</div>`;
+    return;
+  }
+  // Necititele rămân evidențiate cât timp panoul e deschis (au fost desenate înainte de marcarea ca citite)
+  corp.innerHTML = notificari.map(n => {
+    const [titlu, mesaj] = textNotificare(n);
+    return `<button type="button" class="notificare${n.citit ? '' : ' necitita'}" onclick="deschideNotificare('${n.id}')">
+        <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
+        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
+        <small>${escAttr(cand(n.created_at))}</small>
+      </button>`;
+  }).join('');
+}
+
+// Atingerea unei notificări duce la locul potrivit din aplicație
+function deschideNotificare(id) {
+  const n = notificari.find(x => x.id === id);
+  if (!n) return;
+  if (n.tip === 'lipsa_checkin') return arataLipsaCheckin(n);
+  inchidePanouNotificari();
+  if (rolUtilizator === 'clienta') {
+    if (n.tip === 'checkin_memento') { clientaTab('fisa'); return; }
+    clientaTab(n.tip === 'programare_maine' ? 'orar' : 'acasa');
+    return;
+  }
+  if (n.tip === 'rezervare' || n.tip === 'anulare') { document.getElementById('navBtnOrar').click(); return; }
+  document.getElementById('navBtnFisa').click();
+  if (n.tip === 'checkin_nou' && n.date && n.date.client_id) {
+    const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
+    if (client) {
+      deschideClientaDinLista(client.nume);
+      const det = document.getElementById('detailsProgresClienta');
+      det.open = true;
+      setTimeout(() => det.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  } else if (n.tip === 'abonamente_expira') {
+    inapoiLaListaClienteFisa();
+    filtruListaFisa = 'urmarit';
+    randeazaListaClienteFisa();
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+// Lista clienților fără check-in în săptămâna din notificare, cu memento prin meniul de partajare
+async function arataLipsaCheckin(n) {
+  const corp = document.getElementById('notificariContinut');
+  corp.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const saptamana = n.date && n.date.saptamana;
+  const { data } = await supabaseClient.from('checkin_saptamanal').select('client_id').eq('user_id', utilizatorCurent.id).eq('saptamana', saptamana);
+  const facut = new Set((data || []).map(k => k.client_id));
+  window.__lipsaCheckin = (DB.clienti || []).filter(c => (c.status || '').toLowerCase() === 'activ'
+    && (c.contConectat || c.checkinToken) && !facut.has(c.id));
+  const lista = window.__lipsaCheckin;
+  corp.innerHTML = `<button type="button" class="lista-inapoi" onclick="randeazaNotificari()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg><span>${tr('Notificări', 'Notifications')}</span>
+    </button>
+    <div class="checkin-titlu" style="margin:12px 2px 8px;">${tr('Fără check-in în săptămâna', 'No check-in for the week of')} ${formatZiLuna(new Date(saptamana + 'T12:00:00'))}</div>
+    ${lista.length ? lista.map((c, i) => `<div class="lista-clienta lipsa-checkin-rand">
+        <span class="lista-avatar">${escAttr(c.nume.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase())}</span>
+        <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${c.checkinToken ? tr('link de check-in', 'check-in link') : tr('cont în aplicație', 'app account')}</small></span>
+        <button type="button" class="btn lipsa-checkin-btn" onclick="trimiteMementoCheckin(${i})">${tr('Memento', 'Remind')}</button>
+      </div>`).join('') : `<div class="card notificari-gol">${tr('Toți au trimis check-in-ul. 🎉', 'Everyone sent their check-in. 🎉')}</div>`}`;
+}
+
+function trimiteMementoCheckin(i) {
+  const c = window.__lipsaCheckin[i];
+  if (!c) return;
+  const text = tr(`Bună, ${c.nume.split(' ')[0]}! Nu uita de check-in-ul săptămânal 🙂`, `Hi ${c.nume.split(' ')[0]}! Don’t forget your weekly check-in 🙂`);
+  partajeaza(text, c.checkinToken ? `${URL_APLICATIE}?checkin=${c.checkinToken}` : URL_APLICATIE);
 }
 
 // Check-in-urile se citesc din Supabase doar când secțiunea „Progres” e deschisă (nu intră în cache-ul DB)
@@ -7254,7 +7509,8 @@ function schimbaLimbaInscriere(lang) {
   currentLang = lang;
   localStorage.setItem('beatrix_lang', lang);
   document.documentElement.lang = lang;
-  if (stareInscriere.antrenor) randeazaInscriere();
+  if (checkinLink) afiseazaCheckinLink();
+  else if (stareInscriere.antrenor) randeazaInscriere();
   else randeazaAntetInscriere();
 }
 

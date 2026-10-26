@@ -1602,6 +1602,134 @@ html[data-rol="clienta"] .doar-antrenor {
   overflow-wrap: anywhere;
 }
 
+/* NOTIFICĂRI: clopoțelul din antet (cu bulină) și panoul cu lista */
+.btn-notificari {
+  position: relative;
+}
+
+.btn-notificari[hidden] {
+  display: none;
+}
+
+/* Lângă clopoțel, burgerul nu mai împarte spațiul liber (ambele aveau margin-left: auto) */
+.btn-notificari:not([hidden]) + #headerBurgerBtn {
+  margin-left: 8px !important;
+}
+
+.clienta-header .btn-notificari:not([hidden]) {
+  margin-right: -2px;
+}
+
+.notificari-bulina {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #b91c1c;
+  border: 2px solid var(--card-bg);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+}
+
+.notificari-bulina[hidden] {
+  display: none;
+}
+
+.panou-notificari .clienta-body {
+  padding-bottom: 24px;
+}
+
+.notificari-gol {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.notificare {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.notificare.necitita {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  background: var(--primary-light);
+}
+
+.notificare-icon {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+}
+
+.notificare-icon.tip-anulare,
+.notificare-icon.tip-lipsa_checkin { background: #b91c1c; }
+.notificare-icon.tip-abonament_expira,
+.notificare-icon.tip-abonamente_expira,
+.notificare-icon.tip-sedinte_putine { background: #f5b041; }
+.notificare-icon.tip-checkin_nou,
+.notificare-icon.tip-rezervare { background: #15803d; }
+
+.notificare-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notificare-text b {
+  font-size: 0.86rem;
+  color: var(--primary);
+}
+
+[data-theme="dark"] .notificare-text b {
+  color: var(--text);
+}
+
+.notificare-text span {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.notificare small {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.lipsa-checkin-rand {
+  cursor: default;
+}
+
+.lipsa-checkin-btn {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 /* Cardul de reînnoire de pe Acasă la clientă: portocaliu (se termină), roșu (s-a terminat), neutru (fără abonament) */
 .card.reinnoire-card {
   display: flex;
@@ -3193,6 +3321,45 @@ select.slot-select-type {
 
 .fisa-cont-invitatie .btn {
   white-space: nowrap;
+}
+
+.checkin-link-salut {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--primary);
+  margin: 4px 2px 10px;
+}
+
+[data-theme="dark"] .checkin-link-salut {
+  color: var(--text);
+}
+
+.fisa-link-nou {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.fisa-link-text {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.fisa-link-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .fisa-contact-rand {

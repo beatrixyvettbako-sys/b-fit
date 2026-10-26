@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal85">
+  <link rel="stylesheet" href="style.css?v=fitFinal86">
 </head>
 <body>
 
@@ -28,6 +28,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
       <div class="clienta-title" id="clientaTitlu">B-Fit</div>
+      <button type="button" class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <b class="notificari-bulina" hidden></b>
+      </button>
       <button type="button" class="header-icon-bubble-btn" onclick="deschideMeniuLateral()" title="Meniu" data-en-title="Menu">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
       </button>
@@ -71,6 +75,18 @@
         <span data-en="My profile">Fișa mea</span>
       </button>
     </nav>
+  </div>
+
+  <!-- PANOUL DE NOTIFICĂRI (antrenor și client) -->
+  <div id="panouNotificari" class="clienta-app panou-notificari auth-hidden">
+    <header class="clienta-header">
+      <button type="button" class="header-icon-bubble-btn" onclick="inchidePanouNotificari()" title="Înapoi" data-en-title="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="clienta-title" data-en="Notifications">Notificări</div>
+      <span style="width:36px; flex-shrink:0;"></span>
+    </header>
+    <div class="clienta-body" id="notificariContinut"></div>
   </div>
 
   <!-- FORMULAR DE ÎNSCRIERE (?inscriere=<cod>): fără cont, pentru clientele noi -->
@@ -731,6 +747,12 @@
       <span id="pageTitle">Orar Săptămânal</span>
     </div>
 
+    <!-- Clopoțelul de notificări (apare după conectare) -->
+    <button class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications" hidden style="margin-left: auto;">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <b class="notificari-bulina" hidden></b>
+    </button>
+
     <!-- Buton Dreapta: Meniu Burger SAU Buton Închide '✕' pe Plan de Antrenament -->
     <button class="header-icon-bubble-btn" id="headerBurgerBtn" onclick="gestioneazaClickDreaptaHeader()" title="Meniu" style="margin-left: auto;">
       <svg id="headerRightIconSvg" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -993,6 +1015,19 @@
               <input type="email" id="fisaEmailInvitatie" class="form-control" placeholder="email@exemplu.ro" autocomplete="off">
               <button type="button" class="btn" id="btnInvitaClienta" onclick="invitaClienta()">Trimite invitația</button>
             </div>
+          </div>
+
+          <!-- Link personal de check-in (?checkin=<cod>): clientul trimite check-in-ul fără cont -->
+          <div id="blocLinkCheckin" class="fisa-cont">
+            <div class="fisa-cont-sus">
+              <span class="fisa-cont-titlu">
+                <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+                <span data-en="Check-in link">Link check-in</span>
+              </span>
+              <button type="button" class="fisa-link-nou" onclick="trimiteLinkCheckin(true)" data-en="New link">Link nou</button>
+            </div>
+            <div class="fisa-link-text" data-en="The client sends the weekly check-in from this link, no account needed.">Clientul trimite check-in-ul săptămânal din acest link, fără cont.</div>
+            <button type="button" class="btn fisa-link-btn" onclick="trimiteLinkCheckin(false)" data-en="Send the link">Trimite link-ul</button>
           </div>
 
           <!-- Progresul clientei: greutate + check-in-uri; se încarcă la deschidere -->
@@ -1406,6 +1441,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal85"></script>
+  <script src="app.js?v=fitFinal86"></script>
 </body>
 </html>
