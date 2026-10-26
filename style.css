@@ -1086,6 +1086,12 @@ header {
   display: none;
 }
 
+/* Cât e deschis un ecran peste aplicație (notificări, poze, înscriere), pagina din spate nu mai derulează:
+   altfel bara ei de scroll rămâne vizibilă lângă ecran, fără rost */
+body:has(.clienta-app:not(.auth-hidden)) {
+  overflow: hidden;
+}
+
 .clienta-header {
   position: sticky;
   top: 0;
@@ -1670,6 +1676,18 @@ html[data-rol="clienta"] .doar-antrenor {
   white-space: nowrap;
 }
 
+/* Notificări blocate: × în colțul din dreapta-sus (același stil ca la notificări) */
+.card.card-push-blocat {
+  position: relative;
+  padding-right: 36px;
+}
+
+.card-push .card-push-x {
+  top: 6px;
+  bottom: auto;
+  padding: 0;
+}
+
 .notificari-gol {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -1690,6 +1708,12 @@ html[data-rol="clienta"] .doar-antrenor {
   text-align: left;
   font-family: inherit;
   cursor: pointer;
+}
+
+/* Notificare fără loc în aplicație unde să ducă: arată la fel, dar nu reacționează la atingere */
+.notificare:disabled {
+  cursor: default;
+  color: var(--text);
 }
 
 /* × de ascundere, peste colțul din dreapta-jos al notificării */
@@ -3195,6 +3219,63 @@ details {
   justify-content: center;
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
   opacity: 0.55;
+}
+
+/* Selectorul orei suplimentare: același ceas ca pe cardurile de oră, în locul iconiței browserului */
+.camp-ora {
+  position: relative;
+  display: inline-flex;
+}
+
+.camp-ora input {
+  position: relative;
+}
+
+/* Iconița browserului rămâne apăsabilă, dar invizibilă și peste tot câmpul, ca să nu ia loc orei scrise */
+.camp-ora input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.camp-ora-icona {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* Etichetele din dreapta antetului orei și × pentru ora suplimentară goală */
+.hour-header-dreapta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-sterge-ora {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card-bg);
+  color: #b91c1c;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hour-badge {

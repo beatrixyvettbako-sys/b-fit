@@ -14,7 +14,7 @@
   <link rel="icon" type="image/svg+xml" href="icon.svg">
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal90">
+  <link rel="stylesheet" href="style.css?v=fitFinal91">
 </head>
 <body>
 
@@ -810,6 +810,20 @@
 
       <div id="sloturiContainer"></div>
 
+      <div class="extra-hour-card">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--primary); white-space: nowrap; min-width: 0; overflow: hidden;">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          <span id="addOraCustomText" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">Oră suplimentară</span>
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
+          <span class="camp-ora">
+            <input type="time" id="inputOraCustom" onclick="deschideCalendarData(this)" style="width: 84px; padding: 5px 28px 5px 6px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; background: var(--card-bg); color: var(--text);">
+            <span class="hour-icon-static camp-ora-icona"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          </span>
+          <button class="btn" style="padding: 5px 8px; font-size: 0.76rem; white-space: nowrap;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">Adaugă</button>
+        </div>
+      </div>
+
       <!-- CARD FINALUL PROGRAMULUI CU GANTERĂ -->
       <div class="end-schedule-card" id="endScheduleCard">
         <div class="end-schedule-icon-wrap">
@@ -829,17 +843,6 @@
         </div>
       </div>
 
-      <div class="extra-hour-card">
-        <div style="display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--primary); white-space: nowrap; min-width: 0; overflow: hidden;">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-          <span id="addOraCustomText" style="min-width: 0; overflow: hidden; text-overflow: ellipsis;">Adaugă oră suplimentară</span>
-        </div>
-        <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
-          <input type="text" id="inputOraCustom" placeholder="07:30" style="width: 54px; padding: 5px 3px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; text-align: center; background: var(--card-bg); color: var(--text);">
-          <button class="btn" style="padding: 5px 8px; font-size: 0.76rem; white-space: nowrap;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">+ Adaugă</button>
-        </div>
-      </div>
-
       <details id="detailsIstoricOrar" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px;" ontoggle="peComutareIstoricOrar(this)">
         <summary class="summary-toggle-clean">
           <span>
@@ -848,7 +851,7 @@
               <path d="M3 3v5h5"></path>
               <path d="M12 7v5l4 2"></path>
             </svg>
-            <span id="historyOrarSummaryText">Istoric Prezențe Orar</span>
+            <span id="historyOrarSummaryText">Istoric Prezențe</span>
           </span>
           <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
         </summary>
@@ -1215,7 +1218,7 @@
                   <path d="M3 3v5h5"></path>
                   <path d="M12 7v5l4 2"></path>
                 </svg>
-                <span id="recentHistorySummaryText">Istoric Prezențe Recente</span>
+                <span id="recentHistorySummaryText">Istoric Prezențe</span>
               </span>
               <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
             </summary>
@@ -1492,6 +1495,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal90"></script>
+  <script src="app.js?v=fitFinal91"></script>
 </body>
 </html>

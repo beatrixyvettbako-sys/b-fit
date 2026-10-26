@@ -54,9 +54,9 @@ const i18n = {
     futureWeekState: "Planificat (Săptămână viitoare)",
     endScheduleTitle: "Ziua-i gata, caloriile-s topite!",
     endScheduleSubtitle: "Antrenorul a supraviețuit și azi!",
-    addExtraHour: "Adaugă oră suplimentară",
+    addExtraHour: "Oră suplimentară",
     addBtn: "+ Adaugă",
-    historyOrarTitle: "Istoric Prezențe Orar",
+    historyOrarTitle: "Istoric Prezențe",
     filterClient: "Filtrează după client:",
     filterMonth: "Filtrează după lună:",
     allClients: "Toți clienții",
@@ -93,7 +93,7 @@ const i18n = {
     setBtn: "Setează",
     archiveBtn: "Arhivează / Ascunde din Liste",
     reactivateBtn: "Reactivează Clientul (Arată în Liste)",
-    recentHistoryTitle: "Istoric Prezențe Recente",
+    recentHistoryTitle: "Istoric Prezențe",
     noPresenceYet: "Nici o prezență înregistrată încă.",
     newPaymentTitle: "Înregistrare Plată Nouă",
     clientNameIncPlaceholder: "Alege din listă sau scrie nume nou",
@@ -210,9 +210,9 @@ const i18n = {
     futureWeekState: "Planned (Next week)",
     endScheduleTitle: "Day is done, calories burned!",
     endScheduleSubtitle: "The coach survived today too!",
-    addExtraHour: "Add extra hour",
+    addExtraHour: "Extra hour",
     addBtn: "+ Add",
-    historyOrarTitle: "Schedule Attendance History",
+    historyOrarTitle: "Attendance History",
     filterClient: "Filter by client:",
     filterMonth: "Filter by month:",
     allClients: "All clients",
@@ -249,7 +249,7 @@ const i18n = {
     setBtn: "Set",
     archiveBtn: "Archive / Hide from lists",
     reactivateBtn: "Reactivate Client (Show in lists)",
-    recentHistoryTitle: "Recent Attendance History",
+    recentHistoryTitle: "Attendance History",
     noPresenceYet: "No attendance recorded yet.",
     newPaymentTitle: "Register New Payment",
     clientNameIncPlaceholder: "Choose from list or type new name",
@@ -1604,8 +1604,23 @@ async function executaActiuneSupabase(actionName, payload) {
       if (uid) item.user_id = uid;
       return item;
     });
-    await sb.from('orar').insert(noi);
-    return { success: true, ora: oraNorm };
+    const { data: randuri } = await sb.from('orar').insert(noi).select();
+    return { success: true, ora: oraNorm, randuri: randuri || [] };
+  }
+
+  if (actionName === "stergeOraCustom") {
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
+    let q = sb.from('orar')
+      .select('row, clienta, bifat')
+      .in('ziRaw', payload.zi === "Marti" ? [tagZi, payload.saptamanaCheie + "_Marți"] : [tagZi])
+      .eq('ora', oraNorm);
+    if (uid) q = q.eq('user_id', uid);
+    const { data: gasite } = await q;
+    // Verificare și aici, pe datele din bază: între timp cineva putea rezerva un loc
+    if ((gasite || []).some(s => (s.clienta || '').trim() || s.bifat)) return { success: false };
+    if (gasite && gasite.length) await sb.from('orar').delete().in('row', gasite.map(s => s.row));
+    return { success: true };
   }
 
   if (actionName === "inregistreazaAbonament") {
@@ -1838,9 +1853,19 @@ async function executaActiuneSupabase(actionName, payload) {
   }
 
   if (actionName === "prelungesteValabilitate") {
-    const nouaData = payload.dataManuala
-      ? new Date(payload.dataManuala)
-      : new Date(new Date().getTime() + (Number(payload.zile) * 86400000));
+    let nouaData;
+    if (payload.dataManuala) {
+      nouaData = new Date(payload.dataManuala);
+    } else {
+      // +7 / +14 / +30 se adună la expirarea curentă (apăsări repetate se cumulează); expirat sau fără dată: de azi
+      let qExp = sb.from('cliente').select('dataExpirare').ilike('nume', payload.nume.trim());
+      if (uid) qExp = qExp.eq('user_id', uid);
+      const { data: exList } = await qExp.limit(1);
+      const azi = new Date(); azi.setHours(0, 0, 0, 0);
+      const expCurenta = parseazaDataOraRo(exList && exList[0] ? exList[0].dataExpirare : '');
+      nouaData = new Date(Math.max(azi.getTime(), expCurenta || 0));
+      nouaData.setDate(nouaData.getDate() + Number(payload.zile));
+    }
     const dataFinalaRo = formateazaDataRoLocal(nouaData);
     let q = sb.from('cliente').update({ dataExpirare: dataFinalaRo, status: "Activ" }).ilike('nume', payload.nume.trim());
     if (uid) q = q.eq('user_id', uid);
@@ -2053,6 +2078,37 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
 // Momentul ultimului highlight; re-randarea orarului în timpul animației îl reaplică
 let momentHighlightOra = 0;
 const DURATA_HIGHLIGHT_ORA = 1800;
+
+// Din notificarea unei rezervări / anulări: orarul pe săptămâna și ziua ei, cu ora respectivă sus, sub bara de zile
+function mergiLaOraDinOrar(ziIso, ora) {
+  document.getElementById('navBtnOrar').click();
+  const d = new Date((ziIso || '') + 'T12:00:00');
+  if (isNaN(d)) return;
+  const cheieZi = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"][d.getDay()];
+  if (!getZileActive().includes(cheieZi)) return; // zi de weekend ascunsă din Setări: rămâne orarul obișnuit
+  dataReferintaLuni = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  ziCurentaCheie = cheieZi;
+  actualizeazaBaraZile();
+  randeazaOrarInstant();
+  aratOraInOrar(ora);
+}
+
+// Ora arătată ultima dată cu aratOraInOrar; reîncărcarea datelor din timpul animației o reaplică
+let oraEvidentiata = null;
+
+// Ora dată ajunge sus, sub bara de zile, și e evidențiată (notificări, oră suplimentară nou adăugată)
+function aratOraInOrar(ora, reaplicare = false) {
+  const oraNorm = normalizeazaOraUi(ora || '');
+  if (!reaplicare) oraEvidentiata = { ora: oraNorm, zi: getSaptamanaCheie() + '_' + ziCurentaCheie, moment: Date.now() };
+  const bloc = document.querySelector(`#sloturiContainer .hour-block[data-ora="${oraNorm}"]`);
+  calibreazaLayoutEcran(bloc ? oraNorm : "", bloc);
+  window.scrollTo({ top: bloc ? Math.max(0, Math.round(bloc.getBoundingClientRect().top + window.pageYOffset - getTopOffsetSubZile())) : 0, behavior: 'auto' });
+  if (bloc && (!reaplicare || Date.now() - oraEvidentiata.moment < DURATA_HIGHLIGHT_ORA)) {
+    bloc.classList.remove('hour-block-current-highlight');
+    void bloc.offsetWidth;
+    bloc.classList.add('hour-block-current-highlight');
+  }
+}
 
 function autoScrollLaOraCurenta(faraHighlight = false) {
   scrollLaInchidereCalendar = false;
@@ -2321,7 +2377,7 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('endScheduleSubText').innerText = t('endScheduleSubtitle');
 
   document.getElementById('addOraCustomText').innerText = t('addExtraHour');
-  document.getElementById('btnAddOraCustomAction').innerText = t('addBtn');
+  document.getElementById('btnAddOraCustomAction').innerText = tr('Adaugă', 'Add');
   document.getElementById('historyOrarSummaryText').innerText = t('historyOrarTitle');
   document.getElementById('labelFiltruCliOrar').innerText = t('filterClient');
   document.getElementById('labelFiltruLunaOrar').innerText = t('filterMonth');
@@ -2742,9 +2798,28 @@ async function salveazaProgresClienta() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden' && timerSalvareProgres !== null) salveazaProgresClienta();
-  // Conexiunea în timp real poate cădea cât telefonul e în fundal: la revenire recitim locurile
-  if (document.visibilityState === 'visible' && rolUtilizator === 'clienta' && dateClienta.fisa) laSchimbareOrarClienta();
+  // Conexiunea în timp real poate cădea cât telefonul e în fundal: la revenire recitim locurile, notificările și planurile
+  if (document.visibilityState === 'visible' && utilizatorCurent) incarcaNotificari();
+  if (document.visibilityState === 'visible' && rolUtilizator === 'clienta' && dateClienta.fisa) {
+    laSchimbareOrarClienta();
+    reincarcaDateClienta();
+  }
 });
+
+// Abonamentul și planurile clientului, recitite fără repornirea aplicației (plan nou, notă, reînnoire)
+async function reincarcaDateClienta() {
+  if (rolUtilizator !== 'clienta' || !dateClienta.fisa || !supabaseClient || !utilizatorCurent) return;
+  const [resFisa, resPlanuri] = await Promise.all([
+    supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1),
+    supabaseClient.from('planuri_antrenament').select('*').order('updated_at', { ascending: false })
+  ]);
+  const c = resFisa.data && resFisa.data[0];
+  if (resFisa.error || resPlanuri.error || !c) return;
+  dateClienta.fisa = c;
+  dateClienta.planuri = resPlanuri.data || [];
+  // Doar Acasă se redesenează, și nu cât e deschis un plan: progresul bifat acolo nu se pierde
+  if (clientaTabCurent === 'acasa' && !dateClienta.planCurent) randeazaHomeClienta();
+}
 
 // ---- Orar în timp real (Supabase Realtime Broadcast, un canal pe antrenor) ----
 // Mesajul nu conține date, doar „s-a schimbat orarul”: clienta recitește prin sloturi_deschise (regulile din bază rămân),
@@ -3265,13 +3340,22 @@ function seteazaBulinaOrar(nr) {
   b.hidden = !nr;
 }
 
-// Zilele în care clienta are deja o programare (inclusiv una deja efectuată azi): cheie zi -> data și ora programării
+// Zilele în care clienta are deja o programare (inclusiv una deja efectuată azi): cheie zi -> rândul programării, cu `data`
 function programariPeZiClienta(randuri) {
   const zile = new Map();
-  (randuri || []).map(o => dataSlot(o.ziRaw, o.ora)).filter(Boolean).sort((a, b) => a - b).forEach(d => {
-    if (!zile.has(cheieZiClienta(d))) zile.set(cheieZiClienta(d), d);
+  (randuri || []).map(o => ({ ...o, data: dataSlot(o.ziRaw, o.ora) })).filter(o => o.data).sort((a, b) => a.data - b.data).forEach(o => {
+    if (!zile.has(cheieZiClienta(o.data))) zile.set(cheieZiClienta(o.data), o);
   });
   return zile;
+}
+
+// Anulare singură: doar rezervările făcute de ea în aplicație, cu cel puțin 24h înainte (aceeași regulă ca anuleaza_rezervare)
+function stareAnulareClienta(o) {
+  const poateAnula = !o.bifat && o.rezervat_online && (o.data - new Date()) >= 24 * 3600 * 1000;
+  const motiv = !o.rezervat_online
+    ? tr('Programată de antrenor. Pentru anulare, contactează antrenorul.', 'Booked by your trainer. Contact your trainer to cancel.')
+    : tr('Mai puțin de 24h până la ședință. Pentru anulare, contactează antrenorul.', 'Less than 24h before the session. Contact your trainer to cancel.');
+  return { poateAnula, motiv };
 }
 
 async function actualizeazaBulinaOrar() {
@@ -3315,12 +3399,7 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Nu ai nicio programare viitoare.', 'You have no upcoming bookings.')}</div>`;
   }
   mele.forEach(o => {
-    // Anulare singură: doar rezervările făcute de ea în aplicație, cu cel puțin 24h înainte (aceeași regulă ca anuleaza_rezervare)
-    const peste24h = (o.data - acum) >= 24 * 3600 * 1000;
-    const poateAnula = o.rezervat_online && peste24h;
-    const motiv = !o.rezervat_online
-      ? tr('Programată de antrenor. Pentru anulare, contactează antrenorul.', 'Booked by your trainer. Contact your trainer to cancel.')
-      : tr('Mai puțin de 24h până la ședință. Pentru anulare, contactează antrenorul.', 'Less than 24h before the session. Contact your trainer to cancel.');
+    const { poateAnula, motiv } = stareAnulareClienta(o);
     html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
       <div style="min-width:0;"><div style="font-weight:800;">${escAttr(etichetaZiSlot(o.data))}</div>
       <div style="font-size:0.82rem; color:var(--text-muted);">${oraSlot(o.data)}${o.antrenament ? ' • ' + escAttr(o.antrenament) : ''}</div>
@@ -3389,10 +3468,17 @@ function htmlZileSiOreClienta(grupuri) {
   const indici = peZi[dateClienta.ziSelectata] || [];
   const programataAzi = dateClienta.zileProgramate && dateClienta.zileProgramate.get(dateClienta.ziSelectata);
   if (programataAzi) {
-    // O singură programare pe zi
-    html += `<div class="card" style="font-size:0.85rem; line-height:1.4;">${escAttr(tr(
-      `Ai deja o programare ${etichetaZiSlot(programataAzi).toLowerCase()} la ${oraSlot(programataAzi)}. Pentru o programare nouă, anuleaz-o întâi pe cea existentă sau contactează antrenorul.`,
-      `You already have a booking on ${etichetaZiSlot(programataAzi)} at ${oraSlot(programataAzi)}. To book another, first cancel the existing one or contact your trainer.`))}</div>`;
+    // O singură programare pe zi: anularea (sau motivul pentru care nu se poate) chiar aici, nu doar în lista de mai jos
+    const d = programataAzi.data;
+    const { poateAnula, motiv } = stareAnulareClienta(programataAzi);
+    const text = programataAzi.bifat
+      ? tr(`Ai avut deja o ședință ${etichetaZiSlot(d).toLowerCase()}, la ${oraSlot(d)}.`, `You already had a session on ${etichetaZiSlot(d)} at ${oraSlot(d)}.`)
+      : tr(`Ai deja o programare ${etichetaZiSlot(d).toLowerCase()} la ${oraSlot(d)}.`, `You already have a booking on ${etichetaZiSlot(d)} at ${oraSlot(d)}.`)
+        + (poateAnula ? tr(' Pentru altă oră, anuleaz-o întâi.', ' To pick another time, cancel it first.') : '');
+    html += `<div class="card" style="font-size:0.85rem; line-height:1.4;">${escAttr(text)}
+      ${programataAzi.bifat ? '' : poateAnula
+        ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="anuleazaRezervareClienta(${programataAzi.row})">${tr('Anulează programarea', 'Cancel booking')}</button>`
+        : `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">${motiv}</div>`}</div>`;
   } else if (indici.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${grupuri.length ? tr('Nicio oră liberă în această zi.', 'No open spots on this day.') : tr('Momentan nu sunt locuri deschise pentru rezervări.', 'There are no open spots right now.')}</div>`;
   }
@@ -3996,6 +4082,8 @@ function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, alinia
     if (tipTabCurent === 'orar') {
       if (aliniazaLaOraCurenta) {
         autoScrollLaOraCurenta();
+      } else if (oraEvidentiata && oraEvidentiata.zi === getSaptamanaCheie() + '_' + ziCurentaCheie && Date.now() - oraEvidentiata.moment < 5000) {
+        aratOraInOrar(oraEvidentiata.ora, true);
       } else {
         let now = new Date();
         let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
@@ -4621,6 +4709,10 @@ function randeazaOrarInstant() {
     }
 
     let lockTitle = esteBlocat ? (currentLang === 'en' ? 'Unlock hour' : 'Deblochează ora') : (currentLang === 'en' ? 'Block hour' : 'Blochează ora');
+    // Oră suplimentară goală: se poate șterge (stergeOraCustom)
+    let stergeOraHtml = !oreStandard.includes(ora) && ocupate === 0 && !sloturiOra.some(s => s && s.bifat)
+      ? `<button class="btn-sterge-ora" onclick="stergeOraCustom('${ziCurentaCheie}', '${ora}')" title="${tr('Șterge ora suplimentară', 'Remove extra hour')}" aria-label="${tr('Șterge ora suplimentară', 'Remove extra hour')}">×</button>`
+      : '';
 
     html += `
       <div class="hour-block ${esteBlocat ? 'hour-block-blocked' : ''}" data-ora="${ora}">
@@ -4631,8 +4723,11 @@ function randeazaOrarInstant() {
             </button>
             <span>${ora}</span>
           </div>
-          ${clientsBadgeHtml}
-          ${badgeHtml}
+          <div class="hour-header-dreapta">
+            ${clientsBadgeHtml}
+            ${badgeHtml}
+            ${stergeOraHtml}
+          </div>
         </div>
         <div class="hour-slots-wrapper" ${esteBlocat ? 'style="pointer-events: none; user-select: none;"' : ''}>
     `;
@@ -5173,11 +5268,40 @@ function adaugaOraCustom() {
     return;
   }
 
-  callBackend("adaugaOraCustom", { saptamanaCheie: saptamanaCheie, zi: ziCurentaCheie, ora: oraNorm }, function(res) {
-    showToast(t('toastHourAdded') + res.ora);
+  const zi = ziCurentaCheie;
+  callBackend("adaugaOraCustom", { saptamanaCheie: saptamanaCheie, zi: zi, ora: oraNorm }, function(res) {
+    // Ora se adaugă doar în ziua selectată: toast-ul o spune explicit
+    const zCfg = getZileConfig().find(z => z.cheie === zi);
+    const ziText = zCfg ? `${zCfg.nume}, ${formatZiLuna(zCfg.dataDate)}` : '';
+    showToast(tr(`✓ Ora ${res.ora} adăugată pentru ${ziText}`, `✓ ${res.ora} added for ${ziText}`));
     if (inp) inp.value = '';
+    // Rândurile noi intră direct în orar, ca ora să se vadă imediat; reîncărcarea completă vine după
+    if (Array.isArray(res.randuri)) DB.orarSloturi = (DB.orarSloturi || []).concat(res.randuri);
+    if (ziCurentaCheie === zi) {
+      randeazaOrarInstant();
+      aratOraInOrar(res.ora);
+    }
     incarcaBazaDateSilencios();
   });
+}
+
+// O oră suplimentară adăugată greșit se poate scoate cât e goală (fără cliente și fără prezențe)
+function stergeOraCustom(zi, ora) {
+  customConfirm(tr('Ștergi ora suplimentară?', 'Remove the extra hour?'), tr(`Ora ${ora} dispare din această zi.`, `${ora} is removed from this day.`), () => {
+    const tagZi = getSaptamanaCheie() + "_" + zi;
+    callBackend("stergeOraCustom", { saptamanaCheie: getSaptamanaCheie(), zi: zi, ora: ora }, function(res) {
+      if (!res || !res.success) {
+        showToast(tr('Ora are deja programări și nu se poate șterge.', 'This hour already has bookings and cannot be removed.'), 'error');
+        incarcaBazaDateSilencios();
+        return;
+      }
+      DB.orarSloturi = (DB.orarSloturi || []).filter(s => !(s && (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === getSaptamanaCheie() + "_Marți")) && normalizeazaOraUi(s.ora) === ora));
+      randeazaOrarInstant();
+      showToast(tr(`Ora ${ora} a fost ștearsă`, `${ora} removed`));
+      incarcaBazaDateSilencios();
+    });
+  });
+  document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Remove');
 }
 
 function filtreazaIstoricOrarInstant() {
@@ -6038,6 +6162,8 @@ async function incarcaNotificari() {
         notificari.unshift(payload.new);
         actualizeazaBulinaNotificari();
         if (!document.getElementById('panouNotificari').classList.contains('auth-hidden')) randeazaNotificari();
+        // Plan nou, notă, abonament: clientul vede imediat și conținutul, nu doar notificarea
+        reincarcaDateClienta();
       })
       .subscribe();
   }
@@ -6107,6 +6233,12 @@ function htmlCardPush() {
   const esteIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const instalata = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   let text = '', buton = '';
+  // Mesajul „blocate” închis cu ×: nu mai apare pe acest dispozitiv cât notificările rămân blocate
+  const blocate = suportaPush() && Notification.permission === 'denied';
+  try {
+    if (!blocate) localStorage.removeItem('BFIT_PUSH_BLOCAT_ASCUNS');
+    else if (localStorage.getItem('BFIT_PUSH_BLOCAT_ASCUNS')) return '';
+  } catch (e) {}
   if (!suportaPush()) {
     if (!esteIos || instalata) return '';
     text = tr('Pe iPhone, notificările ajung doar dacă adaugi aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'On iPhone, notifications only arrive if you add the app to your home screen: Share › “Add to Home Screen”.');
@@ -6114,11 +6246,17 @@ function htmlCardPush() {
     text = tr('Primește notificările pe telefon, chiar și cu aplicația închisă.', 'Get notifications on your phone, even with the app closed.');
     buton = `<button type="button" class="btn" onclick="activeazaPush()">${tr('Pornește', 'Turn on')}</button>`;
   } else if (Notification.permission === 'denied') {
-    text = tr('Notificările sunt blocate pentru B-Fit. Le poți porni din setările telefonului.', 'Notifications are blocked for B-Fit. You can turn them on in your phone settings.');
+    text = tr('Notificările sunt blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Notifications are blocked for B-Fit. You can turn them on in your browser or phone settings.');
+    buton = `<button type="button" class="notificare-x card-push-x" onclick="ascundeMesajPushBlocat()" aria-label="${tr('Închide', 'Close')}">×</button>`;
   } else {
     return '';
   }
-  return `<div class="card card-push"><span>${text}</span>${buton}</div>`;
+  return `<div class="card card-push${blocate ? ' card-push-blocat' : ''}"><span>${text}</span>${buton}</div>`;
+}
+
+function ascundeMesajPushBlocat() {
+  try { localStorage.setItem('BFIT_PUSH_BLOCAT_ASCUNS', '1'); } catch (e) {}
+  randeazaNotificari();
 }
 
 if ('serviceWorker' in navigator) {
@@ -6195,8 +6333,10 @@ function randeazaNotificari() {
   // Necititele rămân evidențiate cât timp panoul e deschis (au fost desenate înainte de marcarea ca citite)
   corp.innerHTML = htmlCardPush() + notificari.map(n => {
     const [titlu, mesaj] = textNotificare(n);
+    // Fără loc în aplicație unde să ducă: rămâne doar de citit; clientul șters răspunde totuși cu un mesaj
+    const actiune = areDestinatieNotificare(n) || esteClientSters(n) ? `onclick="deschideNotificare('${n.id}')"` : 'disabled';
     return `<div class="notificare-rand">
-      <button type="button" class="notificare${n.citit ? '' : ' necitita'}" onclick="deschideNotificare('${n.id}')">
+      <button type="button" class="notificare${n.citit ? '' : ' necitita'}" ${actiune}>
         <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
         <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
         <small>${escAttr(cand(n.created_at))}</small>
@@ -6229,22 +6369,42 @@ function stergeToateNotificarile() {
 }
 
 // Atingerea unei notificări duce la locul potrivit din aplicație
+// Tipurile care duc undeva în aplicație; restul (tip necunoscut, client șters) rămân doar de citit
+function areDestinatieNotificare(n) {
+  const d = n.date || {};
+  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua'].includes(n.tip);
+  if (n.tip === 'checkin_nou') return (DB.clienti || []).some(c => c.id === d.client_id);
+  return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira'].includes(n.tip);
+}
+
+// Check-in de la un client care nu mai e în listă (șters)
+function esteClientSters(n) {
+  return rolUtilizator !== 'clienta' && n.tip === 'checkin_nou' && !areDestinatieNotificare(n);
+}
+
 function deschideNotificare(id) {
   const n = notificari.find(x => x.id === id);
   if (!n) return;
+  if (esteClientSters(n)) return showToast(tr('Clientul nu mai e în listă.', 'This client is no longer in your list.'));
+  if (!areDestinatieNotificare(n)) return;
   if (n.tip === 'lipsa_checkin') return arataLipsaCheckin(n);
-  // Check-in de la un client care nu mai e în listă (șters): rămânem în panou
-  if (rolUtilizator !== 'clienta' && n.tip === 'checkin_nou' && !(DB.clienti || []).some(c => c.id === (n.date || {}).client_id)) {
-    return showToast(tr('Clientul nu mai e în listă.', 'This client is no longer in your list.'));
-  }
   inchidePanouNotificari();
   if (rolUtilizator === 'clienta') {
     if (n.tip === 'checkin_memento') { clientaTab('fisa'); return; }
     clientaTab(n.tip === 'programare_maine' ? 'orar' : 'acasa');
+    // Planul nou se deschide direct, dacă îl găsim după titlu
+    const iPlan = n.tip === 'plan_nou' ? dateClienta.planuri.findIndex(p => p.titlu === (n.date || {}).titlu) : -1;
+    if (iPlan !== -1) deschidePlanClienta(iPlan);
     return;
   }
-  if (n.tip === 'rezervare' || n.tip === 'anulare') { document.getElementById('navBtnOrar').click(); return; }
+  if (n.tip === 'rezervare' || n.tip === 'anulare') return mergiLaOraDinOrar((n.date || {}).zi, (n.date || {}).ora);
   document.getElementById('navBtnFisa').click();
+  if (n.tip === 'cerere_noua') {
+    // Cererile noi stau sus, deasupra listei de clienți
+    inapoiLaListaClienteFisa();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
   if (n.tip === 'checkin_nou' && n.date && n.date.client_id) {
     const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
     if (client) {
