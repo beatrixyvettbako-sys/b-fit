@@ -1645,6 +1645,24 @@ html[data-rol="clienta"] .doar-antrenor {
   padding-bottom: 24px;
 }
 
+/* Pornirea notificărilor push, deasupra listei */
+.card-push {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.card-push .btn {
+  width: auto;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
 .notificari-gol {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -5180,4 +5198,269 @@ select.slot-select-type {
 
 .hour-motiv-input:focus {
   border-color: var(--accent-purple);
+}
+
+/* Fișa: cine e clientul + banda medicală (randeazaAntetFisa) */
+.fisa-profil {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.fisa-profil-avatar {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.fisa-profil-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.fisa-profil-text b {
+  font-size: 1.05rem;
+  color: var(--primary);
+  overflow-wrap: anywhere;
+}
+
+.fisa-profil-text small {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.fisa-banda-medicala {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(185, 28, 28, 0.08);
+  border: 1px solid rgba(185, 28, 28, 0.35);
+  border-left: 4px solid #b91c1c;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.fisa-banda-medicala > b {
+  color: #b91c1c;
+  font-size: 0.8rem;
+}
+
+/* Notița antrenorului: câmpul din fișă și cardul de pe Acasă al clientului */
+.nota-client-text {
+  margin-top: 8px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.nota-antrenor-card {
+  border-left: 4px solid var(--accent-purple) !important;
+}
+
+.nota-antrenor-titlu {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.nota-antrenor-titlu small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.nota-antrenor-text {
+  margin-top: 4px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* Progres: obiectivul cu bară, cântăririle de la sală și controalele antrenorului */
+.obiectiv-progres {
+  margin: 10px 0 4px;
+}
+
+.obiectiv-sus {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.obiectiv-sus > b {
+  color: var(--primary);
+}
+
+.obiectiv-detalii {
+  margin-top: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.obiectiv-progres.atins .obiectiv-detalii {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.progres-controale {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.progres-control label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.progres-control-rand {
+  display: flex;
+  gap: 6px;
+}
+
+.progres-control-rand .form-control {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+}
+
+.progres-control-rand .obiectiv-kg {
+  flex: 0 0 72px;
+}
+
+.progres-control-rand .btn {
+  width: auto;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+.greutati-sala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.greutate-sala {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 9px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 0.78rem;
+}
+
+.greutate-sala button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #b91c1c;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Insignele clientului (Istoric) */
+.insigne-card {
+  margin-top: 10px;
+}
+
+.insigne-antet {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.insigne-antet span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.insigne-grila {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.insigna {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.insigna-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-light);
+  border: 1.5px dashed var(--border);
+}
+
+.insigna-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.insigna.obtinuta {
+  color: var(--text);
+}
+
+.insigna.obtinuta .insigna-icon {
+  background: linear-gradient(135deg, #f5b041 0%, #ea580c 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.3);
+}
+
+.insigna-nume {
+  line-height: 1.2;
+}
+
+.insigna-cat {
+  font-size: 0.68rem;
+  font-weight: 600;
 }

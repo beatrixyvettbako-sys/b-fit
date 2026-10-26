@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v88';
+const CACHE_NAME = 'bfit-cache-v89';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -34,6 +34,31 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => self.clients.claim())
   );
+});
+
+// Notificări push: mesajul vine criptat de la Worker-ul B-Fit, cu titlul și textul deja compuse
+self.addEventListener('push', (event) => {
+  let m = {};
+  try { m = event.data ? event.data.json() : {}; } catch (e) {}
+  event.waitUntil(self.registration.showNotification(m.titlu || 'B-Fit', {
+    body: m.corp || '',
+    tag: m.tag || undefined,
+    data: { url: m.url || './' }
+  }));
+});
+
+// Atingerea notificării: aplicația deschisă trece în prim-plan cu panoul de notificări; altfel se deschide
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = new URL((event.notification.data && event.notification.data.url) || './', self.registration.scope).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ferestre) => {
+    const deschisa = ferestre.find((f) => f.url.startsWith(self.registration.scope));
+    if (deschisa) {
+      deschisa.postMessage({ tip: 'deschide-notificari' });
+      return deschisa.focus();
+    }
+    return self.clients.openWindow(url);
+  }));
 });
 
 self.addEventListener('fetch', (event) => {
