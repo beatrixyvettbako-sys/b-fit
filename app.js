@@ -121,6 +121,7 @@ const i18n = {
     accentRed: "Roșu",
     accentGreen: "Verde",
     accentGraphite: "Grafit",
+    accentMov: "Mov",
     langTitle: "Limbă / Language",
     toastThemeUpdated: "✓ Temă actualizată!",
     toastLangRo: "✓ Limbă setată pe Română",
@@ -165,7 +166,7 @@ const i18n = {
     toastTextCopied: "✓ Antrenament copiat ca text!",
     toastPdfGenerating: "Se generează PDF-ul...",
 
-    authSubtitleLogin: "Autentificare antrenor & administrare",
+    authSubtitleLogin: "Antrenamente, programări și progres",
     authSubtitleSignup: "Creează un cont nou pentru studio",
     authTabLogin: "Intră în cont",
     authTabSignup: "Creează cont",
@@ -173,7 +174,7 @@ const i18n = {
     authPasswordLabel: "Parolă",
     authSubmitBtnLogin: "Intră în cont",
     authSubmitBtnSignup: "Creează cont",
-    authMagicLinkBtn: "Conectare fără parolă (Magic Link)",
+    authMagicLinkBtn: "Primește un link pe email",
     authDividerOr: "sau",
     authGoogleBtn: "Conectare cu Google",
     authProcessing: "Se procesează...",
@@ -277,6 +278,7 @@ const i18n = {
     accentRed: "Red",
     accentGreen: "Green",
     accentGraphite: "Graphite",
+    accentMov: "Violet",
     langTitle: "Language / Limbă",
     toastThemeUpdated: "✓ Theme updated!",
     toastLangRo: "✓ Limbă setată pe Română",
@@ -321,7 +323,7 @@ const i18n = {
     toastTextCopied: "✓ Workout copied as text!",
     toastPdfGenerating: "Generating PDF...",
 
-    authSubtitleLogin: "Coach authentication & administration",
+    authSubtitleLogin: "Workouts, bookings and progress",
     authSubtitleSignup: "Create a new studio management account",
     authTabLogin: "Log In",
     authTabSignup: "Create Account",
@@ -329,7 +331,7 @@ const i18n = {
     authPasswordLabel: "Password",
     authSubmitBtnLogin: "Log In",
     authSubmitBtnSignup: "Create Account",
-    authMagicLinkBtn: "Passwordless login (Magic Link)",
+    authMagicLinkBtn: "Email me a sign-in link",
     authDividerOr: "or",
     authGoogleBtn: "Sign in with Google",
     authProcessing: "Processing...",
@@ -497,6 +499,7 @@ function comutaTabAuth(mod) {
   if (uitatParola) uitatParola.hidden = mod !== 'login';
   const notaAntrenor = document.getElementById('authNotaAntrenor');
   if (notaAntrenor) notaAntrenor.hidden = mod === 'login';
+  actualizeazaLinkComutareAuth();
 
   if (mod === 'login') {
     if (tabLogin) tabLogin.classList.add('active');
@@ -509,6 +512,14 @@ function comutaTabAuth(mod) {
     if (btnSubmit) btnSubmit.innerText = t('authSubmitBtnSignup');
     if (subTitle) subTitle.innerText = t('authSubtitleSignup');
   }
+}
+
+// Linkul de la finalul ecranului de autentificare: contul nou (doar pentru antrenori) sau întoarcerea la intrare
+function actualizeazaLinkComutareAuth() {
+  const link = document.getElementById('authLinkComutare');
+  if (link) link.innerText = tipModAuth === 'login'
+    ? tr('Ești antrenor? Creează cont', 'Are you a trainer? Create an account')
+    : tr('Ai deja cont? Intră în cont', 'Already have an account? Log in');
 }
 
 async function gestioneazaSubmitAuth(e) {
@@ -2451,6 +2462,7 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('accentBtnRedText').innerText = t('accentRed');
   document.getElementById('accentBtnGreenText').innerText = t('accentGreen');
   document.getElementById('accentBtnGraphiteText').innerText = t('accentGraphite');
+  document.getElementById('accentBtnMovText').innerText = t('accentMov');
   document.getElementById('langSectionTitle').innerText = t('langTitle');
 
   document.getElementById('modalTitle').innerText = t('confirmTitle');
@@ -2480,6 +2492,7 @@ function aplicaTraduceriInterfataStatic() {
   if (elTabLog) elTabLog.innerText = t('authTabLogin');
   const elTabSign = document.getElementById('authTabSignup');
   if (elTabSign) elTabSign.innerText = t('authTabSignup');
+  actualizeazaLinkComutareAuth();
   const elLblEmail = document.getElementById('authEmailLabel');
   if (elLblEmail) elLblEmail.innerText = t('authEmailLabel');
   const elLblPass = document.getElementById('authPasswordLabel');
@@ -3733,7 +3746,7 @@ function citesteEroareLinkAuth() {
   const parametri = new URLSearchParams(window.location.hash.replace(/^#/, '') || window.location.search);
   if (!parametri.get('error') && !parametri.get('error_code')) return '';
   history.replaceState(null, '', window.location.pathname);
-  return tr('Linkul a expirat sau a fost deja folosit. Conectează-te cu email și parolă, sau cere un link nou cu Magic Link.', 'The link has expired or was already used. Sign in with email and password, or request a new link with Magic Link.');
+  return tr('Linkul a expirat sau a fost deja folosit. Conectează-te cu email și parolă, sau cere un link nou pe email.', 'The link has expired or was already used. Sign in with email and password, or request a new link by email.');
 }
 
 // Aplicația antrenorului devine vizibilă doar după ce știm ce ecran urmează (vezi html.app-pornire în CSS)
@@ -8670,8 +8683,8 @@ function seteazaTema(optiune, silent = false) {
 // Valorile curente afișate sub cardurile din Setări (Aspect, Limbă, Orar, Link de înscriere)
 function actualizeazaRezumatSetari() {
   let tema = localStorage.getItem('beatrix_theme') || 'system';
-  let accent = localStorage.getItem('beatrix_accent') || 'petrol';
-  if (accent === 'violet') accent = 'petrol';
+  let accent = localStorage.getItem('beatrix_accent') || 'blue';
+  if (accent === 'violet') accent = 'blue';
   let elAspect = document.getElementById('setariRezumatAspect');
   if (elAspect) elAspect.textContent = [
     t(tema === 'light' ? 'lightTheme' : tema === 'dark' ? 'darkTheme' : 'systemTheme'),
@@ -8688,9 +8701,10 @@ function actualizeazaRezumatSetari() {
     : tr('Nesetat', 'Not set');
 }
 
-// Paleta de culori: petrol (implicit, fără atribut, ca iconița și manifest.json) sau celelalte (data-accent="blue" etc.).
-// Movul de dinainte a fost înlocuit de petrol: „violet” salvat pe dispozitive devine petrol.
-const PALETE_ACCENT = ['petrol', 'blue', 'red', 'green', 'graphite'];
+// Paleta de culori: albastru (implicit; <html data-accent="blue"> din index.html, ca iconița și manifest.json) sau celelalte.
+// Petrolul își păstrează valorile în :root din style.css și apare doar când atributul lipsește (vezi scriptul din <head>).
+// „violet” (vechiul mov) și petrolul implicit din v95 trec o singură dată pe albastru (beatrix_paleta_v96); movul de acum e „mov”.
+const PALETE_ACCENT = ['blue', 'petrol', 'mov', 'red', 'green', 'graphite'];
 
 function actualizeazaButoaneSetariOrar() {
   let val = document.getElementById('setariLocuriValoare');
@@ -8737,15 +8751,17 @@ function seteazaSetariOrar(modificari, dinCont = false) {
 }
 
 function seteazaAccent(optiune, silent = false) {
-  const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'petrol';
+  const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'blue';
   localStorage.setItem('beatrix_accent', paleta);
   if (paleta === 'petrol') document.documentElement.removeAttribute('data-accent');
   else document.documentElement.setAttribute('data-accent', paleta);
   PALETE_ACCENT.forEach(p => {
     document.getElementById('accentBtn' + p.charAt(0).toUpperCase() + p.slice(1))?.classList.toggle('active', p === paleta);
   });
-  // Iconița din tab și cea de pe ecranul principal (iOS o citește la „Add to Home Screen”) urmează paleta
-  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.setAttribute('href', paleta === 'petrol' ? 'icon.svg' : `icon-${paleta}.svg`));
+  // Iconița din tab, cea de pe ecranul principal (iOS o citește la „Add to Home Screen”) și logoul de la autentificare urmează paleta
+  document.querySelector('link[rel="icon"]')?.setAttribute('href', `icon-${paleta}.png`);
+  document.querySelector('link[rel="apple-touch-icon"]')?.setAttribute('href', `apple-${paleta}.png`);
+  document.getElementById('authLogoImg')?.setAttribute('src', `icon-${paleta}.png`);
   actualizeazaRezumatSetari();
   if (!silent) showToast(t('toastThemeUpdated'));
 }
@@ -8787,7 +8803,15 @@ function seteazaLimba(lang, silent = false) {
 (function() {
   let temaSalvata = localStorage.getItem('beatrix_theme') || 'system';
   seteazaTema(temaSalvata, true);
-  seteazaAccent(localStorage.getItem('beatrix_accent') || 'petrol', true);
+  // Migrare unică (v96): cine nu a ales nimic, are petrolul implicit din v95 sau vechiul „violet” trece pe albastru
+  try {
+    if (!localStorage.getItem('beatrix_paleta_v96')) {
+      const veche = localStorage.getItem('beatrix_accent');
+      if (!veche || veche === 'petrol' || veche === 'violet') localStorage.setItem('beatrix_accent', 'blue');
+      localStorage.setItem('beatrix_paleta_v96', '1');
+    }
+  } catch (e) {}
+  seteazaAccent(localStorage.getItem('beatrix_accent') || 'blue', true);
   actualizeazaButoaneSetariOrar();
   // Subsol meniu: anul curent și versiunea din adresa app.js (?v=fitFinalN, urcată la fiecare publicare)
   const elAn = document.getElementById('footerAn');

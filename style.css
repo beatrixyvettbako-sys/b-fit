@@ -78,6 +78,60 @@
   --status-bar-color: #0f5e63;
 }
 
+/* Paleta mov (fosta culoare implicită, acum la alegere din Setări): aceeași structură ca celelalte */
+:root[data-accent="mov"] {
+  --primary-rgb: 92, 77, 125;
+  --primary-dark-rgb: 67, 53, 93;
+  --accent-rgb: 139, 92, 246;
+  --accent-light-rgb: 167, 139, 250;
+  --brand: #5c4d7d;
+  --brand-mid: #7c68a6;
+  --brand-mid2: #7660a3;
+  --accent-pale-rgb: 196, 181, 253;
+  --primary-soft-rgb: 155, 132, 204;
+  --text-soft: #e2d9f3;
+  --text-soft2: #cbb8ee;
+  --brand-deep: #3b2d54;
+  --print-bg: #f5f3fa;
+  --print-head-bg: #ece8f4;
+  --print-head-text: #43355d;
+  --print-border: #c4bcd6;
+  --accent-purple: #8b5cf6;
+  --status-bar-color: #5c4d7d;
+}
+
+:root[data-accent="mov"]:not([data-theme="dark"]) {
+  --primary: #5c4d7d;
+  --primary-dark: #43355d;
+  --primary-light: rgba(236, 231, 244, 0.78);
+  --bg: #f2eff8;
+  --bg-gradient: radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.13) 0%, transparent 45%),
+                 radial-gradient(circle at 88% 30%, rgba(var(--primary-rgb), 0.12) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 92%, rgba(var(--accent-light-rgb), 0.1) 0%, transparent 50%),
+                 linear-gradient(180deg, #f5f3fa 0%, #ece8f4 100%);
+  --header-glass-bg: rgba(235, 229, 246, 0.8);
+  --day-bar-glass: rgba(235, 229, 246, 0.8);
+  --border: rgba(196, 188, 214, 0.55);
+  --accent-purple-light: #c4b5fd;
+}
+
+:root[data-accent="mov"][data-theme="dark"] {
+  --primary: #9b84cc;
+  --primary-dark: #b8a5e3;
+  --primary-light: rgba(58, 46, 84, 0.65);
+  --bg: #0f0d16;
+  --bg-gradient: radial-gradient(circle at 15% 10%, rgba(var(--accent-rgb), 0.18) 0%, transparent 45%),
+                 radial-gradient(circle at 85% 35%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%),
+                 linear-gradient(180deg, #12101b 0%, #0b0a10 100%);
+  --card-bg: rgba(28, 25, 39, 0.86);
+  --card-bg-solid: #1c1927;
+  --glass-border-subtle: rgba(155, 132, 204, 0.22);
+  --input-glass-bg: rgba(18, 16, 26, 0.82);
+  --header-glass-bg: rgba(22, 18, 32, 0.8);
+  --day-bar-glass: rgba(22, 18, 32, 0.8);
+  --accent-purple-light: #d8b4fe;
+}
+
 /* Paleta albastră: aceeași structură ca cea mov. Blocul comun e independent de temă, celelalte două sunt exclusive (luminos / întunecat). */
 :root[data-accent="blue"] {
   --primary-rgb: 51, 92, 143;
@@ -363,6 +417,28 @@ html.app-pornire #bottomNav {
   color: var(--accent-purple-light);
 }
 
+/* Contul nou e doar pentru antrenori: un link discret la final, nu un tab la egalitate cu intrarea */
+.auth-tabs[hidden] {
+  display: none;
+}
+
+.auth-link-comutare {
+  display: block;
+  margin: 14px auto 0;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .auth-link-comutare {
+  color: var(--accent-purple-light);
+}
+
 /* CÂMPURI PAROLĂ CU OCHIȘOR */
 .password-field-wrap {
   position: relative;
@@ -602,11 +678,13 @@ header {
               inset 0 2px 3px rgba(255, 255, 255, 0.9);
 }
 
-.auth-app-icon-wrap svg {
+.auth-app-icon-wrap svg,
+.auth-app-icon-wrap img {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   display: block;
+  object-fit: cover;
 }
 
 .auth-title {
@@ -1066,10 +1144,6 @@ header {
 
 .accent-grid > .theme-option-btn {
   grid-column: span 2;
-}
-
-.accent-grid > .theme-option-btn:nth-child(4) {
-  grid-column: 2 / span 2;
 }
 
 /* ECRANUL CLIENTEI (rol „clienta”): ecran propriu peste aplicație, sertarul (z-index 10001) rămâne deasupra */

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro" class="app-pornire">
+<html lang="ro" class="app-pornire" data-accent="blue">
 <head>
   <meta charset="UTF-8">
   <title>B-Fit</title>
@@ -9,12 +9,16 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="B-Fit">
-  <meta name="theme-color" content="#0f5e63">
-  
-  <link rel="icon" type="image/svg+xml" href="icon.svg">
-  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="theme-color" content="#335c8f">
+  <!-- Culoarea implicită e albastrul (data-accent="blue" pe <html>). Petrolul, singura paletă fără bloc propriu în CSS
+       (valorile lui sunt în :root), apare doar dacă a fost ales în Setări: atributul se scoate înainte de prima afișare,
+       ca să nu pâlpâie albastru. „beatrix_paleta_v96” = migrarea de la petrolul implicit a fost făcută (vezi app.js). -->
+  <script>try { if (localStorage.getItem('beatrix_paleta_v96') && localStorage.getItem('beatrix_accent') === 'petrol') document.documentElement.removeAttribute('data-accent'); } catch (e) {}</script>
+
+  <link rel="icon" type="image/png" href="icon-blue.png">
+  <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal95">
+  <link rel="stylesheet" href="style.css?v=fitFinal96">
 </head>
 <body>
 
@@ -126,33 +130,17 @@
         <button type="button" class="auth-lang-btn" id="authLangBtnEn" onclick="seteazaLimba('en')">🇬🇧 EN</button>
       </div>
 
-      <!-- Logo Rotund Modern Liquid Glass Mov -->
+      <!-- Logoul = iconița aplicației în culoarea paletei alese (src-ul îl pune seteazaAccent) -->
       <div class="auth-app-icon-wrap">
-        <svg viewBox="0 0 512 512" width="64" height="64">
-          <defs>
-            <linearGradient id="liquidPurpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:var(--accent-purple)"/>
-              <stop offset="50%" style="stop-color:var(--brand)"/>
-              <stop offset="100%" style="stop-color:var(--brand-deep)"/>
-            </linearGradient>
-            <linearGradient id="glassShineGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
-              <stop offset="45%" stop-color="#ffffff" stop-opacity="0.08"/>
-              <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          <circle cx="256" cy="256" r="256" fill="url(#liquidPurpleGrad)"/>
-          <ellipse cx="256" cy="120" rx="185" ry="92" fill="url(#glassShineGrad)"/>
-          <circle cx="256" cy="256" r="246" fill="none" stroke="rgba(255,255,255,0.38)" stroke-width="6"/>
-          <path d="M125.8 170.7c-21.7 0-39.3 17.6-39.3 39.3v17.5H74.1c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h12.4v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h17.5c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-17.5V210c0-21.7-17.6-39.3-39.3-39.3zm260.4 0c-21.7 0-39.3 17.6-39.3 39.3v17.5h-17.5c-14.5 0-26.2 11.7-26.2 26.2v4.4c0 14.5 11.7 26.2 26.2 26.2h17.5v17.5c0 21.7 17.6 39.3 39.3 39.3s39.3-17.6 39.3-39.3v-17.5h12.4c14.5 0 26.2-11.7 26.2-26.2v-4.4c0-14.5-11.7-26.2-26.2-26.2h-12.4V210c0-21.7-17.6-39.3-39.3-39.3zm-174.9 66.8h89.4v37H211.3v-37z" fill="#ffffff"/>
-        </svg>
+        <img id="authLogoImg" src="icon-blue.png" alt="B-Fit" width="64" height="64">
       </div>
 
       <div class="auth-title">B-Fit</div>
-      <div class="auth-subtitle" id="authSubtitleText">Autentificare antrenor & administrare</div>
+      <div class="auth-subtitle" id="authSubtitleText">Antrenamente, programări și progres</div>
 
-      <!-- Tab-uri Comutare Login / Înregistrare -->
-      <div class="auth-tabs">
+      <!-- Tab-urile Login / Înregistrare rămân pentru starea lor (comutaTabAuth), dar nu se văd:
+           contul nou e doar pentru antrenori, așa că se ajunge la el din linkul de la final (#authLinkComutare) -->
+      <div class="auth-tabs" hidden>
         <button type="button" class="auth-tab-btn active" id="authTabLogin" onclick="comutaTabAuth('login')">Intră în cont</button>
         <button type="button" class="auth-tab-btn" id="authTabSignup" onclick="comutaTabAuth('signup')">Creează cont</button>
       </div>
@@ -187,12 +175,12 @@
           Intră în cont
         </button>
 
-        <!-- Opțiune Magic Link -->
+        <!-- Intrare fără parolă: link de conectare trimis pe email (Supabase magic link) -->
         <button type="button" class="btn btn-clear" style="width:100%; padding:8px; font-size:0.78rem;" id="authMagicLinkBtn" onclick="trimiteMagicLink()">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17v4M17 19h4"/></svg>
-          <span id="authMagicLinkBtnText">Conectare fără parolă (Magic Link)</span>
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+          <span id="authMagicLinkBtnText">Primește un link pe email</span>
         </button>
-        <div style="font-size:0.72rem; color:var(--text-muted); text-align:center; line-height:1.35;" data-en="Got an invitation? Enter your email and tap Magic Link.">Ai primit o invitație? Introdu emailul și apasă Magic Link.</div>
+        <div style="font-size:0.72rem; color:var(--text-muted); text-align:center; line-height:1.35;" data-en="Got an invitation? Enter your email and request the link.">Ai primit o invitație? Introdu emailul și cere linkul.</div>
       </form>
 
       <div class="auth-divider">
@@ -211,6 +199,9 @@
       </button>
 
       <div id="authStatusFeedback" class="auth-status-msg" style="display:none;"></div>
+
+      <!-- Comutarea intrare / cont nou (textul îl pune comutaTabAuth) -->
+      <button type="button" class="auth-link-comutare" id="authLinkComutare" onclick="comutaTabAuth(tipModAuth === 'login' ? 'signup' : 'login')">Ești antrenor? Creează cont</button>
     </div>
   </div>
 
@@ -559,11 +550,14 @@
         <div class="drawer-section" style="margin-top:14px;">
           <div class="drawer-section-title" id="accentSectionTitle">Culoare</div>
           <div class="theme-selector-grid accent-grid">
+            <button class="theme-option-btn" id="accentBtnBlue" onclick="seteazaAccent('blue')">
+              <span class="accent-swatch" style="background:#3b82f6;"></span> <span id="accentBtnBlueText">Albastru</span>
+            </button>
             <button class="theme-option-btn" id="accentBtnPetrol" onclick="seteazaAccent('petrol')">
               <span class="accent-swatch" style="background:#12a4ab;"></span> <span id="accentBtnPetrolText">Petrol</span>
             </button>
-            <button class="theme-option-btn" id="accentBtnBlue" onclick="seteazaAccent('blue')">
-              <span class="accent-swatch" style="background:#3b82f6;"></span> <span id="accentBtnBlueText">Albastru</span>
+            <button class="theme-option-btn" id="accentBtnMov" onclick="seteazaAccent('mov')">
+              <span class="accent-swatch" style="background:#8b5cf6;"></span> <span id="accentBtnMovText">Mov</span>
             </button>
             <button class="theme-option-btn" id="accentBtnRed" onclick="seteazaAccent('red')">
               <span class="accent-swatch" style="background:#e11d48;"></span> <span id="accentBtnRedText">Roșu</span>
@@ -1499,6 +1493,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal95"></script>
+  <script src="app.js?v=fitFinal96"></script>
 </body>
 </html>
