@@ -2526,6 +2526,21 @@ html[data-rol="clienta"] #bottomNav {
   padding-right: 30px;
 }
 
+/* Pe telefon chevronul de dropdown e desenat de aspectul nativ al câmpului (nu de iconița lui):
+   fără aspect nativ rămâne doar iconița noastră */
+.camp-data-cu-icona input,
+.camp-ora input {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* iPhone: fără aspect nativ, câmpul gol își pierde înălțimea și textul se centrează */
+.camp-data-cu-icona input::-webkit-date-and-time-value,
+.camp-ora input::-webkit-date-and-time-value {
+  min-height: 1.35em;
+  text-align: left;
+}
+
 /* Săgeata / iconița browserului (pe Android apare ca chevron) rămâne apăsabilă, dar invizibilă și peste tot câmpul */
 .camp-data-cu-icona input::-webkit-calendar-picker-indicator {
   position: absolute;
