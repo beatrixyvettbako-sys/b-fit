@@ -55,7 +55,7 @@ const i18n = {
     endScheduleTitle: "Ziua-i gata, caloriile-s topite!",
     endScheduleSubtitle: "Antrenorul a supraviețuit și azi!",
     addExtraHour: "Oră suplimentară",
-    addBtn: "+ Adaugă",
+    addBtn: "Adaugă",
     historyOrarTitle: "Istoric Prezențe",
     filterClient: "Filtrează după client:",
     filterMonth: "Filtrează după lună:",
@@ -63,7 +63,7 @@ const i18n = {
     allMonths: "Toate lunile",
     noPresence: "Nici o prezență înregistrată în această zi din trecut.",
     noPresenceFound: "Nici o prezență găsită.",
-    addClientPlaceholder: "+ Adaugă client",
+    addClientPlaceholder: "Adaugă client",
     activeSection: "Activ",
     holdSection: "Hold",
     noRecords: "Nici o înregistrare",
@@ -105,7 +105,7 @@ const i18n = {
     paymentMethodPlaceholder: "Metoda Plata",
     payDateLabel: "Dată Plată",
     payStartLabel: "Dată Start",
-    paySubmitBtn: "Încasează & Salvează Abonamentul",
+    paySubmitBtn: "Salvează încasarea",
     paySavingBtn: "Se salvează...",
     paymentHistoryTitle: "Istoric Încasări",
     totalPaymentsLabel: "Total Încasări",
@@ -211,7 +211,7 @@ const i18n = {
     endScheduleTitle: "Day is done, calories burned!",
     endScheduleSubtitle: "The coach survived today too!",
     addExtraHour: "Extra hour",
-    addBtn: "+ Add",
+    addBtn: "Add",
     historyOrarTitle: "Attendance History",
     filterClient: "Filter by client:",
     filterMonth: "Filter by month:",
@@ -219,7 +219,7 @@ const i18n = {
     allMonths: "All months",
     noPresence: "No attendance recorded on this past day.",
     noPresenceFound: "No attendance found.",
-    addClientPlaceholder: "+ Add client",
+    addClientPlaceholder: "Add client",
     activeSection: "Active",
     holdSection: "Hold",
     noRecords: "No records",
@@ -261,7 +261,7 @@ const i18n = {
     paymentMethodPlaceholder: "Payment Method",
     payDateLabel: "Payment Date",
     payStartLabel: "Start Date",
-    paySubmitBtn: "Charge & Save Subscription",
+    paySubmitBtn: "Save payment",
     paySavingBtn: "Saving...",
     paymentHistoryTitle: "Payment History",
     totalPaymentsLabel: "Total Payments",
@@ -5857,7 +5857,11 @@ function htmlControaleProgres(ob, greutati) {
         <label for="inputObiectivKg">${tr('Obiectiv: greutate și termen', 'Goal: weight and deadline')}</label>
         <div class="progres-control-rand">
           <input type="number" inputmode="decimal" step="0.1" min="30" max="300" id="inputObiectivKg" class="form-control obiectiv-kg" placeholder="kg" value="${ob ? ob.kg : ''}">
-          <input type="date" id="inputObiectivData" class="form-control" value="${ob && ob.data ? ob.data : ''}">
+          <div class="camp-data camp-data-cu-icona">
+            <input type="date" id="inputObiectivData" class="form-control" required onclick="deschideCalendarData(this)" value="${ob && ob.data ? ob.data : ''}">
+            <span class="camp-data-eticheta">${tr('Termen', 'Deadline')}</span>
+            <svg class="camp-data-icona" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </div>
           <button type="button" class="btn" onclick="salveazaObiectiv()">${tr('Salvează', 'Save')}</button>
         </div>
       </div>

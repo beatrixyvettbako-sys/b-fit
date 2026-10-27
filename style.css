@@ -2521,8 +2521,21 @@ html[data-rol="clienta"] #bottomNav {
   pointer-events: none;
 }
 
+.camp-data-cu-icona input {
+  position: relative;
+  padding-right: 30px;
+}
+
+/* Săgeata / iconița browserului (pe Android apare ca chevron) rămâne apăsabilă, dar invizibilă și peste tot câmpul */
 .camp-data-cu-icona input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
   opacity: 0;
+  cursor: pointer;
 }
 
 /* Cât câmpul e gol, eticheta rămâne și la apăsare (calendarul se deschide direct, vezi deschideCalendarData);
@@ -3237,6 +3250,13 @@ details {
 
 .camp-ora input {
   position: relative;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+/* Selectat: același chenar mov ca la celelalte câmpuri (.form-control:focus) */
+.camp-ora input:focus {
+  border-color: var(--accent-purple) !important;
 }
 
 /* Iconița browserului rămâne apăsabilă, dar invizibilă și peste tot câmpul, ca să nu ia loc orei scrise */
