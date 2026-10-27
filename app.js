@@ -116,7 +116,7 @@ const i18n = {
     darkTheme: "Întunecat",
     systemTheme: "Sistem",
     accentTitle: "Culoare",
-    accentViolet: "Mov",
+    accentPetrol: "Petrol",
     accentBlue: "Albastru",
     accentRed: "Roșu",
     accentGreen: "Verde",
@@ -272,7 +272,7 @@ const i18n = {
     darkTheme: "Dark",
     systemTheme: "System",
     accentTitle: "Color",
-    accentViolet: "Violet",
+    accentPetrol: "Teal",
     accentBlue: "Blue",
     accentRed: "Red",
     accentGreen: "Green",
@@ -2446,7 +2446,7 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('themeBtnDarkText').innerText = t('darkTheme');
   document.getElementById('themeBtnSystemText').innerText = t('systemTheme');
   document.getElementById('accentSectionTitle').innerText = t('accentTitle');
-  document.getElementById('accentBtnVioletText').innerText = t('accentViolet');
+  document.getElementById('accentBtnPetrolText').innerText = t('accentPetrol');
   document.getElementById('accentBtnBlueText').innerText = t('accentBlue');
   document.getElementById('accentBtnRedText').innerText = t('accentRed');
   document.getElementById('accentBtnGreenText').innerText = t('accentGreen');
@@ -8670,7 +8670,8 @@ function seteazaTema(optiune, silent = false) {
 // Valorile curente afișate sub cardurile din Setări (Aspect, Limbă, Orar, Link de înscriere)
 function actualizeazaRezumatSetari() {
   let tema = localStorage.getItem('beatrix_theme') || 'system';
-  let accent = localStorage.getItem('beatrix_accent') || 'violet';
+  let accent = localStorage.getItem('beatrix_accent') || 'petrol';
+  if (accent === 'violet') accent = 'petrol';
   let elAspect = document.getElementById('setariRezumatAspect');
   if (elAspect) elAspect.textContent = [
     t(tema === 'light' ? 'lightTheme' : tema === 'dark' ? 'darkTheme' : 'systemTheme'),
@@ -8687,8 +8688,9 @@ function actualizeazaRezumatSetari() {
     : tr('Nesetat', 'Not set');
 }
 
-// Paleta de culori: mov (implicit, fără atribut) sau albastru (data-accent="blue")
-const PALETE_ACCENT = ['violet', 'blue', 'red', 'green', 'graphite'];
+// Paleta de culori: petrol (implicit, fără atribut, ca iconița și manifest.json) sau celelalte (data-accent="blue" etc.).
+// Movul de dinainte a fost înlocuit de petrol: „violet” salvat pe dispozitive devine petrol.
+const PALETE_ACCENT = ['petrol', 'blue', 'red', 'green', 'graphite'];
 
 function actualizeazaButoaneSetariOrar() {
   let val = document.getElementById('setariLocuriValoare');
@@ -8735,15 +8737,15 @@ function seteazaSetariOrar(modificari, dinCont = false) {
 }
 
 function seteazaAccent(optiune, silent = false) {
-  const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'violet';
+  const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'petrol';
   localStorage.setItem('beatrix_accent', paleta);
-  if (paleta === 'violet') document.documentElement.removeAttribute('data-accent');
+  if (paleta === 'petrol') document.documentElement.removeAttribute('data-accent');
   else document.documentElement.setAttribute('data-accent', paleta);
   PALETE_ACCENT.forEach(p => {
     document.getElementById('accentBtn' + p.charAt(0).toUpperCase() + p.slice(1))?.classList.toggle('active', p === paleta);
   });
   // Iconița din tab și cea de pe ecranul principal (iOS o citește la „Add to Home Screen”) urmează paleta
-  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.setAttribute('href', paleta === 'violet' ? 'icon.svg' : `icon-${paleta}.svg`));
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.setAttribute('href', paleta === 'petrol' ? 'icon.svg' : `icon-${paleta}.svg`));
   actualizeazaRezumatSetari();
   if (!silent) showToast(t('toastThemeUpdated'));
 }
@@ -8785,7 +8787,7 @@ function seteazaLimba(lang, silent = false) {
 (function() {
   let temaSalvata = localStorage.getItem('beatrix_theme') || 'system';
   seteazaTema(temaSalvata, true);
-  seteazaAccent(localStorage.getItem('beatrix_accent') || 'violet', true);
+  seteazaAccent(localStorage.getItem('beatrix_accent') || 'petrol', true);
   actualizeazaButoaneSetariOrar();
   // Subsol meniu: anul curent și versiunea din adresa app.js (?v=fitFinalN, urcată la fiecare publicare)
   const elAn = document.getElementById('footerAn');
