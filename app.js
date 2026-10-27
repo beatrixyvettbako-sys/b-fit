@@ -2616,7 +2616,9 @@ function randeazaHomeClienta() {
   if (dateClienta.planuri.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Antrenorul tău nu ți-a trimis încă un plan.', 'Your trainer has not sent you a plan yet.')}</div>`;
   } else {
+    // Cele mai noi 5 (lista vine ordonată după ultima modificare); restul sunt sub „Vezi toate”
     dateClienta.planuri.forEach((p, i) => {
+      if (i >= PLANURI_VIZIBILE_CLIENTA && !dateClienta.arataToatePlanurile) return;
       html += `<div class="card drawer-nav-card" style="margin-bottom:8px;" onclick="deschidePlanClienta(${i})">
         <div class="drawer-nav-card-left"><div>
           <div class="drawer-nav-title">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</div>
@@ -2625,8 +2627,21 @@ function randeazaHomeClienta() {
         <div class="drawer-nav-arrow">›</div>
       </div>`;
     });
+    const nrPlanuri = dateClienta.planuri.length;
+    if (nrPlanuri > PLANURI_VIZIBILE_CLIENTA) {
+      html += `<button type="button" class="btn btn-clear" style="width:100%; padding:8px;" onclick="comutaToatePlanurile()">${dateClienta.arataToatePlanurile
+        ? tr('Arată mai puține', 'Show fewer')
+        : tr(`Vezi toate (${nrPlanuri})`, `See all (${nrPlanuri})`)}</button>`;
+    }
   }
   document.getElementById('clientaContinut').innerHTML = html;
+}
+
+const PLANURI_VIZIBILE_CLIENTA = 5;
+
+function comutaToatePlanurile() {
+  dateClienta.arataToatePlanurile = !dateClienta.arataToatePlanurile;
+  randeazaHomeClienta();
 }
 
 // Prima deschidere ca clientă: parolă (ca să se poată reconecta oricând, mai ales în aplicația instalată) + cum se instalează aplicația
@@ -7232,10 +7247,7 @@ function sincronizeazaListaPlanuri() {
   trigger.classList.toggle('select-faded', !sel.value);
   trigger.classList.toggle('select-active', !!sel.value);
 
-  construiesteOptiuniListaProprie(panel, sel, true, () => {
-    comutaListaPlanuri(false);
-    sincronizeazaListaPlanuri();
-  });
+  construiestePanelPlanuri(panel, sel);
 
   if (!panel.children.length) {
     const gol = document.createElement('div');
@@ -7243,6 +7255,231 @@ function sincronizeazaListaPlanuri() {
     gol.textContent = currentLang === 'en' ? 'No saved plans yet' : 'Niciun plan salvat încă';
     panel.appendChild(gol);
   }
+}
+
+// ---- Lista de planuri: filtru (client / titlu / șabloane), recente și arhivă ----
+const ARHIVA_PLAN_ZILE = 14; // un plan al unui client, nemodificat de atâtea zile, merge sub „Mai vechi” (nu se șterge)
+const filtruPlanuri = { sabloane: false, vechiDeschis: false };
+const faraDiacritice = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+function actualizeazaButonSabloane() {
+  document.getElementById('btnFiltruSabloane')?.classList.toggle('active', filtruPlanuri.sabloane);
+}
+
+function peFiltruPlanuri() {
+  filtruPlanuri.sabloane = false;
+  filtruPlanuri.vechiDeschis = false;
+  actualizeazaButonSabloane();
+  sincronizeazaListaPlanuri();
+  comutaListaPlanuri(true);
+}
+
+function comutaFiltruSabloane() {
+  filtruPlanuri.sabloane = !filtruPlanuri.sabloane;
+  const inp = document.getElementById('filtruPlanClient');
+  if (inp && filtruPlanuri.sabloane) inp.value = '';
+  actualizeazaButonSabloane();
+  sincronizeazaListaPlanuri();
+  comutaListaPlanuri(true);
+}
+
+// Fără text: ultimele 10 planuri. Client exact: planurile lui (recente + „Mai vechi”). Alt text: căutare în client și titlu.
+// „Șabloane”: planurile fără client. Select-ul ascuns rămâne sursa valorilor; la alegere i se setează valoarea și declanșează change.
+function construiestePanelPlanuri(panel, sel) {
+  panel.innerHTML = '';
+  const text = faraDiacritice(document.getElementById('filtruPlanClient')?.value);
+  const limita = Date.now() - ARHIVA_PLAN_ZILE * 86400000;
+  const data = p => new Date(p.updated_at || 0).getTime();
+  const toate = [...(DB.planuri || [])].sort((a, b) => data(b) - data(a));
+  const esteSablon = p => !(p.clienta || '').trim();
+
+  const rand = (p, textRand) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'plan-picker-item' + (String(p.id) === String(sel.value) ? ' is-selected' : '');
+    btn.setAttribute('role', 'option');
+    btn.textContent = textRand;
+    btn.onclick = () => {
+      sel.value = p.id;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      comutaListaPlanuri(false);
+      sincronizeazaListaPlanuri();
+    };
+    panel.appendChild(btn);
+  };
+  const eticheta = (clasa, txt) => {
+    const d = document.createElement('div');
+    d.className = clasa;
+    d.textContent = txt;
+    panel.appendChild(d);
+  };
+  const titlu = txt => eticheta('plan-picker-group', txt);
+  const nota = txt => eticheta('plan-picker-empty', txt);
+  const cuClient = p => esteSablon(p) ? `${tr('Șablon', 'Template')} · ${p.titlu}` : `[${p.clienta}] ${p.titlu}`;
+
+  if (filtruPlanuri.sabloane) {
+    const lista = toate.filter(esteSablon).sort((a, b) => (a.titlu || '').localeCompare(b.titlu || '', 'ro', { numeric: true, sensitivity: 'base' }));
+    titlu(`${tr('Șabloane', 'Templates')} (${lista.length})`);
+    if (!lista.length) nota(tr('Niciun șablon încă. Un plan fără client devine șablon.', 'No templates yet. A plan without a client becomes a template.'));
+    lista.forEach(p => rand(p, p.titlu));
+    return;
+  }
+
+  const client = text ? (DB.clienti || []).find(c => faraDiacritice(c.nume) === text) : null;
+  if (client) {
+    const ale = toate.filter(p => faraDiacritice(p.clienta) === text);
+    const recente = ale.filter(p => data(p) >= limita);
+    const vechi = ale.filter(p => data(p) < limita);
+    titlu(`${client.nume} · ${tr('recente', 'recent')} (${recente.length})`);
+    if (!recente.length) nota(tr(`Niciun plan din ultimele ${ARHIVA_PLAN_ZILE} zile.`, `No plan in the last ${ARHIVA_PLAN_ZILE} days.`));
+    recente.forEach(p => rand(p, p.titlu));
+    if (vechi.length) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'plan-picker-vechi';
+      toggle.innerHTML = `<span>${tr('Mai vechi', 'Older')} (${vechi.length})</span><span>${filtruPlanuri.vechiDeschis ? '▲' : '▼'}</span>`;
+      toggle.onclick = () => { filtruPlanuri.vechiDeschis = !filtruPlanuri.vechiDeschis; sincronizeazaListaPlanuri(); };
+      panel.appendChild(toggle);
+      if (filtruPlanuri.vechiDeschis) vechi.forEach(p => rand(p, p.titlu));
+    }
+    return;
+  }
+
+  if (text) {
+    const gasite = toate.filter(p => faraDiacritice(p.clienta).includes(text) || faraDiacritice(p.titlu).includes(text));
+    titlu(`${tr('Rezultate', 'Results')} (${gasite.length})`);
+    if (!gasite.length) nota(tr('Niciun plan găsit.', 'No plan found.'));
+    gasite.slice(0, 40).forEach(p => rand(p, cuClient(p)));
+    if (gasite.length > 40) nota(tr(`Încă ${gasite.length - 40}. Scrie mai mult ca să restrângi căutarea.`, `${gasite.length - 40} more. Type more to narrow the search.`));
+    return;
+  }
+
+  if (!toate.length) return;
+  titlu(tr('Recente', 'Recent'));
+  toate.slice(0, 10).forEach(p => rand(p, cuClient(p)));
+  if (toate.length > 10) nota(tr('Alege un client sau caută după titlu ca să vezi restul.', 'Pick a client or search by title to see the rest.'));
+}
+
+// ---- Trimite planul la clienți: o copie personală pentru fiecare client bifat ----
+let trimitePlanSelectati = new Set();
+let trimitereInCurs = false;
+
+const arePlanDeja = (nume, titlu) => (DB.planuri || []).some(p => faraDiacritice(p.clienta) === faraDiacritice(nume) && faraDiacritice(p.titlu) === faraDiacritice(titlu));
+
+function clientiPentruTrimitere() {
+  const text = faraDiacritice(document.getElementById('cautaClientTrimitePlan')?.value);
+  return (DB.clienti || [])
+    .filter(c => !['arhivat', 'archived'].includes((c.status || '').toLowerCase()) && (!text || faraDiacritice(c.nume).includes(text)))
+    .sort((a, b) => a.nume.localeCompare(b.nume, 'ro', { sensitivity: 'base' }));
+}
+
+function deschideModalTrimitePlan() {
+  if (!planActiv) return;
+  if (!(planActiv.titlu || '').trim()) {
+    showToast(tr('Adaugă un titlu planului înainte să-l trimiți!', 'Add a plan title before sending!'), 'error');
+    return;
+  }
+  inchideModalSharePlan();
+  trimitePlanSelectati = new Set();
+  const cauta = document.getElementById('cautaClientTrimitePlan');
+  if (cauta) cauta.value = '';
+  randeazaListaTrimitePlan();
+  document.getElementById('modalTrimitePlanBackdrop').style.display = 'flex';
+}
+
+function inchideModalTrimitePlan() {
+  document.getElementById('modalTrimitePlanBackdrop').style.display = 'none';
+}
+
+function randeazaListaTrimitePlan() {
+  const lista = document.getElementById('listaTrimitePlan');
+  if (!lista) return;
+  const titlu = planActiv ? planActiv.titlu : '';
+  const clienti = clientiPentruTrimitere();
+  lista.innerHTML = clienti.length ? clienti.map(c => `<label class="trimite-plan-rand">
+      <input type="checkbox" data-nume="${escAttr(c.nume)}" ${trimitePlanSelectati.has(c.nume) ? 'checked' : ''} onchange="comutaClientTrimitePlan(this)">
+      <span>${escAttr(c.nume)}</span>${arePlanDeja(c.nume, titlu) ? `<small>${tr('are deja', 'has it')}</small>` : ''}
+    </label>`).join('') : `<div class="plan-picker-empty">${tr('Niciun client găsit.', 'No client found.')}</div>`;
+  actualizeazaButonTrimitePlan();
+}
+
+function comutaClientTrimitePlan(el) {
+  if (el.checked) trimitePlanSelectati.add(el.dataset.nume);
+  else trimitePlanSelectati.delete(el.dataset.nume);
+  actualizeazaButonTrimitePlan();
+}
+
+// „Toți”: bifează clienții afișați care nu au deja planul; apăsat din nou, îi debifează
+function bifeazaToatiTrimitePlan() {
+  const titlu = planActiv ? planActiv.titlu : '';
+  const vizibili = clientiPentruTrimitere().filter(c => !arePlanDeja(c.nume, titlu)).map(c => c.nume);
+  const toti = vizibili.length > 0 && vizibili.every(n => trimitePlanSelectati.has(n));
+  vizibili.forEach(n => toti ? trimitePlanSelectati.delete(n) : trimitePlanSelectati.add(n));
+  randeazaListaTrimitePlan();
+}
+
+function actualizeazaButonTrimitePlan() {
+  const btn = document.getElementById('btnTrimitePlanAcum');
+  if (!btn) return;
+  const n = trimitePlanSelectati.size;
+  btn.disabled = n === 0 || trimitereInCurs;
+  btn.style.opacity = btn.disabled ? '0.55' : '';
+  btn.innerText = trimitereInCurs ? tr('Se trimite...', 'Sending...')
+    : n === 0 ? tr('Alege clienții', 'Pick clients')
+    : tr(`Trimite la ${n} ${n === 1 ? 'client' : 'clienți'}`, `Send to ${n} ${n === 1 ? 'client' : 'clients'}`);
+}
+
+async function trimitePlanLaClienti() {
+  if (trimitereInCurs || !trimitePlanSelectati.size || !planActiv || !supabaseClient) return;
+  const nume = [...trimitePlanSelectati];
+  trimitereInCurs = true;
+  actualizeazaButonTrimitePlan();
+
+  const uid = utilizatorCurent ? utilizatorCurent.id : null;
+  // Copia pornește curată: progresul altcuiva (greutate, serii, status) nu se duce la client
+  const continut = JSON.parse(JSON.stringify(planActiv.continut_json || {}));
+  (continut.sesiuni || []).forEach(s => (s.exercitii || []).forEach(ex => { ex.greutate_kg = ''; ex.seturi_finalizate = ''; ex.status = ''; }));
+  const acum = new Date().toISOString();
+  const randuri = nume.map(n => {
+    const r = { clienta: n, titlu: (planActiv.titlu || '').trim(), subtitlu: (planActiv.subtitlu || '').trim(), continut_json: continut, updated_at: acum };
+    if (uid) r.user_id = uid;
+    return r;
+  });
+
+  let trimise = 0;
+  try {
+    for (let i = 0; i < randuri.length; i += 25) {
+      const { data, error } = await supabaseClient.from('planuri_antrenament').insert(randuri.slice(i, i + 25)).select();
+      if (error) throw error;
+      trimise += (data || []).length;
+      (data || []).forEach(r => { DB.planuri.unshift(r); trimitePlanSelectati.delete(r.clienta); });
+    }
+    showToast(tr(`✓ Plan trimis la ${trimise} ${trimise === 1 ? 'client' : 'clienți'}`, `✓ Plan sent to ${trimise} ${trimise === 1 ? 'client' : 'clients'}`));
+    inchideModalTrimitePlan();
+  } catch (err) {
+    console.error('Eroare trimitere plan:', err);
+    showToast(tr(`Trimiterea s-a oprit: ${trimise} din ${nume.length} trimise. Reîncearcă pentru restul.`, `Sending stopped: ${trimise} of ${nume.length} sent. Try again for the rest.`), 'error');
+  } finally {
+    trimitereInCurs = false;
+    try { localStorage.setItem('BFIT_DB_LOCAL', JSON.stringify(DB)); } catch (e) {}
+    populeazaSelectorPlanuri();
+    randeazaListaTrimitePlan();
+  }
+}
+
+// Un șablon (plan fără client) căruia îi scrii un client ar deveni planul clientului, iar șablonul ar dispărea: întrebăm
+function cuGardaSablon(continua) {
+  const salvat = planActiv && planActiv.id ? (DB.planuri || []).find(p => String(p.id) === String(planActiv.id)) : null;
+  if (!salvat || (salvat.clienta || '').trim() || !(planActiv.clienta || '').trim()) { continua(); return; }
+  customConfirm(tr('Planul era un șablon', 'This plan was a template'),
+    tr(`Îl salvezi ca plan nou pentru ${planActiv.clienta}, cu șablonul neschimbat, sau transformi șablonul în planul lui?`, `Save it as a new plan for ${planActiv.clienta}, keeping the template, or turn the template into their plan?`),
+    () => { planActiv.id = null; continua(); });
+  document.getElementById('modalBtnConfirm').innerText = tr('Plan nou', 'New plan');
+  aratButonAlternativModal(tr('Transformă șablonul', 'Turn the template into the plan'), continua);
+}
+
+function salveazaPlanDinButon() {
+  cuGardaSablon(() => salveazaPlanCurentInBaza());
 }
 
 // Construiește rândurile listei proprii din opțiunile unui <select> (cu grupuri); la alegere setează valoarea
@@ -8095,6 +8332,8 @@ async function deschideModalSharePlan() {
     showToast(tr("Adaugă un titlu planului înainte să-l trimiți!", "Add a plan title before sharing!"), "error");
     return;
   }
+  // Șablon cu client scris pe el: aceeași întrebare ca la Salvează (dacă renunți, nu se întâmplă nimic)
+  await new Promise(continua => cuGardaSablon(() => continua()));
   const salvat = await salveazaPlanCurentInBaza(true);
   const idPlan = salvat ? salvat.id : (planActiv ? planActiv.id : null);
 

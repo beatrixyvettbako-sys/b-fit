@@ -4917,6 +4917,89 @@ select.form-control {
   color: var(--text-muted);
 }
 
+/* Filtrul listei de planuri (client / titlu / Șabloane) */
+.plan-filtru-rand {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.plan-filtru-rand .form-control {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-filtru-rand .btn {
+  flex: 0 0 auto;
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.plan-filtru-rand .btn.active {
+  background: rgba(var(--accent-rgb), 0.16);
+  border-color: rgba(var(--accent-light-rgb), 0.5);
+  color: var(--primary);
+  font-weight: 800;
+}
+
+/* „Mai vechi (N)”: planurile de peste 14 zile, strânse implicit */
+.plan-picker-vechi {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 8px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Lista de clienți din fereastra „Trimite planul la clienți” */
+.trimite-plan-lista {
+  max-height: min(45vh, 320px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.trimite-plan-rand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trimite-plan-rand:last-child {
+  border-bottom: none;
+}
+
+.trimite-plan-rand input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent-purple);
+}
+
+.trimite-plan-rand small {
+  margin-left: auto;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 #selectPlanExistent option {
   color: var(--text);
   font-weight: 700;

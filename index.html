@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal96">
+  <link rel="stylesheet" href="style.css?v=fitFinal97">
 </head>
 <body>
 
@@ -220,6 +220,25 @@
   </div>
 
   <!-- MODAL SHARE PLAN DE ANTRENAMENT CĂTRE CLIENTĂ -->
+  <!-- TRIMITE PLANUL LA CLIENȚI: o copie personală pentru fiecare client bifat (trimitePlanLaClienti) -->
+  <div id="modalTrimitePlanBackdrop" class="modal-share-backdrop" style="display:none;">
+    <div class="modal-edit-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" data-en="Send plan to clients">Trimite planul la clienți</div>
+        <button type="button" onclick="inchideModalTrimitePlan()" aria-label="Închide" data-en-aria="Close" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.35; margin-bottom:8px;" data-en="Each client gets their own copy, with no progress filled in. The original stays as it is.">Fiecare client primește propria copie, cu progresul gol. Planul original rămâne neschimbat.</div>
+      <input type="search" id="cautaClientTrimitePlan" class="form-control" placeholder="Caută client" data-en-placeholder="Search client" autocomplete="off" oninput="randeazaListaTrimitePlan()" style="margin-bottom:8px;">
+      <div class="trimite-plan-lista" id="listaTrimitePlan"></div>
+      <div style="display:flex; gap:6px; margin-top:10px;">
+        <button type="button" class="btn btn-clear" style="flex:0 0 auto; padding:8px 10px; font-size:0.78rem;" onclick="bifeazaToatiTrimitePlan()" id="btnBifeazaToti" data-en="Select all">Toți</button>
+        <button type="button" class="btn" style="flex:1; justify-content:center;" onclick="trimitePlanLaClienti()" id="btnTrimitePlanAcum">Trimite</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modalSharePlanBackdrop" class="modal-share-backdrop" style="display:none;">
     <div class="modal-edit-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
@@ -248,7 +267,10 @@
       </div>
 
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px;" onclick="trimiteShareNativPlan()">
+        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px;" onclick="deschideModalTrimitePlan()" id="btnTrimitePlanClienti">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span data-en="Send to clients">Trimite la clienți</span>
+        </button>
+        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="trimiteShareNativPlan()">
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg> <span id="btnNativeShareText" data-en="Send Link...">Trimite Link...</span>
         </button>
         <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextFormatatPlan()">
@@ -1389,6 +1411,12 @@
           </div>
         </div>
 
+        <!-- Filtrul listei: client (sugestii din clienți), titlu sau „Șabloane”; fără text, lista arată ultimele planuri -->
+        <div class="plan-filtru-rand">
+          <input type="search" id="filtruPlanClient" class="form-control" list="listaClienteVizibile" placeholder="Caută client sau plan" data-en-placeholder="Search client or plan" autocomplete="off" oninput="peFiltruPlanuri()">
+          <button type="button" class="btn btn-clear" id="btnFiltruSabloane" onclick="comutaFiltruSabloane()" data-en="Templates">Șabloane</button>
+        </div>
+
         <!-- Listă proprie de planuri (desenată de aplicație); select-ul ascuns rămâne sursa datelor și a evenimentului change -->
         <div class="plan-picker" id="planPicker">
           <button type="button" class="form-control plan-picker-trigger select-faded" id="planPickerTrigger" onclick="comutaListaPlanuri()" aria-haspopup="listbox" aria-expanded="false">
@@ -1401,7 +1429,7 @@
         </select>
 
         <div class="plan-actions-row">
-          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="salveazaPlanCurentInBaza()" id="btnSavePlanAction">
+          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="salveazaPlanDinButon()" id="btnSavePlanAction">
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
             <span id="btnSavePlanText">Salvează</span>
           </button>
@@ -1493,6 +1521,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal96"></script>
+  <script src="app.js?v=fitFinal97"></script>
 </body>
 </html>
