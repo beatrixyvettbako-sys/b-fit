@@ -1003,6 +1003,18 @@ header {
   padding: 4px 0 2px;
 }
 
+/* Profil: „Salvează” (nume + telefon) și „Actualizează parola”, același stil, cât textul */
+.btn.profile-save-btn {
+  display: block;
+  width: auto;
+  min-width: 180px;
+  margin: 10px auto 0;
+  align-self: center;
+  padding: 9px 26px;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 .profile-avatar-badge-wrap {
   position: relative;
   width: 76px;

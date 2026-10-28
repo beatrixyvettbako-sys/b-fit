@@ -702,7 +702,7 @@ function actualizeazaDateProfilUI(user) {
   if (elName) elName.innerText = numeComplet;
 
   const elInpNume = document.getElementById('profileInputNume');
-  if (elInpNume) elInpNume.value = numeComplet;
+  if (elInpNume) elInpNume.value = elInpNume.dataset.initial = numeComplet;
 
   const elInpEmail = document.getElementById('profileInputEmail');
   if (elInpEmail) elInpEmail.value = user.email || '';
@@ -740,20 +740,8 @@ function navigheazaSubMeniu(strat) {
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
   if (strat === 'profile' && rolUtilizator === 'clienta') {
     const inp = document.getElementById('profileInputTelefonClient');
-    if (inp && document.activeElement !== inp) inp.value = (dateClienta.fisa && dateClienta.fisa.telefon) || '';
+    if (inp && document.activeElement !== inp) inp.value = inp.dataset.initial = (dateClienta.fisa && dateClienta.fisa.telefon) || '';
   }
-}
-
-// ---- Telefonul clientului (cliente.telefon), modificat de client din Profil ----
-async function salveazaTelefonClient() {
-  const tel = (document.getElementById('profileInputTelefonClient').value || '').trim();
-  const { data, error } = await supabaseClient.rpc('seteaza_telefon_client', { p_telefon: tel });
-  if (error || data !== 'ok') {
-    showToast(data === 'invalid' ? tr('Număr de telefon invalid.', 'Invalid phone number.') : tr('Nu s-a putut salva.', 'Could not save.'), 'error');
-    return;
-  }
-  if (dateClienta.fisa) dateClienta.fisa.telefon = tel;
-  showToast(tr('✓ Telefon salvat', '✓ Phone saved'));
 }
 
 // ---- Telefonul antrenorului pentru cliente (profiles.telefon_contact) ----
@@ -761,17 +749,55 @@ async function incarcaTelefonContact() {
   const inp = document.getElementById('profileInputTelefon');
   if (!supabaseClient || !utilizatorCurent || !inp || document.activeElement === inp) return;
   const { data, error } = await supabaseClient.from('profiles').select('telefon_contact').eq('id', utilizatorCurent.id).maybeSingle();
-  if (!error) inp.value = (data && data.telefon_contact) || '';
+  if (!error) inp.value = inp.dataset.initial = (data && data.telefon_contact) || '';
 }
 
-async function salveazaTelefonContact() {
-  const tel = (document.getElementById('profileInputTelefon').value || '').trim();
-  const { data, error } = await supabaseClient.rpc('seteaza_telefon_contact', { p_telefon: tel });
-  if (error || data !== 'ok') {
-    showToast(data === 'invalid' ? tr('Număr de telefon invalid.', 'Invalid phone number.') : tr('Nu s-a putut salva.', 'Could not save.'), 'error');
+// Telefon fără spații / cratime / puncte / paranteze, 00 → +: gol, 0 + 9 cifre (RO) sau + și 8-15 cifre. null = invalid
+function normalizeazaTelefon(tel) {
+  const t = (tel || '').replace(/[\s\-.()]/g, '').replace(/^00/, '+');
+  return (!t || /^0\d{9}$/.test(t) || /^\+\d{8,15}$/.test(t)) ? t : null;
+}
+
+// ---- Profil: un singur buton pentru nume + telefon; trimite doar ce s-a schimbat ----
+// Telefonul: la client cliente.telefon, la antrenor profiles.telefon_contact (cel văzut de cliente)
+async function salveazaProfil() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const esteClienta = rolUtilizator === 'clienta';
+  const inpNume = document.getElementById('profileInputNume');
+  const inpTel = document.getElementById(esteClienta ? 'profileInputTelefonClient' : 'profileInputTelefon');
+  const nouNume = (inpNume.value || '').trim();
+  const tel = normalizeazaTelefon(inpTel.value);
+
+  if (!nouNume) {
+    showToast(tr('Numele nu poate fi gol!', 'Name cannot be empty!'), 'error');
     return;
   }
-  showToast(tr('✓ Telefon salvat', '✓ Phone saved'));
+  if (tel === null) {
+    showToast(tr('Număr de telefon invalid. Ex: 0712 345 678 sau +40 712 345 678', 'Invalid phone number. E.g. 0712 345 678 or +40 712 345 678'), 'error');
+    inpTel.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btnSalveazaProfil');
+  if (btn) btn.disabled = true;
+  try {
+    if (nouNume !== inpNume.dataset.initial) {
+      const { data, error } = await supabaseClient.auth.updateUser({ data: { full_name: nouNume } });
+      if (error) throw error;
+      actualizeazaDateProfilUI(data.user);
+    }
+    if (tel !== (inpTel.dataset.initial || '')) {
+      const { data, error } = await supabaseClient.rpc(esteClienta ? 'seteaza_telefon_client' : 'seteaza_telefon_contact', { p_telefon: tel });
+      if (error || data !== 'ok') throw new Error(data === 'invalid' ? tr('Număr de telefon invalid.', 'Invalid phone number.') : tr('Telefonul nu s-a putut salva.', 'Could not save the phone.'));
+      if (esteClienta && dateClienta.fisa) dateClienta.fisa.telefon = tel;
+    }
+    inpTel.value = inpTel.dataset.initial = tel;
+    showToast(tr('✓ Salvat', '✓ Saved'));
+  } catch (err) {
+    showToast(err.message || tr('Nu s-a putut salva.', 'Could not save.'), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ---- Link de înscriere al antrenorului (?inscriere=<cod>); codul stă în profiles.cod_inscriere ----
@@ -902,31 +928,6 @@ async function proceseazaSiUploadeazaAvatar(inputEl) {
     showToast(currentLang === 'en' ? 'Photo processing error!' : 'Eroare la procesarea pozei!', 'error');
   } finally {
     inputEl.value = '';
-  }
-}
-
-async function salveazaNumeProfil() {
-  if (!supabaseClient || !utilizatorCurent) return;
-  const nouNume = (document.getElementById('profileInputNume')?.value || '').trim();
-  if (!nouNume) {
-    showToast(currentLang === 'en' ? 'Name cannot be empty!' : 'Numele nu poate fi gol!', 'error');
-    return;
-  }
-
-  const btn = document.getElementById('btnSalveazaNumeProfil');
-  if (btn) btn.disabled = true;
-
-  try {
-    const { data, error } = await supabaseClient.auth.updateUser({
-      data: { full_name: nouNume }
-    });
-    if (error) throw error;
-    actualizeazaDateProfilUI(data.user);
-    showToast(currentLang === 'en' ? '✓ Name updated!' : '✓ Nume actualizat!');
-  } catch (err) {
-    showToast(err.message || 'Eroare la salvare nume!', 'error');
-  } finally {
-    if (btn) btn.disabled = false;
   }
 }
 

@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal104">
+  <link rel="stylesheet" href="style.css?v=fitFinal105">
 </head>
 <body>
 
@@ -703,9 +703,6 @@
         <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
           <label id="profileNameLabel" data-en="Full Name">Nume și Prenume</label>
           <input type="text" id="profileInputNume" class="form-control" placeholder="Nume și prenume" data-en-placeholder="Full name">
-          <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" id="btnSalveazaNumeProfil" onclick="salveazaNumeProfil()" data-en="Save Name">
-            Salvează Nume
-          </button>
         </div>
 
         <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
@@ -716,17 +713,17 @@
         <!-- Telefonul clientului, din fișa lui; îl poate modifica și el -->
         <div class="form-group doar-clienta" style="margin-top:8px; margin-bottom:6px;">
           <label data-en="Phone">Telefon</label>
-          <input type="tel" id="profileInputTelefonClient" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel">
-          <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" onclick="salveazaTelefonClient()" data-en="Save Phone">Salvează Telefon</button>
+          <input type="tel" id="profileInputTelefonClient" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
         </div>
 
         <!-- Telefonul pe care îl văd clientele (Sună / WhatsApp pe cardul de reînnoire) -->
         <div class="form-group doar-antrenor" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:6px;">
           <label data-en="Phone for clients">Telefon pentru clienți</label>
-          <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel">
+          <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
           <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Clients can call you or message you on WhatsApp when their subscription runs out.">Clienții te pot suna sau îți pot scrie pe WhatsApp când li se termină abonamentul.</div>
-          <button type="button" class="btn" style="width:100%; margin-top:6px; font-size:0.82rem;" onclick="salveazaTelefonContact()" data-en="Save Phone">Salvează Telefon</button>
         </div>
+
+        <button type="button" class="btn profile-save-btn" id="btnSalveazaProfil" onclick="salveazaProfil()" data-en="Save">Salvează</button>
 
         <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
           <label id="profilePassLabel" data-en="Change Password">Schimbă Parola</label>
@@ -756,9 +753,7 @@
               </svg>
             </button>
           </div>
-          <button type="button" class="btn btn-clear" style="width:100%; margin-top:6px; font-size:0.82rem;" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()" data-en="Update Password">
-            Actualizează Parola
-          </button>
+          <button type="button" class="btn profile-save-btn" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()" data-en="Update Password">Actualizează parola</button>
         </div>
       </div>
     </div>
@@ -1537,6 +1532,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal104"></script>
+  <script src="app.js?v=fitFinal105"></script>
 </body>
 </html>
