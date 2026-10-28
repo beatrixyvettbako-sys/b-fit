@@ -1015,6 +1015,56 @@ if ('serviceWorker' in navigator) {
   }
 }
 
+// Invitație de instalare la deschiderea linkului în browser: Android prin promptul nativ, iPhone cu pașii „Adaugă pe ecranul principal”
+(function () {
+  const CHEIE = 'BFIT_INSTALL_AMANAT';
+  const PAUZA_MS = 7 * 24 * 3600 * 1000;
+  const instalata = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const esteIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let promptAndroid = null;
+  if (instalata) return;
+
+  const amanat = () => {
+    try { return Date.now() - Number(localStorage.getItem(CHEIE) || 0) < PAUZA_MS; } catch (e) { return false; }
+  };
+  const inchide = (amana) => {
+    document.getElementById('invitatieInstalare')?.remove();
+    if (amana) { try { localStorage.setItem(CHEIE, String(Date.now())); } catch (e) {} }
+  };
+  const arata = () => {
+    if (document.getElementById('invitatieInstalare') || amanat()) return;
+    const pasiIos = tr('Apasă Partajează (pătratul cu săgeată), apoi „Adaugă pe ecranul principal”.', 'Tap Share (the square with an arrow), then “Add to Home Screen”.');
+    const div = document.createElement('div');
+    div.id = 'invitatieInstalare';
+    div.className = 'invitatie-instalare';
+    div.innerHTML = `<img src="icon-192.png" alt="" class="invitatie-instalare-icon">
+      <div class="invitatie-instalare-text"><b>${tr('Instalează B-Fit', 'Install B-Fit')}</b><span>${esteIos ? pasiIos : tr('Deschide-o direct de pe ecranul telefonului.', 'Open it straight from your home screen.')}</span></div>
+      ${esteIos ? '' : `<button type="button" class="btn" id="btnInstaleaza">${tr('Instalează', 'Install')}</button>`}
+      <button type="button" class="notificare-x" id="btnInchideInstalare" aria-label="${tr('Închide', 'Close')}">×</button>`;
+    document.body.appendChild(div);
+    document.getElementById('btnInchideInstalare').onclick = () => inchide(true);
+    const btn = document.getElementById('btnInstaleaza');
+    if (btn) btn.onclick = async () => {
+      if (!promptAndroid) return inchide(false);
+      promptAndroid.prompt();
+      await promptAndroid.userChoice.catch(() => {});
+      promptAndroid = null;
+      inchide(false);
+    };
+  };
+
+  window.addEventListener('appinstalled', () => inchide(false));
+  if (esteIos) {
+    setTimeout(arata, 1500);
+  } else {
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      promptAndroid = e;
+      setTimeout(arata, 1500);
+    });
+  }
+})();
+
 // Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau nuanța header-ului din tema curentă (--status-bar-color)
 (function () {
   const meta = document.querySelector('meta[name="theme-color"]');
