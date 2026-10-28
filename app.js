@@ -704,6 +704,9 @@ function actualizeazaDateProfilUI(user) {
   const elInpNume = document.getElementById('profileInputNume');
   if (elInpNume) elInpNume.value = numeComplet;
 
+  const elInpEmail = document.getElementById('profileInputEmail');
+  if (elInpEmail) elInpEmail.value = user.email || '';
+
   const elAvatarWrap = document.getElementById('drawerUserAvatar');
   const elBigAvatar = document.getElementById('profileBigAvatarWrap');
 
@@ -735,6 +738,22 @@ function navigheazaSubMeniu(strat) {
   }
   if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
+  if (strat === 'profile' && rolUtilizator === 'clienta') {
+    const inp = document.getElementById('profileInputTelefonClient');
+    if (inp && document.activeElement !== inp) inp.value = (dateClienta.fisa && dateClienta.fisa.telefon) || '';
+  }
+}
+
+// ---- Telefonul clientului (cliente.telefon), modificat de client din Profil ----
+async function salveazaTelefonClient() {
+  const tel = (document.getElementById('profileInputTelefonClient').value || '').trim();
+  const { data, error } = await supabaseClient.rpc('seteaza_telefon_client', { p_telefon: tel });
+  if (error || data !== 'ok') {
+    showToast(data === 'invalid' ? tr('Număr de telefon invalid.', 'Invalid phone number.') : tr('Nu s-a putut salva.', 'Could not save.'), 'error');
+    return;
+  }
+  if (dateClienta.fisa) dateClienta.fisa.telefon = tel;
+  showToast(tr('✓ Telefon salvat', '✓ Phone saved'));
 }
 
 // ---- Telefonul antrenorului pentru cliente (profiles.telefon_contact) ----
@@ -986,23 +1005,30 @@ function gasesteClientaValida(numeIntrodus) {
 
 // Bara de jos devine compactă (doar iconițe) când utilizatoarea derulează în jos și revine când derulează în sus.
 // Reacționează doar la derularea făcută cu degetul / rotița, nu la salturile automate (ex. la ora curentă).
+// La client derulează ecranul #clientaScreen (nu fereastra), cu bara #clientaNav.
 (function () {
-  let ultimulY = window.scrollY;
   let ultimaAtingere = 0;
   const marcheazaInteractiune = () => { ultimaAtingere = Date.now(); };
   window.addEventListener('touchmove', marcheazaInteractiune, { passive: true });
   window.addEventListener('wheel', marcheazaInteractiune, { passive: true });
 
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    const delta = y - ultimulY;
-    const nav = document.getElementById('bottomNav');
-    if (nav && Date.now() - ultimaAtingere < 1200 && Math.abs(delta) > 6) {
-      nav.classList.toggle('nav-compact', delta > 0 && y > 40);
-    }
-    if (nav && y <= 40) nav.classList.remove('nav-compact');
-    ultimulY = y;
-  }, { passive: true });
+  function urmareste(containerEl, navId, citesteY) {
+    let ultimulY = citesteY();
+    containerEl.addEventListener('scroll', () => {
+      const y = citesteY();
+      const delta = y - ultimulY;
+      const nav = document.getElementById(navId);
+      if (nav && Date.now() - ultimaAtingere < 1200 && Math.abs(delta) > 6) {
+        nav.classList.toggle('nav-compact', delta > 0 && y > 40);
+      }
+      if (nav && y <= 40) nav.classList.remove('nav-compact');
+      ultimulY = y;
+    }, { passive: true });
+  }
+
+  urmareste(window, 'bottomNav', () => window.scrollY);
+  const ecranClienta = document.getElementById('clientaScreen');
+  if (ecranClienta) urmareste(ecranClienta, 'clientaNav', () => ecranClienta.scrollTop);
 })();
 
 // Service worker: pagina se ia mereu de pe internet (versiunea nouă apare la deschidere), fișierele merg și offline
@@ -2835,8 +2861,8 @@ function randeazaPlanClienta() {
   });
   (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
   if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
-  html += `<div id="clientaStareSalvare" style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:10px;">${tr('Modificările se salvează automat.', 'Changes are saved automatically.')}</div>`;
-  html += `<button type="button" class="btn btn-clear" style="width:100%; margin-top:10px;" onclick="exportaPlanCurentPDF(dateClienta.planCurent)">
+  html += `<div id="clientaStareSalvare" style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:10px; min-height:1em;"></div>`;
+  html += `<button type="button" class="btn btn-clear" style="display:flex; width:auto; margin:10px auto 0; padding-left:22px; padding-right:22px;" onclick="exportaPlanCurentPDF(dateClienta.planCurent, true)">
     <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> ${tr('Descarcă PDF', 'Download PDF')}
   </button>`;
   document.getElementById('clientaContinut').innerHTML = html;
@@ -3016,6 +3042,7 @@ function clientaTab(tab) {
     pill.style.transform = `translateX(${idx * 100}%)`;
   }
   clientaTabCurent = tab;
+  document.getElementById('clientaNav')?.classList.remove('nav-compact');
   TABURI_CLIENTA.forEach(t => document.getElementById('clientaTab_' + t)?.classList.toggle('active', t === tab));
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   if (tab === 'orar') randeazaOrarClienta();
@@ -8627,8 +8654,8 @@ async function imagineDataUrl(cale) {
   });
 }
 
-// Generează fișierul PDF și îl trimite prin meniul nativ de share (sau îl descarcă); clientul îl folosește pe planul lui
-async function exportaPlanCurentPDF(plan = planActiv) {
+// Generează fișierul PDF și îl trimite prin meniul nativ de share (sau îl descarcă); clientul doar îl descarcă (doarDescarca)
+async function exportaPlanCurentPDF(plan = planActiv, doarDescarca = false) {
   if (!plan) return;
   showToast(t('toastPdfGenerating'));
 
@@ -8643,7 +8670,7 @@ async function exportaPlanCurentPDF(plan = planActiv) {
 
     const fisier = new File([blob], numeFisier, { type: 'application/pdf' });
     let trimis = false;
-    if (navigator.canShare && navigator.canShare({ files: [fisier] })) {
+    if (!doarDescarca && navigator.canShare && navigator.canShare({ files: [fisier] })) {
       try {
         await navigator.share({ files: [fisier], title: titlu });
         trimis = true;

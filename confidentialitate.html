@@ -28,7 +28,7 @@
   <a class="inapoi" href="index.html">← B-Fit</a>
   <div class="card">
     <h1>Politica de confidențialitate</h1>
-    <p class="data">Ultima actualizare: 25 octombrie 2026 · <a href="#en">English version</a></p>
+    <p class="data">Ultima actualizare: 28 octombrie 2026 · <a href="#en">English version</a></p>
 
     <p>B-Fit este o aplicație de management pentru antrenori de fitness: orar, programări, fișe de clienți, încasări și planuri de antrenament. Această pagină explică ce date prelucrăm, de ce și ce drepturi ai.</p>
 
@@ -52,6 +52,7 @@
     <ul>
       <li><b>Supabase</b>: baza de date, autentificarea și stocarea pozelor de profil.</li>
       <li><b>GitHub Pages</b>: găzduirea fișierelor aplicației.</li>
+      <li><b>GitHub Actions</b>: copiile de siguranță (backup) zilnice ale bazei de date, criptate, într-un depozit privat.</li>
       <li><b>jsDelivr și cdnjs</b>: livrarea unor librării (ex. pentru export PDF); nu primesc datele tale din aplicație.</li>
       <li><b>Google</b>: doar dacă alegi conectarea cu contul Google.</li>
     </ul>
@@ -59,19 +60,20 @@
 
     <h2>5. Cât timp le păstrăm</h2>
     <p>Cât timp contul este activ. Antrenorul poate modifica, arhiva sau șterge oricând datele clienților. La cerere, ștergem contul și datele asociate, cu excepția celor pe care legea ne obligă să le păstrăm.</p>
+    <p>Copiile de siguranță se păstrează 30 de zile și apoi se șterg automat, așa că datele șterse dispar și din ele în cel mult 30 de zile.</p>
 
     <h2>6. Drepturile tale</h2>
     <p>Conform GDPR, ai dreptul de acces, rectificare, ștergere, restricționare, portabilitate și opoziție. Clienții sunt rugați să se adreseze întâi antrenorului lor, care administrează fișa. Ne poți scrie oricând la adresa de mai sus. Ai și dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (<a href="https://www.dataprotection.ro" target="_blank" rel="noopener">dataprotection.ro</a>).</p>
 
     <h2>7. Securitate</h2>
-    <p>Conexiunea este criptată (HTTPS), accesul se face doar cu cont, iar regulile bazei de date limitează fiecare cont la propriile date.</p>
+    <p>Conexiunea este criptată (HTTPS), accesul se face doar cu cont, iar regulile bazei de date limitează fiecare cont la propriile date. Copiile de siguranță sunt criptate (AES-256) și pot fi deschise doar cu o parolă separată.</p>
 
     <h2>8. Modificări</h2>
     <p>Dacă schimbăm această politică, actualizăm data de mai sus.</p>
 
     <div class="lang" id="en">
       <h1>Privacy policy</h1>
-      <p class="data">Last updated: October 25, 2026</p>
+      <p class="data">Last updated: October 28, 2026</p>
       <p>B-Fit is a management app for fitness trainers: schedule, bookings, client records, payments and workout plans.</p>
       <h2>Who is responsible</h2>
       <p>For client data, the <b>trainer</b> using B-Fit is the data controller; B-Fit stores and processes that data on the trainer's behalf (processor). For trainer accounts, B-Fit is the controller. Contact: <a href="mailto:dancristian.chira@hotmail.com">dancristian.chira@hotmail.com</a></p>
@@ -85,9 +87,9 @@
       <h2>Why</h2>
       <p>Only to provide the app (contract) and keep it secure (legitimate interest). No ads, no selling of data, no tracking or usage analytics.</p>
       <h2>Where it is stored</h2>
-      <p>Supabase (database, authentication, profile photos), GitHub Pages (app hosting), jsDelivr and cdnjs (libraries only), Google (only if you sign in with Google). Each trainer sees only their own clients; a client sees only their own data and the open spots, without other clients' names.</p>
+      <p>Supabase (database, authentication, profile photos), GitHub Pages (app hosting), GitHub Actions (daily encrypted database backups in a private repository), jsDelivr and cdnjs (libraries only), Google (only if you sign in with Google). Each trainer sees only their own clients; a client sees only their own data and the open spots, without other clients' names.</p>
       <h2>Retention and your rights</h2>
-      <p>Data is kept while the account is active; the trainer can edit, archive or delete client data at any time, and we delete accounts on request. Under the GDPR you have the right of access, rectification, erasure, restriction, portability and objection, and the right to complain to your data protection authority (in Romania: <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">ANSPDCP</a>). Clients should contact their trainer first.</p>
+      <p>Data is kept while the account is active; the trainer can edit, archive or delete client data at any time, and we delete accounts on request. Backups are encrypted (AES-256), kept for 30 days and then deleted automatically, so deleted data also disappears from them within 30 days. Under the GDPR you have the right of access, rectification, erasure, restriction, portability and objection, and the right to complain to your data protection authority (in Romania: <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">ANSPDCP</a>). Clients should contact their trainer first.</p>
     </div>
   </div>
 </main>
