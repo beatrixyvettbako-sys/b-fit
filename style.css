@@ -5178,6 +5178,22 @@ select.form-control {
   white-space: pre-wrap;
 }
 
+/* Rândurile cu „-” din secțiuni devin buline (htmlTextPlan), ca în PDF */
+.plan-text-lista {
+  margin: 0 0 6px;
+  padding-left: 18px;
+  white-space: normal;
+}
+
+.plan-text-lista li {
+  margin-bottom: 2px;
+}
+
+.plan-text-para {
+  margin: 0 0 4px;
+  white-space: normal;
+}
+
 /* SESIUNI / ZILE DE ANTRENAMENT */
 .plan-session-block {
   margin-bottom: 16px;
@@ -5294,6 +5310,47 @@ select.form-control {
   text-align: center;
 }
 
+/* Planuri: pe telefoanele înguste „Duplică” rămâne doar cu iconița, ca „ALEGE PLAN” să încapă pe un rând */
+#planSelectLabel {
+  white-space: nowrap;
+}
+
+@media (max-width: 400px) {
+  #btnDuplicaPlan span {
+    display: none;
+  }
+}
+
+/* Cont client: progresul zilei în capul sesiunii și butonul „Făcut” al fiecărui exercițiu */
+.plan-progres-ses {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.plan-facut-btn {
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.plan-facut-btn.is-facut {
+  background: var(--color-confirmata);
+  border-color: var(--color-confirmata);
+  color: #ffffff;
+}
+
 .plan-footer-note {
   margin-top: 14px;
   padding-top: 8px;
@@ -5324,27 +5381,15 @@ select.form-control {
     border: none;
   }
   /* Modul PDF pe telefon: fără capul de tabel, fiecare valoare își poartă eticheta */
-  /* (nu și în PDF-ul exportat, care e tabel complet, cu eticheta în capul de coloană) */
-  .plan-pdf-sheet:not(.pdf-export) .plan-exercises-table td[data-eticheta] {
+  .plan-exercises-table td[data-eticheta] {
     text-align: left !important;
     white-space: normal !important;
   }
-  .plan-pdf-sheet:not(.pdf-export) .plan-exercises-table td[data-eticheta]::before {
+  .plan-exercises-table td[data-eticheta]::before {
     content: attr(data-eticheta) ": ";
     font-weight: 600;
     color: var(--text-muted);
   }
-}
-
-/* Cum se citește planul: deasupra sesiunilor, în aplicație și în PDF */
-.plan-legenda {
-  margin: 0 0 10px;
-  padding: 7px 10px;
-  border-radius: 8px;
-  background: var(--primary-light);
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: var(--text);
 }
 
 /* REGULI DE PRINT / EXPORT PDF */
@@ -5454,58 +5499,6 @@ select.form-control {
   .plan-exercises-table td[data-eticheta]::before {
     content: none !important;
   }
-}
-/* EXPORT PDF CA FIȘIER (html2pdf) - aceleași reguli ca la print, aplicate pe clona randată */
-.plan-pdf-sheet.pdf-export {
-  background: #ffffff !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.pdf-export .plan-info-box {
-  background: var(--print-bg) !important;
-  border: 1px solid var(--print-border) !important;
-}
-
-.pdf-export .plan-session-block {
-  border: 1px solid #cbd5e1 !important;
-  margin-bottom: 12px !important;
-}
-
-.pdf-export .plan-exercises-table {
-  display: table !important;
-  width: 100% !important;
-  border-collapse: collapse !important;
-}
-
-/* Tabel complet și pe telefon (anulează aranjarea pe carduri de sub 560px) */
-.pdf-export .plan-exercises-table thead {
-  display: table-header-group !important;
-}
-
-.pdf-export .plan-exercises-table tbody {
-  display: table-row-group !important;
-}
-
-.pdf-export .plan-exercises-table tr {
-  display: table-row !important;
-}
-
-.pdf-export .plan-exercises-table th,
-.pdf-export .plan-exercises-table td {
-  display: table-cell !important;
-  border: 1px solid #cbd5e1 !important;
-  padding: 5px 6px !important;
-  font-size: 9pt !important;
-  color: #1e293b !important;
-}
-
-.pdf-export .plan-exercises-table th {
-  background: var(--print-head-bg) !important;
-  color: var(--print-head-text) !important;
-  font-weight: 800 !important;
 }
 
 /* Status exercițiu din plan: pastilă mai mică; neales = câmp glass cu placeholder, ca restul câmpurilor */

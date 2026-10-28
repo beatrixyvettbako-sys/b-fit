@@ -2743,26 +2743,19 @@ function deschidePlanClienta(idx) {
   randeazaPlanClienta();
 }
 
-// Cum se citește un plan: aceeași explicație la antrenor, la client și în PDF
-function htmlLegendaPlan() {
-  return `<div class="plan-legenda">${tr('<b>4×12</b> = 4 serii a câte 12 repetări. <b>Pauza</b> = odihna dintre serii.', '<b>4×12</b> = 4 sets of 12 reps. <b>Rest</b> = the break between sets.')}</div>`;
-}
-
 function randeazaPlanClienta() {
   const p = dateClienta.planCurent;
   const cj = p.continut_json || {};
   document.getElementById('clientaTitlu').innerText = p.titlu || tr('Plan de antrenament', 'Workout plan');
-  const text = (sec) => `<div class="plan-info-box"><div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div><div class="plan-info-rendered-text">${escAttr(sec.continut)}</div></div>`;
+  const text = (sec) => `<div class="plan-info-box"><div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div><div class="plan-info-rendered-text">${htmlTextPlan(sec.continut)}</div></div>`;
 
   let html = `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
   (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
-  html += htmlLegendaPlan();
-
   (cj.sesiuni || []).forEach((ses, s) => {
-    html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div></div>`;
+    html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div><span class="plan-progres-ses" id="progresSesClienta${s}">${textProgresSesiune(ses)}</span></div>`;
     (ses.exercitii || []).forEach((ex, e) => {
-      const st = ex.status || '';
-      const opt = (v, eticheta) => `<option value="${v}" ${st === v ? 'selected' : ''}>${eticheta}</option>`;
+      const facut = ex.status === 'Finalizat';
+      const ultimaKg = ultimaGreutateClienta(ex.exercitiu, p.id);
       html += `<div style="padding:8px 10px; border-top:1px solid var(--border);">
         <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}</div>
         <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${ex.seturi_repetari ? `${tr('Serii × repetări', 'Sets × reps')}: ${escAttr(ex.seturi_repetari)}` : ''}${ex.seturi_repetari && ex.pauza ? ' • ' : ''}${ex.pauza ? `${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
@@ -2770,17 +2763,15 @@ function randeazaPlanClienta() {
         <div class="plan-tracking-grid">
           <div class="plan-tracking-field">
             <span class="plan-tracking-label">${tr('Greutate (kg)', 'Weight (kg)')}</span>
-            <input type="text" inputmode="decimal" maxlength="20" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'greutate_kg', this.value)">
+            <input type="text" inputmode="decimal" maxlength="20" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="${ultimaKg ? escAttr(tr('ultima: ', 'last: ') + ultimaKg) : '-'}" oninput="peModificareProgresClienta(${s}, ${e}, 'greutate_kg', this.value)">
           </div>
           <div class="plan-tracking-field">
             <span class="plan-tracking-label">${tr('Serii făcute', 'Sets done')}</span>
             <input type="text" inputmode="numeric" maxlength="20" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'seturi_finalizate', this.value)">
           </div>
           <div class="plan-tracking-field plan-tracking-status">
-            <span class="plan-tracking-label">Status</span>
-            <select class="pill-select plan-status-select ${getPillClass(st)}" onchange="this.className='pill-select plan-status-select '+getPillClass(this.value); peModificareProgresClienta(${s}, ${e}, 'status', this.value)">
-              ${opt('', 'Status')}${opt('În așteptare', traduceValoare('În așteptare'))}${opt('Finalizat', traduceValoare('Finalizat'))}${opt('Sărit', traduceValoare('Sărit'))}
-            </select>
+            <span class="plan-tracking-label">${tr('Gata?', 'Done?')}</span>
+            <button type="button" class="plan-facut-btn ${facut ? 'is-facut' : ''}" aria-pressed="${facut}" onclick="comutaFacutClienta(${s}, ${e}, this)">${facut ? '✓ ' : ''}${tr('Făcut', 'Done')}</button>
           </div>
         </div>
       </div>`;
@@ -2790,7 +2781,43 @@ function randeazaPlanClienta() {
   (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
   if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
   html += `<div id="clientaStareSalvare" style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:10px;">${tr('Modificările se salvează automat.', 'Changes are saved automatically.')}</div>`;
+  html += `<button type="button" class="btn btn-clear" style="width:100%; margin-top:10px;" onclick="exportaPlanCurentPDF(dateClienta.planCurent)">
+    <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> ${tr('Descarcă PDF', 'Download PDF')}
+  </button>`;
   document.getElementById('clientaContinut').innerHTML = html;
+}
+
+function textProgresSesiune(ses) {
+  const lista = (ses.exercitii || []).filter(ex => (ex.exercitiu || '').trim());
+  return tr(`${lista.filter(ex => ex.status === 'Finalizat').length} din ${lista.length} făcute`, `${lista.filter(ex => ex.status === 'Finalizat').length} of ${lista.length} done`);
+}
+
+// Greutatea notată ultima dată la același exercițiu, în alt plan (planurile vin de la cel mai recent)
+function ultimaGreutateClienta(nume, idPlan) {
+  const cheie = (nume || '').trim().toLowerCase();
+  if (!cheie) return '';
+  for (const p of dateClienta.planuri || []) {
+    if (p.id === idPlan) continue;
+    for (const ses of p.continut_json?.sesiuni || []) {
+      const ex = (ses.exercitii || []).find(x => (x.exercitiu || '').trim().toLowerCase() === cheie && (x.greutate_kg || '').trim());
+      if (ex) return ex.greutate_kg.trim();
+    }
+  }
+  return '';
+}
+
+// „Făcut” bifează exercițiul (status Finalizat) sau îl debifează; progresul zilei se actualizează pe loc
+function comutaFacutClienta(s, e, btn) {
+  const ses = dateClienta.planCurent?.continut_json?.sesiuni?.[s];
+  const ex = ses?.exercitii?.[e];
+  if (!ex) return;
+  const facut = ex.status !== 'Finalizat';
+  peModificareProgresClienta(s, e, 'status', facut ? 'Finalizat' : '');
+  btn.classList.toggle('is-facut', facut);
+  btn.setAttribute('aria-pressed', facut);
+  btn.innerText = (facut ? '✓ ' : '') + tr('Făcut', 'Done');
+  const progres = document.getElementById('progresSesClienta' + s);
+  if (progres) progres.innerText = textProgresSesiune(ses);
 }
 
 function seteazaStareSalvareClienta(ro, en, eroare) {
@@ -7121,6 +7148,59 @@ function construiesteSablonPlanDefault() {
   };
 }
 
+// Plan complet: structura unui program întreg (principii, încălzire, o sesiune, progresie, siguranță), de adaptat
+function construiesteSablonPlanComplet() {
+  const plan = construiesteSablonPlanDefault();
+  const exercitiu = (nr) => ({ nr, exercitiu: "", seturi_repetari: "3 × 10–12", pauza: "60–90 sec", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "" });
+  plan.continut_json = {
+    sectiuni_inceput: [
+      {
+        titlu: tr("Principii de bază", "Basic principles"),
+        continut: tr(
+          "- Frecvență: 2–3 sesiuni pe săptămână, cu cel puțin o zi de pauză între ele.\n- Intensitate: la finalul fiecărei serii mai poți face 2–3 repetări curate.\n- Tehnică: contează mai mult decât greutatea. Dacă execuția se strică, oprește seria.\n- Pregătire: apă la îndemână, încălțăminte sport, o masă ușoară cu 1–2 ore înainte.",
+          "- Frequency: 2–3 sessions per week, with at least one rest day between them.\n- Intensity: at the end of each set you can still do 2–3 clean reps.\n- Technique: matters more than the weight. If your form breaks, stop the set.\n- Preparation: water at hand, sports shoes, a light meal 1–2 hours before."
+        )
+      },
+      {
+        titlu: tr("Structura unei sesiuni", "Session structure"),
+        continut: tr(
+          "- Încălzire (8–10 min): mers rapid sau bicicletă, rotiri de articulații, genuflexiuni fără greutate.\n- Partea principală (30–40 min): exercițiile din tabel, în ordine.\n- Revenire (5 min): mers lent și întinderi ușoare, 20–30 sec pe grupă.",
+          "- Warm-up (8–10 min): brisk walk or bike, joint rotations, bodyweight squats.\n- Main part (30–40 min): the exercises in the table, in order.\n- Cool-down (5 min): slow walk and light stretching, 20–30 sec per muscle group."
+        )
+      }
+    ],
+    sesiuni: [{ titlu: tr("Sesiunea A", "Session A"), exercitii: [exercitiu(1), exercitiu(2), exercitiu(3)] }],
+    sectiuni_final: [
+      {
+        titlu: tr("Progresie", "Progression"),
+        continut: tr(
+          "- Săptămânile 1–2: greutăți mici, accent pe tehnică.\n- Apoi: crești întâi repetările până la capătul intervalului, apoi greutatea.\n- Jurnal: notează greutatea la fiecare exercițiu, direct în aplicație.",
+          "- Weeks 1–2: light weights, focus on technique.\n- Then: first increase the reps to the top of the range, then the weight.\n- Log: note the weight for each exercise, right in the app."
+        )
+      },
+      {
+        titlu: tr("Când te oprești", "When to stop"),
+        continut: tr(
+          "- Durere ascuțită în articulații sau în spate.\n- Amețeli, greață sau dificultăți de respirație.\nÎn aceste cazuri oprește sesiunea și anunță antrenorul.",
+          "- Sharp pain in the joints or back.\n- Dizziness, nausea or difficulty breathing.\nIn these cases stop the session and tell your trainer."
+        )
+      },
+      {
+        titlu: tr("Alimentație și recuperare", "Nutrition and recovery"),
+        continut: tr(
+          "- Somn: 7–9 ore pe noapte.\n- Alimentație: proteine la fiecare masă și suficientă apă.",
+          "- Sleep: 7–9 hours per night.\n- Nutrition: protein at every meal and enough water."
+        )
+      }
+    ],
+    nota_subsol: tr(
+      "Programul se adaptează împreună cu antrenorul în caz de accidentări sau probleme medicale.",
+      "The program is adjusted together with your trainer in case of injuries or medical issues."
+    )
+  };
+  return plan;
+}
+
 async function deschideSectiunePlanAntrenamentDinMeniu() {
   inchideMeniuLateral();
   tabAnteriorPlan = tipTabCurent || 'orar';
@@ -7690,12 +7770,41 @@ function incarcaPlanDinLista(idPlan) {
   }
 }
 
+// „Plan nou”: complet (cu structura unui program) sau gol (o zi cu un exercițiu)
 function creeazaPlanNouCuSablon() {
-  dupaConfirmareModificariPlan(pornestePlanNou);
+  dupaConfirmareModificariPlan(() => {
+    // Modalul tocmai se închide (închiderea îi golește callback-urile): îl redeschidem după
+    setTimeout(() => {
+      customConfirm(
+        tr("Plan nou", "New plan"),
+        tr("Complet: vine cu principii, încălzire, o sesiune și recomandări, de adaptat.\nGol: doar o zi cu un exercițiu.", "Complete: comes with principles, warm-up, one session and tips, ready to adapt.\nEmpty: just one day with one exercise."),
+        () => pornestePlanNou(construiesteSablonPlanComplet())
+      );
+      document.getElementById('modalBtnConfirm').innerText = tr("Plan complet", "Complete plan");
+      aratButonAlternativModal(tr("Plan gol", "Empty plan"), () => pornestePlanNou());
+    }, 0);
+  });
 }
 
-function pornestePlanNou() {
-  planActiv = construiesteSablonPlanDefault();
+// Copie după planul deschis (ex. săptămâna următoare): plan nou, același client, fără progresul lui
+function duplicaPlanCurent() {
+  if (!planActiv || estePlanNouGol()) {
+    showToast(tr("Alege întâi planul pe care vrei să-l copiezi.", "Choose the plan you want to copy first."), "error");
+    return;
+  }
+  const urmatoarea = (s) => (s || '').replace(/(săptămâna|saptamana|week)\s*(\d+)/i, (m, cuvant, nr) => `${cuvant} ${Number(nr) + 1}`);
+  const copie = JSON.parse(JSON.stringify({ clienta: planActiv.clienta, titlu: planActiv.titlu, subtitlu: planActiv.subtitlu, continut_json: planActiv.continut_json }));
+  copie.id = null;
+  copie.titlu = urmatoarea(copie.titlu);
+  (copie.continut_json.sesiuni || []).forEach(ses => {
+    ses.titlu = urmatoarea(ses.titlu);
+    (ses.exercitii || []).forEach(ex => { ex.greutate_kg = ''; ex.seturi_finalizate = ''; ex.status = ''; });
+  });
+  pornestePlanNou(copie, tr("✓ Copie creată. Verifică titlul și salvează.", "✓ Copy created. Check the title and save."));
+}
+
+function pornestePlanNou(plan, mesaj) {
+  planActiv = plan || construiesteSablonPlanDefault();
   esteModPrevizualizarePdf = false;
   const btnTxt = document.getElementById('btnPreviewPlanText');
   if (btnTxt) btnTxt.innerText = t('btnPreviewPdfMode');
@@ -7706,7 +7815,7 @@ function pornestePlanNou() {
     sincronizeazaListaPlanuri();
   }
   randeazaPlanAntrenamentUI();
-  showToast(currentLang === 'en' ? '✓ New plan started!' : '✓ Plan nou început!');
+  showToast(mesaj || (currentLang === 'en' ? '✓ New plan started!' : '✓ Plan nou început!'));
 }
 
 function comutaModPrevizualizarePlan() {
@@ -7732,6 +7841,7 @@ function randeazaPlanAntrenamentUI() {
   if (!Array.isArray(cjson.sectiuni_final)) cjson.sectiuni_final = [];
 
   const doarCitireStructura = esteModPrevizualizarePdf || esteModClientaShare;
+  if (!doarCitireStructura) actualizeazaListaExercitii();
 
   let html = '';
 
@@ -7761,7 +7871,7 @@ function randeazaPlanAntrenamentUI() {
       html += `
         <div class="plan-info-box">
           <div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div>
-          <div class="plan-info-rendered-text">${escAttr(sec.continut)}</div>
+          <div class="plan-info-rendered-text">${htmlTextPlan(sec.continut)}</div>
         </div>
       `;
     } else {
@@ -7786,8 +7896,6 @@ function randeazaPlanAntrenamentUI() {
       </div>
     `;
   }
-
-  html += htmlLegendaPlan();
 
   cjson.sesiuni.forEach((ses, sesIdx) => {
     const listaEx = ses.exercitii || [];
@@ -7873,7 +7981,7 @@ function randeazaPlanAntrenamentUI() {
             <td>
               <div style="display:flex; align-items:center; gap:4px;">
                 <span style="font-weight:800; color:var(--primary); font-size:0.76rem;">${nrAfisat}.</span>
-                <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value">
+                <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" list="listaExercitiiPlan" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value" onchange="completeazaExercitiuCunoscut(${sesIdx}, ${exIdx})">
               </div>
             </td>
             <td data-eticheta="${tr('Serii × repetări', 'Sets × reps')}">
@@ -7936,7 +8044,7 @@ function randeazaPlanAntrenamentUI() {
       html += `
         <div class="plan-info-box">
           <div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div>
-          <div class="plan-info-rendered-text">${escAttr(sec.continut)}</div>
+          <div class="plan-info-rendered-text">${htmlTextPlan(sec.continut)}</div>
         </div>
       `;
     } else {
@@ -8016,17 +8124,54 @@ function adaugaExercitiuPlan(sesIdx) {
   const ses = planActiv?.continut_json?.sesiuni?.[sesIdx];
   if (!ses) return;
   if (!Array.isArray(ses.exercitii)) ses.exercitii = [];
+  // Seriile și pauza se preiau de la exercițiul de deasupra (de obicei sunt aceleași)
+  const anterior = ses.exercitii[ses.exercitii.length - 1] || {};
   ses.exercitii.push({
     nr: ses.exercitii.length + 1,
     exercitiu: "",
-    seturi_repetari: "",
-    pauza: "",
+    seturi_repetari: anterior.seturi_repetari || "",
+    pauza: anterior.pauza || "",
     indicatii: "",
     greutate_kg: "",
     seturi_finalizate: "",
     status: ""
   });
   randeazaPlanAntrenamentUI();
+}
+
+// Exercițiile folosite în planurile salvate (cel mai recent câștigă): sugestii la nume + seriile, pauza și indicațiile lor
+function exercitiiCunoscute() {
+  const harta = new Map();
+  (DB.planuri || []).forEach(p => (p.continut_json?.sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(ex => {
+    const cheie = (ex.exercitiu || '').trim().toLowerCase();
+    if (cheie && !harta.has(cheie)) harta.set(cheie, ex);
+  })));
+  return harta;
+}
+
+function actualizeazaListaExercitii() {
+  let lista = document.getElementById('listaExercitiiPlan');
+  if (!lista) {
+    lista = document.createElement('datalist');
+    lista.id = 'listaExercitiiPlan';
+    document.body.appendChild(lista);
+  }
+  lista.innerHTML = [...exercitiiCunoscute().values()].map(ex => `<option value="${escAttr(ex.exercitiu.trim())}"></option>`).join('');
+}
+
+// La alegerea unui exercițiu cunoscut se completează câmpurile goale (seriile, pauza, indicațiile)
+function completeazaExercitiuCunoscut(sesIdx, exIdx) {
+  const ex = planActiv?.continut_json?.sesiuni?.[sesIdx]?.exercitii?.[exIdx];
+  const model = ex && exercitiiCunoscute().get((ex.exercitiu || '').trim().toLowerCase());
+  if (!model || model === ex) return;
+  let completat = false;
+  ['seturi_repetari', 'pauza', 'indicatii'].forEach(camp => {
+    if (!(ex[camp] || '').trim() && (model[camp] || '').trim()) {
+      ex[camp] = model[camp];
+      completat = true;
+    }
+  });
+  if (completat) randeazaPlanAntrenamentUI();
 }
 
 function stergeExercitiuPlan(sesIdx, exIdx) {
@@ -8125,9 +8270,8 @@ async function salveazaPlanCurentInBaza(silent = false) {
 // Plan nesalvat și neatins: nu are ce să se șteargă, deci butonul de coș e inactiv
 function estePlanNouGol() {
   if (!planActiv || planActiv.id) return false;
-  const gol = construiesteSablonPlanDefault();
   const cheie = p => JSON.stringify([p.clienta, p.titlu, p.subtitlu, p.continut_json]);
-  return cheie(planActiv) === cheie(gol);
+  return [construiesteSablonPlanDefault(), construiesteSablonPlanComplet()].some(gol => cheie(planActiv) === cheie(gol));
 }
 
 function actualizeazaButonStergePlan() {
@@ -8259,46 +8403,188 @@ function importaPlanDinFisier(inputEl) {
   reader.readAsText(file, 'UTF-8');
 }
 
-// Librăria de generare PDF se încarcă doar la primul export
-function incarcaHtml2Pdf() {
-  if (window.html2pdf) return Promise.resolve();
-  return new Promise((resolve, reject) => {
+// Librăria de PDF (pdfmake, cu fontul Roboto, care are diacriticele) se încarcă doar la primul export
+function incarcaPdfMake() {
+  if (window.pdfMake && window.pdfMake.vfs) return Promise.resolve();
+  const incarca = (src) => new Promise((resolve, reject) => {
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.src = src;
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
   });
+  return incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js')
+    .then(() => incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'));
 }
 
-// Generează fișierul PDF și îl trimite prin meniul nativ de share (sau îl descarcă)
-async function exportaPlanCurentPDF() {
-  if (!planActiv) return;
+// Culoarea de brand a fiecărei palete (aceeași ca fundalul iconiței)
+const CULORI_PDF = { blue: '#335C8F', petrol: '#0F5E63', mov: '#5C4D7D', red: '#9F2A3A', green: '#267048', graphite: '#343A43' };
+
+// Textul secțiunilor: rândurile care încep cu „-”, „•” sau „*” devin buline; la „Termen: explicație” termenul e îngroșat
+function parseazaTextPlan(text) {
+  return (text || '').split('\n').map(r => r.trim()).filter(Boolean).map(r => {
+    const bulina = /^[-•*]\s*/.test(r);
+    const linie = r.replace(/^[-•*]\s*/, '');
+    const m = linie.match(/^([^:]{1,40}):\s+(.+)$/);
+    return { bulina, eticheta: m ? m[1] + ':' : '', rest: m ? m[2] : linie };
+  });
+}
+
+function htmlTextPlan(text) {
+  let html = '';
+  let inLista = false;
+  parseazaTextPlan(text).forEach(r => {
+    if (r.bulina !== inLista) {
+      html += r.bulina ? '<ul class="plan-text-lista">' : '</ul>';
+      inLista = r.bulina;
+    }
+    const continut = (r.eticheta ? `<b>${escAttr(r.eticheta)}</b> ` : '') + escAttr(r.rest);
+    html += r.bulina ? `<li>${continut}</li>` : `<p class="plan-text-para">${continut}</p>`;
+  });
+  return html + (inLista ? '</ul>' : '');
+}
+
+// Documentul PDF: antet cu sigla, titlu, secțiuni numerotate, câte un tabel pe zi, subsol cu numărul paginii
+function construiestePdfPlan(plan, culoare, logo) {
+  const cj = plan.continut_json || {};
+  const sesiuni = cj.sesiuni || [];
+  const gri = '#64748b';
+  const site = URL_APLICATIE.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const titluPlan = (plan.titlu || '').trim() || tr('Plan de antrenament', 'Workout plan');
+  let nrSectiune = 0;
+  const titluSectiune = (text) => ({ text: `${++nrSectiune}. ${text}`, style: 'h2', headlineLevel: 1 });
+
+  const blocText = (text) => {
+    const blocuri = [];
+    let lista = null;
+    parseazaTextPlan(text).forEach(r => {
+      const rand = r.eticheta ? [{ text: r.eticheta + ' ', bold: true }, r.rest] : r.rest;
+      if (r.bulina) {
+        if (!lista) { lista = { ul: [], margin: [6, 0, 0, 6] }; blocuri.push(lista); }
+        lista.ul.push({ text: rand, margin: [0, 0, 0, 2] });
+      } else {
+        lista = null;
+        blocuri.push({ text: rand, margin: [0, 0, 0, 4] });
+      }
+    });
+    return blocuri;
+  };
+  // Titlul secțiunii rămâne pe aceeași pagină cu primul ei paragraf / prima listă
+  const sectiuni = (lista) => (lista || []).filter(s => (s.titlu || '').trim() || (s.continut || '').trim())
+    .flatMap(s => {
+      const [primul, ...rest] = blocText(s.continut);
+      return [{ stack: [titluSectiune((s.titlu || '').trim()), primul || { text: '' }], unbreakable: true }, ...rest];
+    });
+
+  const continut = [{
+    columns: [
+      logo ? { image: logo, width: 34 } : { text: '', width: 0 },
+      { stack: [{ text: 'B-Fit Studio', bold: true, color: culoare, fontSize: 12 }, { text: site, color: gri, fontSize: 8 }], margin: [8, 3, 0, 0] },
+      { stack: [
+          plan.clienta ? { text: [{ text: tr('Client: ', 'Client: '), color: gri }, { text: plan.clienta, bold: true }], alignment: 'right' } : { text: '' },
+          { text: new Date().toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO'), color: gri, fontSize: 8, alignment: 'right' }
+        ], margin: [0, 3, 0, 0] }
+    ],
+    margin: [0, 0, 0, 16]
+  }, { text: titluPlan, style: 'h1' }];
+  if ((plan.subtitlu || '').trim()) continut.push({ text: plan.subtitlu.trim(), color: gri, fontSize: 10, margin: [0, 3, 0, 0] });
+  continut.push({ canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.2, lineColor: culoare }], margin: [0, 7, 0, 2] });
+  continut.push(...sectiuni(cj.sectiuni_inceput));
+
+  sesiuni.forEach(ses => {
+    const exercitii = (ses.exercitii || []).filter(ex => (ex.exercitiu || '').trim() || (ex.seturi_repetari || '').trim());
+    if (!exercitii.length) return;
+    const titluSes = (ses.titlu || '').trim();
+    // Un plan de o zi are adesea ziua cu același nume ca planul: nu-l repetăm
+    if (titluSes && !(sesiuni.length === 1 && titluSes.toLowerCase() === titluPlan.toLowerCase())) continut.push(titluSectiune(titluSes));
+    else continut.push({ text: '', margin: [0, 8, 0, 0] });
+
+    // Greutatea și seriile făcute apar doar dacă clientul le-a completat
+    const areKg = exercitii.some(ex => (ex.greutate_kg || '').trim());
+    const areSerii = exercitii.some(ex => (ex.seturi_finalizate || '').trim());
+    const cap = [tr('Exercițiu', 'Exercise'), tr('Serii × repetări', 'Sets × reps'), tr('Pauză', 'Rest'), tr('Cum se execută / sfaturi', 'How to perform / tips')];
+    const latimi = ['27%', 56, 50, '*'];
+    if (areKg) { cap.push('Kg'); latimi.push(32); }
+    if (areSerii) { cap.push(tr('Serii făcute', 'Sets done')); latimi.push(40); }
+    const corp = [cap.map(c => ({ text: c, bold: true, color: '#ffffff', fontSize: 8.5 }))];
+    exercitii.forEach((ex, i) => {
+      const rand = [
+        { text: `${ex.nr || i + 1}. ${(ex.exercitiu || '').trim()}`, bold: true },
+        ex.seturi_repetari || '',
+        ex.pauza || '–',
+        ex.indicatii || ''
+      ];
+      if (areKg) rand.push({ text: ex.greutate_kg || '', alignment: 'center' });
+      if (areSerii) rand.push({ text: ex.seturi_finalizate || '', alignment: 'center' });
+      corp.push(rand);
+    });
+    continut.push({
+      table: { headerRows: 1, dontBreakRows: true, widths: latimi, body: corp },
+      layout: {
+        fillColor: (i) => i === 0 ? culoare : (i % 2 === 0 ? '#f1f5f9' : null),
+        hLineColor: () => '#cbd5e1',
+        vLineColor: () => '#cbd5e1',
+        hLineWidth: () => 0.5,
+        vLineWidth: () => 0.5,
+        paddingLeft: () => 5,
+        paddingRight: () => 5,
+        paddingTop: () => 4,
+        paddingBottom: () => 4
+      },
+      fontSize: 9
+    });
+  });
+
+  continut.push(...sectiuni(cj.sectiuni_final));
+  if ((cj.nota_subsol || '').trim()) {
+    continut.push({ text: [{ text: tr('Notă: ', 'Note: '), bold: true }, cj.nota_subsol.trim()], italics: true, color: gri, fontSize: 8.5, margin: [0, 16, 0, 0] });
+  }
+
+  return {
+    pageSize: 'A4',
+    pageMargins: [40, 36, 40, 44],
+    info: { title: titluPlan, author: 'B-Fit Studio' },
+    content: continut,
+    // Un titlu de secțiune nu rămâne singur la capătul paginii
+    pageBreakBefore: (nod, urmatoareleDePePagina) => nod.headlineLevel === 1 && urmatoareleDePePagina.length === 0,
+    footer: (pagina, total) => ({
+      columns: [
+        { text: `B-Fit Studio · ${site}`, color: gri, fontSize: 7.5 },
+        { text: tr(`Pagina ${pagina} / ${total}`, `Page ${pagina} / ${total}`), color: gri, fontSize: 7.5, alignment: 'right' }
+      ],
+      margin: [40, 14, 40, 0]
+    }),
+    styles: {
+      h1: { fontSize: 20, bold: true, color: culoare },
+      h2: { fontSize: 12.5, bold: true, color: culoare, margin: [0, 14, 0, 6] }
+    },
+    defaultStyle: { font: 'Roboto', fontSize: 9.5, color: '#1e293b', lineHeight: 1.2 }
+  };
+}
+
+async function imagineDataUrl(cale) {
+  const blob = await (await fetch(cale)).blob();
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+// Generează fișierul PDF și îl trimite prin meniul nativ de share (sau îl descarcă); clientul îl folosește pe planul lui
+async function exportaPlanCurentPDF(plan = planActiv) {
+  if (!plan) return;
   showToast(t('toastPdfGenerating'));
 
-  const eraModPreview = esteModPrevizualizarePdf;
-  esteModPrevizualizarePdf = true;
-  randeazaPlanAntrenamentUI();
-
-  const titlu = (planActiv.titlu || 'Plan de antrenament').trim();
-  const numeFisier = [titlu, planActiv.clienta].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
+  const titlu = (plan.titlu || 'Plan de antrenament').trim();
+  const numeFisier = [titlu, plan.clienta].filter(Boolean).join(' - ').replace(/[\\/:*?"<>|]/g, '') + '.pdf';
 
   try {
-    await incarcaHtml2Pdf();
-    const blob = await html2pdf().set({
-      margin: [12, 10],
-      image: { type: 'jpeg', quality: 0.95 },
-      html2canvas: {
-        scale: 2,
-        onclone: (doc) => {
-          // PDF-ul e mereu pe fundal alb, indiferent de tema aplicației
-          doc.documentElement.setAttribute('data-theme', 'light');
-          doc.querySelectorAll('.plan-pdf-sheet').forEach(el => el.classList.add('pdf-export'));
-        }
-      },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.plan-info-box'] }
-    }).from(document.getElementById('planDocumentContainer')).outputPdf('blob');
+    await incarcaPdfMake();
+    const paleta = PALETE_ACCENT.includes(localStorage.getItem('beatrix_accent')) ? localStorage.getItem('beatrix_accent') : 'blue';
+    const logo = await imagineDataUrl(`icon-${paleta}.png`).catch(() => null);
+    const blob = await new Promise(resolve => pdfMake.createPdf(construiestePdfPlan(plan, CULORI_PDF[paleta], logo)).getBlob(resolve));
 
     const fisier = new File([blob], numeFisier, { type: 'application/pdf' });
     let trimis = false;
@@ -8320,10 +8606,7 @@ async function exportaPlanCurentPDF() {
     }
   } catch (err) {
     console.error("Eroare generare PDF:", err);
-    window.print();
-  } finally {
-    esteModPrevizualizarePdf = eraModPreview;
-    randeazaPlanAntrenamentUI();
+    showToast(tr('Nu s-a putut genera PDF-ul. Verifică conexiunea la internet.', 'Could not create the PDF. Check your internet connection.'), 'error');
   }
 }
 

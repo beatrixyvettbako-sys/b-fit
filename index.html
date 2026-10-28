@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal98">
+  <link rel="stylesheet" href="style.css?v=fitFinal99">
 </head>
 <body>
 
@@ -1405,6 +1405,10 @@
               <span id="btnImportPlanText">Import</span>
             </label>
             <input type="file" id="inputImportPlanFile" accept=".csv,text/csv,.json,application/json" style="display:none;" onchange="importaPlanDinFisier(this)">
+            <button type="button" class="btn btn-glass-subtle" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="duplicaPlanCurent()" id="btnDuplicaPlan" title="Copie după planul deschis (ex. săptămâna următoare)" data-en-title="Copy of the open plan (e.g. next week)">
+              <svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              <span data-en="Copy">Duplică</span>
+            </button>
             <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
               + <span id="btnNewPlanText">Plan Nou</span>
             </button>
@@ -1521,6 +1525,6 @@
   </nav>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal98"></script>
+  <script src="app.js?v=fitFinal99"></script>
 </body>
 </html>
