@@ -580,6 +580,11 @@ async function gestioneazaSubmitAuth(e) {
         }
       });
       if (error) throw error;
+      // Cu confirmarea pe email activă, un email existent nu dă eroare, ci un utilizator fără identități
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        afiseazaMesajAuthFeedback(t('authErrUserExists'));
+        return;
+      }
       if (data?.session) {
         showToast(t('authSignupSuccess'));
       } else {
