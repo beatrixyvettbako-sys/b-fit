@@ -167,7 +167,7 @@ const i18n = {
     toastPdfGenerating: "Se generează PDF-ul...",
 
     authSubtitleLogin: "Antrenamente, programări și progres",
-    authSubtitleSignup: "Creează un cont nou pentru studio",
+    authSubtitleSignup: "Creează un cont nou B-Fit",
     authTabLogin: "Intră în cont",
     authTabSignup: "Creează cont",
     authEmailLabel: "Email",
@@ -324,7 +324,7 @@ const i18n = {
     toastPdfGenerating: "Generating PDF...",
 
     authSubtitleLogin: "Workouts, bookings and progress",
-    authSubtitleSignup: "Create a new studio management account",
+    authSubtitleSignup: "Create a new B-Fit account",
     authTabLogin: "Log In",
     authTabSignup: "Create Account",
     authEmailLabel: "Email",
@@ -8479,7 +8479,7 @@ function construiestePdfPlan(plan, culoare, logo) {
   const continut = [{
     columns: [
       logo ? { image: logo, width: 34 } : { text: '', width: 0 },
-      { stack: [{ text: 'B-Fit Studio', bold: true, color: culoare, fontSize: 12 }, { text: site, color: gri, fontSize: 8 }], margin: [8, 3, 0, 0] },
+      { stack: [{ text: 'B-Fit', bold: true, color: culoare, fontSize: 12 }, { text: site, color: gri, fontSize: 8 }], margin: [8, 3, 0, 0] },
       { stack: [
           plan.clienta ? { text: [{ text: tr('Client: ', 'Client: '), color: gri }, { text: plan.clienta, bold: true }], alignment: 'right' } : { text: '' },
           { text: new Date().toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO'), color: gri, fontSize: 8, alignment: 'right' }
@@ -8543,13 +8543,13 @@ function construiestePdfPlan(plan, culoare, logo) {
   return {
     pageSize: 'A4',
     pageMargins: [40, 36, 40, 44],
-    info: { title: titluPlan, author: 'B-Fit Studio' },
+    info: { title: titluPlan, author: 'B-Fit' },
     content: continut,
     // Un titlu de secțiune nu rămâne singur la capătul paginii
     pageBreakBefore: (nod, urmatoareleDePePagina) => nod.headlineLevel === 1 && urmatoareleDePePagina.length === 0,
     footer: (pagina, total) => ({
       columns: [
-        { text: `B-Fit Studio · ${site}`, color: gri, fontSize: 7.5 },
+        { text: `B-Fit · ${site}`, color: gri, fontSize: 7.5 },
         { text: tr(`Pagina ${pagina} / ${total}`, `Page ${pagina} / ${total}`), color: gri, fontSize: 7.5, alignment: 'right' }
       ],
       margin: [40, 14, 40, 0]
