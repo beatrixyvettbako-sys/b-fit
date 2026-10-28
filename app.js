@@ -3955,9 +3955,9 @@ window.onload = async function() {
             }
             ascundeLogin();
           });
-        } else {
+        } else if (sesiuneInitializata) {
           ascundeLogin();
-        }
+        } // înainte de verificaSesiuneSupabase: pornirea o încheie ea, după ce știe rolul (altfel pâlpâie orarul antrenorului)
       } else if (event === 'SIGNED_OUT') {
         utilizatorCurent = null;
         document.getElementById('clientaScreen')?.classList.add('auth-hidden');
