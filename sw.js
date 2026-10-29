@@ -1,9 +1,10 @@
-const CACHE_NAME = 'bfit-cache-v105';
+const CACHE_NAME = 'bfit-cache-v106';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './style.css',
   './app.js',
+  './vendor/supabase-2.118.0.js',
   './manifest.json',
   './icon.svg',
   './icon-192.png',

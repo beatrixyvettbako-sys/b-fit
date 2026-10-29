@@ -7,6 +7,13 @@
       "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude/serve.ps1", "-Root", ".", "-Port", "5500"],
       "port": 5500,
       "url": "http://127.0.0.1:5500"
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ".claude/serve.ps1", "-Root", "../beatrixyvett-site", "-Port", "5501"],
+      "port": 5501,
+      "url": "http://127.0.0.1:5501"
     }
   ]
 }

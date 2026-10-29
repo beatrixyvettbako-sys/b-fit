@@ -27,6 +27,8 @@ N = versiunea curentă + 1. Citește-o din fișiere; dacă cele 3 locuri nu au a
 
 Verifică și că `ASSETS_TO_CACHE` din `sw.js` conține `./`, `./index.html`, `./style.css`, `./app.js`, `./manifest.json`, `./icon.svg`.
 
+Fiecare fișier din `ASSETS_TO_CACHE` și din `<script src>` din `index.html` (ex. `vendor/supabase-2.118.0.js`) trebuie să fie în commit: verifică cu `git status` că niciunul nu e netracked. Un fișier lipsă pe GitHub Pages lasă aplicația fără Supabase și blochează instalarea service worker-ului nou.
+
 ## 3. Commit și push
 
 - Mesaj de commit scurt, în română, despre ce s-a schimbat pentru utilizatoare (nu „update files”), plus numărul versiunii. Ex: `Orar: scroll la ora curentă corectat (v53)`.

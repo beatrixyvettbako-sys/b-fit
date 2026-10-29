@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal105">
+  <link rel="stylesheet" href="style.css?v=fitFinal106">
 </head>
 <body>
 
@@ -220,25 +220,6 @@
   </div>
 
   <!-- MODAL SHARE PLAN DE ANTRENAMENT CĂTRE CLIENTĂ -->
-  <!-- TRIMITE PLANUL LA CLIENȚI: o copie personală pentru fiecare client bifat (trimitePlanLaClienti) -->
-  <div id="modalTrimitePlanBackdrop" class="modal-share-backdrop" style="display:none;">
-    <div class="modal-edit-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
-        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" data-en="Send plan to clients">Trimite planul la clienți</div>
-        <button type="button" onclick="inchideModalTrimitePlan()" aria-label="Închide" data-en-aria="Close" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div style="font-size:0.78rem; color:var(--text-muted); line-height:1.35; margin-bottom:8px;" data-en="Each client gets their own copy, with no progress filled in. The original stays as it is.">Fiecare client primește propria copie, cu progresul gol. Planul original rămâne neschimbat.</div>
-      <input type="search" id="cautaClientTrimitePlan" class="form-control" placeholder="Caută client" data-en-placeholder="Search client" autocomplete="off" oninput="randeazaListaTrimitePlan()" style="margin-bottom:8px;">
-      <div class="trimite-plan-lista" id="listaTrimitePlan"></div>
-      <div style="display:flex; gap:6px; margin-top:10px;">
-        <button type="button" class="btn btn-clear" style="flex:0 0 auto; padding:8px 10px; font-size:0.78rem;" onclick="bifeazaToatiTrimitePlan()" id="btnBifeazaToti" data-en="Select all">Toți</button>
-        <button type="button" class="btn" style="flex:1; justify-content:center;" onclick="trimitePlanLaClienti()" id="btnTrimitePlanAcum">Trimite</button>
-      </div>
-    </div>
-  </div>
-
   <div id="modalSharePlanBackdrop" class="modal-share-backdrop" style="display:none;">
     <div class="modal-edit-card">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
@@ -267,10 +248,7 @@
       </div>
 
       <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px;" onclick="deschideModalTrimitePlan()" id="btnTrimitePlanClienti">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> <span data-en="Send to clients">Trimite la clienți</span>
-        </button>
-        <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="trimiteShareNativPlan()">
+        <button type="button" class="btn" style="width:100%; justify-content:center; gap:6px;" onclick="trimiteShareNativPlan()">
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg> <span id="btnNativeShareText" data-en="Send Link...">Trimite Link...</span>
         </button>
         <button type="button" class="btn btn-clear" style="width:100%; justify-content:center; gap:6px; padding:8px;" onclick="copiazaTextFormatatPlan()">
@@ -728,7 +706,7 @@
         <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
           <label id="profilePassLabel" data-en="Change Password">Schimbă Parola</label>
           <div class="password-field-wrap">
-            <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 6 caractere)" data-en-placeholder="New password (min. 6 characters)" autocomplete="new-password">
+            <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 8 caractere)" data-en-placeholder="New password (min. 8 characters)" autocomplete="new-password">
             <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaNoua', this)" tabindex="-1" aria-label="Arată/Ascunde parola" data-en-aria="Show/Hide password">
               <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -1173,7 +1151,8 @@
 
               <div class="form-group">
                 <label id="labelEditTip">Tip Abonament</label>
-                <select id="editTip" class="form-control">
+                <select id="editTip" class="form-control" onchange="recalculeazaSedinteEditare()">
+                  <option value="-" data-en="No subscription">Fără abonament</option>
                   <option value="8 sedinte">8 sedinte</option>
                   <option value="10 sedinte">10 sedinte</option>
                   <option value="12 sedinte">12 sedinte</option>
@@ -1185,14 +1164,22 @@
                 </select>
               </div>
 
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+              <div style="display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap:8px;">
                 <div class="form-group">
                   <label id="labelEditStart">Dată Start</label>
-                  <input type="text" id="editDataStart" class="form-control" placeholder="01.10.2026">
+                  <div class="camp-data camp-data-cu-icona">
+                    <input type="date" id="editDataStart" class="form-control" required onclick="deschideCalendarData(this)" onchange="completeazaExpirareEditare()">
+                    <span class="camp-data-eticheta" data-en="At first session">La prima ședință</span>
+                    <svg class="camp-data-icona" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label id="labelEditExp">Dată Expirare</label>
-                  <input type="text" id="editDataExpirare" class="form-control" placeholder="31.10.2026">
+                  <div class="camp-data camp-data-cu-icona">
+                    <input type="date" id="editDataExpirare" class="form-control" required onclick="deschideCalendarData(this)">
+                    <span class="camp-data-eticheta" data-en="Start + 30 days">Start + 30 zile</span>
+                    <svg class="camp-data-icona" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+                  </div>
                 </div>
               </div>
 
@@ -1412,20 +1399,10 @@
               <span id="btnImportPlanText">Import</span>
             </label>
             <input type="file" id="inputImportPlanFile" accept=".csv,text/csv,.json,application/json" style="display:none;" onchange="importaPlanDinFisier(this)">
-            <button type="button" class="btn btn-glass-subtle" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="duplicaPlanCurent()" id="btnDuplicaPlan" title="Copie după planul deschis (ex. săptămâna următoare)" data-en-title="Copy of the open plan (e.g. next week)">
-              <svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              <span data-en="Copy">Duplică</span>
-            </button>
             <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
               + <span id="btnNewPlanText">Plan Nou</span>
             </button>
           </div>
-        </div>
-
-        <!-- Filtrul listei: client (sugestii din clienți), titlu sau „Șabloane”; fără text, lista arată ultimele planuri -->
-        <div class="plan-filtru-rand">
-          <input type="search" id="filtruPlanClient" class="form-control" list="listaClienteVizibile" placeholder="Caută client sau plan" data-en-placeholder="Search client or plan" autocomplete="off" oninput="peFiltruPlanuri()">
-          <button type="button" class="btn btn-clear" id="btnFiltruSabloane" onclick="comutaFiltruSabloane()" data-en="Templates">Șabloane</button>
         </div>
 
         <!-- Listă proprie de planuri (desenată de aplicație); select-ul ascuns rămâne sursa datelor și a evenimentului change -->
@@ -1440,7 +1417,7 @@
         </select>
 
         <div class="plan-actions-row">
-          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="salveazaPlanDinButon()" id="btnSavePlanAction">
+          <button type="button" class="btn" style="flex:1 1 0; min-width:0; white-space:nowrap; font-size:0.78rem; padding:7px 6px;" onclick="salveazaPlanCurentInBaza()" id="btnSavePlanAction">
             <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
             <span id="btnSavePlanText">Salvează</span>
           </button>
@@ -1531,7 +1508,7 @@
     </button>
   </nav>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="app.js?v=fitFinal105"></script>
+  <script src="vendor/supabase-2.118.0.js"></script>
+  <script src="app.js?v=fitFinal106"></script>
 </body>
 </html>

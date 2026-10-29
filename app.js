@@ -1,12 +1,20 @@
 // --- CONFIGURARE SUPABASE ---
-const SUPABASE_URL = "https://qfnhluyczxugyqkbyvmc.supabase.co";
-const SUPABASE_KEY = "sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz";
+// Rulat local pe serverul de dezvoltare (localhost / 127.0.0.1, port 5500), aplicația folosește proiectul de staging,
+// ca testele să nu scrie în producție. Portul contează: o aplicație Android împachetată (ex. Capacitor) rulează tot pe localhost.
+// Cât timp STAGING_URL / STAGING_KEY sunt goale, local rămâne pe producție.
+const STAGING_URL = "https://oggzidgkvzopffeizxev.supabase.co";
+const STAGING_KEY = "sb_publishable_grA4R7N_UkNMHlMmN6HfKw_4YqFFnPZ";
+const ESTE_LOCAL = typeof location !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && location.port === '5500';
+const FOLOSESTE_STAGING = ESTE_LOCAL && !!STAGING_URL && !!STAGING_KEY;
+if (ESTE_LOCAL) console.info(FOLOSESTE_STAGING ? '[B-Fit] Mediu: STAGING' : '[B-Fit] ATENȚIE: local, dar pe baza de PRODUCȚIE (STAGING_URL gol)');
+const SUPABASE_URL = FOLOSESTE_STAGING ? STAGING_URL : "https://qfnhluyczxugyqkbyvmc.supabase.co";
+const SUPABASE_KEY = FOLOSESTE_STAGING ? STAGING_KEY : "sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz";
 let USE_SUPABASE = true;
-const URL_APLICATIE = "https://app.beatrixyvett.com/";
-// Worker-ul Cloudflare pentru pozele de progres (R2); gol = pozele nu apar în aplicație
-const URL_POZE = "https://bfit-poze.beatrixyvett-bako.workers.dev";
+const URL_APLICATIE = FOLOSESTE_STAGING ? location.origin + "/" : "https://app.beatrixyvett.com/";
+// Worker-ul Cloudflare pentru pozele de progres (R2); gol = pozele nu apar în aplicație (pe staging nu există)
+const URL_POZE = FOLOSESTE_STAGING ? "" : "https://bfit-poze.beatrixyvett-bako.workers.dev";
 // Citit înainte ca Supabase să curețe adresa: venim din emailul „Am uitat parola”
-const ESTE_LINK_RESETARE_PAROLA = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash);
+const ESTE_LINK_RESETARE_PAROLA = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash + window.location.search);
 const supabaseClient = (typeof window !== 'undefined' && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
@@ -192,7 +200,7 @@ const i18n = {
     authErrInvalidCreds: "Date de autentificare incorecte (email sau parolă greșită).",
     authErrEmailNotConfirmed: "Adresa de email nu a fost încă confirmată.",
     authErrUserExists: "Există deja un cont înregistrat cu această adresă de email.",
-    authErrPassLength: "Parola trebuie să aibă cel puțin 6 caractere.",
+    authErrPassLength: "Parola trebuie să aibă cel puțin 8 caractere.",
     authErrSamePassword: "Parola nouă trebuie să fie diferită de cea actuală.",
     authErrRateLimit: "Prea multe încercări. Te rugăm să aștepți câteva momente.",
     authErrNetwork: "Eroare de conexiune la rețea. Verifică internetul.",
@@ -349,7 +357,7 @@ const i18n = {
     authErrInvalidCreds: "Invalid login credentials (wrong email or password).",
     authErrEmailNotConfirmed: "Email address has not been confirmed yet.",
     authErrUserExists: "A user with this email address already exists.",
-    authErrPassLength: "Password should be at least 6 characters.",
+    authErrPassLength: "Password should be at least 8 characters.",
     authErrSamePassword: "New password must be different from the current one.",
     authErrRateLimit: "Too many attempts. Please wait a moment and try again.",
     authErrNetwork: "Network error. Please check your internet connection.",
@@ -468,12 +476,55 @@ function localizeazaEroareAuth(errMessage) {
   if (msg.includes("failed to fetch") || msg.includes("network")) {
     return t('authErrNetwork');
   }
+  if (msg.includes("captcha")) {
+    return tr('Verificarea anti-robot nu a reușit. Reîncearcă.', 'The anti-bot check failed. Please try again.');
+  }
   return t('authErrGeneric');
 }
 
 // ==========================================
 // 1. SUPABASE AUTH & SESIUNE UTILIZATOR
 // ==========================================
+
+// CAPTCHA (Cloudflare Turnstile): cu protecția activă în Supabase, login-ul, contul nou, resetarea parolei și magic link-ul
+// cer un token nou la fiecare apel. Pe staging: cheia de test Cloudflare (trece mereu). Widget-ul apare doar dacă e nevoie de interacțiune.
+const TURNSTILE_SITE_KEY = FOLOSESTE_STAGING ? '1x00000000000000000000AA' : '0x4AAAAAAFrlyuhRgdIADuX6';
+let turnstileIncarcare = null;
+let turnstileWidget = null;
+
+function incarcaTurnstile() {
+  if (!turnstileIncarcare) turnstileIncarcare = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    s.onload = resolve;
+    s.onerror = () => { s.remove(); turnstileIncarcare = null; reject(new Error('captcha')); };
+    document.head.appendChild(s);
+  });
+  return turnstileIncarcare;
+}
+
+async function obtineTokenCaptcha() {
+  await incarcaTurnstile();
+  let cutie = document.getElementById('captchaCutie');
+  if (!cutie) {
+    cutie = document.createElement('div');
+    cutie.id = 'captchaCutie';
+    document.body.appendChild(cutie);
+  }
+  if (turnstileWidget !== null) window.turnstile.remove(turnstileWidget);
+  return new Promise((resolve, reject) => {
+    const esec = () => reject(new Error('captcha'));
+    turnstileWidget = window.turnstile.render(cutie, {
+      sitekey: TURNSTILE_SITE_KEY,
+      appearance: 'interaction-only',
+      language: currentLang === 'en' ? 'en' : 'ro',
+      callback: resolve,
+      'error-callback': esec,
+      'timeout-callback': esec,
+      'expired-callback': esec
+    });
+  });
+}
 
 function afiseazaMesajAuthFeedback(mesaj, tip = 'error') {
   const el = document.getElementById('authStatusFeedback');
@@ -562,18 +613,21 @@ async function gestioneazaSubmitAuth(e) {
 
   try {
     if (tipModAuth === 'login') {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const captchaToken = await obtineTokenCaptcha();
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) throw error;
       showToast(t('authLoginSuccess'));
     } else {
-      if (password.length < 6) {
+      if (password.length < 8) {
         afiseazaMesajAuthFeedback(t('authErrPassLength'));
         return;
       }
+      const captchaToken = await obtineTokenCaptcha();
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: {
+          captchaToken,
           data: {
             full_name: email.split('@')[0]
           }
@@ -624,9 +678,14 @@ async function trimiteResetareParola() {
   const email = citesteEmailAuthValid();
   if (!email) return;
   ascundeMesajAuthFeedback();
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
-  if (error) afiseazaMesajAuthFeedback(localizeazaEroareAuth(error.message));
-  else afiseazaMesajAuthFeedback(tr('Ți-am trimis pe email un link pentru parolă nouă.', 'We emailed you a link to set a new password.'), 'success');
+  try {
+    const captchaToken = await obtineTokenCaptcha();
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname, captchaToken });
+    if (error) throw error;
+    afiseazaMesajAuthFeedback(tr('Ți-am trimis pe email un link pentru parolă nouă.', 'We emailed you a link to set a new password.'), 'success');
+  } catch (err) {
+    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
+  }
 }
 
 // După linkul din email clienta/antrenorul e conectat: deschidem Profil la „Schimbă parola”
@@ -644,9 +703,10 @@ async function trimiteMagicLink() {
 
   ascundeMesajAuthFeedback();
   try {
+    const captchaToken = await obtineTokenCaptcha();
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname }
+      options: { emailRedirectTo: window.location.origin + window.location.pathname, captchaToken }
     });
     if (error) throw error;
     afiseazaMesajAuthFeedback(t('authMagicLinkSent'), 'success');
@@ -936,8 +996,8 @@ async function schimbaParolaProfil() {
   const nouaParola = document.getElementById('profileInputParolaNoua')?.value || '';
   const confirmaParola = document.getElementById('profileInputParolaConfirma')?.value || '';
 
-  if (!nouaParola || nouaParola.length < 6) {
-    showToast(currentLang === 'en' ? 'Password must be at least 6 characters!' : 'Parola trebuie să aibă minim 6 caractere!', 'error');
+  if (!nouaParola || nouaParola.length < 8) {
+    showToast(currentLang === 'en' ? 'Password must be at least 8 characters!' : 'Parola trebuie să aibă minim 8 caractere!', 'error');
     return;
   }
 
@@ -2766,7 +2826,7 @@ function htmlOnboardingClienta() {
       <b>${tr('Setează o parolă', 'Set a password')}</b><br>
       ${tr('Așa te poți conecta oricând cu email și parolă, inclusiv în aplicația instalată.', 'This lets you sign in any time with email and password, including in the installed app.')}
       <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
-        ${htmlCampParola('onboardParolaInput', tr('Parolă nouă (min. 6 caractere)', 'New password (min. 6 characters)'))}
+        ${htmlCampParola('onboardParolaInput', tr('Parolă nouă (min. 8 caractere)', 'New password (min. 8 characters)'))}
         ${htmlCampParola('onboardParolaConfirma', tr('Confirmă parola', 'Confirm password'))}
         <button type="button" class="btn" id="btnOnboardParola" onclick="seteazaParolaOnboarding()">${tr('Setează parola', 'Set password')}</button>
       </div>
@@ -2788,7 +2848,7 @@ function htmlOnboardingClienta() {
 async function seteazaParolaOnboarding() {
   const parola = document.getElementById('onboardParolaInput')?.value || '';
   const confirmare = document.getElementById('onboardParolaConfirma')?.value || '';
-  if (parola.length < 6) {
+  if (parola.length < 8) {
     showToast(t('authErrPassLength'), 'error');
     return;
   }
@@ -3871,6 +3931,10 @@ function citesteEroareLinkAuth() {
   const parametri = new URLSearchParams(window.location.hash.replace(/^#/, '') || window.location.search);
   if (!parametri.get('error') && !parametri.get('error_code')) return '';
   history.replaceState(null, '', window.location.pathname);
+  return textLinkExpirat();
+}
+
+function textLinkExpirat() {
   return tr('Linkul a expirat sau a fost deja folosit. Conectează-te cu email și parolă, sau cere un link nou pe email.', 'The link has expired or was already used. Sign in with email and password, or request a new link by email.');
 }
 
@@ -3879,8 +3943,20 @@ function terminaPornirea() {
   document.documentElement.classList.remove('app-pornire');
 }
 
+// Linkurile din emailuri duc la adresa aplicației (?token_hash=...&type=...), nu la supabase.co (filtrele anti-spam penalizează
+// linkurile spre alt domeniu decât expeditorul). Aplicația confirmă singură linkul și curăță adresa.
+async function confirmaLinkEmail() {
+  const parametri = new URLSearchParams(window.location.search);
+  const tokenHash = parametri.get('token_hash');
+  const tip = parametri.get('type');
+  if (!tokenHash || !tip) return '';
+  history.replaceState(null, '', window.location.pathname);
+  const { error } = await supabaseClient.auth.verifyOtp({ token_hash: tokenHash, type: tip });
+  return error ? textLinkExpirat() : '';
+}
+
 async function verificaSesiuneSupabase() {
-  const eroareLink = citesteEroareLinkAuth();
+  let eroareLink = citesteEroareLinkAuth();
   const overlay = document.getElementById('authScreenOverlay');
   if (!supabaseClient) {
     if (overlay) overlay.classList.add('auth-hidden');
@@ -3888,6 +3964,7 @@ async function verificaSesiuneSupabase() {
     terminaPornirea();
     return true;
   }
+  eroareLink = (await confirmaLinkEmail()) || eroareLink;
 
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session && session.user) {
@@ -4783,8 +4860,8 @@ function randeazaOrarInstant() {
           <div class="slot-row slot-occupied">
             <div class="slot-num">${idx + 1}</div>
             <div class="slot-info">
-              <input type="text" class="slot-input" value="${s.clienta}" readonly style="font-weight:700;">
-              <input type="text" class="slot-input ${colorCls}" value="${s.antrenament || '-'}" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+              <input type="text" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
+              <input type="text" class="slot-input ${colorCls}" value="${escAttr(s.antrenament || '-')}" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
             </div>
             <div style="font-size:0.82rem; font-weight:800; color:#15803d; padding:0 8px; white-space:nowrap;">${historyText}</div>
           </div>
@@ -4930,7 +5007,7 @@ function randeazaOrarInstant() {
         <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
           ${slotNumHtml}
           <div class="slot-info">
-            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${clientaCurata}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
+            <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${escAttr(clientaCurata)}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
             ${selectAntHtml}
           </div>
           <div style="display:flex; gap:4px;">
@@ -5492,10 +5569,10 @@ function filtreazaIstoricOrarInstant() {
   filtrate.forEach(item => {
     html += `
       <tr>
-        <td><b>${item.data}</b></td>
-        <td style="font-weight:700;">${item.ora || '-'}</td>
-        <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
-        <td>${item.antrenament || '-'}</td>
+        <td><b>${escAttr(item.data)}</b></td>
+        <td style="font-weight:700;">${escAttr(item.ora || '-')}</td>
+        <td style="font-weight:700; color:var(--primary);">${escAttr(item.clienta)}</td>
+        <td>${escAttr(item.antrenament || '-')}</td>
       </tr>
     `;
   });
@@ -5528,7 +5605,7 @@ function randeazaProgramariInstant() {
       actHtml += `
         <div class="prog-grid-layout prog-row">
           <div class="prog-idx">${index + 1}</div>
-          <div class="prog-name">${item.nume}</div>
+          <div class="prog-name">${escAttr(item.nume)}</div>
           <div>
             <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
               <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
@@ -5538,7 +5615,7 @@ function randeazaProgramariInstant() {
             </select>
           </div>
           <div>
-            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
           </div>
           <div style="text-align:center;">
             <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="${currentLang === 'en' ? 'Move to Hold' : 'Mută în Hold'}">${SVG_COS_PLAN}</button>
@@ -5556,9 +5633,9 @@ function randeazaProgramariInstant() {
       holdHtml += `
         <div class="prog-grid-layout-hold prog-row hold-row">
           <div class="prog-idx">${index + 1}</div>
-          <div class="prog-name">${item.nume}</div>
+          <div class="prog-name">${escAttr(item.nume)}</div>
           <div style="grid-column: 3 / 4;">
-            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${item.mentiuni || ''}</textarea>
+            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
           </div>
           <div style="text-align:center;">
             <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="${currentLang === 'en' ? 'Delete permanently' : 'Șterge definitiv'}">${SVG_COS_PLAN}</button>
@@ -5645,7 +5722,9 @@ function afiseazaFisaClientaInstant() {
   randeazaNotaClient(client);
 
   document.getElementById('fisaSedinteRamase').innerText = client.ramase;
-  document.getElementById('fisaValabilitate').innerText = client.dataExpirare;
+  // Abonament activat fără dată: valabilitatea pornește la prima ședință bifată
+  const asteaptaStart = client.incluse > 0 && (!client.dataExpirare || client.dataExpirare === '-');
+  document.getElementById('fisaValabilitate').innerText = asteaptaStart ? tr('La prima ședință', 'At first session') : client.dataExpirare;
   
   let progresText = currentLang === 'en' ? `Progress: ${client.efectuate} of ${client.incluse} sessions` : `Progres: ${client.efectuate} din ${client.incluse} ședințe`;
   document.getElementById('fisaProgres').innerText = `${client.efectuate} ${currentLang === 'en' ? 'of' : 'din'} ${client.incluse}`;
@@ -5685,8 +5764,8 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('editNume').value = client.nume;
   let tipNormalizat = normalizeazaTipAbonament(client.tipAbonament);
   document.getElementById('editTip').value = tipNormalizat;
-  document.getElementById('editDataStart').value = client.dataStart;
-  document.getElementById('editDataExpirare').value = client.dataExpirare;
+  document.getElementById('editDataStart').value = dataRoInIso(client.dataStart);
+  document.getElementById('editDataExpirare').value = dataRoInIso(client.dataExpirare);
   document.getElementById('editIncluse').value = client.incluse;
   document.getElementById('editEfectuate').value = client.efectuate;
   document.getElementById('editRamase').value = client.ramase;
@@ -6659,7 +6738,10 @@ function invitaClienta() {
       showToast(tr("Eroare sincronizare", "Sync error"), "error");
       return;
     }
-    const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE } });
+    const captchaToken = await obtineTokenCaptcha().catch(() => null);
+    const { error } = captchaToken
+      ? await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE, captchaToken } })
+      : { error: true };
     btn.disabled = false;
     if (error) showToast(tr('Emailul nu s-a putut trimite', 'Could not send the email'), 'error');
     else showToast(tr('Invitație trimisă', 'Invitation sent'));
@@ -6705,7 +6787,7 @@ function filtreazaIstoricFisaInstant() {
   } else {
     let h = '';
     prezenteClienta.forEach(p => {
-      h += `<div style="padding:5px 0; border-bottom:1px solid var(--border);">• <b>${p.data}</b> (${p.ora || '-'}) - ${p.antrenament || '-'}</div>`;
+      h += `<div style="padding:5px 0; border-bottom:1px solid var(--border);">• <b>${escAttr(p.data)}</b> (${escAttr(p.ora || '-')}) - ${escAttr(p.antrenament || '-')}</div>`;
     });
     istoricDiv.innerHTML = h;
   }
@@ -6732,14 +6814,42 @@ function valoriEditareFisa() {
   return CAMPURI_EDITARE_FISA.map(id => (document.getElementById(id)?.value || '').trim()).join('\u0001');
 }
 
+// dd.mm.yyyy → yyyy-mm-dd pentru <input type="date">; „-” sau gol → ''
+function dataRoInIso(s) {
+  const ms = parseazaDataOraRo(s);
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Tipul nou din „Editează” aduce numărul lui de ședințe; altfel clientul rămâne „Fără abonament” (incluse 0)
+function recalculeazaSedinteEditare() {
+  const tip = document.getElementById('editTip').value;
+  const incluse = tip === '-' ? 0 : getNrSedinteAbonamentLocal(tip);
+  const efectuate = Number(document.getElementById('editEfectuate').value) || 0;
+  document.getElementById('editIncluse').value = incluse;
+  document.getElementById('editRamase').value = Math.max(0, incluse - efectuate);
+}
+
+// Start ales fără expirare: expirarea devine start + 30 de zile (se poate ajusta)
+function completeazaExpirareEditare() {
+  const start = document.getElementById('editDataStart').value;
+  const elExp = document.getElementById('editDataExpirare');
+  if (!start || elExp.value) return;
+  const d = new Date(parseazaDataOraRo(start));
+  d.setDate(d.getDate() + 30);
+  elExp.value = dataRoInIso(formateazaDataRoLocal(d));
+}
+
 function salveazaEditareClienta() {
   if (valoriEditareFisa() === valoriInitialeFisa) return;
   let sel = document.getElementById('selectClientaFisa');
   let numeVechi = sel ? sel.value.trim() : "";
   let numeNou = document.getElementById('editNume').value.trim();
   let tip = document.getElementById('editTip').value;
-  let dStart = document.getElementById('editDataStart').value;
-  let dExp = document.getElementById('editDataExpirare').value;
+  // Câmpurile de dată dau yyyy-mm-dd (gol = „-”, abonamentul pornește la prima ședință bifată)
+  let dStart = formateazaDataRoLocal(document.getElementById('editDataStart').value);
+  let dExp = formateazaDataRoLocal(document.getElementById('editDataExpirare').value);
   let inc = document.getElementById('editIncluse').value;
   let ef = document.getElementById('editEfectuate').value;
   let ram = document.getElementById('editRamase').value;
@@ -6960,20 +7070,21 @@ function filtreazaIstoricIncasariInstant() {
     let sumaStil = esteGol ? 'color:var(--text-muted); font-weight:700;' : 'color:#27ae60; font-weight:700;';
     
     let metodaContinut = (item.metoda && item.metoda.trim() !== "-" && item.metoda.trim() !== "") 
-      ? item.metoda 
-      : '<span class="dash-placeholder">-</span>';
-      
-    let tipContinut = (item.tip && item.tip.trim() !== "-" && item.tip.trim() !== "") 
-      ? item.tip 
+      ? escAttr(item.metoda)
       : '<span class="dash-placeholder">-</span>';
 
-    let itemJson = encodeURIComponent(JSON.stringify(item));
+    let tipContinut = (item.tip && item.tip.trim() !== "-" && item.tip.trim() !== "")
+      ? escAttr(item.tip)
+      : '<span class="dash-placeholder">-</span>';
+
+    // encodeURIComponent lasă apostroful necodificat, iar el ar închide argumentul din onclick
+    let itemJson = encodeURIComponent(JSON.stringify(item)).replace(/'/g, '%27');
 
     html += `
       <tr class="incasare-row-clickable" onclick="deschideModalEditareIncasare('${itemJson}')" title="${currentLang === 'en' ? 'Click to edit this payment' : 'Apasă pentru a edita această plată'}">
-        <td style="font-weight:700;">${item.data}</td>
-        <td style="font-weight:700; color:var(--primary);">${item.clienta}</td>
-        <td style="${sumaStil}">${item.suma}</td>
+        <td style="font-weight:700;">${escAttr(item.data)}</td>
+        <td style="font-weight:700; color:var(--primary);">${escAttr(item.clienta)}</td>
+        <td style="${sumaStil}">${escAttr(item.suma)}</td>
         <td style="text-align:center;">${metodaContinut}</td>
         <td>${tipContinut}</td>
         <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></td>
@@ -7231,59 +7342,6 @@ function construiesteSablonPlanDefault() {
   };
 }
 
-// Plan complet: structura unui program întreg (principii, încălzire, o sesiune, progresie, siguranță), de adaptat
-function construiesteSablonPlanComplet() {
-  const plan = construiesteSablonPlanDefault();
-  const exercitiu = (nr) => ({ nr, exercitiu: "", seturi_repetari: "3 × 10–12", pauza: "60–90 sec", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "" });
-  plan.continut_json = {
-    sectiuni_inceput: [
-      {
-        titlu: tr("Principii de bază", "Basic principles"),
-        continut: tr(
-          "- Frecvență: 2–3 sesiuni pe săptămână, cu cel puțin o zi de pauză între ele.\n- Intensitate: la finalul fiecărei serii mai poți face 2–3 repetări curate.\n- Tehnică: contează mai mult decât greutatea. Dacă execuția se strică, oprește seria.\n- Pregătire: apă la îndemână, încălțăminte sport, o masă ușoară cu 1–2 ore înainte.",
-          "- Frequency: 2–3 sessions per week, with at least one rest day between them.\n- Intensity: at the end of each set you can still do 2–3 clean reps.\n- Technique: matters more than the weight. If your form breaks, stop the set.\n- Preparation: water at hand, sports shoes, a light meal 1–2 hours before."
-        )
-      },
-      {
-        titlu: tr("Structura unei sesiuni", "Session structure"),
-        continut: tr(
-          "- Încălzire (8–10 min): mers rapid sau bicicletă, rotiri de articulații, genuflexiuni fără greutate.\n- Partea principală (30–40 min): exercițiile din tabel, în ordine.\n- Revenire (5 min): mers lent și întinderi ușoare, 20–30 sec pe grupă.",
-          "- Warm-up (8–10 min): brisk walk or bike, joint rotations, bodyweight squats.\n- Main part (30–40 min): the exercises in the table, in order.\n- Cool-down (5 min): slow walk and light stretching, 20–30 sec per muscle group."
-        )
-      }
-    ],
-    sesiuni: [{ titlu: tr("Sesiunea A", "Session A"), exercitii: [exercitiu(1), exercitiu(2), exercitiu(3)] }],
-    sectiuni_final: [
-      {
-        titlu: tr("Progresie", "Progression"),
-        continut: tr(
-          "- Săptămânile 1–2: greutăți mici, accent pe tehnică.\n- Apoi: crești întâi repetările până la capătul intervalului, apoi greutatea.\n- Jurnal: notează greutatea la fiecare exercițiu, direct în aplicație.",
-          "- Weeks 1–2: light weights, focus on technique.\n- Then: first increase the reps to the top of the range, then the weight.\n- Log: note the weight for each exercise, right in the app."
-        )
-      },
-      {
-        titlu: tr("Când te oprești", "When to stop"),
-        continut: tr(
-          "- Durere ascuțită în articulații sau în spate.\n- Amețeli, greață sau dificultăți de respirație.\nÎn aceste cazuri oprește sesiunea și anunță antrenorul.",
-          "- Sharp pain in the joints or back.\n- Dizziness, nausea or difficulty breathing.\nIn these cases stop the session and tell your trainer."
-        )
-      },
-      {
-        titlu: tr("Alimentație și recuperare", "Nutrition and recovery"),
-        continut: tr(
-          "- Somn: 7–9 ore pe noapte.\n- Alimentație: proteine la fiecare masă și suficientă apă.",
-          "- Sleep: 7–9 hours per night.\n- Nutrition: protein at every meal and enough water."
-        )
-      }
-    ],
-    nota_subsol: tr(
-      "Programul se adaptează împreună cu antrenorul în caz de accidentări sau probleme medicale.",
-      "The program is adjusted together with your trainer in case of injuries or medical issues."
-    )
-  };
-  return plan;
-}
-
 async function deschideSectiunePlanAntrenamentDinMeniu() {
   inchideMeniuLateral();
   tabAnteriorPlan = tipTabCurent || 'orar';
@@ -7410,7 +7468,10 @@ function sincronizeazaListaPlanuri() {
   trigger.classList.toggle('select-faded', !sel.value);
   trigger.classList.toggle('select-active', !!sel.value);
 
-  construiestePanelPlanuri(panel, sel);
+  construiesteOptiuniListaProprie(panel, sel, true, () => {
+    comutaListaPlanuri(false);
+    sincronizeazaListaPlanuri();
+  });
 
   if (!panel.children.length) {
     const gol = document.createElement('div');
@@ -7418,231 +7479,6 @@ function sincronizeazaListaPlanuri() {
     gol.textContent = currentLang === 'en' ? 'No saved plans yet' : 'Niciun plan salvat încă';
     panel.appendChild(gol);
   }
-}
-
-// ---- Lista de planuri: filtru (client / titlu / șabloane), recente și arhivă ----
-const ARHIVA_PLAN_ZILE = 14; // un plan al unui client, nemodificat de atâtea zile, merge sub „Mai vechi” (nu se șterge)
-const filtruPlanuri = { sabloane: false, vechiDeschis: false };
-const faraDiacritice = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
-
-function actualizeazaButonSabloane() {
-  document.getElementById('btnFiltruSabloane')?.classList.toggle('active', filtruPlanuri.sabloane);
-}
-
-function peFiltruPlanuri() {
-  filtruPlanuri.sabloane = false;
-  filtruPlanuri.vechiDeschis = false;
-  actualizeazaButonSabloane();
-  sincronizeazaListaPlanuri();
-  comutaListaPlanuri(true);
-}
-
-function comutaFiltruSabloane() {
-  filtruPlanuri.sabloane = !filtruPlanuri.sabloane;
-  const inp = document.getElementById('filtruPlanClient');
-  if (inp && filtruPlanuri.sabloane) inp.value = '';
-  actualizeazaButonSabloane();
-  sincronizeazaListaPlanuri();
-  comutaListaPlanuri(true);
-}
-
-// Fără text: ultimele 10 planuri. Client exact: planurile lui (recente + „Mai vechi”). Alt text: căutare în client și titlu.
-// „Șabloane”: planurile fără client. Select-ul ascuns rămâne sursa valorilor; la alegere i se setează valoarea și declanșează change.
-function construiestePanelPlanuri(panel, sel) {
-  panel.innerHTML = '';
-  const text = faraDiacritice(document.getElementById('filtruPlanClient')?.value);
-  const limita = Date.now() - ARHIVA_PLAN_ZILE * 86400000;
-  const data = p => new Date(p.updated_at || 0).getTime();
-  const toate = [...(DB.planuri || [])].sort((a, b) => data(b) - data(a));
-  const esteSablon = p => !(p.clienta || '').trim();
-
-  const rand = (p, textRand) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'plan-picker-item' + (String(p.id) === String(sel.value) ? ' is-selected' : '');
-    btn.setAttribute('role', 'option');
-    btn.textContent = textRand;
-    btn.onclick = () => {
-      sel.value = p.id;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      comutaListaPlanuri(false);
-      sincronizeazaListaPlanuri();
-    };
-    panel.appendChild(btn);
-  };
-  const eticheta = (clasa, txt) => {
-    const d = document.createElement('div');
-    d.className = clasa;
-    d.textContent = txt;
-    panel.appendChild(d);
-  };
-  const titlu = txt => eticheta('plan-picker-group', txt);
-  const nota = txt => eticheta('plan-picker-empty', txt);
-  const cuClient = p => esteSablon(p) ? `${tr('Șablon', 'Template')} · ${p.titlu}` : `[${p.clienta}] ${p.titlu}`;
-
-  if (filtruPlanuri.sabloane) {
-    const lista = toate.filter(esteSablon).sort((a, b) => (a.titlu || '').localeCompare(b.titlu || '', 'ro', { numeric: true, sensitivity: 'base' }));
-    titlu(`${tr('Șabloane', 'Templates')} (${lista.length})`);
-    if (!lista.length) nota(tr('Niciun șablon încă. Un plan fără client devine șablon.', 'No templates yet. A plan without a client becomes a template.'));
-    lista.forEach(p => rand(p, p.titlu));
-    return;
-  }
-
-  const client = text ? (DB.clienti || []).find(c => faraDiacritice(c.nume) === text) : null;
-  if (client) {
-    const ale = toate.filter(p => faraDiacritice(p.clienta) === text);
-    const recente = ale.filter(p => data(p) >= limita);
-    const vechi = ale.filter(p => data(p) < limita);
-    titlu(`${client.nume} · ${tr('recente', 'recent')} (${recente.length})`);
-    if (!recente.length) nota(tr(`Niciun plan din ultimele ${ARHIVA_PLAN_ZILE} zile.`, `No plan in the last ${ARHIVA_PLAN_ZILE} days.`));
-    recente.forEach(p => rand(p, p.titlu));
-    if (vechi.length) {
-      const toggle = document.createElement('button');
-      toggle.type = 'button';
-      toggle.className = 'plan-picker-vechi';
-      toggle.innerHTML = `<span>${tr('Mai vechi', 'Older')} (${vechi.length})</span><span>${filtruPlanuri.vechiDeschis ? '▲' : '▼'}</span>`;
-      toggle.onclick = () => { filtruPlanuri.vechiDeschis = !filtruPlanuri.vechiDeschis; sincronizeazaListaPlanuri(); };
-      panel.appendChild(toggle);
-      if (filtruPlanuri.vechiDeschis) vechi.forEach(p => rand(p, p.titlu));
-    }
-    return;
-  }
-
-  if (text) {
-    const gasite = toate.filter(p => faraDiacritice(p.clienta).includes(text) || faraDiacritice(p.titlu).includes(text));
-    titlu(`${tr('Rezultate', 'Results')} (${gasite.length})`);
-    if (!gasite.length) nota(tr('Niciun plan găsit.', 'No plan found.'));
-    gasite.slice(0, 40).forEach(p => rand(p, cuClient(p)));
-    if (gasite.length > 40) nota(tr(`Încă ${gasite.length - 40}. Scrie mai mult ca să restrângi căutarea.`, `${gasite.length - 40} more. Type more to narrow the search.`));
-    return;
-  }
-
-  if (!toate.length) return;
-  titlu(tr('Recente', 'Recent'));
-  toate.slice(0, 10).forEach(p => rand(p, cuClient(p)));
-  if (toate.length > 10) nota(tr('Alege un client sau caută după titlu ca să vezi restul.', 'Pick a client or search by title to see the rest.'));
-}
-
-// ---- Trimite planul la clienți: o copie personală pentru fiecare client bifat ----
-let trimitePlanSelectati = new Set();
-let trimitereInCurs = false;
-
-const arePlanDeja = (nume, titlu) => (DB.planuri || []).some(p => faraDiacritice(p.clienta) === faraDiacritice(nume) && faraDiacritice(p.titlu) === faraDiacritice(titlu));
-
-function clientiPentruTrimitere() {
-  const text = faraDiacritice(document.getElementById('cautaClientTrimitePlan')?.value);
-  return (DB.clienti || [])
-    .filter(c => !['arhivat', 'archived'].includes((c.status || '').toLowerCase()) && (!text || faraDiacritice(c.nume).includes(text)))
-    .sort((a, b) => a.nume.localeCompare(b.nume, 'ro', { sensitivity: 'base' }));
-}
-
-function deschideModalTrimitePlan() {
-  if (!planActiv) return;
-  if (!(planActiv.titlu || '').trim()) {
-    showToast(tr('Adaugă un titlu planului înainte să-l trimiți!', 'Add a plan title before sending!'), 'error');
-    return;
-  }
-  inchideModalSharePlan();
-  trimitePlanSelectati = new Set();
-  const cauta = document.getElementById('cautaClientTrimitePlan');
-  if (cauta) cauta.value = '';
-  randeazaListaTrimitePlan();
-  document.getElementById('modalTrimitePlanBackdrop').style.display = 'flex';
-}
-
-function inchideModalTrimitePlan() {
-  document.getElementById('modalTrimitePlanBackdrop').style.display = 'none';
-}
-
-function randeazaListaTrimitePlan() {
-  const lista = document.getElementById('listaTrimitePlan');
-  if (!lista) return;
-  const titlu = planActiv ? planActiv.titlu : '';
-  const clienti = clientiPentruTrimitere();
-  lista.innerHTML = clienti.length ? clienti.map(c => `<label class="trimite-plan-rand">
-      <input type="checkbox" data-nume="${escAttr(c.nume)}" ${trimitePlanSelectati.has(c.nume) ? 'checked' : ''} onchange="comutaClientTrimitePlan(this)">
-      <span>${escAttr(c.nume)}</span>${arePlanDeja(c.nume, titlu) ? `<small>${tr('are deja', 'has it')}</small>` : ''}
-    </label>`).join('') : `<div class="plan-picker-empty">${tr('Niciun client găsit.', 'No client found.')}</div>`;
-  actualizeazaButonTrimitePlan();
-}
-
-function comutaClientTrimitePlan(el) {
-  if (el.checked) trimitePlanSelectati.add(el.dataset.nume);
-  else trimitePlanSelectati.delete(el.dataset.nume);
-  actualizeazaButonTrimitePlan();
-}
-
-// „Toți”: bifează clienții afișați care nu au deja planul; apăsat din nou, îi debifează
-function bifeazaToatiTrimitePlan() {
-  const titlu = planActiv ? planActiv.titlu : '';
-  const vizibili = clientiPentruTrimitere().filter(c => !arePlanDeja(c.nume, titlu)).map(c => c.nume);
-  const toti = vizibili.length > 0 && vizibili.every(n => trimitePlanSelectati.has(n));
-  vizibili.forEach(n => toti ? trimitePlanSelectati.delete(n) : trimitePlanSelectati.add(n));
-  randeazaListaTrimitePlan();
-}
-
-function actualizeazaButonTrimitePlan() {
-  const btn = document.getElementById('btnTrimitePlanAcum');
-  if (!btn) return;
-  const n = trimitePlanSelectati.size;
-  btn.disabled = n === 0 || trimitereInCurs;
-  btn.style.opacity = btn.disabled ? '0.55' : '';
-  btn.innerText = trimitereInCurs ? tr('Se trimite...', 'Sending...')
-    : n === 0 ? tr('Alege clienții', 'Pick clients')
-    : tr(`Trimite la ${n} ${n === 1 ? 'client' : 'clienți'}`, `Send to ${n} ${n === 1 ? 'client' : 'clients'}`);
-}
-
-async function trimitePlanLaClienti() {
-  if (trimitereInCurs || !trimitePlanSelectati.size || !planActiv || !supabaseClient) return;
-  const nume = [...trimitePlanSelectati];
-  trimitereInCurs = true;
-  actualizeazaButonTrimitePlan();
-
-  const uid = utilizatorCurent ? utilizatorCurent.id : null;
-  // Copia pornește curată: progresul altcuiva (greutate, serii, status) nu se duce la client
-  const continut = JSON.parse(JSON.stringify(planActiv.continut_json || {}));
-  (continut.sesiuni || []).forEach(s => (s.exercitii || []).forEach(ex => { ex.greutate_kg = ''; ex.seturi_finalizate = ''; ex.status = ''; }));
-  const acum = new Date().toISOString();
-  const randuri = nume.map(n => {
-    const r = { clienta: n, titlu: (planActiv.titlu || '').trim(), subtitlu: (planActiv.subtitlu || '').trim(), continut_json: continut, updated_at: acum };
-    if (uid) r.user_id = uid;
-    return r;
-  });
-
-  let trimise = 0;
-  try {
-    for (let i = 0; i < randuri.length; i += 25) {
-      const { data, error } = await supabaseClient.from('planuri_antrenament').insert(randuri.slice(i, i + 25)).select();
-      if (error) throw error;
-      trimise += (data || []).length;
-      (data || []).forEach(r => { DB.planuri.unshift(r); trimitePlanSelectati.delete(r.clienta); });
-    }
-    showToast(tr(`✓ Plan trimis la ${trimise} ${trimise === 1 ? 'client' : 'clienți'}`, `✓ Plan sent to ${trimise} ${trimise === 1 ? 'client' : 'clients'}`));
-    inchideModalTrimitePlan();
-  } catch (err) {
-    console.error('Eroare trimitere plan:', err);
-    showToast(tr(`Trimiterea s-a oprit: ${trimise} din ${nume.length} trimise. Reîncearcă pentru restul.`, `Sending stopped: ${trimise} of ${nume.length} sent. Try again for the rest.`), 'error');
-  } finally {
-    trimitereInCurs = false;
-    try { localStorage.setItem('BFIT_DB_LOCAL', JSON.stringify(DB)); } catch (e) {}
-    populeazaSelectorPlanuri();
-    randeazaListaTrimitePlan();
-  }
-}
-
-// Un șablon (plan fără client) căruia îi scrii un client ar deveni planul clientului, iar șablonul ar dispărea: întrebăm
-function cuGardaSablon(continua) {
-  const salvat = planActiv && planActiv.id ? (DB.planuri || []).find(p => String(p.id) === String(planActiv.id)) : null;
-  if (!salvat || (salvat.clienta || '').trim() || !(planActiv.clienta || '').trim()) { continua(); return; }
-  customConfirm(tr('Planul era un șablon', 'This plan was a template'),
-    tr(`Îl salvezi ca plan nou pentru ${planActiv.clienta}, cu șablonul neschimbat, sau transformi șablonul în planul lui?`, `Save it as a new plan for ${planActiv.clienta}, keeping the template, or turn the template into their plan?`),
-    () => { planActiv.id = null; continua(); });
-  document.getElementById('modalBtnConfirm').innerText = tr('Plan nou', 'New plan');
-  aratButonAlternativModal(tr('Transformă șablonul', 'Turn the template into the plan'), continua);
-}
-
-function salveazaPlanDinButon() {
-  cuGardaSablon(() => salveazaPlanCurentInBaza());
 }
 
 // Construiește rândurile listei proprii din opțiunile unui <select> (cu grupuri); la alegere setează valoarea
@@ -7853,37 +7689,8 @@ function incarcaPlanDinLista(idPlan) {
   }
 }
 
-// „Plan nou”: complet (cu structura unui program) sau gol (o zi cu un exercițiu)
 function creeazaPlanNouCuSablon() {
-  dupaConfirmareModificariPlan(() => {
-    // Modalul tocmai se închide (închiderea îi golește callback-urile): îl redeschidem după
-    setTimeout(() => {
-      customConfirm(
-        tr("Plan nou", "New plan"),
-        tr("Complet: vine cu principii, încălzire, o sesiune și recomandări, de adaptat.\nGol: doar o zi cu un exercițiu.", "Complete: comes with principles, warm-up, one session and tips, ready to adapt.\nEmpty: just one day with one exercise."),
-        () => pornestePlanNou(construiesteSablonPlanComplet())
-      );
-      document.getElementById('modalBtnConfirm').innerText = tr("Plan complet", "Complete plan");
-      aratButonAlternativModal(tr("Plan gol", "Empty plan"), () => pornestePlanNou());
-    }, 0);
-  });
-}
-
-// Copie după planul deschis (ex. săptămâna următoare): plan nou, același client, fără progresul lui
-function duplicaPlanCurent() {
-  if (!planActiv || estePlanNouGol()) {
-    showToast(tr("Alege întâi planul pe care vrei să-l copiezi.", "Choose the plan you want to copy first."), "error");
-    return;
-  }
-  const urmatoarea = (s) => (s || '').replace(/(săptămâna|saptamana|week)\s*(\d+)/i, (m, cuvant, nr) => `${cuvant} ${Number(nr) + 1}`);
-  const copie = JSON.parse(JSON.stringify({ clienta: planActiv.clienta, titlu: planActiv.titlu, subtitlu: planActiv.subtitlu, continut_json: planActiv.continut_json }));
-  copie.id = null;
-  copie.titlu = urmatoarea(copie.titlu);
-  (copie.continut_json.sesiuni || []).forEach(ses => {
-    ses.titlu = urmatoarea(ses.titlu);
-    (ses.exercitii || []).forEach(ex => { ex.greutate_kg = ''; ex.seturi_finalizate = ''; ex.status = ''; });
-  });
-  pornestePlanNou(copie, tr("✓ Copie creată. Verifică titlul și salvează.", "✓ Copy created. Check the title and save."));
+  dupaConfirmareModificariPlan(() => pornestePlanNou());
 }
 
 function pornestePlanNou(plan, mesaj) {
@@ -8353,8 +8160,9 @@ async function salveazaPlanCurentInBaza(silent = false) {
 // Plan nesalvat și neatins: nu are ce să se șteargă, deci butonul de coș e inactiv
 function estePlanNouGol() {
   if (!planActiv || planActiv.id) return false;
+  const gol = construiesteSablonPlanDefault();
   const cheie = p => JSON.stringify([p.clienta, p.titlu, p.subtitlu, p.continut_json]);
-  return [construiesteSablonPlanDefault(), construiesteSablonPlanComplet()].some(gol => cheie(planActiv) === cheie(gol));
+  return cheie(planActiv) === cheie(gol);
 }
 
 function actualizeazaButonStergePlan() {
@@ -8489,15 +8297,18 @@ function importaPlanDinFisier(inputEl) {
 // Librăria de PDF (pdfmake, cu fontul Roboto, care are diacriticele) se încarcă doar la primul export
 function incarcaPdfMake() {
   if (window.pdfMake && window.pdfMake.vfs) return Promise.resolve();
-  const incarca = (src) => new Promise((resolve, reject) => {
+  // integrity: browserul refuză fișierul dacă diferă de versiunea verificată (CDN compromis sau modificat)
+  const incarca = (src, integrity) => new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
+    s.integrity = integrity;
+    s.crossOrigin = 'anonymous';
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
   });
-  return incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js')
-    .then(() => incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js'));
+  return incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js', 'sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7')
+    .then(() => incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js', 'sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n'));
 }
 
 // Culoarea de brand a fiecărei palete (aceeași ca fundalul iconiței)
@@ -8698,8 +8509,6 @@ async function deschideModalSharePlan() {
     showToast(tr("Adaugă un titlu planului înainte să-l trimiți!", "Add a plan title before sharing!"), "error");
     return;
   }
-  // Șablon cu client scris pe el: aceeași întrebare ca la Salvează (dacă renunți, nu se întâmplă nimic)
-  await new Promise(continua => cuGardaSablon(() => continua()));
   const salvat = await salveazaPlanCurentInBaza(true);
   const idPlan = salvat ? salvat.id : (planActiv ? planActiv.id : null);
 
@@ -9169,7 +8978,7 @@ function htmlFinalInscriere() {
         <input type="email" class="form-control" value="${escAttr(stareInscriere.r.email || '')}" disabled>
       </div>
       <div class="form-group">
-        <label>${tr('Alege o parolă (minim 6 caractere)', 'Choose a password (at least 6 characters)')}</label>
+        <label>${tr('Alege o parolă (minim 8 caractere)', 'Choose a password (at least 8 characters)')}</label>
         ${htmlCampParolaInscriere('inscriereParola')}
       </div>
       <div class="form-group">
@@ -9206,7 +9015,7 @@ function htmlAreDejaContInscriere() {
 // Contul primește rolul de clientă abia după acceptare (leaga_cont_clienta găsește emailul în fișă la login)
 async function creeazaContInscriere() {
   const parola = document.getElementById('inscriereParola').value;
-  if (parola.length < 6) {
+  if (parola.length < 8) {
     showToast(t('authErrPassLength'), 'error');
     return;
   }
@@ -9216,11 +9025,14 @@ async function creeazaContInscriere() {
   }
   const btn = document.getElementById('btnInscriereCont');
   btn.disabled = true;
-  const { data, error } = await supabaseClient.auth.signUp({
-    email: (stareInscriere.r.email || '').trim().toLowerCase(),
-    password: parola,
-    options: { emailRedirectTo: URL_APLICATIE, data: { full_name: (stareInscriere.r.nume || '').trim() } }
-  });
+  const captchaToken = await obtineTokenCaptcha().catch(() => null);
+  const { data, error } = captchaToken
+    ? await supabaseClient.auth.signUp({
+      email: (stareInscriere.r.email || '').trim().toLowerCase(),
+      password: parola,
+      options: { emailRedirectTo: URL_APLICATIE, captchaToken, data: { full_name: (stareInscriere.r.nume || '').trim() } }
+    })
+    : { data: null, error: new Error('captcha') };
   const mesaj = ((error && error.message) || '').toLowerCase();
   // Cu confirmarea pe email activă, Supabase nu dă eroare pentru un email existent, ci un utilizator fără identități
   const areDejaCont = /already (registered|exists|been registered)/.test(mesaj)
