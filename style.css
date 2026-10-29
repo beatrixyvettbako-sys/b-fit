@@ -5828,12 +5828,34 @@ select.form-control {
   flex-shrink: 0;
 }
 
-/* CAPTCHA Turnstile: vizibil doar când Cloudflare cere o interacțiune; peste ecranul de autentificare */
+/* CAPTCHA Turnstile: rulează ascuns (nu display:none, altfel nu pornește); cardul apare doar când Cloudflare cere un clic */
 #captchaCutie {
   position: fixed;
   left: 50%;
   bottom: calc(16px + env(safe-area-inset-bottom));
-  transform: translateX(-50%);
+  transform: translate(-50%, 12px);
   z-index: 100000;
   max-width: calc(100vw - 32px);
+  padding: 10px 10px 8px;
+  border-radius: 16px;
+  background: var(--card-bg-solid);
+  border: 1px solid var(--glass-border-subtle);
+  box-shadow: 0 12px 32px -8px rgba(var(--primary-dark-rgb), 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#captchaCutie.vizibil {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0);
+}
+
+.captcha-titlu {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 6px;
 }

@@ -487,10 +487,14 @@ function localizeazaEroareAuth(errMessage) {
 // ==========================================
 
 // CAPTCHA (Cloudflare Turnstile): cu protecția activă în Supabase, login-ul, contul nou, resetarea parolei și magic link-ul
-// cer un token nou la fiecare apel. Pe staging: cheia de test Cloudflare (trece mereu). Widget-ul apare doar dacă e nevoie de interacțiune.
+// cer un token nou la fiecare apel. Pe staging: cheia de test Cloudflare (trece mereu).
+// Verificarea pornește din timp (pregatesteCaptcha, la ecranul de login), ca token-ul să fie gata la apăsarea butonului;
+// după fiecare folosire se cere în fundal unul nou. Caseta apare doar când Cloudflare cere un clic și dispare imediat după.
 const TURNSTILE_SITE_KEY = FOLOSESTE_STAGING ? '1x00000000000000000000AA' : '0x4AAAAAAFrlyuhRgdIADuX6';
 let turnstileIncarcare = null;
 let turnstileWidget = null;
+let captchaTokenGata = null;
+let captchaAsteptatori = [];
 
 function incarcaTurnstile() {
   if (!turnstileIncarcare) turnstileIncarcare = new Promise((resolve, reject) => {
@@ -503,27 +507,52 @@ function incarcaTurnstile() {
   return turnstileIncarcare;
 }
 
-async function obtineTokenCaptcha() {
+function arataCasetaCaptcha(vizibila) {
+  document.getElementById('captchaCutie')?.classList.toggle('vizibil', vizibila);
+}
+
+function respingeAsteptatoriCaptcha() {
+  captchaAsteptatori.splice(0).forEach(a => a.reject(new Error('captcha')));
+}
+
+async function pregatesteCaptcha() {
   await incarcaTurnstile();
-  let cutie = document.getElementById('captchaCutie');
-  if (!cutie) {
-    cutie = document.createElement('div');
-    cutie.id = 'captchaCutie';
-    document.body.appendChild(cutie);
-  }
-  if (turnstileWidget !== null) window.turnstile.remove(turnstileWidget);
-  return new Promise((resolve, reject) => {
-    const esec = () => reject(new Error('captcha'));
-    turnstileWidget = window.turnstile.render(cutie, {
-      sitekey: TURNSTILE_SITE_KEY,
-      appearance: 'interaction-only',
-      language: currentLang === 'en' ? 'en' : 'ro',
-      callback: resolve,
-      'error-callback': esec,
-      'timeout-callback': esec,
-      'expired-callback': esec
-    });
+  if (turnstileWidget !== null) return;
+  const cutie = document.createElement('div');
+  cutie.id = 'captchaCutie';
+  cutie.innerHTML = `<div class="captcha-titlu">${tr('Verificare de securitate', 'Security check')}</div><div class="captcha-widget"></div>`;
+  document.body.appendChild(cutie);
+  turnstileWidget = window.turnstile.render(cutie.querySelector('.captcha-widget'), {
+    sitekey: TURNSTILE_SITE_KEY,
+    appearance: 'interaction-only',
+    language: currentLang === 'en' ? 'en' : 'ro',
+    'refresh-expired': 'manual',
+    'before-interactive-callback': () => arataCasetaCaptcha(true),
+    'after-interactive-callback': () => arataCasetaCaptcha(false),
+    callback: token => {
+      arataCasetaCaptcha(false);
+      const asteptator = captchaAsteptatori.shift();
+      if (!asteptator) {
+        captchaTokenGata = token;
+        return;
+      }
+      asteptator.resolve(token);
+      setTimeout(() => window.turnstile.reset(turnstileWidget), 0);
+    },
+    'error-callback': () => { arataCasetaCaptcha(false); respingeAsteptatoriCaptcha(); },
+    'timeout-callback': () => { arataCasetaCaptcha(false); respingeAsteptatoriCaptcha(); window.turnstile.reset(turnstileWidget); },
+    'expired-callback': () => { captchaTokenGata = null; window.turnstile.reset(turnstileWidget); }
   });
+}
+
+// Token-ul pregătit se folosește o singură dată; imediat după se cere în fundal următorul
+async function obtineTokenCaptcha() {
+  await pregatesteCaptcha();
+  let token = captchaTokenGata;
+  captchaTokenGata = null;
+  if (!token) token = await new Promise((resolve, reject) => captchaAsteptatori.push({ resolve, reject }));
+  else window.turnstile.reset(turnstileWidget);
+  return token;
 }
 
 function afiseazaMesajAuthFeedback(mesaj, tip = 'error') {
@@ -3983,6 +4012,7 @@ async function verificaSesiuneSupabase() {
     // Devine vizibilă abia la conectare (ascundeLogin din onAuthStateChange).
     if (overlay) overlay.classList.remove('auth-hidden');
     if (eroareLink) afiseazaMesajAuthFeedback(eroareLink);
+    pregatesteCaptcha().catch(() => {});
     actualizeazaStareNoScrollBody();
     return false;
   }
@@ -8831,6 +8861,7 @@ function randeazaInscriere() {
 
   if (pas === 'trimis') {
     continut.innerHTML = htmlFinalInscriere();
+    if (!stareInscriere.areSesiune) pregatesteCaptcha().catch(() => {});
     return;
   }
 
