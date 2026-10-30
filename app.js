@@ -162,7 +162,6 @@ const i18n = {
     workoutPlanTitle: "Plan de Antrenament",
     drawerWorkoutDesc: "Programe, export PDF, trimitere la clienți",
     planSelectLabel: "ALEGE PLAN",
-    btnImportPlan: "Import",
     btnNewPlan: "Plan Nou",
     btnSavePlan: "Salvează",
     btnPreviewPdfMode: "Mod PDF",
@@ -170,7 +169,6 @@ const i18n = {
     btnSharePlan: "Distribuie",
     toastPlanSaved: "✓ Planul de antrenament a fost salvat!",
     toastPlanDeleted: "✓ Planul a fost șters!",
-    toastPlanImported: "✓ Fișierul a fost importat cu succes!",
     toastLinkCopied: "✓ Link copiat în clipboard!",
     toastTextCopied: "✓ Antrenament copiat ca text!",
     toastPdfGenerating: "Se generează PDF-ul...",
@@ -319,7 +317,6 @@ const i18n = {
     workoutPlanTitle: "Workout Plan",
     drawerWorkoutDesc: "Programs, PDF export & client share",
     planSelectLabel: "CHOOSE PLAN",
-    btnImportPlan: "Import",
     btnNewPlan: "New Plan",
     btnSavePlan: "Save",
     btnPreviewPdfMode: "PDF Mode",
@@ -327,7 +324,6 @@ const i18n = {
     btnSharePlan: "Share",
     toastPlanSaved: "✓ Workout plan saved!",
     toastPlanDeleted: "✓ Workout plan deleted!",
-    toastPlanImported: "✓ File imported successfully!",
     toastLinkCopied: "✓ Link copied to clipboard!",
     toastTextCopied: "✓ Workout copied as text!",
     toastPdfGenerating: "Generating PDF...",
@@ -2631,6 +2627,11 @@ function peComutareIstoricFisa(detailsEl) {
 // CONTROL HEADER STÂNGA / DREAPTA PE PLANUL DE ANTRENAMENT (BACK / CLOSE)
 function gestioneazaClickStangaHeader(event) {
   if (tipTabCurent === 'plan') {
+    // Pe pagina unei zile, Înapoi (‹) revine la lista zilelor
+    if (!esteModPrevizualizarePdf && indexZiDeschisaPlan() !== null) {
+      inchideZiPlan();
+      return;
+    }
     // Înapoi (‹) duce la meniul din care a fost deschis planul; X din dreapta închide direct
     iesireDinPlanCuConfirmare(() => {
       revenireDinPlanAntrenament();
@@ -2858,8 +2859,6 @@ function aplicaTraduceriInterfataStatic() {
   if (elWDesc) elWDesc.innerText = t('drawerWorkoutDesc');
   const elPlanSelLbl = document.getElementById('planSelectLabel');
   if (elPlanSelLbl) elPlanSelLbl.innerText = t('planSelectLabel');
-  const elBtnImport = document.getElementById('btnImportPlanText');
-  if (elBtnImport) elBtnImport.innerText = t('btnImportPlan');
   const elBtnNewPlan = document.getElementById('btnNewPlanText');
   if (elBtnNewPlan) elBtnNewPlan.innerText = t('btnNewPlan');
   const elBtnSavePlan = document.getElementById('btnSavePlanText');
@@ -3111,15 +3110,35 @@ function inchideOnboardingClienta() {
   document.getElementById('clientaOnboarding')?.remove();
 }
 
+// Înapoi: din ziua deschisă la lista zilelor, din listă la Acasă
 function clientaInapoi() {
   salveazaProgresClienta();
+  if (dateClienta.ziCurenta !== null && dateClienta.ziCurenta !== undefined && (dateClienta.planCurent?.continut_json?.sesiuni || []).length > 1) {
+    inchideZiClienta();
+    return;
+  }
   randeazaHomeClienta();
 }
 
 function deschidePlanClienta(idx) {
   dateClienta.planCurent = JSON.parse(JSON.stringify(dateClienta.planuri[idx]));
+  dateClienta.ziCurenta = null;
   document.getElementById('clientaBtnInapoi').style.visibility = 'visible';
   randeazaPlanClienta();
+}
+
+function deschideZiClienta(s) {
+  dateClienta.ziCurenta = s;
+  randeazaPlanClienta();
+  document.getElementById('clientaScreen')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function inchideZiClienta() {
+  const s = dateClienta.ziCurenta;
+  dateClienta.ziCurenta = null;
+  randeazaPlanClienta();
+  const card = document.getElementById('planZiCard' + s);
+  if (card) card.scrollIntoView({ block: 'center', behavior: 'auto' });
 }
 
 function randeazaPlanClienta() {
@@ -3127,10 +3146,29 @@ function randeazaPlanClienta() {
   const cj = p.continut_json || {};
   document.getElementById('clientaTitlu').innerText = p.titlu || tr('Plan de antrenament', 'Workout plan');
   const text = (sec) => `<div class="plan-info-box"><div style="font-size:0.92rem; font-weight:800; color:var(--primary); margin-bottom:5px;">${escAttr(sec.titlu)}</div><div class="plan-info-rendered-text">${htmlTextPlan(sec.continut)}</div></div>`;
+  // Planul cu o singură zi se deschide direct pe ea
+  const sesiuni = cj.sesiuni || [];
+  const zi = sesiuni.length === 1 ? 0 : (sesiuni[dateClienta.ziCurenta] ? dateClienta.ziCurenta : null);
+  const paginaZi = zi !== null && sesiuni.length > 1;
 
-  let html = `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
-  (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
-  (cj.sesiuni || []).forEach((ses, s) => {
+  let html = '';
+  if (paginaZi) {
+    html += `<div class="plan-zi-bara">
+      <button type="button" class="btn btn-clear plan-zi-inapoi" onclick="inchideZiClienta()">
+        <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> ${tr('Toate zilele', 'All days')}
+      </button>
+    </div>`;
+  }
+  if (!paginaZi) {
+    html += `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
+    (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
+  }
+  sesiuni.forEach((ses, s) => {
+    if (zi === null) {
+      html += htmlCardZiPlan(ses, s, `deschideZiClienta(${s})`, true);
+      return;
+    }
+    if (s !== zi) return;
     html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div><span class="plan-progres-ses" id="progresSesClienta${s}">${textProgresSesiune(ses)}</span></div>`;
     (ses.exercitii || []).forEach((ex, e) => {
       const facut = ex.status === 'Finalizat';
@@ -3157,13 +3195,34 @@ function randeazaPlanClienta() {
     });
     html += `</div>`;
   });
-  (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
-  if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
+  if (!paginaZi) {
+    (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
+    if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
+  }
   html += `<div id="clientaStareSalvare" style="text-align:center; font-size:0.75rem; color:var(--text-muted); margin-top:10px; min-height:1em;"></div>`;
   html += `<button type="button" class="btn btn-clear" style="display:flex; width:auto; margin:10px auto 0; padding-left:22px; padding-right:22px;" onclick="exportaPlanCurentPDF(dateClienta.planCurent, true)">
     <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> ${tr('Descarcă PDF', 'Download PDF')}
   </button>`;
   document.getElementById('clientaContinut').innerHTML = html;
+}
+
+// Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
+function htmlCardZiPlan(ses, idx, laClick, cuProgres) {
+  const lista = (ses.exercitii || []).filter(ex => (ex.exercitiu || '').trim());
+  const nume = lista.map(ex => ex.exercitiu.trim());
+  const rest = nume.length > 3 ? ` +${nume.length - 3}` : '';
+  const facute = lista.filter(ex => ex.status === 'Finalizat').length;
+  const gata = cuProgres && lista.length > 0 && facute === lista.length;
+  return `
+    <button type="button" class="plan-zi-card" id="planZiCard${idx}" onclick="${laClick}">
+      <span class="plan-zi-card-text">
+        <span class="plan-zi-card-titlu">${escAttr(ses.titlu || tr(`Ziua ${idx + 1}`, `Day ${idx + 1}`))}</span>
+        <span class="plan-zi-card-detalii">${nume.length ? escAttr(nume.slice(0, 3).join(' · ')) + rest : tr('Niciun exercițiu încă', 'No exercises yet')}</span>
+      </span>
+      <span class="plan-zi-card-nr${gata ? ' is-gata' : ''}">${cuProgres ? (gata ? '✓' : `${facute}/${lista.length}`) : lista.length}</span>
+      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+  `;
 }
 
 function textProgresSesiune(ses) {
@@ -7676,6 +7735,7 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
   if (tabPlan) tabPlan.classList.add('active');
 
   actualizeazaHeaderVisual('plan', t('workoutPlanTitle'));
+  ziDeschisaPlan = null;
 
   // Dacă nu este selectat niciun plan, afișează șablonul default de creare
   if (!planActiv) {
@@ -8038,6 +8098,30 @@ function comutaModPrevizualizarePlan() {
 // Iconița de coș pentru butoanele de ștergere din plan (zi, secțiuni, exerciții), aceeași ca pe Programări
 const SVG_COS_PLAN = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>';
 
+// La editare, planul arată zilele ca listă de carduri; o zi se deschide pe pagina ei.
+// Ziua deschisă ține de obiectul planului, deci orice alt plan încărcat pornește de la listă.
+let ziDeschisaPlan = null; // { plan, idx }
+
+function indexZiDeschisaPlan() {
+  const z = ziDeschisaPlan;
+  return (z && z.plan === planActiv && planActiv.continut_json?.sesiuni?.[z.idx]) ? z.idx : null;
+}
+
+function deschideZiPlan(idx) {
+  ziDeschisaPlan = { plan: planActiv, idx };
+  randeazaPlanAntrenamentUI();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function inchideZiPlan() {
+  const idx = indexZiDeschisaPlan();
+  ziDeschisaPlan = null;
+  randeazaPlanAntrenamentUI();
+  const card = idx !== null ? document.getElementById('planZiCard' + idx) : null;
+  if (card) card.scrollIntoView({ block: 'center', behavior: 'auto' });
+  else window.scrollTo({ top: 0, behavior: 'auto' });
+}
+
 function randeazaPlanAntrenamentUI() {
   const container = document.getElementById('planDocumentContainer');
   if (!container) return;
@@ -8050,10 +8134,23 @@ function randeazaPlanAntrenamentUI() {
 
   const doarCitireStructura = esteModPrevizualizarePdf || esteModClientaShare;
   if (!doarCitireStructura) actualizeazaListaExercitii();
+  // Lista zilelor la editare și pe linkul clientului (dacă are mai multe zile); în Mod PDF rămâne tot planul pe o pagină
+  const cuListaZile = !esteModPrevizualizarePdf && (!esteModClientaShare || cjson.sesiuni.length > 1);
+  const ziIdx = cuListaZile ? indexZiDeschisaPlan() : null;
+  const peZi = ziIdx !== null;
 
   let html = '';
 
-  if (doarCitireStructura) {
+  if (peZi) {
+    html += `
+      <div class="plan-zi-bara no-print">
+        <button type="button" class="btn btn-clear plan-zi-inapoi" onclick="inchideZiPlan()">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> ${tr('Toate zilele', 'All days')}
+        </button>
+        <span class="plan-zi-bara-titlu">${escAttr(planActiv.titlu || tr('Plan nou', 'New plan'))}</span>
+      </div>
+    `;
+  } else if (doarCitireStructura) {
     html += `
       <div class="plan-header-block">
         <div style="font-size:1.3rem; font-weight:800; color:var(--primary); line-height:1.25;">${escAttr(planActiv.titlu)}</div>
@@ -8074,7 +8171,7 @@ function randeazaPlanAntrenamentUI() {
     `;
   }
 
-  cjson.sectiuni_inceput.forEach((sec, sIdx) => {
+  (peZi ? [] : cjson.sectiuni_inceput).forEach((sec, sIdx) => {
     if (doarCitireStructura) {
       html += `
         <div class="plan-info-box">
@@ -8095,7 +8192,7 @@ function randeazaPlanAntrenamentUI() {
     }
   });
 
-  if (!doarCitireStructura) {
+  if (!doarCitireStructura && !peZi) {
     html += `
       <div class="no-print" style="margin-bottom:12px;">
         <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 9px;" onclick="adaugaSectiuneTextPlan('sectiuni_inceput')">
@@ -8107,6 +8204,12 @@ function randeazaPlanAntrenamentUI() {
 
   cjson.sesiuni.forEach((ses, sesIdx) => {
     const listaEx = ses.exercitii || [];
+
+    if (peZi && sesIdx !== ziIdx) return;
+    if (cuListaZile && !peZi) {
+      html += htmlCardZiPlan(ses, sesIdx, `deschideZiPlan(${sesIdx})`, esteModClientaShare);
+      return;
+    }
 
     html += `
       <div class="plan-session-block">
@@ -8237,7 +8340,7 @@ function randeazaPlanAntrenamentUI() {
     `;
   });
 
-  if (!doarCitireStructura) {
+  if (!doarCitireStructura && !peZi) {
     html += `
       <div class="no-print" style="margin-bottom:14px;">
         <button type="button" class="btn" style="font-size:0.78rem; padding:7px 12px; width:100%;" onclick="adaugaSesiunePlan()">
@@ -8247,7 +8350,7 @@ function randeazaPlanAntrenamentUI() {
     `;
   }
 
-  cjson.sectiuni_final.forEach((sec, sIdx) => {
+  (peZi ? [] : cjson.sectiuni_final).forEach((sec, sIdx) => {
     if (doarCitireStructura) {
       html += `
         <div class="plan-info-box">
@@ -8268,7 +8371,7 @@ function randeazaPlanAntrenamentUI() {
     }
   });
 
-  if (!doarCitireStructura) {
+  if (!doarCitireStructura && !peZi) {
     html += `
       <div class="no-print" style="margin-bottom:10px;">
         <button type="button" class="btn btn-clear" style="font-size:0.74rem; padding:4px 9px;" onclick="adaugaSectiuneTextPlan('sectiuni_final')">
@@ -8278,7 +8381,7 @@ function randeazaPlanAntrenamentUI() {
     `;
   }
 
-  if (cjson.nota_subsol !== undefined) {
+  if (cjson.nota_subsol !== undefined && !peZi) {
     if (doarCitireStructura) {
       html += `<div class="plan-footer-note">${escAttr(cjson.nota_subsol)}</div>`;
     } else {
@@ -8318,13 +8421,15 @@ function adaugaSesiunePlan() {
       { nr: 1, exercitiu: "", seturi_repetari: "", pauza: "", indicatii: "", greutate_kg: "", seturi_finalizate: "", status: "" }
     ]
   });
-  randeazaPlanAntrenamentUI();
+  deschideZiPlan(nrSes - 1);
 }
 
 function stergeSesiunePlan(sesIdx) {
   customConfirm(tr("Ștergere sesiune", "Delete session"), tr("Sigur vrei să ștergi această sesiune și exercițiile ei?", "Are you sure you want to delete this session and its exercises?"), function() {
     planActiv.continut_json.sesiuni.splice(sesIdx, 1);
+    ziDeschisaPlan = null;
     randeazaPlanAntrenamentUI();
+    window.scrollTo({ top: 0, behavior: 'auto' });
   });
 }
 
@@ -8517,99 +8622,6 @@ async function stergePlanCurent() {
       showToast(tr("Eroare la ștergere!", "Error deleting!"), "error");
     }
   });
-}
-
-function parseazaLinieCsv(line) {
-  const result = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      inQuotes = !inQuotes;
-    } else if (ch === ',' && !inQuotes) {
-      result.push(cur.trim());
-      cur = '';
-    } else {
-      cur += ch;
-    }
-  }
-  result.push(cur.trim());
-  return result;
-}
-
-// Butonul unificat 'Import' acceptă atât JSON cât și CSV
-function importaPlanDinFisier(inputEl) {
-  if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
-  const file = inputEl.files[0];
-  const reader = new FileReader();
-
-  reader.onload = function(e) {
-    const text = (e.target.result || '').trim();
-    if (!text) return;
-
-    if (file.name.toLowerCase().endsWith('.json') || text.startsWith('{')) {
-      try {
-        const obj = JSON.parse(text);
-        inputEl.value = '';
-        // Importul JSON înlocuiește planul curent, deci cere confirmare dacă are modificări nesalvate
-        dupaConfirmareModificariPlan(() => {
-          if (obj.continut_json) {
-            planActiv = obj;
-          } else if (obj.sesiuni) {
-            if (!planActiv) planActiv = construiesteSablonPlanDefault();
-            planActiv.continut_json = obj;
-          }
-          randeazaPlanAntrenamentUI();
-          showToast(t('toastPlanImported'));
-        });
-        return;
-      } catch (err) {
-        console.error("Eroare parsare JSON:", err);
-      }
-    }
-
-    // Fallback: Parsare CSV
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-    if (lines.length === 0) return;
-
-    let titluSesiune = file.name.replace(/\.[^/.]+$/, "");
-    const exercitiiImportate = [];
-
-    lines.forEach((line, idx) => {
-      const cols = parseazaLinieCsv(line);
-      if (idx === 0 && cols[0] && !/^\d+$/.test(cols[0]) && cols[0].toLowerCase() !== 'nr.') {
-        titluSesiune = cols[0];
-        return;
-      }
-      if (cols[0] && /^\d+$/.test(cols[0])) {
-        exercitiiImportate.push({
-          nr: Number(cols[0]) || (exercitiiImportate.length + 1),
-          exercitiu: cols[1] || "",
-          seturi_repetari: cols[2] || "3 x 15",
-          pauza: "60-90 sec",
-          indicatii: cols[3] || "",
-          greutate_kg: cols[4] || "",
-          seturi_finalizate: cols[5] || "",
-          status: cols[6] || ""
-        });
-      }
-    });
-
-    if (!planActiv) planActiv = construiesteSablonPlanDefault();
-    if (!planActiv.continut_json) planActiv.continut_json = { sectiuni_inceput: [], sesiuni: [], sectiuni_final: [] };
-
-    planActiv.continut_json.sesiuni.push({
-      titlu: titluSesiune,
-      exercitii: exercitiiImportate
-    });
-
-    randeazaPlanAntrenamentUI();
-    showToast(t('toastPlanImported'));
-    inputEl.value = '';
-  };
-
-  reader.readAsText(file, 'UTF-8');
 }
 
 // integrity: browserul refuză fișierul dacă diferă de versiunea verificată (CDN compromis sau modificat)

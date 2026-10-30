@@ -5231,6 +5231,103 @@ select.form-control {
   background: var(--input-glass-bg);
 }
 
+/* Lista zilelor (editare): câte un card pe zi, care deschide pagina zilei */
+.plan-zi-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--card-bg);
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-zi-card:active {
+  transform: scale(0.99);
+}
+
+.plan-zi-card-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.plan-zi-card-titlu {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-zi-card-detalii {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-zi-card-nr {
+  flex-shrink: 0;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: rgba(var(--primary-rgb), 0.12);
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plan-zi-card-nr.is-gata {
+  background: rgba(21, 128, 61, 0.14);
+  color: #15803d;
+}
+
+.plan-zi-card-sageata {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Pagina unei zile: bara de revenire la lista zilelor */
+.plan-zi-bara {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  min-width: 0;
+}
+
+.plan-zi-inapoi {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 5px 10px;
+}
+
+.plan-zi-bara-titlu {
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* TABELUL DE EXERCIȚII */
 .plan-exercises-table {
   width: 100%;

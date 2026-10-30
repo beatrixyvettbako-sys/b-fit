@@ -21,7 +21,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal111">
+  <link rel="stylesheet" href="style.css?v=fitFinal112">
 </head>
 <body>
 
@@ -1422,16 +1422,11 @@
     <!-- 5. PLAN DE ANTRENAMENT (ECRAN SECUNDAR DEDICAT) -->
     <div id="tabPlanAntrenament" class="tab-content">
 
-      <!-- BARĂ ACȚIUNI ANTRENOR (BUTON SIMPLIFICAT 'IMPORT' PENTRU CSV / JSON) -->
+      <!-- BARĂ ACȚIUNI ANTRENOR -->
       <div class="card plan-toolbar-card no-print" id="planCoachToolbar">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:8px;">
           <label style="font-size:0.76rem; font-weight:800; color:var(--primary); text-transform:uppercase; margin:0;" id="planSelectLabel">ALEGE PLAN</label>
           <div style="display:flex; gap:5px;">
-            <label for="inputImportPlanFile" class="btn btn-glass-subtle" style="padding:4px 9px; font-size:0.74rem; cursor:pointer; margin:0;" title="Importă fișier plan (CSV sau JSON)" data-en-title="Import plan file (CSV or JSON)">
-              <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>
-              <span id="btnImportPlanText">Import</span>
-            </label>
-            <input type="file" id="inputImportPlanFile" accept=".csv,text/csv,.json,application/json" style="display:none;" onchange="importaPlanDinFisier(this)">
             <button type="button" class="btn" style="padding:4px 9px; font-size:0.74rem; white-space:nowrap;" onclick="creeazaPlanNouCuSablon('complet')" id="btnNewPlanTemplate">
               + <span id="btnNewPlanText">Plan Nou</span>
             </button>
@@ -1542,6 +1537,6 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="app.js?v=fitFinal111"></script>
+  <script src="app.js?v=fitFinal112"></script>
 </body>
 </html>
