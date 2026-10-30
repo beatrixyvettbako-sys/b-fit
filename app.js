@@ -651,11 +651,18 @@ async function gestioneazaSubmitAuth(e) {
     btnSubmit.innerText = t('authProcessing');
   }
 
+  // Butonul arată etapa: verificarea anti-robot, conectarea, apoi încărcarea (până dispare ecranul de login)
+  const etapa = text => { if (btnSubmit) btnSubmit.innerText = text; };
+  let conectat = false;
   try {
     if (tipModAuth === 'login') {
+      if (!captchaTokenGata) etapa(tr('Verificare anti-robot...', 'Anti-bot check...'));
       const captchaToken = await obtineTokenCaptcha();
+      etapa(tr('Se conectează...', 'Signing in...'));
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) throw error;
+      conectat = true;
+      etapa(tr('Se încarcă...', 'Loading...'));
       showToast(t('authLoginSuccess'));
     } else {
       if (password.length < 8) {
@@ -688,7 +695,8 @@ async function gestioneazaSubmitAuth(e) {
   } catch (err) {
     afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
   } finally {
-    if (btnSubmit) {
+    // După o conectare reușită butonul rămâne „Se încarcă...” până se deschide aplicația (rolul și datele încă se încarcă)
+    if (btnSubmit && !conectat) {
       btnSubmit.disabled = false;
       btnSubmit.innerText = tipModAuth === 'login' ? t('authSubmitBtnLogin') : t('authSubmitBtnSignup');
     }
@@ -2712,13 +2720,13 @@ async function incarcaRolUtilizator() {
     if (profil && profil.rol === 'clienta') {
       rolUtilizator = 'clienta';
     } else {
-      const { data: legat } = await supabaseClient.rpc('leaga_cont_clienta');
-      if (legat === true) rolUtilizator = 'clienta';
-      else {
-        // Cont făcut din formularul de înscriere, cererea neacceptată (în așteptare sau refuzată): nu e antrenor
-        const { data: stareCerere } = await supabaseClient.rpc('stare_cerere_inscriere');
-        if (stareCerere) rolUtilizator = 'clienta';
-      }
+      // În paralel (o singură așteptare în loc de două): legarea fișei de client și cererea de înscriere.
+      // Cont făcut din formularul de înscriere, cererea neacceptată (în așteptare sau refuzată): nu e antrenor
+      const [{ data: legat }, { data: stareCerere }] = await Promise.all([
+        supabaseClient.rpc('leaga_cont_clienta'),
+        supabaseClient.rpc('stare_cerere_inscriere')
+      ]);
+      if (legat === true || stareCerere) rolUtilizator = 'clienta';
     }
     localStorage.setItem('BFIT_ROL', rolUtilizator);
   } catch (e) {
