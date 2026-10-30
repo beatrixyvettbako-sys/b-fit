@@ -22,6 +22,7 @@ const supabaseClient = (typeof window !== 'undefined' && window.supabase)
 let utilizatorCurent = null;
 let rolUtilizator = 'antrenor'; // 'antrenor' | 'clienta' (din tabelul profiles)
 let tipModAuth = 'login'; // 'login' sau 'signup'
+let deconectareInCurs = false; // la ieșire ecranul doar se estompează până la reîncărcare (fără login suprapus, meniu animat, scrollbar)
 
 if ('scrollRestoration' in history) {
   history.scrollRestoration = 'manual';
@@ -518,13 +519,23 @@ function respingeAsteptatoriCaptcha() {
 async function pregatesteCaptcha() {
   await incarcaTurnstile();
   if (turnstileWidget !== null) return;
+  // Caseta stă în formularul vizibil (login sau contul de după înscriere), deasupra butonului; altfel, card jos pe ecran
+  const loc = [document.getElementById('captchaLocInscriere'), document.getElementById('captchaLoc')].find(e => e && e.offsetParent !== null);
   const cutie = document.createElement('div');
   cutie.id = 'captchaCutie';
-  cutie.innerHTML = `<div class="captcha-titlu">${tr('Verificare de securitate', 'Security check')}</div><div class="captcha-widget"></div>`;
-  document.body.appendChild(cutie);
+  if (loc) {
+    cutie.className = 'in-formular';
+    cutie.innerHTML = '<div class="captcha-widget"></div>';
+    loc.appendChild(cutie);
+  } else {
+    cutie.innerHTML = `<div class="captcha-titlu">${tr('Verificare de securitate', 'Security check')}</div><div class="captcha-widget"></div>`;
+    document.body.appendChild(cutie);
+  }
   turnstileWidget = window.turnstile.render(cutie.querySelector('.captcha-widget'), {
     sitekey: TURNSTILE_SITE_KEY,
     appearance: 'interaction-only',
+    size: loc ? 'flexible' : 'normal',
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
     language: currentLang === 'en' ? 'en' : 'ro',
     'refresh-expired': 'manual',
     'before-interactive-callback': () => arataCasetaCaptcha(true),
@@ -762,11 +773,12 @@ async function loginCuGoogle() {
 
 async function deconectareUtilizator() {
   customConfirm(t('authLogoutConfirmTitle'), t('authLogoutConfirmText'), async function() {
+    deconectareInCurs = true;
+    document.documentElement.classList.add('deconectare');
     if (supabaseClient) {
       await dezaboneazaPush();
       await supabaseClient.auth.signOut();
     }
-    inchideMeniuLateral();
     localStorage.removeItem('BFIT_DB_LOCAL');
     localStorage.removeItem('BFIT_ROL');
     window.location.reload();
@@ -4093,7 +4105,7 @@ window.onload = async function() {
         } else if (sesiuneInitializata) {
           ascundeLogin();
         } // înainte de verificaSesiuneSupabase: pornirea o încheie ea, după ce știe rolul (altfel pâlpâie orarul antrenorului)
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' && !deconectareInCurs) {
         utilizatorCurent = null;
         document.getElementById('clientaScreen')?.classList.add('auth-hidden');
         if (overlay) overlay.classList.remove('auth-hidden');
@@ -9016,6 +9028,7 @@ function htmlFinalInscriere() {
         <label>${tr('Confirmă parola', 'Confirm password')}</label>
         ${htmlCampParolaInscriere('inscriereParolaConfirmare')}
       </div>
+      <div id="captchaLocInscriere" class="captcha-loc"></div>
       <div class="inscriere-butoane">
         <button type="button" class="btn btn-clear" onclick="document.getElementById('inscriereCont').remove()">${tr('Nu acum', 'Not now')}</button>
         <button type="button" class="btn" id="btnInscriereCont" onclick="creeazaContInscriere()">${tr('Creează contul', 'Create account')}</button>

@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="style.css?v=fitFinal107">
+  <link rel="stylesheet" href="style.css?v=fitFinal108">
 </head>
 <body>
 
@@ -170,6 +170,9 @@
           </div>
           <button type="button" class="auth-link-parola" id="authUitatParolaBtn" onclick="trimiteResetareParola()" data-en="Forgot password?">Ai uitat parola?</button>
         </div>
+
+        <!-- Verificarea anti-robot (Turnstile) apare aici doar când Cloudflare cere un clic -->
+        <div id="captchaLoc" class="captcha-loc"></div>
 
         <button type="submit" class="btn" style="width:100%; padding:10px; font-weight:800; margin-top:4px;" id="authSubmitBtn">
           Intră în cont
@@ -1509,6 +1512,6 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="app.js?v=fitFinal107"></script>
+  <script src="app.js?v=fitFinal108"></script>
 </body>
 </html>

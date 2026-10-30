@@ -396,6 +396,17 @@ html.app-pornire #bottomNav {
   visibility: hidden;
 }
 
+/* Deconectare: ecranul curent se estompează și rămâne neschimbat până la reîncărcare (fără scrollbar temporar) */
+html.deconectare {
+  overflow: hidden;
+}
+
+html.deconectare body {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
 /* „Ai uitat parola?” sub câmpul de parolă din login */
 .auth-link-parola {
   display: block;
@@ -5850,6 +5861,55 @@ select.form-control {
   opacity: 1;
   pointer-events: auto;
   transform: translate(-50%, 0);
+}
+
+/* În formular (login / cont după înscriere): fără card, se deschide lin deasupra butonului, cât câmpurile */
+#captchaCutie.in-formular {
+  position: static;
+  transform: none;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  display: flex;
+  justify-content: center;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+}
+
+#captchaCutie.in-formular.vizibil {
+  transform: none;
+  max-height: 90px;
+  margin: 6px 0 10px;
+  overflow: visible;
+}
+
+/* Ramă de sticlă în stilul cardurilor; interiorul îl desenează Cloudflare (min. 300px), de aceea rama iese puțin în padding-ul cardului */
+#captchaCutie.in-formular .captcha-widget {
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 10px 24px -12px rgba(var(--primary-dark-rgb), 0.4);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+}
+
+#captchaCutie.in-formular .captcha-widget iframe {
+  display: block;
+  border-radius: 11px;
+}
+
+html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 24px -12px rgba(0, 0, 0, 0.6);
 }
 
 .captcha-titlu {
