@@ -3809,6 +3809,39 @@ select.form-control {
   font-weight: 800;
 }
 
+.fisa-link-butoane {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 6px;
+}
+
+.fisa-link-butoane .fisa-link-btn {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* Fereastra cu codul QR: albă în ambele teme, ca scanerul să-l citească ușor */
+.qr-card {
+  width: 100%;
+  max-width: 340px;
+}
+
+.qr-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.qr-canvas {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 0 auto 12px;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
 .fisa-contact-rand {
   display: flex;
   align-items: center;

@@ -21,7 +21,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal110">
+  <link rel="stylesheet" href="style.css?v=fitFinal111">
 </head>
 <body>
 
@@ -264,6 +264,21 @@
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> <span id="btnShareExportPdfText" data-en="Send as PDF">Trimite ca PDF</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL COD QR (link de înscriere, link de check-in): clientul scanează de pe ecranul antrenorului -->
+  <div id="modalQrBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideModalQr()">
+    <div class="modal-edit-card qr-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" id="qrModalTitlu"></div>
+        <button type="button" onclick="inchideModalQr()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="qr-desc" data-en="The client scans the code with the phone camera.">Clientul scanează codul cu camera telefonului.</div>
+      <canvas id="qrCanvas" class="qr-canvas"></canvas>
+      <button type="button" class="btn" style="width:100%; justify-content:center;" onclick="salveazaImagineQr()" data-en="Save image">Salvează imaginea</button>
     </div>
   </div>
 
@@ -512,9 +527,10 @@
         <div class="drawer-section" id="setariLinkInscriereBloc" style="margin-top:14px;" hidden>
           <div class="drawer-section-title" data-en="Your link">Link-ul tău</div>
           <div class="inscriere-link-afisat" id="setariLinkInscriere"></div>
-          <div class="theme-selector-grid" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+          <div class="theme-selector-grid" style="grid-template-columns: repeat(3, 1fr); margin-top:8px;">
             <button class="theme-option-btn" onclick="copiazaLinkInscriere()" data-en="Copy">Copiază</button>
             <button class="theme-option-btn" onclick="distribuieLinkInscriere()" data-en="Share">Distribuie</button>
+            <button class="theme-option-btn" onclick="arataQrInscriere()" data-en="QR code">Cod QR</button>
           </div>
         </div>
       </div>
@@ -743,7 +759,8 @@
         <!-- Datele tale (GDPR): copie a datelor și ștergerea contului -->
         <div class="form-group profile-date-tale">
           <label data-en="Your data">Datele tale</label>
-          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDate" onclick="exportaDateleMele()" data-en="Download my data">Descarcă datele mele</button>
+          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDate" onclick="exportaDateleMele()" data-en="Download my data (PDF)">Descarcă datele mele (PDF)</button>
+          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDateJson" onclick="exportaDateleMeleJson()" data-en="Technical export (JSON)">Export tehnic (JSON)</button>
           <button type="button" class="btn btn-clear profile-date-btn profile-sterge-cont" id="btnStergeCont" onclick="stergeContulMeu()" data-en="Delete account">Șterge contul</button>
         </div>
       </div>
@@ -1135,7 +1152,10 @@
               <button type="button" class="fisa-link-nou" onclick="trimiteLinkCheckin(true)" data-en="New link">Link nou</button>
             </div>
             <div class="fisa-link-text" data-en="The client sends the weekly check-in from this link, no account needed.">Clientul trimite check-in-ul săptămânal din acest link, fără cont.</div>
-            <button type="button" class="btn fisa-link-btn" onclick="trimiteLinkCheckin(false)" data-en="Send the link">Trimite link-ul</button>
+            <div class="fisa-link-butoane">
+              <button type="button" class="btn fisa-link-btn" onclick="trimiteLinkCheckin(false)" data-en="Send the link">Trimite link-ul</button>
+              <button type="button" class="btn btn-clear fisa-link-btn" onclick="arataQrCheckin()" data-en="QR code">Cod QR</button>
+            </div>
           </div>
 
           <details id="detailsEditareFisa" style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
@@ -1522,6 +1542,6 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="app.js?v=fitFinal110"></script>
+  <script src="app.js?v=fitFinal111"></script>
 </body>
 </html>

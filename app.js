@@ -656,9 +656,9 @@ async function gestioneazaSubmitAuth(e) {
   let conectat = false;
   try {
     if (tipModAuth === 'login') {
-      if (!captchaTokenGata) etapa(tr('Verificare anti-robot...', 'Anti-bot check...'));
-      const captchaToken = await obtineTokenCaptcha();
+      // Verificarea anti-robot rulează de obicei nevăzut; caseta apare singură doar când cere un clic
       etapa(tr('Se conectează...', 'Signing in...'));
+      const captchaToken = await obtineTokenCaptcha();
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) throw error;
       conectat = true;
@@ -1072,7 +1072,8 @@ async function schimbaParolaProfil() {
 }
 
 // ---- Datele tale (GDPR): copie a datelor (portabilitate) și ștergerea contului ----
-function exportaDateleMele() {
+// Aceleași date în format tehnic (portabilitate, GDPR art. 20), pentru import în alt program
+function exportaDateleMeleJson() {
   if (!utilizatorCurent) return;
   const date = {
     exportatLa: new Date().toISOString(),
@@ -1087,6 +1088,143 @@ function exportaDateleMele() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Un PDF lizibil cu toate datele contului: antrenorul (clienți, orar, confirmări, încasări, prezențe, planuri), clientul (fișa, obiectivele, greutățile, planurile)
+async function exportaDateleMele() {
+  if (!utilizatorCurent) return;
+  const btn = document.getElementById('btnExportaDate');
+  btn.disabled = true;
+  showToast(t('toastPdfGenerating'));
+  try {
+    await incarcaPdfMake();
+    const paleta = PALETE_ACCENT.includes(localStorage.getItem('beatrix_accent')) ? localStorage.getItem('beatrix_accent') : 'blue';
+    const culoare = CULORI_PDF[paleta];
+    const logo = await imagineDataUrl(`icon-${paleta}.png`).catch(() => null);
+    const gri = '#64748b';
+    const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
+    const data = v => { const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T12:00:00' : v); return v && !isNaN(d) ? d.toLocaleDateString(loc) : v; };
+    const val = v => (v === undefined || v === null || String(v).trim() === '') ? '-' : String(v);
+    const continut = [{
+      columns: [
+        logo ? { image: logo, width: 34 } : { text: '', width: 0 },
+        { stack: [{ text: tr('Datele mele', 'My data'), bold: true, color: culoare, fontSize: 18 }, { text: 'B-Fit · ' + URL_APLICATIE.replace(/^https?:\/\//, '').replace(/\/$/, ''), color: gri, fontSize: 8 }], margin: [8, 0, 0, 0] },
+        { text: data(new Date().toISOString()), color: gri, fontSize: 8, alignment: 'right', margin: [0, 6, 0, 0] }
+      ],
+      margin: [0, 0, 0, 6]
+    }, { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.2, lineColor: culoare }], margin: [0, 0, 0, 4] }];
+    const sectiune = (titlu, nr) => continut.push({ text: nr === undefined ? titlu : `${titlu} (${nr})`, style: 'h2', headlineLevel: 1 });
+    const gol = () => continut.push({ text: tr('Nimic înregistrat.', 'Nothing recorded.'), color: gri, italics: true });
+    const tabel = (cap, randuri, latimi) => {
+      if (!randuri.length) return gol();
+      continut.push({
+        table: { headerRows: 1, dontBreakRows: true, widths: latimi || cap.map(() => '*'), body: [cap.map(c => ({ text: c, bold: true, color: '#ffffff' })), ...randuri.map(r => r.map(val))] },
+        layout: {
+          fillColor: i => i === 0 ? culoare : (i % 2 === 0 ? '#f1f5f9' : null),
+          hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1', hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+          paddingLeft: () => 4, paddingRight: () => 4, paddingTop: () => 3, paddingBottom: () => 3
+        },
+        fontSize: 8.5
+      });
+    };
+    const perechi = randuri => tabel([tr('Câmp', 'Field'), tr('Valoare', 'Value')], randuri.filter(r => val(r[1]) !== '-'), [150, '*']);
+    // Fișa de obiective: întrebările formularului, în ordine, cu textul opțiunilor alese
+    const raspunsuriInscriere = r => {
+      const intrebari = SECTIUNI_INSCRIERE.flatMap(s => s.intrebari).concat(INTREBARI_VECHI_INSCRIERE);
+      return intrebari.filter(q => r[q.id] !== undefined).map(q => {
+        const opt = id => { const o = (q.optiuni || OPTIUNI_DA_NU).find(x => x.id === id); return o ? textInscriere(o) : id; };
+        const v = Array.isArray(r[q.id]) ? r[q.id].map(opt).join(', ') : opt(r[q.id]);
+        return [textInscriere(ETICHETE_SCURTE_INSCRIERE[q.id] || q).replace(/\s*\((opțional|optional)\)/, ''),[v, r[q.id + 'Detalii']].filter(x => val(x) !== '-').join(' · ')];
+      });
+    };
+    const planuri = lista => {
+      sectiune(tr('Planuri de antrenament', 'Workout plans'), lista.length);
+      if (!lista.length) return gol();
+      lista.forEach(p => {
+        continut.push({ text: [{ text: (p.titlu || '').trim() || tr('Plan de antrenament', 'Workout plan'), bold: true }, { text: `  ${p.clienta ? p.clienta + ' · ' : ''}${data(p.updated_at)}`, color: gri, fontSize: 8 }], margin: [0, 6, 0, 2] });
+        ((p.continut_json || {}).sesiuni || []).forEach(s => {
+          const ex = (s.exercitii || []).filter(e => (e.exercitiu || '').trim()).map(e => [e.exercitiu, e.seturi_repetari, e.greutate_kg && e.greutate_kg + ' kg'].filter(Boolean).join(' · '));
+          if (ex.length) continut.push({ text: [{ text: ((s.titlu || '').trim() || tr('Sesiune', 'Session')) + ': ', bold: true }, ex.join('; ')], fontSize: 8.5, margin: [8, 0, 0, 2] });
+        });
+      });
+    };
+
+    const meta = utilizatorCurent.user_metadata || {};
+    sectiune(tr('Contul', 'Account'));
+    perechi([
+      [tr('Email', 'Email'), utilizatorCurent.email],
+      [tr('Nume', 'Name'), meta.full_name],
+      [tr('Tip cont', 'Account type'), rolUtilizator === 'clienta' ? tr('Client', 'Client') : tr('Antrenor', 'Trainer')],
+      [tr('Creat la', 'Created on'), data(utilizatorCurent.created_at)]
+    ]);
+
+    if (rolUtilizator === 'clienta') {
+      const c = dateClienta.fisa || {};
+      const { data: greutati } = c.id ? await supabaseClient.from('greutati').select('*').eq('client_id', c.id) : { data: [] };
+      sectiune(tr('Abonamentul', 'Subscription'));
+      perechi([
+        [tr('Nume', 'Name'), c.nume], [tr('Telefon', 'Phone'), c.telefon],
+        [tr('Abonament', 'Subscription'), c.tipAbonament], [tr('Ședințe incluse', 'Sessions included'), c.incluse],
+        [tr('Ședințe efectuate', 'Sessions done'), c.efectuate], [tr('Ședințe rămase', 'Sessions left'), c.ramase],
+        [tr('Început', 'Start'), data(c.dataStart)], [tr('Expiră', 'Expires'), data(c.dataExpirare)], [tr('Status', 'Status'), c.status],
+        [tr('Nota antrenorului', 'Trainer’s note'), c.nota_client]
+      ]);
+      sectiune(tr('Fișa de obiective', 'Goal-setting form'));
+      c.fisa_inscriere ? perechi(raspunsuriInscriere(c.fisa_inscriere)) : gol();
+      sectiune(tr('Greutate', 'Weight'), (greutati || []).length);
+      tabel([tr('Data', 'Date'), 'Kg'], (greutati || []).sort((a, b) => (a.data || '').localeCompare(b.data || '')).map(g => [data(g.data), g.greutate]), [120, '*']);
+      planuri(dateClienta.planuri || []);
+    } else {
+      sectiune(tr('Clienți', 'Clients'), DB.clienti.length);
+      tabel([tr('Nume', 'Name'), tr('Telefon', 'Phone'), 'Email', tr('Abonament', 'Subscription'), tr('Ședințe', 'Sessions'), tr('Început', 'Start'), tr('Expiră', 'Expires'), 'Status'],
+        DB.clienti.map(c => [c.nume, c.telefon, c.emailInvitatie, c.tipAbonament, `${c.efectuate}/${c.incluse}`, data(c.dataStart), data(c.dataExpirare), c.status]),
+        ['16%', '12%', '18%', '12%', '9%', '11%', '11%', '11%']);
+      DB.clienti.filter(c => c.fisaInscriere).forEach(c => {
+        sectiune(`${tr('Fișa de obiective', 'Goal-setting form')}: ${c.nume}`);
+        perechi(raspunsuriInscriere(c.fisaInscriere));
+      });
+      sectiune(tr('Orar', 'Schedule'), DB.orarSloturi.length);
+      tabel([tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout'), tr('Stare', 'Status')],
+        DB.orarSloturi.map(s => [s.ziRaw.replace(/_/g, ' '), s.ora, s.clienta, s.antrenament, [s.bifat && tr('prezent', 'attended'), s.blocat && (tr('blocat', 'blocked') + (s.motiv ? ': ' + s.motiv : '')), s.deschis && tr('deschis', 'open')].filter(Boolean).join(', ')]),
+        [90, 40, '*', '*', 90]);
+      sectiune(tr('Confirmări', 'Check-in'), DB.progActive.length + DB.progHold.length);
+      tabel([tr('Nume', 'Name'), tr('Secțiune', 'Section'), tr('Prezență', 'Attendance'), tr('Mențiuni', 'Notes')],
+        DB.progActive.map(p => [p.nume, tr('Activ', 'Active'), p.prezenta, p.mentiuni]).concat(DB.progHold.map(p => [p.nume, 'Hold', p.prezenta, p.mentiuni])),
+        ['*', 60, 80, '*']);
+      sectiune(tr('Încasări', 'Payments'), DB.incasari.length);
+      tabel([tr('Data', 'Date'), tr('Client', 'Client'), tr('Sumă', 'Amount'), tr('Metodă', 'Method'), tr('Tip', 'Type'), tr('Luna', 'Month')],
+        DB.incasari.map(i => [data(i.data),i.clienta, i.suma, i.metoda, i.tip, i.luna]), [60, '*', 65, 65, '*', 60]);
+      sectiune(tr('Prezențe', 'Attendance'), DB.prezente.length);
+      tabel([tr('Data', 'Date'), tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout')],
+        DB.prezente.map(p => [data(p.data),p.zi, p.ora, p.clienta, p.antrenament]), [60, 60, 40, '*', '*']);
+      planuri(DB.planuri || []);
+    }
+
+    const doc = {
+      pageSize: 'A4',
+      pageMargins: [40, 36, 40, 44],
+      info: { title: tr('Datele mele', 'My data'), author: 'B-Fit' },
+      content: continut,
+      pageBreakBefore: (nod, urmatoareleDePePagina) => nod.headlineLevel === 1 && urmatoareleDePePagina.length === 0,
+      footer: (pagina, total) => ({ text: tr(`Pagina ${pagina} / ${total}`, `Page ${pagina} / ${total}`), color: gri, fontSize: 7.5, alignment: 'right', margin: [40, 14, 40, 0] }),
+      styles: { h2: { fontSize: 12.5, bold: true, color: culoare, margin: [0, 14, 0, 6] } },
+      defaultStyle: { font: 'Roboto', fontSize: 9.5, color: '#1e293b', lineHeight: 1.2 }
+    };
+    const blob = await new Promise(resolve => pdfMake.createPdf(doc).getBlob(resolve));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tr('B-Fit - datele mele', 'B-Fit - my data')} ${new Date().toISOString().slice(0, 10)}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error('Eroare export date:', err);
+    showToast(tr('Nu s-a putut genera PDF-ul. Verifică conexiunea la internet.', 'Could not create the PDF. Check your internet connection.'), 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // Antrenor: se șterg contul și toate datele lui. Client: contul; fișa rămâne la antrenor (vezi sql/2026-10-30_stergere_cont.sql)
@@ -6485,6 +6623,82 @@ function partajeaza(text, url) {
   }
 }
 
+// ---- Cod QR pentru link-uri: clientul scanează de pe ecranul antrenorului, la sală, fără să primească link-ul pe mesaj ----
+// Generatorul (qrcode-generator, ~20 KB) se încarcă doar la primul cod afișat
+let qrCurent = null;
+
+async function arataQr(url, titlu, eticheta, numeFisier) {
+  try {
+    if (!window.qrcode) await incarcaScriptVerificat('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js', 'sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1');
+  } catch (e) {
+    showToast(tr('Nu s-a putut genera codul QR. Verifică conexiunea la internet.', 'Could not create the QR code. Check your internet connection.'), 'error');
+    return;
+  }
+  const qr = qrcode(0, 'M');
+  qr.addData(url);
+  qr.make();
+  // Desenat pe canvas cu margine albă (zona liniștită cerută de scanere) și eticheta dedesubt, pentru imaginea salvată
+  const n = qr.getModuleCount();
+  const cel = Math.max(4, Math.floor(640 / (n + 8)));
+  const latura = cel * (n + 8);
+  const canvas = document.getElementById('qrCanvas');
+  canvas.width = latura;
+  canvas.height = latura + cel * 4;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000000';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect((c + 4) * cel, (r + 4) * cel, cel, cel);
+  ctx.fillStyle = '#1e293b';
+  ctx.font = `700 ${Math.round(latura / 22)}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText(eticheta, latura / 2, latura + cel, latura - cel * 4);
+  qrCurent = { titlu, numeFisier };
+  document.getElementById('qrModalTitlu').textContent = titlu;
+  document.getElementById('modalQrBackdrop').style.display = 'flex';
+}
+
+function inchideModalQr() {
+  document.getElementById('modalQrBackdrop').style.display = 'none';
+}
+
+// Pe telefon: meniul nativ (Salvează în galerie, WhatsApp...); pe calculator: descărcare PNG
+function salveazaImagineQr() {
+  if (!qrCurent) return;
+  document.getElementById('qrCanvas').toBlob(async blob => {
+    const fisier = new File([blob], qrCurent.numeFisier, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [fisier] })) {
+      try { await navigator.share({ files: [fisier], title: qrCurent.titlu }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    }
+    const url = URL.createObjectURL(fisier);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = qrCurent.numeFisier;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+
+function arataQrInscriere() {
+  if (!codInscriereAntrenor) return;
+  arataQr(linkInscriere(codInscriereAntrenor), tr('Link de înscriere', 'Sign-up link'),
+    tr('Scanează și completează fișa de înscriere', 'Scan to fill in the sign-up form'), 'B-Fit QR inscriere.png');
+}
+
+async function arataQrCheckin() {
+  const client = clientaFisaCurenta();
+  if (!client) return;
+  if (!client.checkinToken) {
+    const { data: cod, error } = await supabaseClient.rpc('genereaza_link_checkin', { p_client_id: client.id, p_nou: false });
+    if (error || !cod) return showToast(tr('Nu s-a putut crea link-ul.', 'Could not create the link.'), 'error');
+    client.checkinToken = cod;
+  }
+  arataQr(`${URL_APLICATIE}?checkin=${client.checkinToken}`, tr('Check-in', 'Check-in'),
+    `Check-in · ${client.nume}`, `B-Fit QR check-in ${client.nume}.png`.replace(/[\\/:*?"<>|]/g, ''));
+}
+
 // ---- Notificări (tabelul notificari): clopoțelul din antet, panoul, actualizare pe loc prin Realtime ----
 // Baza salvează doar tipul și datele; textul se compune aici, în limba aleasă.
 let notificari = [];
@@ -8398,19 +8612,23 @@ function importaPlanDinFisier(inputEl) {
   reader.readAsText(file, 'UTF-8');
 }
 
-// Librăria de PDF (pdfmake, cu fontul Roboto, care are diacriticele) se încarcă doar la primul export
-function incarcaPdfMake() {
-  if (window.pdfMake && window.pdfMake.vfs) return Promise.resolve();
-  // integrity: browserul refuză fișierul dacă diferă de versiunea verificată (CDN compromis sau modificat)
-  const incarca = (src, integrity) => new Promise((resolve, reject) => {
+// integrity: browserul refuză fișierul dacă diferă de versiunea verificată (CDN compromis sau modificat)
+function incarcaScriptVerificat(src, integrity) {
+  return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
     s.integrity = integrity;
     s.crossOrigin = 'anonymous';
     s.onload = resolve;
-    s.onerror = reject;
+    s.onerror = () => { s.remove(); reject(new Error('script')); };
     document.head.appendChild(s);
   });
+}
+
+// Librăria de PDF (pdfmake, cu fontul Roboto, care are diacriticele) se încarcă doar la primul export
+function incarcaPdfMake() {
+  if (window.pdfMake && window.pdfMake.vfs) return Promise.resolve();
+  const incarca = incarcaScriptVerificat;
   return incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js', 'sha384-VFQrHzqBh5qiJIU0uGU5CIW3+OWpdGGJM9LBnGbuIH2mkICcFZ7lPd/AAtI7SNf7')
     .then(() => incarca('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js', 'sha384-/RlQG9uf0M2vcTw3CX7fbqgbj/h8wKxw7C3zu9/GxcBPRKOEcESxaxufwRXqzq6n'));
 }
