@@ -4068,6 +4068,7 @@ select.form-control {
 /* Fișă fără clientă aleasă: filtre + lista clientelor (avatar cu inițiale, abonament, starea ca etichetă) */
 .lista-filtre {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   margin: 12px 0 8px;
 }
@@ -4075,8 +4076,9 @@ select.form-control {
 .lista-filtru {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 6px 10px;
+  white-space: nowrap;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--card-bg);
@@ -4125,6 +4127,46 @@ select.form-control {
 
 .lista-clienta:active {
   transform: scale(0.98);
+}
+
+/* „De reactivat”: rândul clientului + butonul de mesaj alături */
+.lista-rand {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.lista-rand .lista-clienta {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.lista-mesaj {
+  flex-shrink: 0;
+  width: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.lista-mesaj svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lista-mesaj:active {
+  transform: scale(0.94);
 }
 
 .lista-avatar {

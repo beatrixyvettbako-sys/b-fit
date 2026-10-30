@@ -4876,6 +4876,29 @@ function stareAbonamentClienta(c) {
   return { tip: 'activ', text: tr(`${c.ramase} rămase`, `${c.ramase} left`), urmarit: false };
 }
 
+// Semafor de retenție: clienții care nu mai vin. Galben = 14–29 de zile fără prezență; roșu = 30+ zile,
+// sau abonament terminat și nereînnoit de cel puțin 7 zile. Peste 180 de zile nu mai apar (de arhivat, nu de reactivat).
+function stareRetentie(c, s) {
+  if (s.tip === 'arhivat' || s.tip === 'nou') return null;
+  const nume = c.nume.trim().toLowerCase();
+  const ultima = (DB.prezente || []).filter(p => p.clienta.trim().toLowerCase() === nume)
+    .reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0) || parseazaDataOraRo(c.dataStart);
+  if (!ultima) return null;
+  const azi = new Date(); azi.setHours(0, 0, 0, 0);
+  const zile = Math.round((azi - new Date(ultima).setHours(0, 0, 0, 0)) / 86400000);
+  if (zile < 7 || zile > 180) return null;
+  if (zile >= 30 || (s.tip === 'expirat' && zile >= 7)) return { culoare: 'rosu', zile };
+  return zile >= 14 ? { culoare: 'galben', zile } : null;
+}
+
+function trimiteMesajReactivare(nume) {
+  const c = (DB.clienti || []).find(x => x.nume === nume);
+  if (!c) return;
+  const prenume = c.nume.trim().split(/\s+/)[0];
+  partajeaza(tr(`Bună, ${prenume}! Ne-a fost dor de tine la antrenamente. Vrei să-ți rezerv un loc săptămâna asta?`,
+    `Hi ${prenume}! We’ve missed you at training. Shall I book you a spot this week?`), c.contConectat ? URL_APLICATIE : undefined);
+}
+
 // Abonament propriu-zis (nu ședință gratuită / individuală) încă valabil
 function areAbonamentActiv(c) {
   return !/gratuit|individual/i.test(c.tipAbonament || '') && ['activ', 'curand'].includes(stareAbonamentClienta(c).tip);
@@ -4888,7 +4911,7 @@ function randeazaListaClienteFisa() {
   const arataArhivate = document.getElementById('checkArataArhivate')?.checked;
   const cauta = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
   const toate = (DB.clienti || [])
-    .map(c => ({ c, s: stareAbonamentClienta(c) }))
+    .map(c => { const s = stareAbonamentClienta(c); return { c, s, r: stareRetentie(c, s) }; })
     .filter(x => arataArhivate || x.s.tip !== 'arhivat');
 
   // Fără nicio clientă (antrenor nou): rămâne cardul gol, cu explicația
@@ -4901,24 +4924,31 @@ function randeazaListaClienteFisa() {
   lista.hidden = false;
 
   const deUrmarit = toate.filter(x => x.s.urmarit).length;
-  if (deUrmarit === 0) filtruListaFisa = 'toate';
+  const deReactivat = toate.filter(x => x.r).length;
+  if ((filtruListaFisa === 'urmarit' && !deUrmarit) || (filtruListaFisa === 'reactivat' && !deReactivat)) filtruListaFisa = 'toate';
   const ordine = { expirat: 0, curand: 1, nou: 2, activ: 3, arhivat: 4 };
+  const reactivare = filtruListaFisa === 'reactivat';
   const vizibile = toate
-    .filter(x => filtruListaFisa === 'toate' || x.s.urmarit)
+    .filter(x => filtruListaFisa === 'toate' || (reactivare ? x.r : x.s.urmarit))
     .filter(x => !cauta || x.c.nume.toLowerCase().includes(cauta))
-    .sort((a, b) => (ordine[a.s.tip] - ordine[b.s.tip]) || a.c.nume.localeCompare(b.c.nume));
+    .sort((a, b) => reactivare ? (b.r.zile - a.r.zile) : ((ordine[a.s.tip] - ordine[b.s.tip]) || a.c.nume.localeCompare(b.c.nume)));
 
   const filtru = (id, text, n) => `<button type="button" class="lista-filtru${filtruListaFisa === id ? ' active' : ''}" onclick="filtruListaFisa='${id}'; randeazaListaClienteFisa()">${text}<span>${n}</span></button>`;
   const initiale = nume => nume.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-  let html = `<div class="lista-filtre">${filtru('toate', tr('Toate', 'All'), toate.length)}${deUrmarit ? filtru('urmarit', tr('De urmărit', 'Needs attention'), deUrmarit) : ''}</div>`;
-  html += vizibile.length ? vizibile.map(({ c, s }) => {
+  let html = `<div class="lista-filtre">${filtru('toate', tr('Toate', 'All'), toate.length)}${deUrmarit ? filtru('urmarit', tr('De urmărit', 'Needs attention'), deUrmarit) : ''}${deReactivat ? filtru('reactivat', tr('De reactivat', 'Win back'), deReactivat) : ''}</div>`;
+  html += vizibile.length ? vizibile.map(({ c, s, r }) => {
     const detalii = s.tip === 'nou' ? tr('Abonamentul se adaugă din Încasări', 'Add the subscription in Payments')
       : [traduceValoare(c.tipAbonament), c.dataExpirare && c.dataExpirare !== '-' ? tr('până la ', 'until ') + c.dataExpirare : ''].filter(Boolean).join(' · ');
-    return `<button type="button" class="lista-clienta" data-nume="${escAttr(c.nume)}" onclick="deschideClientaDinLista(this.dataset.nume)">
+    // În „De reactivat”: semaforul (zile fără prezență) în locul stării abonamentului și butonul de mesaj
+    const stare = reactivare
+      ? `<span class="lista-stare ${r.culoare === 'rosu' ? 'expirat' : 'curand'}">${tr(`${r.zile} zile`, `${r.zile} days`)}</span>`
+      : `<span class="lista-stare ${s.tip}">${escAttr(s.text)}</span>`;
+    const rand = `<button type="button" class="lista-clienta" data-nume="${escAttr(c.nume)}" onclick="deschideClientaDinLista(this.dataset.nume)">
         <span class="lista-avatar">${escAttr(initiale(c.nume))}</span>
-        <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${escAttr(detalii)}</small></span>
-        <span class="lista-stare ${s.tip}">${escAttr(s.text)}</span>
+        <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${reactivare ? tr('fără prezență', 'no attendance') : escAttr(detalii)}</small></span>
+        ${stare}
       </button>`;
+    return reactivare ? `<div class="lista-rand">${rand}<button type="button" class="lista-mesaj" data-nume="${escAttr(c.nume)}" onclick="trimiteMesajReactivare(this.dataset.nume)" aria-label="${tr('Trimite mesaj', 'Send message')}"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button></div>` : rand;
   }).join('') : `<div class="lista-gol">${tr('Niciun client găsit.', 'No client found.')}</div>`;
   lista.innerHTML = html;
 }
@@ -6908,6 +6938,7 @@ function textNotificare(n) {
       : [tr('Abonamentul expiră curând', 'Subscription ending soon'), tr(`Abonamentul tău expiră pe ${d.data || ''}.`, `Your subscription ends on ${d.data || ''}.`)],
     sedinte_putine: [tr(`Mai ai ${d.ramase} ședințe`, `${d.ramase} sessions left`), tr('Vorbește cu antrenorul despre reînnoire.', 'Talk to your trainer about renewing.')],
     programare_maine: [tr('Antrenament mâine', 'Workout tomorrow'), tr(`Mâine la ${d.ora || ''} ai antrenament.`, `You have a workout tomorrow at ${d.ora || ''}.`)],
+    loc_liber: [tr('Loc liber', 'Spot available'), tr(`S-a eliberat un loc ${zi}, ora ${d.ora || ''}. Rezervă din aplicație.`, `A spot opened up on ${zi} at ${d.ora || ''}. Book it in the app.`)],
     nota_noua: [tr('Notă nouă de la antrenor', 'New note from your trainer'), tr('Antrenorul ți-a lăsat o notă în aplicație.', 'Your trainer left you a note in the app.')]
   }[n.tip];
   return t || [tr('Notificare', 'Notification'), ''];
@@ -6987,7 +7018,7 @@ function stergeToateNotificarile() {
 // Tipurile care duc undeva în aplicație; restul (tip necunoscut, client șters) rămân doar de citit
 function areDestinatieNotificare(n) {
   const d = n.date || {};
-  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua'].includes(n.tip);
+  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber'].includes(n.tip);
   if (n.tip === 'checkin_nou') return (DB.clienti || []).some(c => c.id === d.client_id);
   return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira'].includes(n.tip);
 }
@@ -7006,7 +7037,9 @@ function deschideNotificare(id) {
   inchidePanouNotificari();
   if (rolUtilizator === 'clienta') {
     if (n.tip === 'checkin_memento') { clientaTab('fisa'); return; }
-    clientaTab(n.tip === 'programare_maine' ? 'orar' : 'acasa');
+    // Locul liber: Orarul se deschide direct pe ziua locului
+    if (n.tip === 'loc_liber' && (n.date || {}).zi) dateClienta.ziSelectata = cheieZiClienta(new Date(n.date.zi + 'T12:00:00'));
+    clientaTab(['programare_maine', 'loc_liber'].includes(n.tip) ? 'orar' : 'acasa');
     // Planul nou se deschide direct, dacă îl găsim după titlu
     const iPlan = n.tip === 'plan_nou' ? dateClienta.planuri.findIndex(p => p.titlu === (n.date || {}).titlu) : -1;
     if (iPlan !== -1) deschidePlanClienta(iPlan);
