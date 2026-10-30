@@ -28,7 +28,7 @@
   <a class="inapoi" href="index.html">← B-Fit</a>
   <div class="card">
     <h1>Politica de confidențialitate</h1>
-    <p class="data">Ultima actualizare: 28 octombrie 2026 · <a href="#en">English version</a></p>
+    <p class="data">Ultima actualizare: 30 octombrie 2026 · <a href="#en">English version</a></p>
 
     <p>B-Fit este o aplicație de management pentru antrenori de fitness: orar, programări, fișe de clienți, încasări și planuri de antrenament. Această pagină explică ce date prelucrăm, de ce și ce drepturi ai.</p>
 
@@ -41,29 +41,45 @@
       <li><b>Contul:</b> adresa de email, numele, poza de profil (opțional). Parola este gestionată criptat de furnizorul de autentificare; nu o vedem.</li>
       <li><b>Date introduse de antrenor despre clienți:</b> nume, tip de abonament, ședințe incluse și rămase, valabilitate, programări, prezențe, încasări, mențiuni și planuri de antrenament.</li>
       <li><b>Date ale clientului care are cont:</b> rezervările făcute în aplicație și progresul notat în planurile de antrenament.</li>
-      <li><b>Pe dispozitivul tău:</b> preferințe (limbă, temă, culoare, setările orarului) și o copie a datelor pentru afișare rapidă, păstrate în memoria browserului.</li>
+      <li><b>Date despre sănătate</b> (categorie specială, art. 9 GDPR), doar dacă clientul le completează: afecțiuni, dureri, restricții și contactul de urgență din fișa de înscriere, greutatea și răspunsurile din check-in-ul săptămânal, pozele de progres.</li>
+      <li><b>Notificări:</b> dacă le activezi, adresa tehnică a abonamentului de notificări a dispozitivului.</li>
+      <li><b>Pe dispozitivul tău:</b> preferințe (limbă, temă, culoare, setările orarului) și o copie a datelor pentru afișare rapidă, păstrate în memoria browserului. Nu folosim cookie-uri de urmărire.</li>
     </ul>
 
     <h2>3. De ce le folosim</h2>
-    <p>Doar pentru funcționarea aplicației: autentificare, afișarea și salvarea orarului, a fișelor, a încasărilor, a rezervărilor și a planurilor. Temeiul este executarea serviciului cerut (contract) și interesul legitim de a ține aplicația sigură.</p>
+    <p>Doar pentru funcționarea aplicației: autentificare, afișarea și salvarea orarului, a fișelor, a încasărilor, a rezervărilor și a planurilor. Temeiul este executarea serviciului cerut (contract) și interesul legitim de a ține aplicația sigură (de exemplu, verificarea anti-robot la conectare).</p>
+    <p>Datele despre sănătate se prelucrează doar pe baza <b>consimțământului explicit</b> al clientului, dat la înscriere, și doar pentru antrenamentul lui personal. Consimțământul poate fi retras oricând, cerându-i antrenorului să șteargă aceste date. Aplicația este destinată persoanelor de cel puțin 16 ani.</p>
     <p>B-Fit <b>nu</b> afișează reclame, <b>nu</b> vinde date și <b>nu</b> folosește instrumente de urmărire sau statistici de utilizare.</p>
 
     <h2>4. Unde sunt stocate și cine le mai vede</h2>
     <ul>
-      <li><b>Supabase</b>: baza de date, autentificarea și stocarea pozelor de profil.</li>
+      <li><b>Supabase</b>: baza de date, autentificarea și stocarea pozelor de profil, în Uniunea Europeană (Irlanda).</li>
+      <li><b>Cloudflare</b>: stocarea pozelor de progres (R2), verificarea anti-robot la conectare (Turnstile, care analizează semnale tehnice ale browserului) și numele de domeniu.</li>
+      <li><b>Resend</b>: trimiterea emailurilor aplicației (confirmarea contului, resetarea parolei, linkuri de conectare); primește adresa de email a destinatarului.</li>
+      <li><b>Serviciile de notificări ale browserului</b> (Google, Apple sau Mozilla): livrează notificările, dacă le activezi.</li>
       <li><b>GitHub Pages</b>: găzduirea fișierelor aplicației.</li>
       <li><b>GitHub Actions</b>: copiile de siguranță (backup) zilnice ale bazei de date, criptate, într-un depozit privat.</li>
-      <li><b>jsDelivr și cdnjs</b>: livrarea unor librării (ex. pentru export PDF); nu primesc datele tale din aplicație.</li>
+      <li><b>cdnjs</b>: librăria pentru export PDF; nu primește datele tale din aplicație.</li>
       <li><b>Google</b>: doar dacă alegi conectarea cu contul Google.</li>
     </ul>
+    <p>Unii dintre acești furnizori pot prelucra date și în afara UE; în aceste cazuri, transferul se face pe baza garanțiilor prevăzute de GDPR (clauze contractuale standard sau cadrul de protecție a datelor UE-SUA).</p>
     <p>Fiecare antrenor vede doar datele propriilor clienți. Un client cu cont vede doar datele sale, plus locurile libere deschise de antrenor, fără numele altor clienți.</p>
 
     <h2>5. Cât timp le păstrăm</h2>
-    <p>Cât timp contul este activ. Antrenorul poate modifica, arhiva sau șterge oricând datele clienților. La cerere, ștergem contul și datele asociate, cu excepția celor pe care legea ne obligă să le păstrăm.</p>
+    <p>Cât timp contul este activ. Antrenorul poate modifica, arhiva sau șterge oricând datele clienților. Contul îl poți șterge oricând din aplicație (vezi mai jos), cu excepția datelor pe care legea ne obligă să le păstrăm.</p>
     <p>Copiile de siguranță se păstrează 30 de zile și apoi se șterg automat, așa că datele șterse dispar și din ele în cel mult 30 de zile.</p>
 
     <h2>6. Drepturile tale</h2>
-    <p>Conform GDPR, ai dreptul de acces, rectificare, ștergere, restricționare, portabilitate și opoziție. Clienții sunt rugați să se adreseze întâi antrenorului lor, care administrează fișa. Ne poți scrie oricând la adresa de mai sus. Ai și dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (<a href="https://www.dataprotection.ro" target="_blank" rel="noopener">dataprotection.ro</a>).</p>
+    <p>Conform GDPR, ai dreptul de acces, rectificare, ștergere, restricționare, portabilitate și opoziție. Din aplicație, la <b>Profil → Datele tale</b>, poți descărca o copie a datelor tale (<b>Descarcă datele mele</b>) și îți poți șterge contul (<b>Șterge contul</b>). Clienții sunt rugați să se adreseze întâi antrenorului lor, care administrează fișa. Ne poți scrie oricând la adresa de mai sus. Ai și dreptul de a depune o plângere la Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal (<a href="https://www.dataprotection.ro" target="_blank" rel="noopener">dataprotection.ro</a>).</p>
+
+    <h2 id="stergere">Ștergerea contului</h2>
+    <p><b>Din aplicație:</b> intră în cont → meniul lateral → <b>Profil</b> → <b>Datele tale</b> → <b>Șterge contul</b>, apoi confirmă scriind cuvântul cerut. Ștergerea este imediată și definitivă.</p>
+    <p><b>Fără acces la aplicație:</b> scrie-ne de pe adresa de email a contului la <a href="mailto:dancristian.chira@hotmail.com">dancristian.chira@hotmail.com</a>, cu subiectul „Ștergere cont B-Fit”; ștergem contul în cel mult 30 de zile.</p>
+    <ul>
+      <li><b>Cont de antrenor:</b> se șterg contul și toate datele lui (clienți, orar, încasări, prezențe, planuri, cereri, check-in-uri). Clienții lui pierd accesul în aplicație.</li>
+      <li><b>Cont de client:</b> se șterg contul, profilul și notificările. Fișa clientului (abonament, programări, progres) aparține antrenorului și rămâne la el; pentru ștergerea ei, cere-i antrenorului.</li>
+      <li>Pozele de progres stocate la Cloudflare se șterg de antrenor din fișă sau, la cerere, de noi, în cel mult 30 de zile. Datele șterse dispar și din copiile de siguranță în cel mult 30 de zile.</li>
+    </ul>
 
     <h2>7. Securitate</h2>
     <p>Conexiunea este criptată (HTTPS), accesul se face doar cu cont, iar regulile bazei de date limitează fiecare cont la propriile date. Copiile de siguranță sunt criptate (AES-256) și pot fi deschise doar cu o parolă separată.</p>
@@ -73,7 +89,7 @@
 
     <div class="lang" id="en">
       <h1>Privacy policy</h1>
-      <p class="data">Last updated: October 28, 2026</p>
+      <p class="data">Last updated: October 30, 2026</p>
       <p>B-Fit is a management app for fitness trainers: schedule, bookings, client records, payments and workout plans.</p>
       <h2>Who is responsible</h2>
       <p>For client data, the <b>trainer</b> using B-Fit is the data controller; B-Fit stores and processes that data on the trainer's behalf (processor). For trainer accounts, B-Fit is the controller. Contact: <a href="mailto:dancristian.chira@hotmail.com">dancristian.chira@hotmail.com</a></p>
@@ -82,14 +98,19 @@
         <li><b>Account:</b> email, name, optional profile photo. Passwords are handled in encrypted form by the authentication provider; we never see them.</li>
         <li><b>Client data entered by the trainer:</b> name, subscription, sessions, validity, bookings, attendance, payments, notes and workout plans.</li>
         <li><b>Client accounts:</b> bookings made in the app and progress logged in workout plans.</li>
-        <li><b>On your device:</b> preferences and a cached copy of the data for fast display, stored in browser storage.</li>
+        <li><b>Health data</b> (special category, Art. 9 GDPR), only if the client provides it: conditions, pain, restrictions and emergency contact from the sign-up form, weight and weekly check-in answers, progress photos.</li>
+        <li><b>Notifications:</b> if enabled, the device's technical push subscription address.</li>
+        <li><b>On your device:</b> preferences and a cached copy of the data for fast display, stored in browser storage. No tracking cookies.</li>
       </ul>
       <h2>Why</h2>
-      <p>Only to provide the app (contract) and keep it secure (legitimate interest). No ads, no selling of data, no tracking or usage analytics.</p>
+      <p>Only to provide the app (contract) and keep it secure (legitimate interest, e.g. the anti-bot check at sign-in). Health data is processed only with the client's <b>explicit consent</b>, given at sign-up, and only for their personal training; consent can be withdrawn at any time by asking the trainer to delete it. The app is intended for people aged 16 and over. No ads, no selling of data, no tracking or usage analytics.</p>
       <h2>Where it is stored</h2>
-      <p>Supabase (database, authentication, profile photos), GitHub Pages (app hosting), GitHub Actions (daily encrypted database backups in a private repository), jsDelivr and cdnjs (libraries only), Google (only if you sign in with Google). Each trainer sees only their own clients; a client sees only their own data and the open spots, without other clients' names.</p>
+      <p>Supabase (database, authentication, profile photos, in the EU, Ireland), Cloudflare (progress photos in R2, Turnstile anti-bot check, domain), Resend (sending the app's emails), your browser's push service (Google, Apple or Mozilla, if you enable notifications), GitHub Pages (app hosting), GitHub Actions (daily encrypted database backups in a private repository), cdnjs (PDF library only), Google (only if you sign in with Google). Some providers may process data outside the EU, based on the safeguards provided by the GDPR (standard contractual clauses or the EU-US Data Privacy Framework). Each trainer sees only their own clients; a client sees only their own data and the open spots, without other clients' names.</p>
       <h2>Retention and your rights</h2>
-      <p>Data is kept while the account is active; the trainer can edit, archive or delete client data at any time, and we delete accounts on request. Backups are encrypted (AES-256), kept for 30 days and then deleted automatically, so deleted data also disappears from them within 30 days. Under the GDPR you have the right of access, rectification, erasure, restriction, portability and objection, and the right to complain to your data protection authority (in Romania: <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">ANSPDCP</a>). Clients should contact their trainer first.</p>
+      <p>Data is kept while the account is active; the trainer can edit, archive or delete client data at any time. Backups are encrypted (AES-256), kept for 30 days and then deleted automatically, so deleted data also disappears from them within 30 days. Under the GDPR you have the right of access, rectification, erasure, restriction, portability and objection, and the right to complain to your data protection authority (in Romania: <a href="https://www.dataprotection.ro" target="_blank" rel="noopener">ANSPDCP</a>). In the app, under <b>Profile → Your data</b>, you can download a copy of your data and delete your account. Clients should contact their trainer first.</p>
+      <h2 id="deletion">Account deletion</h2>
+      <p><b>In the app:</b> sign in → side menu → <b>Profile</b> → <b>Your data</b> → <b>Delete account</b>, then confirm by typing the requested word. Deletion is immediate and permanent. <b>Without access to the app:</b> email us from your account's address at <a href="mailto:dancristian.chira@hotmail.com">dancristian.chira@hotmail.com</a> with the subject "B-Fit account deletion"; we delete the account within 30 days.</p>
+      <p>A trainer account is deleted together with all its data (clients, schedule, payments, attendance, plans, requests, check-ins); its clients lose access to the app. A client account is deleted together with its profile and notifications; the client record belongs to the trainer and stays with them, so ask your trainer to delete it. Progress photos stored at Cloudflare are deleted by the trainer from the record or, on request, by us within 30 days. Deleted data also disappears from backups within 30 days.</p>
     </div>
   </div>
 </main>

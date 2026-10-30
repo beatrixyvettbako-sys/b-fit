@@ -1071,6 +1071,56 @@ async function schimbaParolaProfil() {
   }
 }
 
+// ---- Datele tale (GDPR): copie a datelor (portabilitate) și ștergerea contului ----
+function exportaDateleMele() {
+  if (!utilizatorCurent) return;
+  const date = {
+    exportatLa: new Date().toISOString(),
+    cont: { email: utilizatorCurent.email, nume: (utilizatorCurent.user_metadata || {}).full_name || '', creatLa: utilizatorCurent.created_at, rol: rolUtilizator },
+    date: rolUtilizator === 'clienta' ? { fisa: dateClienta.fisa, planuri: dateClienta.planuri } : DB
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(date, null, 2)], { type: 'application/json' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `b-fit-datele-mele-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Antrenor: se șterg contul și toate datele lui. Client: contul; fișa rămâne la antrenor (vezi sql/2026-10-30_stergere_cont.sql)
+function stergeContulMeu() {
+  if (!utilizatorCurent) return;
+  const cuvant = tr('ȘTERGE', 'DELETE');
+  const text = rolUtilizator === 'clienta'
+    ? tr('Contul tău se șterge definitiv. Fișa ta (abonament, programări, progres) rămâne la antrenor; pentru ștergerea ei, cere-i antrenorului.',
+      'Your account will be permanently deleted. Your record (subscription, bookings, progress) stays with your trainer; ask your trainer to delete it.')
+    : tr('Se șterg definitiv contul și toate datele tale: clienți, orar, încasări, prezențe, planuri. Clienții tăi pierd accesul în aplicație. Nu se poate anula.',
+      'Your account and all your data will be permanently deleted: clients, schedule, payments, attendance, plans. Your clients lose access to the app. This cannot be undone.');
+  customConfirm(tr('Ștergi contul?', 'Delete your account?'), `${text}\n\n${tr('Scrie', 'Type')} ${cuvant} ${tr('ca să confirmi.', 'to confirm.')}`, async (valoare) => {
+    const normalizat = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().trim();
+    if (normalizat(valoare) !== normalizat(cuvant)) {
+      showToast(tr('Contul nu a fost șters: cuvântul de confirmare nu se potrivește.', 'Account not deleted: the confirmation word does not match.'), 'error');
+      return;
+    }
+    await supabaseClient.storage.from('avatars').remove([`${utilizatorCurent.id}/avatar.webp`]).catch(() => {});
+    await dezaboneazaPush();
+    const { data, error } = await supabaseClient.rpc('sterge_contul_meu');
+    if (error || data !== 'ok') {
+      showToast(tr('Contul nu s-a putut șterge. Reîncearcă sau scrie-ne.', 'Could not delete the account. Try again or contact us.'), 'error');
+      return;
+    }
+    deconectareInCurs = true;
+    document.documentElement.classList.add('deconectare');
+    await supabaseClient.auth.signOut().catch(() => {});
+    localStorage.removeItem('BFIT_DB_LOCAL');
+    localStorage.removeItem('BFIT_ROL');
+    sessionStorage.setItem('BFIT_CONT_STERS', '1');
+    window.location.reload();
+  }, { placeholder: cuvant });
+}
+
 function normalizeazaOraUi(oraStr) {
   if (!oraStr) return "";
   let s = oraStr.toString().trim();
@@ -4032,6 +4082,10 @@ async function verificaSesiuneSupabase() {
     // Devine vizibilă abia la conectare (ascundeLogin din onAuthStateChange).
     if (overlay) overlay.classList.remove('auth-hidden');
     if (eroareLink) afiseazaMesajAuthFeedback(eroareLink);
+    if (sessionStorage.getItem('BFIT_CONT_STERS')) {
+      sessionStorage.removeItem('BFIT_CONT_STERS');
+      afiseazaMesajAuthFeedback(tr('Contul tău a fost șters.', 'Your account has been deleted.'), 'success');
+    }
     pregatesteCaptcha().catch(() => {});
     actualizeazaStareNoScrollBody();
     return false;
@@ -8898,8 +8952,8 @@ function randeazaInscriere() {
     corp = `<div class="inscriere-sectiune">${tr('Consimțământ', 'Consent')}</div>
       <label class="inscriere-acord" id="inscQ_consimtamant">
         <input type="checkbox" ${acord ? 'checked' : ''} onchange="seteazaRaspunsInscriere('consimtamant', this.checked)">
-        <span>${tr('Confirm că informațiile oferite sunt reale și îmi dau acordul pentru prelucrarea lor în scopul serviciilor de antrenament personal.',
-          'I confirm that the information I gave is true and I agree to it being processed for personal training services.')}
+        <span>${tr('Am cel puțin 16 ani, informațiile oferite sunt reale și îmi dau acordul explicit ca antrenorul să le prelucreze, inclusiv datele despre sănătate (afecțiuni, dureri, greutate, poze de progres), doar pentru antrenamentul meu personal. Pot retrage acordul oricând.',
+          'I am at least 16, the information I gave is true and I explicitly agree to my trainer processing it, including health data (conditions, pain, weight, progress photos), only for my personal training. I can withdraw my consent at any time.')}
           <a href="confidentialitate.html" target="_blank" rel="noopener">${tr('Politica de confidențialitate', 'Privacy policy')}</a></span>
       </label>
       <input type="text" id="inscriereWebsite" class="inscriere-capcana" tabindex="-1" autocomplete="off" aria-hidden="true">`;

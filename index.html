@@ -21,7 +21,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal109">
+  <link rel="stylesheet" href="style.css?v=fitFinal110">
 </head>
 <body>
 
@@ -738,6 +738,13 @@
             </button>
           </div>
           <button type="button" class="btn profile-save-btn" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()" data-en="Update Password">Actualizează parola</button>
+        </div>
+
+        <!-- Datele tale (GDPR): copie a datelor și ștergerea contului -->
+        <div class="form-group profile-date-tale">
+          <label data-en="Your data">Datele tale</label>
+          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDate" onclick="exportaDateleMele()" data-en="Download my data">Descarcă datele mele</button>
+          <button type="button" class="btn btn-clear profile-date-btn profile-sterge-cont" id="btnStergeCont" onclick="stergeContulMeu()" data-en="Delete account">Șterge contul</button>
         </div>
       </div>
     </div>
@@ -1515,6 +1522,6 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="app.js?v=fitFinal109"></script>
+  <script src="app.js?v=fitFinal110"></script>
 </body>
 </html>
