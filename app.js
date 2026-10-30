@@ -2182,7 +2182,7 @@ async function executaActiuneSupabase(actionName, payload) {
       await sb.from('cliente').update(actualizare).eq('row', ex[0].row);
 
       // Numele se schimbă peste tot: după client_id (legătura sigură, prinde și nume rămase vechi din redenumiri anterioare)
-      // și după numele vechi (rândurile fără client_id). Planurile nu au client_id, doar nume.
+      // și după numele vechi (rândurile fără client_id). La planuri, client_id îl pune baza după nume (trigger leaga_plan_de_client).
       const idClienta = ex[0].id || ("cli_" + ex[0].row);
       const tabeleCuNume = [['orar', 'clienta'], ['prezente', 'clienta'], ['confirmari', 'nume'], ['incasari', 'clienta']];
       const cereri = tabeleCuNume.map(([tabel, col]) => {
