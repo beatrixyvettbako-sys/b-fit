@@ -5375,7 +5375,9 @@ select.form-control {
 }
 
 .sabloane-plan-lista .plan-zi-card-detalii,
-.sabloane-plan-lista .plan-zi-card-titlu {
+.sabloane-plan-lista .plan-zi-card-titlu,
+.plan-fisa-lista .plan-zi-card-detalii,
+.plan-fisa-lista .plan-zi-card-titlu {
   white-space: normal;
 }
 
@@ -5503,6 +5505,12 @@ select.form-control {
 
 .trimite-plan-eticheta {
   font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+/* Fișa clientului: planurile mai vechi decât cel curent */
+.plan-fisa-vechi {
+  font-weight: 700;
   color: var(--text-muted);
 }
 

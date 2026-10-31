@@ -185,7 +185,6 @@ const i18n = {
     workoutPlanTitle: "Plan de Antrenament",
     drawerWorkoutDesc: "Programe, export PDF, trimitere la clienți",
     planSelectLabel: "ALEGE PLAN",
-    btnNewPlan: "Plan Nou",
     btnSavePlan: "Salvează",
     btnPreviewPdfMode: "Mod PDF",
     btnEditMode: "Editare",
@@ -340,7 +339,6 @@ const i18n = {
     workoutPlanTitle: "Workout Plan",
     drawerWorkoutDesc: "Programs, PDF export & client share",
     planSelectLabel: "CHOOSE PLAN",
-    btnNewPlan: "New Plan",
     btnSavePlan: "Save",
     btnPreviewPdfMode: "PDF Mode",
     btnEditMode: "Edit",
@@ -2688,10 +2686,10 @@ function gestioneazaClickStangaHeader(event) {
       inchideZiPlan();
       return;
     }
-    // Înapoi (‹) duce la meniul din care a fost deschis planul; X din dreapta închide direct
+    // Înapoi (‹) duce la meniul din care a fost deschis planul (sau la fișa clientului); X din dreapta închide direct
     iesireDinPlanCuConfirmare(() => {
       revenireDinPlanAntrenament();
-      if (!esteModClientaShare) deschideMeniuLateral();
+      if (!esteModClientaShare && !planDeschisDinFisa) deschideMeniuLateral();
     });
   } else if (tipTabCurent === 'orar') {
     comutaExpandareBaraCalendar(event);
@@ -2915,8 +2913,6 @@ function aplicaTraduceriInterfataStatic() {
   if (elWDesc) elWDesc.innerText = t('drawerWorkoutDesc');
   const elPlanSelLbl = document.getElementById('planSelectLabel');
   if (elPlanSelLbl) elPlanSelLbl.innerText = t('planSelectLabel');
-  const elBtnNewPlan = document.getElementById('btnNewPlanText');
-  if (elBtnNewPlan) elBtnNewPlan.innerText = t('btnNewPlan');
   const elBtnSavePlan = document.getElementById('btnSavePlanText');
   if (elBtnSavePlan) elBtnSavePlan.innerText = t('btnSavePlan');
 
@@ -6339,10 +6335,44 @@ function afiseazaFisaClientaInstant() {
   const detInscriere = document.getElementById('detailsFisaInscriere');
   detInscriere.hidden = !client.fisaInscriere;
   randeazaFisaInscriereDeschisa();
+  randeazaPlanFisa(client);
   // Progresul apare la toți: check-in-urile pot fi și importate (ex. din Google Forms), fără cont sau fișă de obiective
   document.getElementById('detailsProgresClienta').hidden = false;
   incarcaProgresFisa();
   filtreazaIstoricFisaInstant();
+}
+
+// Planurile clientului în fișă (cel mai recent primul): progres pe exerciții, ultima notiță, deschidere pentru editare
+function randeazaPlanFisa(client) {
+  const cont = document.getElementById('planFisaContinut');
+  if (!cont) return;
+  const planuri = (DB.planuri || []).filter(p => randulClientei(p, client, p.clienta))
+    .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+  if (!planuri.length) {
+    cont.innerHTML = `<div class="plan-picker-empty">${tr('Niciun plan trimis. Deschide un șablon din Plan de antrenament și apasă „Trimite la clienți”.', 'No plan sent yet. Open a template in Workout plan and press "Send to clients".')}</div>`;
+    return;
+  }
+  cont.innerHTML = planuri.map((p, i) => {
+    const ex = (p.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim()));
+    const facute = ex.filter(x => x.status === 'Finalizat').length;
+    const note = (p.continut_json?.sesiuni || []).flatMap(s => [s.nota_client, ...(s.exercitii || []).map(x => x.nota_client)]).filter(n => (n || '').trim());
+    const data = p.updated_at ? new Date(p.updated_at).toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO') : '';
+    return `<button type="button" class="plan-zi-card" onclick="deschidePlanDinFisa('${escAttr(p.id)}')">
+      <span class="plan-zi-card-text">
+        <span class="plan-zi-card-titlu">${i === 0 ? '' : `<span class="plan-fisa-vechi">${tr('Anterior', 'Earlier')} · </span>`}${escAttr(p.titlu)}</span>
+        <span class="plan-zi-card-detalii">${data ? `${tr('Actualizat', 'Updated')} ${data} · ` : ''}${facute}/${ex.length} ${tr('exerciții făcute', 'exercises done')}${note.length ? ` · ${note.length} ${note.length === 1 ? tr('notiță', 'note') : tr('notițe', 'notes')}` : ''}</span>
+      </span>
+      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>`;
+  }).join('');
+}
+
+// Deschide planul clientului în Plan de antrenament (cu revenire în fișă la Înapoi)
+let planDeschisDinFisa = false;
+async function deschidePlanDinFisa(idPlan) {
+  await deschideSectiunePlanAntrenamentDinMeniu();
+  planDeschisDinFisa = true;
+  selecteazaPlanDinLista(idPlan);
 }
 
 function actualizeazaBlocContClienta(client) {
@@ -7994,6 +8024,7 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
 
   actualizeazaHeaderVisual('plan', t('workoutPlanTitle'));
   ziDeschisaPlan = null;
+  planDeschisDinFisa = false;
 
   // Dacă nu este selectat niciun plan, afișează șablonul default de creare
   if (!planActiv) {
@@ -8042,9 +8073,10 @@ function populeazaSelectorPlanuri() {
   const idCurent = planActiv && planActiv.id ? planActiv.id : "";
   sel.innerHTML = `<option value="">${currentLang === 'en' ? 'Choose a plan' : 'Alege un plan'}</option>`;
 
-  // Ordine alfabetică naturală (Săptămâna 2 înainte de Săptămâna 10), grupat pe clientă
+  // Lista e biblioteca de șabloane: planurile trimise clienților se găsesc în fișa fiecărui client.
+  // Ordine alfabetică naturală (Săptămâna 2 înainte de Săptămâna 10)
   const eticheta = p => `${p.clienta ? `[${p.clienta}] ` : ''}${p.titlu}`;
-  const sortate = [...(DB.planuri || [])]
+  const sortate = (DB.planuri || []).filter(p => !(p.clienta || '').trim())
     .sort((a, b) => eticheta(a).localeCompare(eticheta(b), 'ro', { numeric: true, sensitivity: 'base' }));
 
   // Titlurile „Săptămâna N - Ziua M: ...” se grupează pe săptămâni, ca rândurile din listă să fie scurte
@@ -8065,6 +8097,25 @@ function populeazaSelectorPlanuri() {
     parinte.appendChild(opt);
   };
 
+  // Planul unui client deschis din fișa lui rămâne vizibil în listă cât e deschis
+  if (planActiv && planActiv.id && (planActiv.clienta || '').trim()) {
+    const grup = document.createElement('optgroup');
+    grup.label = tr('Deschis acum', 'Open now');
+    adaugaOptiune(grup, planActiv.id, eticheta(planActiv));
+    sel.appendChild(grup);
+  }
+
+  adaugaOptiune(sel, 'gol', tr('+ Plan gol', '+ Blank plan'));
+
+  // Șabloanele B-Fit: alegerea unuia deschide o copie de editat
+  const sabloane = typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [];
+  if (sabloane.length) {
+    const grup = document.createElement('optgroup');
+    grup.label = tr('Șabloane B-Fit', 'B-Fit templates');
+    sabloane.forEach((s, i) => adaugaOptiune(grup, 'sablon:' + i, s.titlu));
+    sel.appendChild(grup);
+  }
+
   grupuri.forEach((lista, cheie) => {
     const grup = document.createElement('optgroup');
     grup.label = cheie;
@@ -8073,9 +8124,9 @@ function populeazaSelectorPlanuri() {
   });
 
   if (altele.length > 0) {
-    const parinte = grupuri.size > 0 ? document.createElement('optgroup') : sel;
+    const parinte = grupuri.size > 0 || sabloane.length ? document.createElement('optgroup') : sel;
     if (parinte !== sel) {
-      parinte.label = currentLang === 'en' ? 'Other plans' : 'Alte planuri';
+      parinte.label = grupuri.size > 0 ? tr('Alte șabloane', 'Other templates') : tr('Șabloanele mele', 'My templates');
       sel.appendChild(parinte);
     }
     altele.forEach(p => adaugaOptiune(parinte, p.id, eticheta(p)));
@@ -8317,6 +8368,14 @@ function incarcaPlanDinLista(idPlan) {
     randeazaPlanAntrenamentUI();
     return;
   }
+  if (idPlan === 'gol') {
+    pornestePlanNou();
+    return;
+  }
+  if (String(idPlan).startsWith('sablon:')) {
+    incarcaSablonPlan(Number(String(idPlan).slice(7)));
+    return;
+  }
   const gasit = (DB.planuri || []).find(p => String(p.id) === String(idPlan));
   if (gasit) {
     planActiv = JSON.parse(JSON.stringify(gasit));
@@ -8325,51 +8384,13 @@ function incarcaPlanDinLista(idPlan) {
   }
 }
 
-// „Plan nou” deschide alegerea: plan gol sau o copie a unui șablon B-Fit (sabloane.js)
-function creeazaPlanNouCuSablon() {
-  const lista = document.getElementById('listaSabloanePlan');
-  if (!lista) return;
-  const sabloane = typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [];
-  lista.innerHTML = `
-    <button type="button" class="plan-zi-card" onclick="alegeSablonPlan(-1)">
-      <span class="plan-zi-card-text">
-        <span class="plan-zi-card-titlu">${tr('Plan gol', 'Blank plan')}</span>
-        <span class="plan-zi-card-detalii">${tr('Pornești de la zero', 'Start from scratch')}</span>
-      </span>
-      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-    </button>
-    ${sabloane.map((s, i) => {
-      const sesiuni = s.continut_json.sesiuni;
-      const nrEx = sesiuni.reduce((n, ses) => n + ses.exercitii.length, 0);
-      const zile = sesiuni.map(ses => ses.titlu.replace(/^.*?Ziua \d+:\s*/, '').replace(/\s*\(.*$/, '')).join(' · ');
-      return `
-        <button type="button" class="plan-zi-card" onclick="alegeSablonPlan(${i})">
-          <span class="plan-zi-card-text">
-            <span class="plan-zi-card-titlu">${escAttr(s.tip)}</span>
-            <span class="plan-zi-card-detalii">${escAttr(zile)}</span>
-            <span class="plan-zi-card-detalii">${escAttr(s.focus)} · ${nrEx} ${tr('exerciții', 'exercises')}</span>
-          </span>
-          <span class="plan-zi-card-nr sablon-nr-zile">${s.nr_zile} ${tr('zile', 'days')}</span>
-        </button>`;
-    }).join('')}
-  `;
-  document.getElementById('modalSabloanePlanBackdrop').style.display = 'flex';
-}
-
-function inchideModalSabloanePlan() {
-  document.getElementById('modalSabloanePlanBackdrop').style.display = 'none';
-}
-
-// Planul nou e o copie: modificările nu ating șablonul; se salvează în bază doar la „Salvează”
-function alegeSablonPlan(idx) {
-  inchideModalSabloanePlan();
+// Șablon din listă: planul nou e o copie; modificările nu ating șablonul și se salvează în bază doar la „Salvează”
+function incarcaSablonPlan(idx) {
   const s = idx >= 0 ? SABLOANE_PLAN[idx] : null;
-  dupaConfirmareModificariPlan(() => {
-    if (!s) { pornestePlanNou(); return; }
-    const copie = JSON.parse(JSON.stringify(s));
-    pornestePlanNou({ id: null, clienta: '', titlu: copie.titlu, subtitlu: copie.subtitlu, continut_json: copie.continut_json },
-      tr('✓ Șablon încărcat. Modifică-l și apasă Salvează.', '✓ Template loaded. Edit it and press Save.'));
-  });
+  if (!s) { pornestePlanNou(); return; }
+  const copie = JSON.parse(JSON.stringify(s));
+  pornestePlanNou({ id: null, clienta: '', titlu: copie.titlu, subtitlu: copie.subtitlu, continut_json: copie.continut_json },
+    tr('✓ Șablon încărcat. Modifică-l și apasă Salvează.', '✓ Template loaded. Edit it and press Save.'));
 }
 
 // Progresul clientului nu se copiază: planul nou (variantă sau trimis) pornește curat
@@ -8478,7 +8499,7 @@ async function trimitePlanLaClienti() {
     try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
     populeazaSelectorPlanuri();
     inchideTrimitePlan();
-    showToast(tr(`✓ Trimis la ${alesi.length} ${alesi.length === 1 ? 'client' : 'clienți'}`, `✓ Sent to ${alesi.length} ${alesi.length === 1 ? 'client' : 'clients'}`));
+    showToast(tr(`✓ Trimis la ${alesi.length} ${alesi.length === 1 ? 'client' : 'clienți'}. Îl găsești în fișa clientului.`, `✓ Sent to ${alesi.length} ${alesi.length === 1 ? 'client' : 'clients'}. Find it in the client's profile.`));
   } catch (err) {
     console.error("Eroare trimitere plan:", err);
     showToast(tr('Eroare la trimitere: ', 'Error sending: ') + (err.message || ''), 'error');
