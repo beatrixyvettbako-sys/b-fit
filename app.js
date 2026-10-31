@@ -598,6 +598,8 @@ function comutaTabAuth(mod) {
     if (tabLogin) tabLogin.classList.remove('active');
     if (btnSubmit) btnSubmit.innerText = t('authSubmitBtnSignup');
     if (subTitle) subTitle.innerText = t('authSubtitleSignup');
+    // CAPTCHA doar pentru contul nou: pornește când se alege „Creează cont”, ca tokenul să fie gata la trimitere
+    pregatesteCaptcha().catch(() => {});
   }
 }
 
@@ -607,26 +609,6 @@ function actualizeazaLinkComutareAuth() {
   if (link) link.innerText = tipModAuth === 'login'
     ? tr('Ești antrenor? Creează cont', 'Are you a trainer? Create an account')
     : tr('Ai deja cont? Intră în cont', 'Already have an account? Log in');
-}
-
-// Diagnostic temporar pentru durata logării: se pornește o dată cu ?diag=1 și arată, după logare, cât a durat fiecare pas
-const DIAG_LOGIN = (() => {
-  try {
-    if (new URLSearchParams(location.search).has('diag')) localStorage.setItem('BFIT_DIAG', '1');
-    return localStorage.getItem('BFIT_DIAG') === '1';
-  } catch (e) { return false; }
-})();
-let diagLogin = null;
-
-// Apelată la răspunsul serverului (parola) și la deschiderea aplicației; afișează când le are pe amândouă
-function arataDiagLogin(pas) {
-  if (!DIAG_LOGIN || !diagLogin) return;
-  diagLogin[pas] = diagLogin[pas] || performance.now();
-  const d = diagLogin;
-  if (!d.parola || !d.deschis) return;
-  diagLogin = null;
-  const s = (a, b) => ((Math.max(a, b) - a) / 1000).toFixed(1) + ' s';
-  setTimeout(() => alert(`Diagnostic logare\n\nAnti-robot: ${s(d.start, d.captcha)}${d.tokenGata ? ' (era gata)' : ' (s-a așteptat)'}\nParola (server): ${s(d.captcha, d.parola)}\nDeschiderea aplicației: ${s(d.parola, d.deschis)}\n\nTotal: ${s(d.start, Math.max(d.parola, d.deschis))}`), 400);
 }
 
 async function gestioneazaSubmitAuth(e) {
@@ -667,19 +649,15 @@ async function gestioneazaSubmitAuth(e) {
     btnSubmit.innerText = t('authProcessing');
   }
 
-  // Butonul arată etapa: verificarea anti-robot, conectarea, apoi încărcarea (până dispare ecranul de login)
+  // Butonul arată etapa: conectarea, apoi încărcarea (până dispare ecranul de login)
   const etapa = text => { if (btnSubmit) btnSubmit.innerText = text; };
   let conectat = false;
   try {
     if (tipModAuth === 'login') {
-      // Verificarea anti-robot rulează de obicei nevăzut; caseta apare singură doar când cere un clic
+      // Logarea nu cere CAPTCHA: verificarea anti-robot e doar la conturile noi (hook-ul „before user created”, vezi worker/)
       etapa(tr('Se conectează...', 'Signing in...'));
-      diagLogin = { start: performance.now(), tokenGata: !!captchaTokenGata };
-      const captchaToken = await obtineTokenCaptcha();
-      diagLogin.captcha = performance.now();
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options: { captchaToken } });
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      arataDiagLogin('parola');
       conectat = true;
       etapa(tr('Se încarcă...', 'Loading...'));
       showToast(t('authLoginSuccess'));
@@ -688,14 +666,15 @@ async function gestioneazaSubmitAuth(e) {
         afiseazaMesajAuthFeedback(t('authErrPassLength'));
         return;
       }
+      // Tokenul anti-robot merge în datele contului nou; serverul îl verifică înainte să creeze contul
       const captchaToken = await obtineTokenCaptcha();
       const { data, error } = await supabaseClient.auth.signUp({
         email,
         password,
         options: {
-          captchaToken,
           data: {
-            full_name: email.split('@')[0]
+            full_name: email.split('@')[0],
+            captcha_token: captchaToken
           }
         }
       });
@@ -746,8 +725,7 @@ async function trimiteResetareParola() {
   if (!email) return;
   ascundeMesajAuthFeedback();
   try {
-    const captchaToken = await obtineTokenCaptcha();
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname, captchaToken });
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + window.location.pathname });
     if (error) throw error;
     afiseazaMesajAuthFeedback(tr('Ți-am trimis pe email un link pentru parolă nouă.', 'We emailed you a link to set a new password.'), 'success');
   } catch (err) {
@@ -770,10 +748,10 @@ async function trimiteMagicLink() {
 
   ascundeMesajAuthFeedback();
   try {
-    const captchaToken = await obtineTokenCaptcha();
+    // Doar pentru conturi existente (inclusiv cele invitate de antrenor): de aici nu se creează conturi noi
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + window.location.pathname, captchaToken }
+      options: { emailRedirectTo: window.location.origin + window.location.pathname, shouldCreateUser: false }
     });
     if (error) throw error;
     afiseazaMesajAuthFeedback(t('authMagicLinkSent'), 'success');
@@ -4331,7 +4309,6 @@ async function verificaSesiuneSupabase() {
       sessionStorage.removeItem('BFIT_CONT_STERS');
       afiseazaMesajAuthFeedback(tr('Contul tău a fost șters.', 'Your account has been deleted.'), 'success');
     }
-    pregatesteCaptcha().catch(() => {});
     actualizeazaStareNoScrollBody();
     return false;
   }
@@ -4398,7 +4375,6 @@ window.onload = async function() {
           if (overlay) overlay.classList.add('auth-hidden');
           actualizeazaStareNoScrollBody();
           terminaPornirea();
-          arataDiagLogin('deschis');
         };
         if (eraNeconectat && sesiuneInitializata) {
           // Ecranul de login rămâne până se știe rolul, altfel o clientă vede o clipă orarul antrenorului
@@ -7199,7 +7175,7 @@ function invitaClienta() {
     }
     const captchaToken = await obtineTokenCaptcha().catch(() => null);
     const { error } = captchaToken
-      ? await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE, captchaToken } })
+      ? await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE, data: { captcha_token: captchaToken } } })
       : { error: true };
     btn.disabled = false;
     if (error) showToast(tr('Emailul nu s-a putut trimite', 'Could not send the email'), 'error');
@@ -9448,7 +9424,7 @@ async function creeazaContInscriere() {
     ? await supabaseClient.auth.signUp({
       email: (stareInscriere.r.email || '').trim().toLowerCase(),
       password: parola,
-      options: { emailRedirectTo: URL_APLICATIE, captchaToken, data: { full_name: (stareInscriere.r.nume || '').trim() } }
+      options: { emailRedirectTo: URL_APLICATIE, data: { full_name: (stareInscriere.r.nume || '').trim(), captcha_token: captchaToken } }
     })
     : { data: null, error: new Error('captcha') };
   const mesaj = ((error && error.message) || '').toLowerCase();
