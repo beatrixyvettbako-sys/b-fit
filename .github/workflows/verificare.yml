@@ -1,0 +1,30 @@
+# Verifică la fiecare 30 de minute că aplicația, Worker-ul și baza de date răspund.
+# Dacă una nu răspunde, rularea eșuează și GitHub trimite email contului care a publicat fișierul.
+name: Verificare aplicatie
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  verificare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Aplicatia (app.beatrixyvett.com)
+        run: curl -fsS --retry 3 --retry-delay 20 --max-time 20 https://app.beatrixyvett.com/ | grep -q 'app.js'
+
+      - name: Worker-ul (poze, notificari, conturi noi)
+        run: |
+          cod=$(curl -sS --retry 3 --retry-delay 20 --max-time 20 -o /dev/null -w '%{http_code}' https://bfit-poze.beatrixyvett-bako.workers.dev/)
+          echo "HTTP $cod"
+          test "$cod" -lt 500
+
+      - name: Baza de date (Supabase)
+        run: |
+          curl -fsS --retry 3 --retry-delay 20 --max-time 20 \
+            -H 'apikey: sb_publishable_rikiPkqUDuSPVYdZyGR4Vw_ed371Huz' \
+            https://qfnhluyczxugyqkbyvmc.supabase.co/auth/v1/health

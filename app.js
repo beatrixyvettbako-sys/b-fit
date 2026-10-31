@@ -19,6 +19,29 @@ const supabaseClient = (typeof window !== 'undefined' && window.supabase)
   ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
   : null;
 
+// Erorile JavaScript de pe telefoanele utilizatorilor se salvează în tabelul erori_aplicatie (citit doar din SQL editor).
+// O eroare se trimite o singură dată pe deschidere, cel mult 10 pe deschidere.
+const eroriTrimise = new Set();
+function raporteazaEroare(mesaj, sursa) {
+  mesaj = String(mesaj || '').trim();
+  if (!supabaseClient || !mesaj || eroriTrimise.has(mesaj) || eroriTrimise.size >= 10) return;
+  eroriTrimise.add(mesaj);
+  let ecran = '';
+  try { ecran = tipTabCurent; } catch (e) {}
+  const versiune = ((document.querySelector('script[src*="app.js"]')?.getAttribute('src') || '').match(/fitFinal(\d+)/) || [])[1] || '';
+  supabaseClient.rpc('raporteaza_eroare', { p_mesaj: mesaj, p_sursa: sursa || '', p_ecran: ecran, p_versiune: versiune }).then(() => {}, () => {});
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('error', e => {
+    if (!e.message || e.message === 'Script error.') return; // resurse care nu s-au încărcat; erori din scripturi externe, fără detalii
+    raporteazaEroare(e.message, (e.filename || '').split('/').pop().split('?')[0] + ':' + (e.lineno || 0) + ':' + (e.colno || 0));
+  });
+  window.addEventListener('unhandledrejection', e => {
+    const r = e.reason;
+    raporteazaEroare(r && r.message ? r.message : r, r && r.stack ? String(r.stack).split('\n')[1]?.trim() : 'promise');
+  });
+}
+
 let utilizatorCurent = null;
 let rolUtilizator = 'antrenor'; // 'antrenor' | 'clienta' (din tabelul profiles)
 let tipModAuth = 'login'; // 'login' sau 'signup'
