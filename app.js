@@ -2361,7 +2361,9 @@ function showToast(mesaj, tip = 'success') {
   if (!tEl) return;
   tEl.innerText = mesaj;
   tEl.className = 'show ' + (tip === 'error' ? 'error' : 'success');
-  setTimeout(() => { tEl.className = ''; }, 2600);
+  // La ascundere rămâne culoarea (altfel se face gri în timp ce dispare); un toast nou nu e închis de timer-ul celui vechi
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { tEl.classList.remove('show'); }, 2600);
 }
 
 // `camp` (opțional): { placeholder, valoare }. Afișează un câmp de text, iar onConfirm primește ce s-a scris.

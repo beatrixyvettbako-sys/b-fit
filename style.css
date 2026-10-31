@@ -398,7 +398,7 @@ html.app-pornire #appDrawer {
 }
 
 /* Conținutul ascuns ocupă totuși loc: fără scroll / scrollbar până apare ecranul */
-html.app-pornire {
+html.app-pornire body {
   overflow: hidden;
 }
 
@@ -4763,11 +4763,15 @@ select.form-control {
 }
 
 /* TOAST & MODALE LIQUID GLASS */
+/* Apare centrat pe verticală în header, peste titlu; la ieșire urcă fără arc (arcul doar la apariție) */
 #customToast {
   position: fixed;
-  top: 16px;
+  top: calc(6px + env(safe-area-inset-top, 0px));
   left: 50%;
-  transform: translateX(-50%) translateY(-100px);
+  width: max-content;
+  max-width: calc(100vw - 24px);
+  text-align: center;
+  transform: translateX(-50%) translateY(-150%);
   background: rgba(30, 41, 59, 0.92);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -4780,7 +4784,7 @@ select.form-control {
   z-index: 99999;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25),
               inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transition: transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.28s;
+  transition: transform 0.22s ease-in, opacity 0.22s ease-in;
   opacity: 0;
   pointer-events: none;
 }
@@ -4788,6 +4792,7 @@ select.form-control {
 #customToast.show {
   transform: translateX(-50%) translateY(0);
   opacity: 1;
+  transition: transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.28s;
 }
 
 #customToast.success { background: rgba(21, 128, 61, 0.94); }
