@@ -2337,6 +2337,14 @@ html[data-rol="clienta"] #bottomNav {
   border: 1px solid rgba(var(--accent-rgb), 0.25);
 }
 
+/* Textul centrat exact pe înălțimea majusculelor/cifrelor, indiferent de fontul telefonului */
+@supports (text-box: trim-both cap alphabetic) {
+  .checkin-scor {
+    padding-block: 7px;
+    text-box: trim-both cap alphabetic;
+  }
+}
+
 .checkin-scor span {
   margin-right: 4px;
 }
