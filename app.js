@@ -3164,6 +3164,7 @@ function clientaInapoi() {
     inchideZiClienta();
     return;
   }
+  opresteTimerPauza();
   randeazaHomeClienta();
 }
 
@@ -3218,26 +3219,12 @@ function randeazaPlanClienta() {
     if (s !== zi) return;
     html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div><span class="plan-progres-ses" id="progresSesClienta${s}">${textProgresSesiune(ses)}</span></div>`;
     (ses.exercitii || []).forEach((ex, e) => {
-      const facut = ex.status === 'Finalizat';
-      const ultimaKg = ultimaGreutateClienta(ex.exercitiu, p.id);
       html += `<div style="padding:8px 10px; border-top:1px solid var(--border);">
         <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}</div>
+        ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}
         <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${ex.seturi_repetari ? `${tr('Serii × repetări', 'Sets × reps')}: ${escAttr(ex.seturi_repetari)}` : ''}${ex.seturi_repetari && ex.pauza ? ' • ' : ''}${ex.pauza ? `${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
         ${ex.indicatii ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">${escAttr(ex.indicatii)}</div>` : ''}
-        <div class="plan-tracking-grid">
-          <div class="plan-tracking-field">
-            <span class="plan-tracking-label">${tr('Greutate (kg)', 'Weight (kg)')}</span>
-            <input type="text" inputmode="decimal" maxlength="20" class="plan-ex-input" value="${escAttr(ex.greutate_kg)}" placeholder="${ultimaKg ? escAttr(tr('ultima: ', 'last: ') + ultimaKg) : '-'}" oninput="peModificareProgresClienta(${s}, ${e}, 'greutate_kg', this.value)">
-          </div>
-          <div class="plan-tracking-field">
-            <span class="plan-tracking-label">${tr('Serii făcute', 'Sets done')}</span>
-            <input type="text" inputmode="numeric" maxlength="20" class="plan-ex-input" value="${escAttr(ex.seturi_finalizate)}" placeholder="-" oninput="peModificareProgresClienta(${s}, ${e}, 'seturi_finalizate', this.value)">
-          </div>
-          <div class="plan-tracking-field plan-tracking-status">
-            <span class="plan-tracking-label">${tr('Gata?', 'Done?')}</span>
-            <button type="button" class="plan-facut-btn ${facut ? 'is-facut' : ''}" aria-pressed="${facut}" onclick="comutaFacutClienta(${s}, ${e}, this)">${facut ? '✓ ' : ''}${tr('Făcut', 'Done')}</button>
-          </div>
-        </div>
+        ${htmlSeriiClienta(ex, s, e, p.id)}
       </div>`;
     });
     html += `</div>`;
@@ -3291,18 +3278,165 @@ function ultimaGreutateClienta(nume, idPlan) {
   return '';
 }
 
-// „Făcut” bifează exercițiul (status Finalizat) sau îl debifează; progresul zilei se actualizează pe loc
-function comutaFacutClienta(s, e, btn) {
+// ---- Notarea pe serii (clientul): câte un rând pe serie, cu bifă; exercițiul e „Făcut” când toate seriile sunt bifate ----
+
+// „4 × 10-12” → 4 serii și ținta „10-12”; fără număr de serii (ex. „15-20 min”) → o singură serie
+function seriiPlanificate(ex) {
+  const text = (ex.seturi_repetari || '').trim();
+  const m = text.match(/^(\d+)\s*(?:[×x*]|circuit)/i);
+  const tinta = text.includes('×') || /\d\s*x\s*\d/i.test(text) ? text.split(/[×x]/i).slice(1).join('×').trim() : '';
+  return { nr: m ? Math.min(Math.max(+m[1], 1), 10) : (text ? 1 : 3), tinta };
+}
+
+// Seriile exercițiului, completate până la numărul planificat (cele notate deja rămân)
+function seriiExercitiu(ex) {
+  if (!Array.isArray(ex.serii)) ex.serii = [];
+  const nr = seriiPlanificate(ex).nr;
+  // Exercițiile bifate „Făcut” înainte de notarea pe serii apar cu toate seriile bifate
+  const faraSerii = ex.serii.length === 0 && ex.status === 'Finalizat';
+  while (ex.serii.length < nr) ex.serii.push({ kg: '', rep: '', gata: faraSerii });
+  return ex.serii;
+}
+
+// Seriile notate data trecută la același exercițiu, în alt plan (planurile vin de la cel mai recent)
+function seriiDataTrecuta(nume, idPlan) {
+  const cheie = (nume || '').trim().toLowerCase();
+  if (!cheie) return [];
+  for (const p of dateClienta.planuri || []) {
+    if (p.id === idPlan) continue;
+    for (const ses of p.continut_json?.sesiuni || []) {
+      const ex = (ses.exercitii || []).find(x => (x.exercitiu || '').trim().toLowerCase() === cheie && Array.isArray(x.serii) && x.serii.some(r => r.gata));
+      if (ex) return ex.serii;
+    }
+  }
+  return [];
+}
+
+function htmlSeriiClienta(ex, s, e, idPlan) {
+  const tip = ex.tip || 'kg';
+  const { tinta } = seriiPlanificate(ex);
+  const trecut = seriiDataTrecuta(ex.exercitiu, idPlan);
+  const kgVechi = ultimaGreutateClienta(ex.exercitiu, idPlan);
+  const unitate = { rep: tr('Rep', 'Reps'), sec: tr('Sec', 'Sec'), min: tr('Min', 'Min') };
+  const cuKg = tip === 'kg';
+  const cuRep = tip !== 'circuit';
+  const cap = `<div class="serie-rand serie-cap"><span class="serie-nr">${tr('Seria', 'Set')}</span>
+    ${cuKg ? `<span class="serie-camp">Kg</span><span class="serie-x"></span>` : ''}
+    ${cuRep ? `<span class="serie-camp">${unitate[tip] || unitate.rep}</span>` : '<span class="serie-camp"></span>'}
+    <span class="serie-bifa-loc"></span></div>`;
+  const randuri = seriiExercitiu(ex).map((r, i) => {
+    const vechi = trecut[i] || {};
+    const phKg = vechi.kg || kgVechi || 'kg';
+    const phRep = vechi.rep || (tinta.match(/\d+(?:-\d+)?/) || [''])[0] || '-';
+    return `<div class="serie-rand${r.gata ? ' is-gata' : ''}">
+      <span class="serie-nr">${i + 1}</span>
+      ${cuKg ? `<input type="text" inputmode="decimal" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.kg)}" placeholder="${escAttr(phKg)}" oninput="peModificareSerieClienta(${s}, ${e}, ${i}, 'kg', this.value)"><span class="serie-x">×</span>` : ''}
+      ${cuRep ? `<input type="text" inputmode="numeric" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.rep)}" placeholder="${escAttr(phRep)}" oninput="peModificareSerieClienta(${s}, ${e}, ${i}, 'rep', this.value)">` : `<span class="serie-camp serie-circuit">${tr('Circuitul', 'Circuit')} ${i + 1}</span>`}
+      <button type="button" class="serie-bifa" aria-pressed="${!!r.gata}" aria-label="${tr('Serie făcută', 'Set done')}" onclick="bifeazaSerieClienta(${s}, ${e}, ${i})">✓</button>
+    </div>`;
+  }).join('');
+  return `<div class="serii-lista">${cap}${randuri}</div>`;
+}
+
+// Greutatea maximă, numărul de serii făcute și statusul se calculează din serii (le folosesc PDF-ul și antrenorul)
+function actualizeazaDinSerii(ex) {
+  const facute = ex.serii.filter(r => r.gata);
+  const kg = facute.map(r => parseFloat(String(r.kg).replace(',', '.'))).filter(n => !isNaN(n));
+  ex.greutate_kg = kg.length ? String(Math.max(...kg)) : '';
+  ex.seturi_finalizate = facute.length ? String(facute.length) : '';
+  ex.status = facute.length === ex.serii.length ? 'Finalizat' : '';
+}
+
+function peModificareSerieClienta(s, e, i, camp, valoare) {
+  const ex = dateClienta.planCurent?.continut_json?.sesiuni?.[s]?.exercitii?.[e];
+  if (!ex || !ex.serii?.[i]) return;
+  ex.serii[i][camp] = valoare;
+  actualizeazaDinSerii(ex);
+  peModificareProgresClienta(s, e, 'status', ex.status);
+}
+
+// Bifa pe o serie goală preia valorile de data trecută (sau ținta), ca seria repetată să nu trebuiască rescrisă
+function bifeazaSerieClienta(s, e, i) {
   const ses = dateClienta.planCurent?.continut_json?.sesiuni?.[s];
   const ex = ses?.exercitii?.[e];
   if (!ex) return;
-  const facut = ex.status !== 'Finalizat';
-  peModificareProgresClienta(s, e, 'status', facut ? 'Finalizat' : '');
-  btn.classList.toggle('is-facut', facut);
-  btn.setAttribute('aria-pressed', facut);
-  btn.innerText = (facut ? '✓ ' : '') + tr('Făcut', 'Done');
-  const progres = document.getElementById('progresSesClienta' + s);
-  if (progres) progres.innerText = textProgresSesiune(ses);
+  const r = seriiExercitiu(ex)[i];
+  r.gata = !r.gata;
+  if (r.gata) {
+    // De data trecută la aceeași serie; altfel ca seria de deasupra
+    const vechi = seriiDataTrecuta(ex.exercitiu, dateClienta.planCurent.id)[i] || ex.serii[i - 1] || {};
+    const tinta = seriiPlanificate(ex).tinta;
+    if ((ex.tip || 'kg') === 'kg' && !String(r.kg).trim()) r.kg = vechi.kg || ultimaGreutateClienta(ex.exercitiu, dateClienta.planCurent.id) || '';
+    if (!String(r.rep).trim()) r.rep = vechi.rep || (/^\d+$/.test(tinta.replace(/\s*(rep|s|sec)\.?$/i, '')) ? tinta.replace(/\D+$/, '') : '');
+  }
+  actualizeazaDinSerii(ex);
+  peModificareProgresClienta(s, e, 'status', ex.status);
+  const sus = document.getElementById('clientaScreen')?.scrollTop;
+  randeazaPlanClienta();
+  if (sus !== undefined) document.getElementById('clientaScreen').scrollTop = sus;
+  // Pauza pornește după fiecare serie bifată, mai puțin după ultima serie a zilei
+  const ultimaZilei = e === ses.exercitii.length - 1 && i === ex.serii.length - 1;
+  if (r.gata && !ultimaZilei) pornesteTimerPauza(ex.pauza);
+  else opresteTimerPauza();
+}
+
+// ---- Timer de pauză: pornește singur la bifarea unei serii; +15 sec sau „Sari peste” ----
+let timerPauza = { id: null, ramas: 0 };
+
+function pornesteTimerPauza(pauza) {
+  // „90-120 sec” → 90; „2 min” → 120; fără pauză → 60
+  const m = String(pauza || '').match(/(\d+)/);
+  let sec = m ? +m[1] : 60;
+  if (/min/i.test(pauza || '') && sec < 10) sec *= 60;
+  let bara = document.getElementById('timerPauza');
+  if (!bara) {
+    bara = document.createElement('div');
+    bara.id = 'timerPauza';
+    bara.className = 'timer-pauza';
+    bara.innerHTML = `<span class="timer-pauza-text">${tr('Pauză', 'Rest')} <b id="timerPauzaTimp"></b></span>
+      <button type="button" class="timer-pauza-btn" onclick="adaugaTimpPauza(15)">+15s</button>
+      <button type="button" class="timer-pauza-btn" onclick="opresteTimerPauza()">${tr('Sari peste', 'Skip')}</button>`;
+    document.body.appendChild(bara);
+  }
+  // Deasupra meniului de jos (care plutește la o distanță de margine)
+  const nav = document.getElementById('clientaNav');
+  const susNav = nav && nav.offsetHeight ? nav.getBoundingClientRect().top : window.innerHeight;
+  bara.style.bottom = Math.round(window.innerHeight - susNav + 10) + 'px';
+  clearInterval(timerPauza.id);
+  timerPauza.ramas = sec;
+  bara.classList.remove('is-gata');
+  bara.classList.add('is-vizibil');
+  afiseazaTimpPauza();
+  timerPauza.id = setInterval(() => {
+    timerPauza.ramas--;
+    afiseazaTimpPauza();
+    if (timerPauza.ramas <= 0) {
+      clearInterval(timerPauza.id);
+      timerPauza.id = null;
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      bara.classList.add('is-gata');
+      document.getElementById('timerPauzaTimp').innerText = tr('gata, următoarea serie!', 'done, next set!');
+      setTimeout(() => { if (!timerPauza.id) bara.classList.remove('is-vizibil'); }, 3000);
+    }
+  }, 1000);
+}
+
+function afiseazaTimpPauza() {
+  const el = document.getElementById('timerPauzaTimp');
+  const t = Math.max(0, timerPauza.ramas);
+  if (el) el.innerText = `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+function adaugaTimpPauza(sec) {
+  if (!timerPauza.id) return;
+  timerPauza.ramas += sec;
+  afiseazaTimpPauza();
+}
+
+function opresteTimerPauza() {
+  clearInterval(timerPauza.id);
+  timerPauza.id = null;
+  document.getElementById('timerPauza')?.classList.remove('is-vizibil');
 }
 
 function seteazaStareSalvareClienta(ro, en, eroare) {
@@ -3329,7 +3463,7 @@ async function salveazaProgresClienta() {
   timerSalvareProgres = null;
   const progres = [];
   (p.continut_json?.sesiuni || []).forEach((ses, s) => (ses.exercitii || []).forEach((ex, e) => {
-    progres.push({ s, e, greutate_kg: ex.greutate_kg || '', seturi_finalizate: ex.seturi_finalizate || '', status: ex.status || '' });
+    progres.push({ s, e, greutate_kg: ex.greutate_kg || '', seturi_finalizate: ex.seturi_finalizate || '', status: ex.status || '', serii: ex.serii || [] });
   }));
   const { data, error } = await supabaseClient.rpc('salveaza_progres_plan', { p_id: p.id, p_progres: progres });
   if (error || data !== true) {
@@ -8145,8 +8279,51 @@ function incarcaPlanDinLista(idPlan) {
   }
 }
 
+// „Plan nou” deschide alegerea: plan gol sau o copie a unui șablon B-Fit (sabloane.js)
 function creeazaPlanNouCuSablon() {
-  dupaConfirmareModificariPlan(() => pornestePlanNou());
+  const lista = document.getElementById('listaSabloanePlan');
+  if (!lista) return;
+  const sabloane = typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [];
+  lista.innerHTML = `
+    <button type="button" class="plan-zi-card" onclick="alegeSablonPlan(-1)">
+      <span class="plan-zi-card-text">
+        <span class="plan-zi-card-titlu">${tr('Plan gol', 'Blank plan')}</span>
+        <span class="plan-zi-card-detalii">${tr('Pornești de la zero', 'Start from scratch')}</span>
+      </span>
+      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>
+    ${sabloane.map((s, i) => {
+      const sesiuni = s.continut_json.sesiuni;
+      const nrEx = sesiuni.reduce((n, ses) => n + ses.exercitii.length, 0);
+      const zile = sesiuni.map(ses => ses.titlu.replace(/^Ziua \d+:\s*/, '').replace(/\s*\(.*$/, '')).join(' · ');
+      return `
+        <button type="button" class="plan-zi-card" onclick="alegeSablonPlan(${i})">
+          <span class="plan-zi-card-text">
+            <span class="plan-zi-card-titlu">${escAttr(s.tip)}</span>
+            <span class="plan-zi-card-detalii">${escAttr(zile)}</span>
+            <span class="plan-zi-card-detalii">${escAttr(s.focus)} · ${nrEx} ${tr('exerciții', 'exercises')}</span>
+          </span>
+          <span class="plan-zi-card-nr sablon-nr-zile">${s.nr_zile} ${tr('zile', 'days')}</span>
+        </button>`;
+    }).join('')}
+  `;
+  document.getElementById('modalSabloanePlanBackdrop').style.display = 'flex';
+}
+
+function inchideModalSabloanePlan() {
+  document.getElementById('modalSabloanePlanBackdrop').style.display = 'none';
+}
+
+// Planul nou e o copie: modificările nu ating șablonul; se salvează în bază doar la „Salvează”
+function alegeSablonPlan(idx) {
+  inchideModalSabloanePlan();
+  const s = idx >= 0 ? SABLOANE_PLAN[idx] : null;
+  dupaConfirmareModificariPlan(() => {
+    if (!s) { pornestePlanNou(); return; }
+    const copie = JSON.parse(JSON.stringify(s));
+    pornestePlanNou({ id: null, clienta: '', titlu: copie.titlu, subtitlu: copie.subtitlu, continut_json: copie.continut_json },
+      tr('✓ Șablon încărcat. Modifică-l și apasă Salvează.', '✓ Template loaded. Edit it and press Save.'));
+  });
 }
 
 function pornestePlanNou(plan, mesaj) {
@@ -8372,6 +8549,7 @@ function randeazaPlanAntrenamentUI() {
                 <span style="font-weight:800; color:var(--primary); font-size:0.76rem;">${nrAfisat}.</span>
                 <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" list="listaExercitiiPlan" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value" onchange="completeazaExercitiuCunoscut(${sesIdx}, ${exIdx})">
               </div>
+              ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}
             </td>
             <td data-eticheta="${tr('Serii × repetări', 'Sets × reps')}">
               <input type="text" class="plan-ex-input" value="${escAttr(ex.seturi_repetari)}" placeholder="${tr('ex. 4×12 sau 3×30 sec', 'e.g. 4×12 or 3×30 sec')}" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].seturi_repetari = this.value">
@@ -8530,14 +8708,28 @@ function adaugaExercitiuPlan(sesIdx) {
   randeazaPlanAntrenamentUI();
 }
 
-// Exercițiile folosite în planurile salvate (cel mai recent câștigă): sugestii la nume + seriile, pauza și indicațiile lor
+// Exercițiile folosite în planurile salvate (cel mai recent câștigă), apoi cele din șabloanele B-Fit:
+// sugestii la nume + seriile, pauza, indicațiile și mușchii lor
 function exercitiiCunoscute() {
   const harta = new Map();
-  (DB.planuri || []).forEach(p => (p.continut_json?.sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(ex => {
+  const planuri = (DB.planuri || []).concat(typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : []);
+  planuri.forEach(p => (p.continut_json?.sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(ex => {
     const cheie = (ex.exercitiu || '').trim().toLowerCase();
     if (cheie && !harta.has(cheie)) harta.set(cheie, ex);
   })));
   return harta;
+}
+
+// Mușchii și tipul notării vin din șabloane (planurile salvate mai vechi nu le au)
+function exercitiuDinSabloane(nume) {
+  const cheie = (nume || '').trim().toLowerCase();
+  for (const s of (typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [])) {
+    for (const ses of s.continut_json.sesiuni) {
+      const ex = ses.exercitii.find(x => x.exercitiu.trim().toLowerCase() === cheie);
+      if (ex) return ex;
+    }
+  }
+  return null;
 }
 
 function actualizeazaListaExercitii() {
@@ -8550,18 +8742,29 @@ function actualizeazaListaExercitii() {
   lista.innerHTML = [...exercitiiCunoscute().values()].map(ex => `<option value="${escAttr(ex.exercitiu.trim())}"></option>`).join('');
 }
 
-// La alegerea unui exercițiu cunoscut se completează câmpurile goale (seriile, pauza, indicațiile)
+// La alegerea unui exercițiu cunoscut se completează câmpurile goale (seriile, pauza, indicațiile).
+// Mușchii și tipul notării țin de nume, deci se actualizează la orice schimbare a numelui.
 function completeazaExercitiuCunoscut(sesIdx, exIdx) {
   const ex = planActiv?.continut_json?.sesiuni?.[sesIdx]?.exercitii?.[exIdx];
-  const model = ex && exercitiiCunoscute().get((ex.exercitiu || '').trim().toLowerCase());
-  if (!model || model === ex) return;
+  if (!ex) return;
+  const model = exercitiiCunoscute().get((ex.exercitiu || '').trim().toLowerCase());
+  const sablon = exercitiuDinSabloane(ex.exercitiu);
   let completat = false;
-  ['seturi_repetari', 'pauza', 'indicatii'].forEach(camp => {
-    if (!(ex[camp] || '').trim() && (model[camp] || '').trim()) {
-      ex[camp] = model[camp];
-      completat = true;
-    }
-  });
+  if (model && model !== ex) {
+    ['seturi_repetari', 'pauza', 'indicatii'].forEach(camp => {
+      if (!(ex[camp] || '').trim() && (model[camp] || '').trim()) {
+        ex[camp] = model[camp];
+        completat = true;
+      }
+    });
+  }
+  const muschi = (model && model.muschi) || (sablon && sablon.muschi) || '';
+  const tip = (model && model.tip) || (sablon && sablon.tip) || '';
+  if ((ex.muschi || '') !== muschi || (ex.tip || '') !== tip) {
+    ex.muschi = muschi;
+    ex.tip = tip;
+    completat = true;
+  }
   if (completat) randeazaPlanAntrenamentUI();
 }
 

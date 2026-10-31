@@ -15,17 +15,17 @@ Rulează doar la cererea explicită a utilizatoarei (`/publica` sau „publică�
 - Dacă apar fișiere neașteptate (backup-uri, fișiere temporare, `.zip`), întreabă înainte să le incluzi.
 - `git fetch` și verifică dacă `origin/main` are commit-uri noi (de ex. editări făcute direct pe GitHub). Dacă da, oprește-te și explică înainte de orice merge.
 
-## 2. Urcă versiunea (dacă s-a schimbat `index.html`, `style.css` sau `app.js`)
+## 2. Urcă versiunea (dacă s-a schimbat `index.html`, `style.css`, `app.js` sau `sabloane.js`)
 
-Un singur număr de versiune N, sincron în 3 locuri:
+Un singur număr de versiune N, sincron în 4 locuri:
 
 - `sw.js`: `const CACHE_NAME = 'bfit-cache-vN';`
 - `index.html`: `style.css?v=fitFinalN`
-- `index.html`: `app.js?v=fitFinalN`
+- `index.html`: `app.js?v=fitFinalN` și `sabloane.js?v=fitFinalN`
 
-N = versiunea curentă + 1. Citește-o din fișiere; dacă cele 3 locuri nu au același număr, ia maximul + 1 și spune asta.
+N = versiunea curentă + 1. Citește-o din fișiere; dacă cele 4 locuri nu au același număr, ia maximul + 1 și spune asta.
 
-Verifică și că `ASSETS_TO_CACHE` din `sw.js` conține `./`, `./index.html`, `./style.css`, `./app.js`, `./manifest.json`, `./icon.svg`.
+Verifică și că `ASSETS_TO_CACHE` din `sw.js` conține `./`, `./index.html`, `./style.css`, `./app.js`, `./sabloane.js`, `./manifest.json`, `./icon.svg`.
 
 Fiecare fișier din `ASSETS_TO_CACHE` și din `<script src>` din `index.html` (ex. `vendor/supabase-2.118.0.js`) trebuie să fie în commit: verifică cu `git status` că niciunul nu e netracked. Un fișier lipsă pe GitHub Pages lasă aplicația fără Supabase și blochează instalarea service worker-ului nou.
 
