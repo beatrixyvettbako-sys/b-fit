@@ -8326,6 +8326,96 @@ function alegeSablonPlan(idx) {
   });
 }
 
+// ---- Trimite la clienți: fiecare client ales primește o copie a planului, fără progres ----
+// Baza leagă copia de client după nume (trigger leaga_plan_de_client) și îi trimite notificarea „plan nou”.
+function deschideTrimitePlan() {
+  if (!(planActiv?.titlu || '').trim()) {
+    showToast(tr('Adaugă un titlu planului înainte să-l trimiți!', 'Add a plan title before sending!'), 'error');
+    return;
+  }
+  const titlu = planActiv.titlu.trim();
+  const clienti = (DB.clienti || []).filter(c => !/^(arhivat|archived)$/i.test(c.status || ''));
+  const lista = document.getElementById('listaTrimitePlan');
+  lista.innerHTML = clienti.length ? clienti.map(c => {
+    const areDeja = (DB.planuri || []).some(p => cheieNume(p.clienta) === cheieNume(c.nume) && (p.titlu || '').trim() === titlu);
+    const eticheta = [areDeja ? tr('are deja planul', 'already has it') : '', !c.contConectat ? tr('fără cont: folosește Distribuie', 'no account: use Share') : ''].filter(Boolean).join(' · ');
+    return `<label class="trimite-plan-rand" data-nume="${escAttr(cheieNume(c.nume))}">
+      <input type="checkbox" value="${escAttr(c.nume)}" onchange="actualizeazaButonTrimitePlan()">
+      <span class="trimite-plan-text">
+        <span class="trimite-plan-nume">${escAttr(c.nume)}</span>
+        ${eticheta ? `<span class="trimite-plan-eticheta">${eticheta}</span>` : ''}
+      </span>
+    </label>`;
+  }).join('') : `<div class="plan-picker-empty">${tr('Nu ai clienți activi.', 'You have no active clients.')}</div>`;
+  document.getElementById('cautareTrimitePlan').value = '';
+  actualizeazaButonTrimitePlan();
+  document.getElementById('modalTrimitePlanBackdrop').style.display = 'flex';
+}
+
+function inchideTrimitePlan() {
+  document.getElementById('modalTrimitePlanBackdrop').style.display = 'none';
+}
+
+function filtreazaTrimitePlan(text) {
+  const cautat = cheieNume(text);
+  document.querySelectorAll('#listaTrimitePlan .trimite-plan-rand').forEach(r => {
+    r.style.display = !cautat || r.dataset.nume.includes(cautat) ? '' : 'none';
+  });
+}
+
+function clientiAlesiTrimitePlan() {
+  return [...document.querySelectorAll('#listaTrimitePlan input:checked')].map(i => i.value);
+}
+
+function actualizeazaButonTrimitePlan() {
+  const n = clientiAlesiTrimitePlan().length;
+  const btn = document.getElementById('btnTrimitePlanConfirma');
+  btn.innerText = n ? tr(`Trimite la ${n} ${n === 1 ? 'client' : 'clienți'}`, `Send to ${n} ${n === 1 ? 'client' : 'clients'}`) : tr('Alege clienții', 'Choose clients');
+  btn.classList.toggle('btn-clear-disabled', !n);
+}
+
+async function trimitePlanLaClienti() {
+  const alesi = clientiAlesiTrimitePlan();
+  const btn = document.getElementById('btnTrimitePlanConfirma');
+  if (!alesi.length || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    // Planul trimis rămâne și la antrenor: cel nou sau modificat se salvează întâi
+    if (!planActiv.id || estePlanModificat()) {
+      if (!await salveazaPlanCurentInBaza(true)) {
+        showToast(tr('Planul nu s-a putut salva. Încearcă din nou.', 'Could not save the plan. Try again.'), 'error');
+        return;
+      }
+    }
+    const continut = JSON.parse(JSON.stringify(planActiv.continut_json || {}));
+    (continut.sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(ex => {
+      ex.greutate_kg = ''; ex.seturi_finalizate = ''; ex.status = '';
+      delete ex.serii;
+    }));
+    const acum = new Date().toISOString();
+    const randuri = alesi.map(nume => ({
+      user_id: utilizatorCurent.id,
+      clienta: nume,
+      titlu: planActiv.titlu.trim(),
+      subtitlu: (planActiv.subtitlu || '').trim(),
+      continut_json: continut,
+      updated_at: acum
+    }));
+    const { data, error } = await supabaseClient.from('planuri_antrenament').insert(randuri).select();
+    if (error) throw error;
+    DB.planuri = (data || []).concat(DB.planuri || []);
+    try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
+    populeazaSelectorPlanuri();
+    inchideTrimitePlan();
+    showToast(tr(`✓ Trimis la ${alesi.length} ${alesi.length === 1 ? 'client' : 'clienți'}`, `✓ Sent to ${alesi.length} ${alesi.length === 1 ? 'client' : 'clients'}`));
+  } catch (err) {
+    console.error("Eroare trimitere plan:", err);
+    showToast(tr('Eroare la trimitere: ', 'Error sending: ') + (err.message || ''), 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function pornestePlanNou(plan, mesaj) {
   planActiv = plan || construiesteSablonPlanDefault();
   esteModPrevizualizarePdf = false;
@@ -8422,6 +8512,9 @@ function randeazaPlanAntrenamentUI() {
           <span style="font-size:0.76rem; font-weight:700; color:var(--text-muted); white-space:nowrap;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${tr('Client', 'Client')}:</span>
           <input type="text" class="form-control" style="padding:4px 8px; font-size:0.8rem;" value="${escAttr(planActiv.clienta)}" placeholder="${tr('Alege clientul sau lasă liber pentru șablon', 'Choose a client or leave empty for a template')}" list="listaClienteVizibile" oninput="planActiv.clienta = this.value">
         </div>
+        <button type="button" class="btn plan-trimite-btn no-print" onclick="deschideTrimitePlan()">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg> ${tr('Trimite la clienți', 'Send to clients')}
+        </button>
       </div>
     `;
   }

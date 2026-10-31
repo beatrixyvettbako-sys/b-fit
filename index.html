@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal125">
+  <link rel="stylesheet" href="style.css?v=fitFinal126">
 </head>
 <body>
 
@@ -283,6 +283,24 @@
         Primești o copie pe care o poți modifica. Șablonul rămâne neschimbat.
       </div>
       <div id="listaSabloanePlan" class="sabloane-plan-lista"></div>
+    </div>
+  </div>
+
+  <!-- MODAL TRIMITE PLANUL: fiecare client ales primește o copie a planului, fără progres -->
+  <div id="modalTrimitePlanBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideTrimitePlan()">
+    <div class="modal-edit-card sabloane-plan-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" id="trimitePlanTitlu" data-en="Send the plan">Trimite planul</div>
+        <button type="button" onclick="inchideTrimitePlan()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="trimitePlanDesc" data-en="Each client gets their own copy, without progress, in their app.">
+        Fiecare client primește propria copie, fără progres, în aplicația lui.
+      </div>
+      <input type="text" id="cautareTrimitePlan" class="form-control" style="margin-bottom:8px;" placeholder="Caută client" data-en-placeholder="Search client" oninput="filtreazaTrimitePlan(this.value)">
+      <div id="listaTrimitePlan" class="sabloane-plan-lista trimite-plan-lista"></div>
+      <button type="button" class="btn" id="btnTrimitePlanConfirma" style="width:100%; justify-content:center; margin-top:10px;" onclick="trimitePlanLaClienti()"></button>
     </div>
   </div>
 
@@ -1556,7 +1574,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal125"></script>
-  <script src="app.js?v=fitFinal125"></script>
+  <script src="sabloane.js?v=fitFinal126"></script>
+  <script src="app.js?v=fitFinal126"></script>
 </body>
 </html>

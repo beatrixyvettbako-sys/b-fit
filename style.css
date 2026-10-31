@@ -5383,6 +5383,59 @@ select.form-control {
   padding: 0 8px;
 }
 
+/* Trimite la clienți: butonul din antetul planului și lista cu bife */
+.plan-trimite-btn {
+  width: 100%;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  padding: 7px 10px;
+}
+
+.trimite-plan-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trimite-plan-rand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.trimite-plan-rand:has(input:checked) {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.trimite-plan-rand input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  accent-color: var(--primary);
+  margin: 0;
+}
+
+.trimite-plan-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.trimite-plan-nume {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.trimite-plan-eticheta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
 /* Mușchii vizați, sub numele exercițiului */
 .plan-ex-muschi {
   font-size: 0.72rem;
