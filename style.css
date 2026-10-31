@@ -5374,7 +5374,8 @@ select.form-control {
   min-height: 0;
 }
 
-.sabloane-plan-lista .plan-zi-card-detalii {
+.sabloane-plan-lista .plan-zi-card-detalii,
+.sabloane-plan-lista .plan-zi-card-titlu {
   white-space: normal;
 }
 
@@ -5383,14 +5384,83 @@ select.form-control {
   padding: 0 8px;
 }
 
-/* Trimite la clienți: butonul din antetul planului și lista cu bife */
+/* Trimite la clienți și Salvează ca nou: butoanele din antetul planului */
+.plan-actiuni-antet {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .plan-trimite-btn {
-  width: 100%;
+  flex: 1 1 0;
+  min-width: 0;
   justify-content: center;
   gap: 6px;
-  margin-top: 8px;
   font-size: 0.8rem;
-  padding: 7px 10px;
+  padding: 7px 8px;
+  white-space: nowrap;
+}
+
+/* Înlocuiește exercițiul (antrenor) */
+.plan-inlocuieste-btn {
+  margin-top: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Notițele clientului: scrise de client, citite de antrenor */
+.plan-nota-client {
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.08);
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.plan-nota-sesiune {
+  margin: 8px 10px 0;
+}
+
+.nota-client {
+  margin-top: 6px;
+}
+
+.nota-client summary {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+  list-style: none;
+}
+
+.nota-client summary::-webkit-details-marker {
+  display: none;
+}
+
+.nota-client[open] summary {
+  margin-bottom: 4px;
+}
+
+.nota-sesiune {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.nota-sesiune label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
 }
 
 .trimite-plan-lista {
