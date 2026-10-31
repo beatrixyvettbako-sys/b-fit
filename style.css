@@ -397,9 +397,12 @@ html.app-pornire #appDrawer {
   visibility: hidden;
 }
 
-/* Conținutul ascuns ocupă totuși loc: fără scroll / scrollbar până apare ecranul */
+/* Conținutul ascuns ocupă totuși loc: pagina rămâne cât ecranul, altfel derularea din cod (ora curentă)
+   face Android să arate scrollbar-ul peste login. După conectare orarul se aliniază din nou la ora curentă. */
+html.app-pornire,
 html.app-pornire body {
   overflow: hidden;
+  height: 100dvh;
 }
 
 /* Deconectare: ecranul curent se estompează și rămâne neschimbat până la reîncărcare (fără scrollbar temporar) */
