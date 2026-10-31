@@ -1294,6 +1294,16 @@ function normalizeazaTipAbonament(tip) {
   return tip.trim();
 }
 
+// Cheie de comparare a numelor: fără diacritice, majuscule și spații în plus (rândurile vechi pot avea altă grafie)
+function cheieNume(nume) {
+  return (nume || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+// Rândul (prezență, încasare etc.) aparține clientului: după client_id, iar fără legătură, după nume
+function randulClientei(rand, client, numeRand) {
+  return !!client && (!!client.id && rand.client_id === client.id || cheieNume(numeRand) === cheieNume(client.nume));
+}
+
 function gasesteClientaValida(numeIntrodus) {
   if (!numeIntrodus || typeof numeIntrodus !== 'string') return null;
   let curat = numeIntrodus.trim().toLowerCase();
@@ -1814,7 +1824,8 @@ async function executaActiuneSupabase(actionName, payload) {
       zi: p.zi || "",
       ora: normalizeazaOraUi(p.ora),
       clienta: (p.clienta || "").trim(),
-      antrenament: p.antrenament || "-"
+      antrenament: p.antrenament || "-",
+      client_id: p.client_id || ""
     })).filter(p => p.clienta !== "");
 
     const planuri = (resPlan.data || []).map(pl => ({
@@ -4915,9 +4926,8 @@ function stareAbonamentClienta(c) {
 // sau abonament terminat și nereînnoit de cel puțin 7 zile. Peste 180 de zile nu mai apar (de arhivat, nu de reactivat).
 function stareRetentie(c, s) {
   if (s.tip === 'arhivat' || s.tip === 'nou') return null;
-  const nume = c.nume.trim().toLowerCase();
-  const ultima = (DB.prezente || []).filter(p => p.clienta.trim().toLowerCase() === nume)
-    .reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0) || parseazaDataOraRo(c.dataStart);
+  const ultima = (DB.prezente || []).filter(p => randulClientei(p, c, p.clienta))
+    .reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0);
   if (!ultima) return null;
   const azi = new Date(); azi.setHours(0, 0, 0, 0);
   const zile = Math.round((azi - new Date(ultima).setHours(0, 0, 0, 0)) / 86400000);
@@ -7205,8 +7215,8 @@ function filtreazaIstoricFisaInstant() {
   const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
 
   let prezenteClienta = (DB.prezente || []).filter(p => {
-    if (!p || !p.clienta || p.clienta.toLowerCase() !== nume.toLowerCase()) return false;
-    
+    if (!p || !p.clienta || !randulClientei(p, clientaFisaCurenta(), p.clienta)) return false;
+
     if (filtruLuna) {
       let lunaPrezenta = "";
       if (p.data && p.data.indexOf('.') !== -1) {
@@ -7311,7 +7321,7 @@ function salveazaEditareClienta() {
 
   // Rândurile care pe ecran poartă numele vechi (numele sunt afișate fără spații în plus), ca să fie redenumite
   // și cele salvate cu mici diferențe de scriere în baza de date
-  const acelasiNume = n => (n || '').replace(/\s+/g, ' ').trim().toLowerCase() === numeVechi.replace(/\s+/g, ' ').toLowerCase();
+  const acelasiNume = n => cheieNume(n) === cheieNume(numeVechi);
   const randuri = {
     confirmari: (DB.progActive || []).concat(DB.progHold || []).filter(p => acelasiNume(p.nume)).map(p => p.row),
     orar: (DB.orarSloturi || []).filter(s => acelasiNume(s.clienta)).map(s => s.row),
