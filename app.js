@@ -1238,6 +1238,14 @@ function stergeContulMeu() {
       showToast(tr('Contul nu a fost șters: cuvântul de confirmare nu se potrivește.', 'Account not deleted: the confirmation word does not match.'), 'error');
       return;
     }
+    // Antrenor: întâi pozele de progres ale clienților (Cloudflare R2, prin Worker); fără ele ștergerea nu continuă
+    if (URL_POZE && rolUtilizator !== 'clienta') {
+      const r = await cerePoze('DELETE', '/cont', {});
+      if (!r || !r.ok) {
+        showToast(tr('Pozele de progres nu s-au putut șterge. Verifică internetul și reîncearcă.', 'Progress photos could not be deleted. Check your internet and try again.'), 'error');
+        return;
+      }
+    }
     await supabaseClient.storage.from('avatars').remove([`${utilizatorCurent.id}/avatar.webp`]).catch(() => {});
     await dezaboneazaPush();
     const { data, error } = await supabaseClient.rpc('sterge_contul_meu');
