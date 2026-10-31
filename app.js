@@ -784,7 +784,6 @@ async function deconectareUtilizator() {
       await supabaseClient.auth.signOut();
     }
     localStorage.removeItem('BFIT_DB_LOCAL');
-    localStorage.removeItem('BFIT_ROL');
     window.location.reload();
   });
 }
@@ -1718,8 +1717,20 @@ async function executaActiuneSupabase(actionName, payload) {
       qPrez = qPrez.eq('user_id', uid);
     }
 
+    // Supabase întoarce maximum 1.000 de rânduri pe cerere: orarul, prezențele și încasările cresc în timp, deci se citesc pe pagini
+    // (ordinea după „row”, unică, ține paginile fără goluri sau dubluri)
+    const toateRandurile = async (q) => {
+      const tot = [];
+      for (let de = 0; ; de += 1000) {
+        const { data, error } = await q.range(de, de + 999);
+        if (error) return { data: tot, error };
+        tot.push(...(data || []));
+        if (!data || data.length < 1000) return { data: tot };
+      }
+    };
+
     const [resCli, resOrar, resProg, resInc, resPrez, resPlan, resCereri] = await Promise.all([
-      qCli, qOrar, qProg, qInc, qPrez, qPlanuri, qCereri
+      qCli, toateRandurile(qOrar), qProg, toateRandurile(qInc), toateRandurile(qPrez), qPlanuri, qCereri
     ]);
 
     const clienti = (resCli.data || []).map(c => ({
@@ -2899,29 +2910,43 @@ function aplicaTraduceriInterfataStatic() {
 // Rolul vine din tabelul profiles. Contul invitat devine „clienta” la primul login, prin leaga_cont_clienta().
 // Rolul doar alege ecranul; accesul la date îl hotărăsc politicile RLS din Supabase.
 async function incarcaRolUtilizator() {
-  rolUtilizator = 'antrenor';
-  if (!supabaseClient || !utilizatorCurent) return;
+  if (!supabaseClient || !utilizatorCurent) { rolUtilizator = 'antrenor'; return; }
+  const id = utilizatorCurent.id;
+  let rol = 'antrenor';
   try {
-    const { data: profil, error } = await supabaseClient.from('profiles').select('rol').eq('id', utilizatorCurent.id).maybeSingle();
+    // Toate trei deodată (o singură așteptare): profilul, legarea fișei de client și cererea de înscriere.
+    // Cont făcut din formularul de înscriere, cererea neacceptată (în așteptare sau refuzată): nu e antrenor
+    const [{ data: profil, error }, { data: legat }, { data: stareCerere }] = await Promise.all([
+      supabaseClient.from('profiles').select('rol').eq('id', id).maybeSingle(),
+      supabaseClient.rpc('leaga_cont_clienta'),
+      supabaseClient.rpc('stare_cerere_inscriere')
+    ]);
     if (error) throw error;
-    if (profil && profil.rol === 'clienta') {
-      rolUtilizator = 'clienta';
-    } else {
-      // În paralel (o singură așteptare în loc de două): legarea fișei de client și cererea de înscriere.
-      // Cont făcut din formularul de înscriere, cererea neacceptată (în așteptare sau refuzată): nu e antrenor
-      const [{ data: legat }, { data: stareCerere }] = await Promise.all([
-        supabaseClient.rpc('leaga_cont_clienta'),
-        supabaseClient.rpc('stare_cerere_inscriere')
-      ]);
-      if (legat === true || stareCerere) rolUtilizator = 'clienta';
-    }
-    localStorage.setItem('BFIT_ROL', rolUtilizator);
+    if ((profil && profil.rol === 'clienta') || legat === true || stareCerere) rol = 'clienta';
+    localStorage.setItem('BFIT_ROL', id + ':' + rol);
   } catch (e) {
     // fără rețea: ultimul rol cunoscut pe acest dispozitiv
-    rolUtilizator = localStorage.getItem('BFIT_ROL') === 'clienta' ? 'clienta' : 'antrenor';
+    rol = rolSalvat(id) || (localStorage.getItem('BFIT_ROL') === 'clienta' ? 'clienta' : 'antrenor');
   }
-  document.documentElement.setAttribute('data-rol', rolUtilizator); // ascunde din sertar ce e doar pentru antrenor
+  rolUtilizator = rol;
+  document.documentElement.setAttribute('data-rol', rol); // ascunde din sertar ce e doar pentru antrenor
   incarcaNotificari();
+}
+
+// Rolul salvat pe dispozitiv pentru acest cont („<id>:<rol>”; rămâne și după ieșirea din cont)
+function rolSalvat(id) {
+  const [uid, rol] = (localStorage.getItem('BFIT_ROL') || '').split(':');
+  return uid === id && (rol === 'clienta' || rol === 'antrenor') ? rol : null;
+}
+
+// Același cont pe același dispozitiv: aplicația pornește direct cu rolul salvat, iar verificarea din bază rulează în fundal.
+// Dacă rolul s-a schimbat între timp (rar), pagina se reîncarcă pe ecranul corect. Fără rol salvat, se așteaptă verificarea.
+async function stabilesteRol() {
+  const salvat = rolSalvat(utilizatorCurent.id);
+  if (!salvat) return incarcaRolUtilizator();
+  rolUtilizator = salvat;
+  document.documentElement.setAttribute('data-rol', salvat);
+  incarcaRolUtilizator().then(() => { if (rolUtilizator !== salvat) location.reload(); });
 }
 
 // ---- Ecranul clientei: abonament + planurile ei; Profil și Setări vin din același sertar ca la antrenor ----
@@ -4266,7 +4291,7 @@ async function verificaSesiuneSupabase() {
   if (session && session.user) {
     utilizatorCurent = session.user;
     actualizeazaDateProfilUI(session.user);
-    await incarcaRolUtilizator();
+    await stabilesteRol();
     // Clienta: ecranul ei apare înaintea oricărei alte afișări
     if (rolUtilizator === 'clienta') document.getElementById('clientaScreen')?.classList.remove('auth-hidden');
     if (overlay) overlay.classList.add('auth-hidden');
@@ -4353,7 +4378,7 @@ window.onload = async function() {
         };
         if (eraNeconectat && sesiuneInitializata) {
           // Ecranul de login rămâne până se știe rolul, altfel o clientă vede o clipă orarul antrenorului
-          incarcaRolUtilizator().then(() => {
+          stabilesteRol().then(() => {
             if (rolUtilizator === 'clienta') afiseazaEcranClienta();
             else {
               conecteazaCanalOrar(utilizatorCurent.id, laSchimbareOrarAntrenor);
