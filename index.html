@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal123">
+  <link rel="stylesheet" href="style.css?v=fitFinal124">
 </head>
 <body>
 
@@ -267,22 +267,6 @@
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> <span id="btnShareExportPdfText" data-en="Send as PDF">Trimite ca PDF</span>
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- MODAL ALEGE UN ȘABLON (Plan nou): plan gol sau o copie a unui șablon B-Fit -->
-  <div id="modalSabloanePlanBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideModalSabloanePlan()">
-    <div class="modal-edit-card sabloane-plan-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
-        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" id="sabloanePlanTitlu" data-en="Choose a template">Alege un șablon</div>
-        <button type="button" onclick="inchideModalSabloanePlan()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.35;" id="sabloanePlanDesc" data-en="You get a copy you can edit. The template stays unchanged.">
-        Primești o copie pe care o poți modifica. Șablonul rămâne neschimbat.
-      </div>
-      <div id="listaSabloanePlan" class="sabloane-plan-lista"></div>
     </div>
   </div>
 
@@ -1556,7 +1540,6 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal123"></script>
-  <script src="app.js?v=fitFinal123"></script>
+  <script src="app.js?v=fitFinal124"></script>
 </body>
 </html>
