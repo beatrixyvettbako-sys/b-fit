@@ -392,8 +392,14 @@ body.no-scroll {
 /* La pornire, până se știe dacă urmează login, ecranul clientei sau al antrenorului: fără ecrane „fantomă” */
 html.app-pornire #mainAppHeader,
 html.app-pornire .container,
-html.app-pornire #bottomNav {
+html.app-pornire #bottomNav,
+html.app-pornire #appDrawer {
   visibility: hidden;
+}
+
+/* Conținutul ascuns ocupă totuși loc: fără scroll / scrollbar până apare ecranul */
+html.app-pornire {
+  overflow: hidden;
 }
 
 /* Deconectare: ecranul curent se estompează și rămâne neschimbat până la reîncărcare (fără scrollbar temporar) */
