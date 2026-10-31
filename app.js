@@ -609,6 +609,26 @@ function actualizeazaLinkComutareAuth() {
     : tr('Ai deja cont? Intră în cont', 'Already have an account? Log in');
 }
 
+// Diagnostic temporar pentru durata logării: se pornește o dată cu ?diag=1 și arată, după logare, cât a durat fiecare pas
+const DIAG_LOGIN = (() => {
+  try {
+    if (new URLSearchParams(location.search).has('diag')) localStorage.setItem('BFIT_DIAG', '1');
+    return localStorage.getItem('BFIT_DIAG') === '1';
+  } catch (e) { return false; }
+})();
+let diagLogin = null;
+
+// Apelată la răspunsul serverului (parola) și la deschiderea aplicației; afișează când le are pe amândouă
+function arataDiagLogin(pas) {
+  if (!DIAG_LOGIN || !diagLogin) return;
+  diagLogin[pas] = diagLogin[pas] || performance.now();
+  const d = diagLogin;
+  if (!d.parola || !d.deschis) return;
+  diagLogin = null;
+  const s = (a, b) => ((Math.max(a, b) - a) / 1000).toFixed(1) + ' s';
+  setTimeout(() => alert(`Diagnostic logare\n\nAnti-robot: ${s(d.start, d.captcha)}${d.tokenGata ? ' (era gata)' : ' (s-a așteptat)'}\nParola (server): ${s(d.captcha, d.parola)}\nDeschiderea aplicației: ${s(d.parola, d.deschis)}\n\nTotal: ${s(d.start, Math.max(d.parola, d.deschis))}`), 400);
+}
+
 async function gestioneazaSubmitAuth(e) {
   if (e) e.preventDefault();
   if (!supabaseClient) return;
@@ -654,9 +674,12 @@ async function gestioneazaSubmitAuth(e) {
     if (tipModAuth === 'login') {
       // Verificarea anti-robot rulează de obicei nevăzut; caseta apare singură doar când cere un clic
       etapa(tr('Se conectează...', 'Signing in...'));
+      diagLogin = { start: performance.now(), tokenGata: !!captchaTokenGata };
       const captchaToken = await obtineTokenCaptcha();
+      diagLogin.captcha = performance.now();
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options: { captchaToken } });
       if (error) throw error;
+      arataDiagLogin('parola');
       conectat = true;
       etapa(tr('Se încarcă...', 'Loading...'));
       showToast(t('authLoginSuccess'));
@@ -4375,6 +4398,7 @@ window.onload = async function() {
           if (overlay) overlay.classList.add('auth-hidden');
           actualizeazaStareNoScrollBody();
           terminaPornirea();
+          arataDiagLogin('deschis');
         };
         if (eraNeconectat && sesiuneInitializata) {
           // Ecranul de login rămâne până se știe rolul, altfel o clientă vede o clipă orarul antrenorului
