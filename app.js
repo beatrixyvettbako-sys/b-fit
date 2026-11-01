@@ -8036,6 +8036,7 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
   // Dacă nu este selectat niciun plan, afișează șablonul default de creare
   if (!planActiv) {
     planActiv = construiesteSablonPlanDefault();
+    retinePlanInitial();
   }
 
   // Planul deschis și neatins se reia din baza de date (clienta poate fi completat progresul între timp)
@@ -8061,7 +8062,7 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
         }));
         try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
         const proaspat = eraNemodificat ? DB.planuri.find(p => String(p.id) === String(planActiv.id)) : null;
-        if (proaspat) planActiv = JSON.parse(JSON.stringify(proaspat));
+        if (proaspat) { planActiv = JSON.parse(JSON.stringify(proaspat)); retinePlanInitial(); }
       }
     } catch (err) {
       console.error("Eroare sincronizare planuri:", err);
@@ -8322,14 +8323,24 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') comutaListaPlanuri(false);
 });
 
-// Planul curent are modificări nesalvate: față de varianta din baza de date (plan salvat) sau față de planul gol (plan nou)
+// Amprenta planului: secțiunile goale pe care afișarea le adaugă singură nu contează ca modificare
+function amprentaPlanului(p) {
+  const c = Object.assign({ sectiuni_inceput: [], sesiuni: [], sectiuni_final: [] }, (p && p.continut_json) || {});
+  return JSON.stringify([((p && p.clienta) || '').trim(), ((p && p.titlu) || '').trim(), ((p && p.subtitlu) || '').trim(), c]);
+}
+
+// Starea planului la deschidere (sau la ultima salvare); modificările se compară cu ea
+let amprentaPlanInitial = null;
+function retinePlanInitial() {
+  amprentaPlanInitial = planActiv ? amprentaPlanului(planActiv) : null;
+}
+
+// Planul curent are modificări nesalvate față de cum era când a fost deschis sau salvat
+// (merge și pentru șabloanele B-Fit, care nu sunt în baza de date)
 function estePlanModificat() {
   if (!planActiv || esteModClientaShare) return false;
-  if (!planActiv.id) return !estePlanNouGol();
-  const salvat = (DB.planuri || []).find(p => String(p.id) === String(planActiv.id));
-  if (!salvat) return false;
-  const cheie = p => JSON.stringify([(p.clienta || '').trim(), (p.titlu || '').trim(), (p.subtitlu || '').trim(), p.continut_json || {}]);
-  return cheie(planActiv) !== cheie(salvat);
+  if (amprentaPlanInitial === null) return !planActiv.id && !estePlanNouGol();
+  return amprentaPlanului(planActiv) !== amprentaPlanInitial;
 }
 
 // Rulează `continua` direct sau, dacă ar pierde modificări nesalvate, doar după confirmare
@@ -8354,6 +8365,7 @@ window.addEventListener('beforeunload', (e) => {
 function renuntaLaModificariPlan() {
   const salvat = planActiv && planActiv.id ? (DB.planuri || []).find(p => String(p.id) === String(planActiv.id)) : null;
   planActiv = salvat ? JSON.parse(JSON.stringify(salvat)) : construiesteSablonPlanDefault();
+  retinePlanInitial();
 }
 
 function selecteazaPlanDinLista(idPlan) {
@@ -8373,6 +8385,7 @@ function incarcaPlanDinLista(idPlan) {
   if (!idPlan) {
     planActiv = construiesteSablonPlanDefault();
     bibliotecaPlanuri = true;
+    retinePlanInitial();
     randeazaPlanAntrenamentUI();
     return;
   }
@@ -8388,6 +8401,7 @@ function incarcaPlanDinLista(idPlan) {
   if (gasit) {
     planActiv = JSON.parse(JSON.stringify(gasit));
     bibliotecaPlanuri = false;
+    retinePlanInitial();
     populeazaSelectorPlanuri();
     randeazaPlanAntrenamentUI();
   }
@@ -8520,6 +8534,7 @@ async function trimitePlanLaClienti() {
 function pornestePlanNou(plan, mesaj) {
   planActiv = plan || construiesteSablonPlanDefault();
   bibliotecaPlanuri = false;
+  retinePlanInitial();
   esteModPrevizualizarePdf = false;
   const btnTxt = document.getElementById('btnPreviewPlanText');
   if (btnTxt) btnTxt.innerText = t('btnPreviewPdfMode');
@@ -8629,7 +8644,7 @@ function randeazaBibliotecaPlanuri(container) {
     <div class="biblioteca-antet">
       <input type="search" class="form-control" id="cautareBiblioteca" value="${escAttr(filtruBiblioteca.text)}" placeholder="${tr('Caută plan sau exercițiu', 'Search plan or exercise')}" oninput="filtruBiblioteca.text = this.value; actualizeazaListaBiblioteca()">
       <div class="plan-chips" id="chipsBiblioteca">
-        ${chip('toate', tr('Toate', 'All'))}${chip('bfit', 'B-Fit')}${chip('ale', tr('Ale mele', 'Mine'))}${chip('2', tr('2 zile', '2 days'))}${chip('3', tr('3 zile', '3 days'))}${chip('4', tr('4+ zile', '4+ days'))}
+        ${chip('toate', tr('Toate', 'All'))}${chip('bfit', 'B-Fit')}${chip('ale', tr('Ale mele', 'Mine'))}${chip('2', tr('2 zile', '2 days'))}${chip('3', tr('3 zile', '3 days'))}${chip('4', tr('4 zile', '4 days'))}${chip('5', tr('5 zile', '5 days'))}
       </div>
     </div>
     <button type="button" class="plan-zi-card biblioteca-nou" onclick="incarcaPlanDinLista('gol')">
@@ -8660,7 +8675,8 @@ function actualizeazaListaBiblioteca() {
     if (tip === 'ale' && el.bfit) return false;
     if (tip === '2' && el.nrZile !== 2) return false;
     if (tip === '3' && el.nrZile !== 3) return false;
-    if (tip === '4' && el.nrZile < 4) return false;
+    if (tip === '4' && el.nrZile !== 4) return false;
+    if (tip === '5' && el.nrZile !== 5) return false;
     if (!cautat) return true;
     const exercitii = (el.plan.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).map(ex => ex.exercitiu || ''));
     return [el.titlu, ...exercitii].some(t => cheieNume(t).includes(cautat));
@@ -8682,6 +8698,15 @@ function actualizeazaListaBiblioteca() {
       <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
     </button>`;
   }).join('') : `<div class="plan-picker-empty">${tr('Niciun plan nu se potrivește.', 'No plan matches.')}</div>`;
+}
+
+// Titlul planului trece pe al doilea rând când e lung (câmp care crește cu textul); rândurile noi lipite devin spații
+function potrivesteInaltimeTitlu(camp) {
+  if (/[\r\n]/.test(camp.value)) camp.value = camp.value.replace(/[\r\n]+/g, ' ');
+  camp.style.height = 'auto';
+  // Pe o pagină ascunsă înălțimea e 0: câmpul rămâne pe un rând până la următoarea afișare
+  camp.style.height = camp.scrollHeight ? (camp.scrollHeight + camp.offsetHeight - camp.clientHeight) + 'px' : '';
+  return camp.value;
 }
 
 // Bara de jos apare doar când e deschis un plan (nu în bibliotecă, nu pe linkul clientului)
@@ -8721,6 +8746,7 @@ function inapoiLaBiblioteca() {
     esteModPrevizualizarePdf = false;
     ziDeschisaPlan = null;
     bibliotecaPlanuri = true;
+    retinePlanInitial();
     randeazaPlanAntrenamentUI();
     window.scrollTo({ top: 0, behavior: 'auto' });
   });
@@ -8784,10 +8810,10 @@ function randeazaPlanAntrenamentUI() {
         ${(planActiv.clienta || '').trim() ? `<span class="plan-tag plan-pentru">${tr('Plan pentru', 'Plan for')}: ${escAttr(planActiv.clienta)}</span>` : ''}
       </div>
       <div class="plan-header-block">
-        <input type="text" class="plan-doc-title-input" value="${escAttr(planActiv.titlu)}" placeholder="${tr('Titlu program (ex: Program de forță generală)', 'Program title (e.g. General strength program)')}" oninput="planActiv.titlu = this.value">
+        <textarea class="plan-doc-title-input" rows="1" placeholder="${tr('Titlu program (ex: Program de forță generală)', 'Program title (e.g. General strength program)')}" oninput="planActiv.titlu = potrivesteInaltimeTitlu(this)" onkeydown="if (event.key === 'Enter') event.preventDefault()">${escAttr(planActiv.titlu)}</textarea>
         <input type="text" class="plan-doc-subtitle-input" value="${escAttr(planActiv.subtitlu)}" placeholder="${tr('Subtitlu / detalii (ex: 3 sesiuni pe săptămână)', 'Subtitle / details (e.g. 3 sessions per week)')}" oninput="planActiv.subtitlu = this.value">
         <div class="plan-tags no-print">
-          <span class="plan-tag">${rez.zile} ${rez.zile === 1 ? tr('zi', 'day') : tr('zile', 'days')}</span>
+          <span class="plan-tag">${rez.zile} ${rez.zile === 1 ? tr('zi în plan', 'day in plan') : tr('zile în plan', 'days in plan')}</span>
           <span class="plan-tag">${rez.exercitii} ${tr('exerciții', 'exercises')}</span>
           ${rez.minute ? `<span class="plan-tag">~${rez.minute} min/${tr('zi', 'day')}</span>` : ''}
         </div>
@@ -9027,6 +9053,7 @@ function randeazaPlanAntrenamentUI() {
   }
 
   container.innerHTML = html;
+  container.querySelectorAll('textarea.plan-doc-title-input').forEach(potrivesteInaltimeTitlu);
   actualizeazaButonStergePlan();
 }
 
@@ -9284,6 +9311,7 @@ async function salveazaPlanCurentInBaza(silent = false) {
       try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
       populeazaSelectorPlanuri();
     }
+    retinePlanInitial();
 
     if (progresPreluat) {
       showToast(tr('Plan salvat; am preluat și progresul completat de client.', 'Plan saved; client progress was kept too.'));
@@ -9324,6 +9352,7 @@ async function stergePlanCurent() {
     customConfirm(tr("Renunțare plan", "Discard plan"), tr("Renunți la planul nou, nesalvat?", "Discard the new, unsaved plan?"), function() {
       planActiv = construiesteSablonPlanDefault();
       bibliotecaPlanuri = true;
+      retinePlanInitial();
       randeazaPlanAntrenamentUI();
     });
     return;
@@ -9336,6 +9365,7 @@ async function stergePlanCurent() {
       try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
       planActiv = construiesteSablonPlanDefault();
       bibliotecaPlanuri = true;
+      retinePlanInitial();
       populeazaSelectorPlanuri();
       randeazaPlanAntrenamentUI();
       showToast(t('toastPlanDeleted'));

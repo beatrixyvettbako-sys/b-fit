@@ -5139,6 +5139,11 @@ select.form-control {
   border-radius: 6px;
   outline: none;
   font-family: inherit;
+  /* Câmp pe mai multe rânduri (titlurile lungi trec pe rândul următor) */
+  display: block;
+  resize: none;
+  overflow: hidden;
+  line-height: 1.25;
 }
 
 .plan-doc-title-input:focus {
