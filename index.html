@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal129">
+  <link rel="stylesheet" href="style.css?v=fitFinal130">
 </head>
 <body>
 
@@ -1520,6 +1520,14 @@
 
       <div id="planDocumentContainer" class="plan-pdf-sheet"></div>
 
+      <!-- BARA DE ACȚIUNI A PLANULUI (antrenor): Mai multe, Salvează, Trimite la clienți -->
+      <div id="planBaraActiuni" class="plan-bara-actiuni no-print" style="display:none;">
+        <div id="planMeniuMaiMulte" class="plan-meniu-mai-multe" style="display:none;"></div>
+        <button type="button" class="btn btn-clear" id="btnPlanMaiMulte" onclick="comutaMeniuMaiMulte()" data-en="More">Mai multe</button>
+        <button type="button" class="btn btn-clear" id="btnPlanSalveaza" onclick="salveazaPlanCurentInBaza()" data-en="Save">Salvează</button>
+        <button type="button" class="btn" id="btnPlanTrimite" onclick="deschideTrimitePlan()" data-en="Send to clients">Trimite la clienți</button>
+      </div>
+
     </div>
 
   </div>
@@ -1579,7 +1587,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal129"></script>
-  <script src="app.js?v=fitFinal129"></script>
+  <script src="sabloane.js?v=fitFinal130"></script>
+  <script src="app.js?v=fitFinal130"></script>
 </body>
 </html>

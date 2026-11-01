@@ -5514,6 +5514,228 @@ select.form-control {
   color: var(--text-muted);
 }
 
+/* Biblioteca de planuri (pagina de pornire a planului de antrenament) */
+.biblioteca-antet {
+  margin-bottom: 10px;
+}
+
+.plan-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.plan-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.plan-chip {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.plan-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 11px;
+  background: var(--card-bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plan-chip.is-activ {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.biblioteca-nou {
+  border-style: dashed;
+  border-color: rgba(var(--primary-rgb), 0.45);
+}
+
+.biblioteca-nou .plan-zi-card-titlu {
+  font-size: 0.95rem;
+}
+
+.plan-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.plan-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(var(--primary-rgb), 0.08);
+  color: var(--primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.plan-tag.is-bfit {
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+/* Antetul planului deschis: înapoi la bibliotecă, pentru cine e planul, rezumat și volum */
+.plan-sus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+
+.plan-inapoi-biblioteca {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  padding: 2px 0;
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.plan-pentru {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.plan-volum {
+  margin-top: 8px;
+}
+
+.plan-volum summary {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--primary);
+  cursor: pointer;
+}
+
+.plan-volum-nota {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 4px 0 6px;
+}
+
+.plan-volum-rand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.76rem;
+  margin-bottom: 4px;
+}
+
+.plan-volum-rand > span:first-child {
+  width: 96px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.plan-volum-bara {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(var(--primary-rgb), 0.1);
+  overflow: hidden;
+}
+
+.plan-volum-bara > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+}
+
+.plan-volum-rand b {
+  width: 22px;
+  text-align: right;
+}
+
+/* Bara de acțiuni a planului, fixă jos (antrenor) */
+#tabPlanAntrenament.cu-bara-plan {
+  padding-bottom: 84px;
+}
+
+.plan-bara-actiuni {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  width: calc(100% - 24px);
+  max-width: 560px;
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+}
+
+.plan-bara-actiuni > .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  padding: 9px 6px;
+}
+
+.plan-bara-actiuni > #btnPlanTrimite {
+  flex-grow: 1.4;
+}
+
+.plan-meniu-mai-multe {
+  position: absolute;
+  left: 8px;
+  bottom: calc(100% + 8px);
+  min-width: 220px;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.plan-meniu-optiune {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.plan-meniu-optiune:hover {
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+.plan-meniu-optiune.is-pericol {
+  color: #b91c1c;
+}
+
 /* Mușchii vizați, sub numele exercițiului */
 .plan-ex-muschi {
   font-size: 0.72rem;
