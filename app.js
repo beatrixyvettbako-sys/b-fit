@@ -13,6 +13,8 @@ let USE_SUPABASE = true;
 const URL_APLICATIE = FOLOSESTE_STAGING ? location.origin + "/" : "https://app.beatrixyvett.com/";
 // Worker-ul Cloudflare pentru pozele de progres (R2); gol = pozele nu apar în aplicație (pe staging nu există)
 const URL_POZE = FOLOSESTE_STAGING ? "" : "https://bfit-poze.beatrixyvett-bako.workers.dev";
+// Fișierele atașate la feedback: același Worker (R2); ?test=1 = Worker-ul verifică sesiunea pe proiectul de staging
+const URL_FEEDBACK = "https://bfit-poze.beatrixyvett-bako.workers.dev/feedback" + (FOLOSESTE_STAGING ? "?test=1" : "");
 // Citit înainte ca Supabase să curețe adresa: venim din emailul „Am uitat parola”
 const ESTE_LINK_RESETARE_PAROLA = typeof window !== 'undefined' && /type=recovery/.test(window.location.hash + window.location.search);
 const supabaseClient = (typeof window !== 'undefined' && window.supabase)
@@ -852,7 +854,8 @@ function navigheazaSubMeniu(strat) {
     settingsLanguage: document.getElementById('drawerSettingsLanguageView'),
     settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
     settingsSignup: document.getElementById('drawerSettingsSignupView'),
-    profile: document.getElementById('drawerProfileView')
+    profile: document.getElementById('drawerProfileView'),
+    feedback: document.getElementById('drawerFeedbackView')
   };
 
   Object.values(layers).forEach(el => {
@@ -867,6 +870,107 @@ function navigheazaSubMeniu(strat) {
   if (strat === 'profile' && rolUtilizator === 'clienta') {
     const inp = document.getElementById('profileInputTelefonClient');
     if (inp && document.activeElement !== inp) inp.value = inp.dataset.initial = (dateClienta.fisa && dateClienta.fisa.telefon) || '';
+  }
+}
+
+// ---- Feedback (meniu › Raportează o problemă): text în tabelul feedback (trimite_feedback), fișierul în R2 prin Worker ----
+let feedbackTip = 'problema';
+let feedbackFisier = null; // Blob gata de trimis (poza deja micșorată)
+
+function seteazaTipFeedback(tip) {
+  feedbackTip = tip;
+  document.getElementById('feedbackTipProblema').classList.toggle('active', tip === 'problema');
+  document.getElementById('feedbackTipSugestie').classList.toggle('active', tip === 'sugestie');
+  // Textul ajutător depinde de tip; data-ro/en-placeholder îl păstrează și la schimbarea limbii
+  const camp = document.getElementById('feedbackText');
+  const [ro, en] = tip === 'sugestie'
+    ? ['Ce ai vrea să îmbunătățim sau să adăugăm în aplicație?', 'What would you like us to improve or add to the app?']
+    : ['Ce s-a întâmplat? Ce făceai când a apărut problema?', 'What happened? What were you doing when the problem appeared?'];
+  camp.dataset.roPlaceholder = ro;
+  camp.dataset.enPlaceholder = en;
+  camp.placeholder = tr(ro, en);
+}
+
+async function alegeFisierFeedback(input) {
+  const fisier = input.files && input.files[0];
+  input.value = '';
+  if (!fisier) return;
+  let blob = fisier;
+  if (fisier.type.startsWith('video/')) {
+    if (fisier.size > 50 * 1024 * 1024) {
+      showToast(tr('Video prea mare (max. 50 MB). Taie clipul sau folosește înregistrarea de ecran.', 'Video too large (max. 50 MB). Trim the clip or use a screen recording.'), 'error');
+      return;
+    }
+    if (!/^video\/(mp4|quicktime|webm)$/.test(fisier.type)) {
+      showToast(tr('Format video neacceptat. Folosește MP4 sau MOV.', 'Unsupported video format. Use MP4 or MOV.'), 'error');
+      return;
+    }
+  } else {
+    try {
+      blob = await micsoreazaPozaJpeg(fisier);
+    } catch (e) {
+      showToast(tr('Poza nu a putut fi citită. Încearcă alta.', 'The photo could not be read. Try another one.'), 'error');
+      return;
+    }
+  }
+  feedbackFisier = blob;
+  document.getElementById('feedbackFisierNume').textContent = `${(blob.size / 1024 / 1024).toFixed(1)} MB · ${fisier.name}`;
+  document.getElementById('feedbackFisierAles').hidden = false;
+}
+
+function stergeFisierFeedback() {
+  feedbackFisier = null;
+  document.getElementById('feedbackFisierAles').hidden = true;
+}
+
+async function trimiteFeedback() {
+  const campText = document.getElementById('feedbackText');
+  const mesaj = campText.value.trim();
+  if (!mesaj) {
+    showToast(feedbackTip === 'sugestie'
+      ? tr('Scrie pe scurt sugestia ta.', 'Briefly describe your suggestion.')
+      : tr('Scrie pe scurt ce s-a întâmplat.', 'Briefly describe what happened.'), 'error');
+    campText.focus();
+    return;
+  }
+  if (!supabaseClient || !utilizatorCurent) return;
+  const btn = document.getElementById('btnTrimiteFeedback');
+  btn.disabled = true;
+  btn.textContent = tr('Se trimite...', 'Sending...');
+  try {
+    let cheie = null;
+    if (feedbackFisier) {
+      const { data } = await supabaseClient.auth.getSession();
+      const r = data.session && await fetch(URL_FEEDBACK, {
+        method: 'PUT',
+        headers: { Authorization: 'Bearer ' + data.session.access_token, 'Content-Type': feedbackFisier.type },
+        body: feedbackFisier
+      }).catch(() => null);
+      const rez = r && r.ok ? await r.json().catch(() => null) : null;
+      if (!rez || !rez.cheie) {
+        showToast(tr('Fișierul nu s-a putut încărca. Verifică internetul sau trimite fără fișier.', 'The file could not be uploaded. Check your internet or send without the file.'), 'error');
+        return;
+      }
+      cheie = rez.cheie;
+    }
+    const versiune = ((document.querySelector('script[src*="app.js"]')?.getAttribute('src') || '').match(/fitFinal(\d+)/) || [])[1] || '';
+    const { error } = await supabaseClient.rpc('trimite_feedback', {
+      p_tip: feedbackTip, p_mesaj: mesaj, p_ecran: `${rolUtilizator}/${tipTabCurent}`, p_versiune: versiune, p_fisier: cheie
+    });
+    if (error) {
+      showToast(/prea_multe/.test(error.message)
+        ? tr('Ai trimis multe mesaje azi. Încearcă mâine.', 'You have sent many messages today. Try again tomorrow.')
+        : tr('Mesajul nu s-a putut trimite. Reîncearcă.', 'The message could not be sent. Try again.'), 'error');
+      return;
+    }
+    campText.value = '';
+    stergeFisierFeedback();
+    seteazaTipFeedback('problema');
+    showToast(tr('Mulțumim! Mesajul a fost trimis.', 'Thank you! Your message has been sent.'));
+    navigheazaSubMeniu('main');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = tr('Trimite', 'Send');
   }
 }
 
@@ -3790,19 +3894,24 @@ function htmlPozeCheckin() {
 }
 
 // Poza se micșorează în telefon (max. 1600 px, JPEG) înainte de încărcare: câteva sute de KB în loc de câțiva MB
+async function micsoreazaPozaJpeg(fisier) {
+  const bmp = await createImageBitmap(fisier);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(bmp.width * k);
+  canvas.height = Math.round(bmp.height * k);
+  canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.82));
+  if (!blob) throw new Error('toBlob');
+  return blob;
+}
+
 async function alegePozaCheckin(unghi, input) {
   const fisier = input.files && input.files[0];
   input.value = '';
   if (!fisier) return;
   try {
-    const bmp = await createImageBitmap(fisier);
-    const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bmp.width * k);
-    canvas.height = Math.round(bmp.height * k);
-    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.82));
-    if (!blob) throw new Error('toBlob');
+    const blob = await micsoreazaPozaJpeg(fisier);
     const f = checkinFormular;
     f.pozeNoi = f.pozeNoi || {};
     if (f.pozeNoi[unghi]) URL.revokeObjectURL(f.pozeNoi[unghi].url);
