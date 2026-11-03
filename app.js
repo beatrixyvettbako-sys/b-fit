@@ -5351,6 +5351,7 @@ function pasInapoiTelefon() {
   if (modal) return modal[1];
   if (vizibil('panouPoze')) return inchidePanouPoze;
   if (vizibil('panouMesaje')) return inchidePanouMesaje;
+  if (vizibil('panouConversatii')) return inchidePanouConversatii;
   if (vizibil('panouNotificari')) return inchidePanouNotificari;
   if (document.getElementById('appDrawer')?.classList.contains('open')) {
     const strat = document.querySelector('#appDrawer [id^="drawer"][id$="View"].active')?.id.replace(/^drawer|View$/g, '');
@@ -7189,6 +7190,8 @@ async function deschideMesaje(clientId, userId, titlu) {
   conversatie = { clientId, userId, mesaje: [] };
   document.getElementById('panouMesajeTitlu').textContent = titlu;
   document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
+  raspunsuriEditare = false;
+  randeazaRaspunsuriRapide();
   document.getElementById('panouMesaje').classList.remove('auth-hidden');
   sincronizeazaIstoricInapoi();
   await incarcaConversatie();
@@ -7227,7 +7230,18 @@ function randeazaConversatie() {
     const ora = d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' });
     return `${separator}<div class="mesaj${m.autor === autorulMeu() ? ' al-meu' : ''}"><div class="mesaj-text">${escAttr(m.text)}</div><small>${ora}</small></div>`;
   }).join('');
+  // „Văzut” sub ultimul mesaj trimis, după ce celălalt a deschis conversația
+  const ultim = conversatie.mesaje[conversatie.mesaje.length - 1];
+  if (ultim.autor === autorulMeu() && ultim.citit) lista.insertAdjacentHTML('beforeend', `<div class="mesaj-vazut">${tr('Văzut', 'Seen')}</div>`);
   lista.scrollTop = lista.scrollHeight;
+}
+
+// Câmpul de scris crește cu textul (până la ~5 rânduri); bara de derulare apare doar peste înălțimea maximă
+function potrivesteCampMesaj(camp) {
+  camp.style.height = 'auto';
+  const inaltime = camp.scrollHeight + camp.offsetHeight - camp.clientHeight; // + bordura
+  camp.style.height = Math.min(inaltime, 120) + 'px';
+  camp.style.overflowY = inaltime > 120 ? 'auto' : 'hidden';
 }
 
 async function trimiteMesaj() {
@@ -7251,9 +7265,145 @@ async function trimiteMesaj() {
 function inchidePanouMesaje() {
   document.getElementById('panouMesaje').classList.add('auth-hidden');
   conversatie = null;
-  // Necititele s-au citit: se actualizează cardul de pe Acasă și blocul din fișă
+  // Necititele s-au citit: se actualizează bulina din antet, cardul de pe Acasă, blocul din fișă și lista conversațiilor
+  actualizeazaBulinaMesaje();
   if (rolUtilizator === 'clienta') actualizeazaCardMesajeAcasa();
-  else { const client = clientaFisaCurenta(); if (client) randeazaBlocMesaje(client); }
+  else {
+    const client = clientaFisaCurenta(); if (client) randeazaBlocMesaje(client);
+    if (!document.getElementById('panouConversatii').classList.contains('auth-hidden')) incarcaConversatii();
+  }
+}
+
+// Bulina de pe butonul Mesaje din antet: câte mesaje necitite au venit de la celălalt (toți clienții, la antrenor)
+async function actualizeazaBulinaMesaje() {
+  if (!supabaseClient || !utilizatorCurent) return;
+  const { count, error } = await supabaseClient.from('mesaje').select('id', { count: 'exact', head: true }).eq('citit', false).neq('autor', autorulMeu());
+  if (error) return;
+  document.querySelectorAll('.mesaje-bulina-antet').forEach(b => {
+    b.hidden = !count;
+    b.textContent = count > 9 ? '9+' : count;
+  });
+}
+
+// ---- Lista conversațiilor (antrenor): necititele sus, apoi după ultimul mesaj; dedesubt clienții cu cont fără mesaje ----
+let conversatiiDoarNecitite = false;
+let conversatiiDate = [];
+
+function deschideConversatii() {
+  document.getElementById('panouConversatii').classList.remove('auth-hidden');
+  sincronizeazaIstoricInapoi();
+  incarcaConversatii();
+}
+
+function inchidePanouConversatii() {
+  document.getElementById('panouConversatii').classList.add('auth-hidden');
+}
+
+async function incarcaConversatii() {
+  const corp = document.getElementById('conversatiiContinut');
+  if (!conversatiiDate.length) corp.innerHTML = `<div class="mesaje-gol" style="padding-top:40px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const { data, error } = await supabaseClient.from('mesaje').select('client_id, autor, text, created_at, citit').order('created_at', { ascending: false }).limit(2000);
+  if (error) {
+    corp.innerHTML = `<div class="mesaje-gol" style="padding-top:40px;">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
+    return;
+  }
+  const peClient = new Map();
+  (data || []).forEach(m => {
+    if (!peClient.has(m.client_id)) peClient.set(m.client_id, { ultim: m, necitite: 0 });
+    if (!m.citit && m.autor !== 'antrenor') peClient.get(m.client_id).necitite++;
+  });
+  conversatiiDate = (DB.clienti || []).filter(c => c.contConectat || peClient.has(c.id))
+    .map(c => ({ client: c, ...(peClient.get(c.id) || { ultim: null, necitite: 0 }) }));
+  randeazaConversatii();
+}
+
+function deschideConversatieDinLista(i) {
+  const x = conversatiiDate[i];
+  if (x) deschideMesaje(x.client.id, utilizatorCurent.id, x.client.nume);
+}
+
+function comutaFiltruConversatii(doarNecitite) {
+  conversatiiDoarNecitite = doarNecitite;
+  randeazaConversatii();
+}
+
+function randeazaConversatii() {
+  const corp = document.getElementById('conversatiiContinut');
+  const cuMesaje = conversatiiDate.filter(x => x.ultim)
+    .sort((a, b) => (b.necitite > 0) - (a.necitite > 0) || b.ultim.created_at.localeCompare(a.ultim.created_at));
+  const faraMesaje = conversatiiDate.filter(x => !x.ultim).sort((a, b) => a.client.nume.localeCompare(b.client.nume));
+  const totalNecitite = cuMesaje.filter(x => x.necitite).length;
+  const lista = conversatiiDoarNecitite ? cuMesaje.filter(x => x.necitite) : cuMesaje;
+  const cand = iso => {
+    const d = new Date(iso);
+    return d.toDateString() === new Date().toDateString()
+      ? d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' })
+      : formatZiLuna(d);
+  };
+  const rand = x => `<button type="button" class="conversatie-rand${x.necitite ? ' necitita' : ''}" onclick="deschideConversatieDinLista(${conversatiiDate.indexOf(x)})">
+      <span class="conversatie-initiala">${escAttr((x.client.nume || '?').trim().charAt(0).toUpperCase())}</span>
+      <span class="conversatie-text"><b>${escAttr(x.client.nume)}</b><small>${x.ultim ? escAttr((x.ultim.autor === 'antrenor' ? tr('Tu: ', 'You: ') : '') + x.ultim.text) : tr('Scrie primul mesaj', 'Write the first message')}</small></span>
+      ${x.ultim ? `<span class="conversatie-meta"><small>${cand(x.ultim.created_at)}</small>${x.necitite ? `<span class="mesaje-bulina">${x.necitite}</span>` : ''}</span>` : ''}
+    </button>`;
+  let html = `<div class="inscriere-chips conversatii-filtre">
+      <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? '' : ' active'}" onclick="comutaFiltruConversatii(false)">${tr('Toate', 'All')}</button>
+      <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? ' active' : ''}" onclick="comutaFiltruConversatii(true)">${tr('Necitite', 'Unread')}${totalNecitite ? ` (${totalNecitite})` : ''}</button>
+    </div>`;
+  if (lista.length) html += `<div class="card conversatii-lista">${lista.map(rand).join('')}</div>`;
+  else html += `<div class="mesaje-gol" style="padding:24px 20px;">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.') : tr('Nicio conversație încă.', 'No conversations yet.')}</div>`;
+  if (!conversatiiDoarNecitite && faraMesaje.length) {
+    html += `<div class="drawer-section-title" style="margin:16px 4px 6px;">${tr('Scrie unui client', 'Write to a client')}</div>
+      <div class="card conversatii-lista">${faraMesaje.map(rand).join('')}</div>`;
+  }
+  if (!conversatiiDate.length) html += `<div class="mesaje-gol" style="padding:0 20px;">${tr('Mesajele apar pentru clienții care au cont în aplicație.', 'Messages are available for clients with an app account.')}</div>`;
+  corp.innerHTML = html;
+}
+
+// ---- Răspunsuri rapide (antrenor): o atingere pune textul în câmp; lista se poate modifica (user_metadata.raspunsuri_rapide) ----
+const RASPUNSURI_IMPLICITE = [
+  ['Bravo! 💪', 'Well done! 💪'],
+  ['Ne vedem mâine!', 'See you tomorrow!'],
+  ['Cum te simți după antrenament?', 'How do you feel after the workout?'],
+  ['Trimite-mi o poză, te rog.', 'Please send me a photo.']
+];
+let raspunsuriEditare = false;
+const raspunsuriRapide = () => (utilizatorCurent && utilizatorCurent.user_metadata && utilizatorCurent.user_metadata.raspunsuri_rapide)
+  || RASPUNSURI_IMPLICITE.map(r => tr(...r));
+
+function randeazaRaspunsuriRapide() {
+  const el = document.getElementById('raspunsuriRapide');
+  el.hidden = rolUtilizator === 'clienta';
+  if (el.hidden) return;
+  el.innerHTML = raspunsuriRapide().map((r, i) => raspunsuriEditare
+    ? `<button type="button" class="raspuns-rapid editare" onclick="stergeRaspunsRapid(${i})">${escAttr(r)} <b>×</b></button>`
+    : `<button type="button" class="raspuns-rapid" onclick="folosesteRaspunsRapid(${i})">${escAttr(r)}</button>`).join('')
+    + (raspunsuriEditare ? `<button type="button" class="raspuns-rapid adauga" onclick="adaugaRaspunsRapid()">+ ${tr('Adaugă', 'Add')}</button>` : '')
+    + `<button type="button" class="raspuns-rapid adauga" onclick="raspunsuriEditare = !raspunsuriEditare; randeazaRaspunsuriRapide()">${raspunsuriEditare ? tr('Gata', 'Done') : tr('Editează', 'Edit')}</button>`;
+}
+
+function folosesteRaspunsRapid(i) {
+  const camp = document.getElementById('mesajText');
+  const text = raspunsuriRapide()[i];
+  camp.value = camp.value.trim() ? camp.value.trim() + ' ' + text : text;
+  potrivesteCampMesaj(camp);
+  camp.focus();
+}
+
+async function salveazaRaspunsuriRapide(lista) {
+  const { data, error } = await supabaseClient.auth.updateUser({ data: { raspunsuri_rapide: lista } });
+  if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
+  if (data && data.user) utilizatorCurent = data.user;
+  randeazaRaspunsuriRapide();
+}
+
+function stergeRaspunsRapid(i) {
+  salveazaRaspunsuriRapide(raspunsuriRapide().filter((_, j) => j !== i));
+}
+
+function adaugaRaspunsRapid() {
+  customConfirm(tr('Răspuns rapid nou', 'New quick reply'), tr('Textul apare ca buton deasupra câmpului de scris.', 'The text appears as a button above the message box.'), text => {
+    if (text) salveazaRaspunsuriRapide(raspunsuriRapide().concat([text.slice(0, 80)]));
+  }, { placeholder: tr('Ex.: Felicitări pentru record!', 'E.g. Congrats on the record!') });
 }
 
 // Acasă (client): conversația apare cu ultimul mesaj și bulina de necitite, de îndată ce există un mesaj
@@ -7909,6 +8059,7 @@ async function incarcaNotificari() {
   notificari = data || [];
   document.querySelectorAll('.btn-notificari').forEach(b => { b.hidden = false; });
   actualizeazaBulinaNotificari();
+  actualizeazaBulinaMesaje();
   if (!canalNotificari) {
     canalNotificari = supabaseClient.channel('notificari-' + utilizatorCurent.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificari', filter: `user_id=eq.${utilizatorCurent.id}` }, payload => {
@@ -7918,6 +8069,8 @@ async function incarcaNotificari() {
         // Mesaj nou: conversația deschisă se completează pe loc; altfel se actualizează cardul / blocul cu necitite
         if (payload.new.tip === 'mesaj_nou') {
           const d = payload.new.date || {};
+          actualizeazaBulinaMesaje();
+          if (!document.getElementById('panouConversatii').classList.contains('auth-hidden')) incarcaConversatii();
           if (conversatie && (rolUtilizator === 'clienta' || d.client_id === conversatie.clientId)) incarcaConversatie();
           else if (rolUtilizator !== 'clienta') { const client = clientaFisaCurenta(); if (client && client.id === d.client_id) randeazaBlocMesaje(client); }
         }

@@ -1896,7 +1896,8 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 /* Lângă clopoțel, burgerul nu mai împarte spațiul liber (ambele aveau margin-left: auto) */
-.btn-notificari:not([hidden]) + #headerBurgerBtn {
+.btn-notificari:not([hidden]) + #headerBurgerBtn,
+.btn-mesaje:not([hidden]) + .btn-notificari {
   margin-left: 8px !important;
 }
 
@@ -6961,6 +6962,7 @@ input.serie-camp {
   min-width: 0;
   resize: none;
   max-height: 120px;
+  overflow-y: hidden;
   border-radius: 18px;
   padding: 9px 14px;
 }
@@ -6979,6 +6981,138 @@ input.serie-camp {
 .mesaje-scrie .btn svg {
   width: 18px;
   height: 18px;
+}
+
+.mesaj-vazut {
+  align-self: flex-end;
+  margin-top: -2px;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+}
+
+/* Răspunsuri rapide (antrenor): pastile derulabile deasupra câmpului de scris */
+.raspunsuri-rapide {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 6px 12px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.raspunsuri-rapide::-webkit-scrollbar {
+  display: none;
+}
+
+.raspunsuri-rapide[hidden] {
+  display: none;
+}
+
+.raspuns-rapid {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--primary-rgb), 0.3);
+  background: var(--card-bg);
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.raspuns-rapid.editare b {
+  margin-left: 4px;
+  color: #b91c1c;
+}
+
+.raspuns-rapid.adauga {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+/* Lista conversațiilor (antrenor) */
+.conversatii-filtre {
+  margin-bottom: 10px;
+}
+
+.conversatii-lista {
+  padding: 2px 0;
+}
+
+.conversatie-rand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.conversatie-rand + .conversatie-rand {
+  border-top: 1px solid var(--border);
+}
+
+.conversatie-initiala {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--primary-rgb), 0.12);
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.conversatie-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.conversatie-text b {
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversatie-text small {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversatie-rand.necitita .conversatie-text small {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.conversatie-meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.conversatie-meta small {
+  font-size: 0.68rem;
+  color: var(--text-muted);
 }
 
 /* Acasă (client): ultimul mesaj, cu bulina de necitite */
