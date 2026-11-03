@@ -3994,7 +3994,7 @@ function umplePoze(radacina) {
     if (src) img.src = src;
     else {
       cachePoze.delete(cheie);
-      img.closest('.poza-cadru, .poza-mare')?.classList.add('poza-lipsa');
+      img.closest('.poza-cadru, .poza-mare, .poza-comp')?.classList.add('poza-lipsa');
     }
   });
 }
@@ -4037,6 +4037,56 @@ function stergePozaProgres(s, u) {
     if (rolUtilizator === 'clienta') afiseazaFisaMeaClienta();
     else incarcaProgresFisa();
   });
+}
+
+// Comparația „Început / Acum”: pe un unghi, prima și ultima săptămână cu poze; oricare se poate schimba cu altă săptămână
+let comparatiePoze = { client: null, u: null, st: null, dr: null, greutati: {} };
+
+function htmlComparatiePoze(checkinuri) {
+  if (!URL_POZE || !pozeCurente.lista.length) return '';
+  const c = comparatiePoze;
+  if (c.client !== pozeCurente.client) Object.assign(c, { client: pozeCurente.client, u: null, st: null, dr: null });
+  c.greutati = {};
+  (checkinuri || []).forEach(x => { if (x.greutate != null) c.greutati[x.saptamana] = Number(x.greutate); });
+  return `<div class="poze-comparatie">${htmlCorpComparatie()}</div>`;
+}
+
+function htmlCorpComparatie() {
+  const c = comparatiePoze;
+  const unghiuri = UNGHIURI_POZE.filter(o => pozeCurente.lista.some(p => p.u === o.id));
+  if (!unghiuri.some(o => o.id === c.u)) c.u = unghiuri[0].id;
+  const poze = pozeCurente.lista.filter(p => p.u === c.u).sort((a, b) => a.s.localeCompare(b.s));
+  const prima = poze[0].s, ultima = poze[poze.length - 1].s;
+  // Fără o alegere explicită, capetele urmează prima și ultima săptămână (și după un set nou)
+  const st = poze.some(p => p.s === c.st) ? c.st : prima;
+  const dr = poze.some(p => p.s === c.dr) ? c.dr : ultima;
+  const butoane = unghiuri.map(o => `<button type="button" class="inscriere-chip${o.id === c.u ? ' active' : ''}" onclick="alegeComparatiePoze('u', '${o.id}')">${tr(o.ro, o.en)}</button>`).join('');
+  const coloana = (latura, s) => {
+    const p = poze.find(x => x.s === s);
+    const eticheta = s === prima ? tr('Început', 'Start') : s === ultima ? tr('Acum', 'Now') : tr('Săptămâna', 'Week');
+    const optiuni = poze.map(x => `<option value="${x.s}"${x.s === s ? ' selected' : ''}>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(x.s + 'T12:00:00'))}</option>`).join('');
+    const kg = comparatiePoze.greutati[s];
+    return `<div class="poza-comp">
+        <div class="poza-comp-eticheta">${eticheta}</div>
+        <img data-poza="${escAttr(pozeCurente.client)}|${p.s}|${p.u}|${p.t}" alt="" onclick="deschidePanouPoze('${s}')">
+        <select class="poza-comp-data" aria-label="${tr('Alege săptămâna', 'Choose the week')}" onchange="alegeComparatiePoze('${latura}', this.value)">${optiuni}</select>
+        <div class="poza-comp-kg">${kg != null ? `${formatKg(kg)} kg` : '&nbsp;'}</div>
+      </div>`;
+  };
+  return `<div class="inscriere-chips poze-comp-unghiuri">${butoane}</div>
+    ${poze.length < 2
+      ? `${coloana('st', prima)}<div class="progres-gol">${tr('Comparația apare de la al doilea set de poze.', 'The comparison appears from the second set of photos.')}</div>`
+      : `<div class="poze-comp-grid">${coloana('st', st)}${coloana('dr', dr)}</div>`}`;
+}
+
+function alegeComparatiePoze(camp, valoare) {
+  const c = comparatiePoze;
+  if (camp === 'u') Object.assign(c, { u: valoare, st: null, dr: null });
+  else c[camp] = valoare;
+  const bloc = document.querySelector('.poze-comparatie');
+  if (!bloc) return;
+  bloc.innerHTML = htmlCorpComparatie();
+  umplePoze(bloc);
 }
 
 function bifeazaCheckin(id, optiune, bifat) {
@@ -6884,6 +6934,8 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   html += htmlObiectiv(ob, puncte);
   html += htmlGraficGreutate(puncte);
   if (extra.antrenor) html += htmlControaleProgres(ob, greutati);
+  const comparatie = htmlComparatiePoze(checkinuri);
+  if (comparatie) html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Poze de progres', 'Progress photos')}</div>${comparatie}`;
 
   const lista = (checkinuri || []).slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana)).slice(0, 8);
   if (lista.length) {
@@ -7491,6 +7543,7 @@ async function incarcaProgresFisa() {
     + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
       ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
       : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`);
+  umplePoze(corp);
 }
 
 function randeazaFisaInscriereDeschisa() {
@@ -9060,7 +9113,7 @@ function randeazaPlanAntrenamentUI() {
                 <input type="text" class="plan-ex-input" style="font-weight:700;" value="${escAttr(ex.exercitiu)}" placeholder="${tr('Nume exercițiu', 'Exercise name')}" list="listaExercitiiPlan" oninput="planActiv.continut_json.sesiuni[${sesIdx}].exercitii[${exIdx}].exercitiu = this.value" onchange="completeazaExercitiuCunoscut(${sesIdx}, ${exIdx})">
               </div>
               ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}
-              ${ex.muschi ? `<button type="button" class="plan-inlocuieste-btn no-print" onclick="deschideInlocuiesteExercitiu(${sesIdx}, ${exIdx})">⇄ ${tr('Înlocuiește', 'Swap')}</button>` : ''}
+              <button type="button" class="plan-inlocuieste-btn no-print" onclick="deschideInlocuiesteExercitiu(${sesIdx}, ${exIdx})">${(ex.exercitiu || '').trim() ? `⇄ ${tr('Înlocuiește', 'Swap')}` : tr('Alege din bibliotecă', 'Choose from library')}</button>
               ${ex.nota_client ? `<div class="plan-nota-client"><b>${tr('Notița clientului', 'Client note')}:</b> ${escAttr(ex.nota_client)}</div>` : ''}
             </td>
             <td data-eticheta="${tr('Serii × repetări', 'Sets × reps')}">
@@ -9296,21 +9349,51 @@ function deschideInlocuiesteExercitiu(sesIdx, exIdx) {
   exercitiuDeInlocuit = { sesIdx, exIdx };
   const muschi = muschiExercitiu(ex);
   const nume = cheieNume(ex.exercitiu);
-  // Întâi cele cu același mușchi principal, apoi cele care lucrează măcar unul dintre mușchi
-  const toate = [...exercitiiCunoscute().values()].filter(x => cheieNume(x.exercitiu) !== nume && x.muschi);
-  const scor = x => { const m = muschiExercitiu(x); return m[0] === muschi[0] ? 2 : (m.some(y => muschi.includes(y)) ? 1 : 0); };
-  const alternative = toate.filter(x => scor(x) > 0).sort((a, b) => scor(b) - scor(a)).slice(0, 12);
-  document.getElementById('inlocuiesteDesc').innerText = tr(`În locul exercițiului „${ex.exercitiu}”. Seriile și pauza rămân cele din plan.`, `Instead of "${ex.exercitiu}". Sets and rest stay as planned.`);
-  alternativeInlocuieste = alternative;
-  document.getElementById('listaInlocuieste').innerHTML = alternative.length ? alternative.map((x, i) => `
-    <button type="button" class="plan-zi-card" onclick="alegeInlocuitor(${i})">
+  // Toată biblioteca de exerciții; cele pentru aceiași mușchi (scor > 0) apar primele
+  const scor = x => { const m = muschiExercitiu(x); return !muschi.length ? 0 : (m[0] === muschi[0] ? 2 : (m.some(y => muschi.includes(y)) ? 1 : 0)); };
+  alternativeInlocuieste = [...exercitiiCunoscute().values()]
+    .filter(x => (x.exercitiu || '').trim() && cheieNume(x.exercitiu) !== nume)
+    .map(x => ({ ex: x, scor: scor(x), grupa: grupaMusculara(x) || tr('Altele', 'Other') }));
+  document.getElementById('inlocuiesteTitlu').innerText = (ex.exercitiu || '').trim() ? tr('Înlocuiește exercițiul', 'Swap exercise') : tr('Alege exercițiul', 'Choose exercise');
+  document.getElementById('inlocuiesteDesc').innerText = (ex.exercitiu || '').trim()
+    ? tr(`În locul exercițiului „${ex.exercitiu}”. Seriile și pauza rămân cele din plan.`, `Instead of "${ex.exercitiu}". Sets and rest stay as planned.`)
+    : tr('Alege din biblioteca de exerciții. Seriile și pauza rămân cele din plan.', 'Choose from the exercise library. Sets and rest stay as planned.');
+  document.getElementById('cautareInlocuieste').value = '';
+  randeazaListaInlocuieste('');
+  document.getElementById('modalInlocuiesteBackdrop').style.display = 'flex';
+}
+
+// Fără căutare: „Pentru aceiași mușchi”, apoi toate exercițiile pe grupe musculare; cu căutare: după nume sau mușchi
+function randeazaListaInlocuieste(text) {
+  const cautat = cheieNume(text);
+  const card = (el) => `
+    <button type="button" class="plan-zi-card" onclick="alegeInlocuitor(${alternativeInlocuieste.indexOf(el)})">
       <span class="plan-zi-card-text">
-        <span class="plan-zi-card-titlu">${escAttr(x.exercitiu)}</span>
-        <span class="plan-zi-card-detalii">${escAttr(x.muschi)}</span>
+        <span class="plan-zi-card-titlu">${escAttr(el.ex.exercitiu)}</span>
+        ${el.ex.muschi ? `<span class="plan-zi-card-detalii">${escAttr(el.ex.muschi)}</span>` : ''}
       </span>
       <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-    </button>`).join('') : `<div class="plan-picker-empty">${tr('Nu am găsit alternative pentru acești mușchi.', 'No alternatives found for these muscles.')}</div>`;
-  document.getElementById('modalInlocuiesteBackdrop').style.display = 'flex';
+    </button>`;
+  const titlu = t => `<div class="plan-picker-group">${escAttr(t)}</div>`;
+  const dupaNume = (a, b) => a.ex.exercitiu.localeCompare(b.ex.exercitiu, 'ro');
+  let html = '';
+  if (cautat) {
+    const gasite = alternativeInlocuieste.filter(el => cheieNume(el.ex.exercitiu + ' ' + (el.ex.muschi || '')).includes(cautat)).sort((a, b) => b.scor - a.scor || dupaNume(a, b));
+    html = gasite.map(card).join('');
+  } else {
+    const potrivite = alternativeInlocuieste.filter(el => el.scor > 0).sort((a, b) => b.scor - a.scor || dupaNume(a, b));
+    if (potrivite.length) html += titlu(tr('Pentru aceiași mușchi', 'Same muscles')) + potrivite.map(card).join('');
+    const grupe = new Map();
+    alternativeInlocuieste.filter(el => !el.scor).sort(dupaNume).forEach(el => {
+      if (!grupe.has(el.grupa)) grupe.set(el.grupa, []);
+      grupe.get(el.grupa).push(el);
+    });
+    // „Altele” (exerciții fără mușchi cunoscuți, scrise de antrenor) la final
+    const altele = tr('Altele', 'Other');
+    [...grupe.keys()].sort((a, b) => (a === altele) - (b === altele) || a.localeCompare(b, 'ro'))
+      .forEach(g => { html += titlu(g) + grupe.get(g).map(card).join(''); });
+  }
+  document.getElementById('listaInlocuieste').innerHTML = html || `<div class="plan-picker-empty">${tr('Niciun exercițiu nu se potrivește.', 'No exercise matches.')}</div>`;
 }
 
 function inchideInlocuiesteExercitiu() {
@@ -9319,7 +9402,7 @@ function inchideInlocuiesteExercitiu() {
 
 // Exercițiul nou își aduce numele, mușchii, tipul notării și indicațiile; seriile și pauza din plan rămân
 function alegeInlocuitor(i) {
-  const alt = alternativeInlocuieste[i];
+  const alt = (alternativeInlocuieste[i] || {}).ex;
   const loc = exercitiuDeInlocuit;
   const ex = loc && planActiv?.continut_json?.sesiuni?.[loc.sesIdx]?.exercitii?.[loc.exIdx];
   if (!alt || !ex) return;

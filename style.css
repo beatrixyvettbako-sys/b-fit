@@ -2572,6 +2572,67 @@ html[data-rol="clienta"] #bottomNav {
   visibility: hidden;
 }
 
+/* Comparația „Început / Acum” din Progres: două poze una lângă alta, data se alege din listă */
+.poze-comp-unghiuri {
+  margin-bottom: 10px;
+}
+
+.poze-comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.poza-comp {
+  min-width: 0;
+  text-align: center;
+}
+
+.poza-comp-eticheta {
+  margin-bottom: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.poza-comp img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--card-bg);
+  cursor: zoom-in;
+}
+
+.poze-comparatie > .poza-comp {
+  max-width: min(50%, 256px);
+  margin: 0 auto;
+}
+
+.poza-comp-data {
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-glass-bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  text-align-last: center;
+}
+
+.poza-comp-kg {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
 /* Formularul de check-in: câmpuri ca în formularul Google, scala 0–10 / 1–10 pe un rând */
 .checkin-camp {
   margin-top: 12px;
@@ -5687,6 +5748,14 @@ select.form-control {
 
 .plan-volum {
   margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.plan-volum[open] summary {
+  margin-bottom: 2px;
 }
 
 .plan-volum summary {

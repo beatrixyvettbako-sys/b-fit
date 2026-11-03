@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal132">
+  <link rel="stylesheet" href="style.css?v=fitFinal133">
 </head>
 <body>
 
@@ -280,6 +280,7 @@
         </button>
       </div>
       <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="inlocuiesteDesc"></div>
+      <input type="search" id="cautareInlocuieste" class="form-control" style="margin-bottom:8px;" placeholder="Caută exercițiu sau mușchi" data-en-placeholder="Search exercise or muscle" oninput="randeazaListaInlocuieste(this.value)">
       <div id="listaInlocuieste" class="sabloane-plan-lista"></div>
     </div>
   </div>
@@ -1643,7 +1644,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal132"></script>
-  <script src="app.js?v=fitFinal132"></script>
+  <script src="sabloane.js?v=fitFinal133"></script>
+  <script src="app.js?v=fitFinal133"></script>
 </body>
 </html>
