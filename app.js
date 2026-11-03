@@ -8733,6 +8733,12 @@ function escAttr(str) {
 }
 
 // Plan nou: gol, cu o singură zi neîncepută (titlul se completează la salvare)
+// Șabloanele B-Fit în limba interfeței (sabloane.js: SABLOANE_PLAN în română, SABLOANE_PLAN_EN în engleză)
+function sabloanePlan() {
+  if (typeof SABLOANE_PLAN === 'undefined') return [];
+  return currentLang === 'en' && typeof SABLOANE_PLAN_EN !== 'undefined' ? SABLOANE_PLAN_EN : SABLOANE_PLAN;
+}
+
 function construiesteSablonPlanDefault() {
   return {
     id: null,
@@ -8870,7 +8876,7 @@ function populeazaSelectorPlanuri() {
   adaugaOptiune(sel, 'gol', tr('+ Plan gol', '+ Blank plan'));
 
   // Șabloanele B-Fit: alegerea unuia deschide o copie de editat
-  const sabloane = typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [];
+  const sabloane = sabloanePlan();
   if (sabloane.length) {
     const grup = document.createElement('optgroup');
     grup.label = tr('Șabloane B-Fit', 'B-Fit templates');
@@ -9163,7 +9169,7 @@ function incarcaPlanDinLista(idPlan) {
 
 // Șablon din listă: planul nou e o copie; modificările nu ating șablonul și se salvează în bază doar la „Salvează”
 function incarcaSablonPlan(idx) {
-  const s = idx >= 0 ? SABLOANE_PLAN[idx] : null;
+  const s = idx >= 0 ? sabloanePlan()[idx] : null;
   if (!s) { pornestePlanNou(); return; }
   const copie = JSON.parse(JSON.stringify(s));
   pornestePlanNou({ id: null, clienta: '', titlu: copie.titlu, subtitlu: copie.subtitlu, continut_json: copie.continut_json },
@@ -9364,9 +9370,14 @@ function grupaMusculara(ex) {
   const reguli = [['fesier', 'Fesieri'], ['glute', 'Fesieri'], ['biceps femural', 'Femurali'], ['femural', 'Femurali'], ['lant posterior', 'Lanț posterior'],
     ['cvadriceps', 'Cvadriceps'], ['gamb', 'Gambe'], ['dorsal', 'Spate'], ['spate', 'Spate'], ['romboid', 'Spate'], ['trapez', 'Spate'],
     ['pectoral', 'Piept'], ['piept', 'Piept'], ['deltoid', 'Umeri'], ['umer', 'Umeri'], ['triceps', 'Triceps'], ['biceps', 'Biceps'],
-    ['core', 'Core'], ['abdom', 'Core'], ['oblic', 'Core'], ['transvers', 'Core'], ['cardio', 'Cardio']];
+    ['core', 'Core'], ['abdom', 'Core'], ['oblic', 'Core'], ['oblique', 'Core'], ['transvers', 'Core'], ['cardio', 'Cardio'],
+    // Mușchii din șabloanele în engleză
+    ['hamstring', 'Femurali'], ['posterior chain', 'Lanț posterior'], ['quadriceps', 'Cvadriceps'], ['calves', 'Gambe'], ['calf', 'Gambe'],
+    ['lats', 'Spate'], ['back', 'Spate'], ['rhomboid', 'Spate'], ['chest', 'Piept'], ['shoulder', 'Umeri']];
   const r = reguli.find(([cheie]) => m.includes(cheie));
-  return r ? r[1] : '';
+  const en = { 'Fesieri': 'Glutes', 'Femurali': 'Hamstrings', 'Lanț posterior': 'Posterior chain', 'Cvadriceps': 'Quads', 'Gambe': 'Calves',
+    'Spate': 'Back', 'Piept': 'Chest', 'Umeri': 'Shoulders' };
+  return r ? tr(r[1], en[r[1]] || r[1]) : '';
 }
 
 function rezumatPlan(cjson) {
@@ -9384,7 +9395,7 @@ function rezumatPlan(cjson) {
 }
 
 function elementeBiblioteca() {
-  const bfit = (typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : []).map((s, i) => ({
+  const bfit = sabloanePlan().map((s, i) => ({
     cheie: 'sablon:' + i, titlu: s.titlu, detalii: s.focus, nrZile: s.nr_zile, bfit: true, plan: s
   }));
   const ale = (DB.planuri || []).filter(p => !(p.clienta || '').trim())
@@ -9871,7 +9882,7 @@ function adaugaExercitiuPlan(sesIdx) {
 // sugestii la nume + seriile, pauza, indicațiile și mușchii lor
 function exercitiiCunoscute() {
   const harta = new Map();
-  const planuri = (DB.planuri || []).concat(typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : []);
+  const planuri = (DB.planuri || []).concat(sabloanePlan());
   planuri.forEach(p => (p.continut_json?.sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(ex => {
     const cheie = (ex.exercitiu || '').trim().toLowerCase();
     if (cheie && !harta.has(cheie)) harta.set(cheie, ex);
@@ -9879,10 +9890,11 @@ function exercitiiCunoscute() {
   return harta;
 }
 
-// Mușchii și tipul notării vin din șabloane (planurile salvate mai vechi nu le au)
+// Mușchii și tipul notării vin din șabloane (planurile salvate mai vechi nu le au), în oricare limbă
 function exercitiuDinSabloane(nume) {
   const cheie = (nume || '').trim().toLowerCase();
-  for (const s of (typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN : [])) {
+  const toate = typeof SABLOANE_PLAN !== 'undefined' ? SABLOANE_PLAN.concat(typeof SABLOANE_PLAN_EN !== 'undefined' ? SABLOANE_PLAN_EN : []) : [];
+  for (const s of toate) {
     for (const ses of s.continut_json.sesiuni) {
       const ex = ses.exercitii.find(x => x.exercitiu.trim().toLowerCase() === cheie);
       if (ex) return ex;
