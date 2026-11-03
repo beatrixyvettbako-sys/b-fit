@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal140">
+  <link rel="stylesheet" href="style.css?v=fitFinal141">
 </head>
 <body>
 
@@ -362,7 +362,7 @@
           <input type="text" id="editIncData" class="form-control" placeholder="DD.MM.YYYY">
         </div>
         <div class="form-group">
-          <label data-en="Amount (RON)">Sumă (RON)</label>
+          <label id="labelEditIncSuma">Sumă (RON)</label>
           <input type="number" id="editIncSuma" class="form-control">
         </div>
       </div>
@@ -370,12 +370,7 @@
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
         <div class="form-group">
           <label data-en="Payment Method">Metodă Plată</label>
-          <select id="editIncMetoda" class="form-control">
-            <option value="Revolut">Revolut</option>
-            <option value="Cash">Cash</option>
-            <option value="ING / Card">ING / Card</option>
-            <option value="-">-</option>
-          </select>
+          <select id="editIncMetoda" class="form-control"><!-- opțiunile: setariStudio.metodePlata (aplicaSetariPlatiUI) --></select>
         </div>
         <div class="form-group">
           <label data-en="Subscription Type">Tip Abonament</label>
@@ -556,6 +551,32 @@
             <div>
               <div class="drawer-nav-title" data-en="Schedule">Orar</div>
               <div class="drawer-nav-desc" id="setariRezumatOrar"></div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <div class="drawer-nav-card doar-antrenor" onclick="navigheazaSubMeniu('settingsWorkouts')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Workout types">Tipuri de antrenament</div>
+              <div class="drawer-nav-desc" id="setariRezumatAntrenamente"></div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <div class="drawer-nav-card doar-antrenor" onclick="navigheazaSubMeniu('settingsPayments')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Payments">Plăți</div>
+              <div class="drawer-nav-desc" id="setariRezumatPlati"></div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -760,6 +781,64 @@
             <button class="theme-option-btn" id="btnZileLucru" onclick="seteazaSetariOrar({ weekend: false })" data-en="Mon – Fri">Luni – Vineri</button>
             <button class="theme-option-btn" id="btnZileWeekend" onclick="seteazaSetariOrar({ weekend: true })" data-en="Mon – Sun">Luni – Duminică</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATUL 2d: SETĂRI › TIPURI DE ANTRENAMENT (listele se randează în randeazaSetariStudio) -->
+    <div id="drawerSettingsWorkoutsView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('settings')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Workout types">Tipuri de antrenament</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div class="setari-lista-nota" data-en="Shown in the Schedule slots. Tap the colour to change it. Slots already saved keep their type.">Apar în sloturile din Orar. Atinge culoarea ca s-o schimbi. Sloturile deja salvate își păstrează tipul.</div>
+          <div id="setariListaAntrenamente" class="setari-lista"></div>
+          <button type="button" class="theme-option-btn setari-lista-adauga" onclick="adaugaElementSetari('antrenamente')" data-en="+ Add type">+ Adaugă tip</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATUL 2e: SETĂRI › PLĂȚI (metode de plată + monedă) -->
+    <div id="drawerSettingsPaymentsView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('settings')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Payments">Plăți</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div class="drawer-section-title" data-en="Payment methods">Metode de plată</div>
+          <div id="setariListaMetode" class="setari-lista"></div>
+          <button type="button" class="theme-option-btn setari-lista-adauga" onclick="adaugaElementSetari('metodePlata')" data-en="+ Add method">+ Adaugă metodă</button>
+        </div>
+
+        <div class="drawer-section" style="margin-top:14px;">
+          <div class="drawer-section-title" data-en="Currency">Monedă</div>
+          <div class="theme-selector-grid" id="setariMonede"></div>
+          <div class="setari-lista-nota" data-en="Only changes how amounts are shown. Saved amounts are not converted.">Schimbă doar cum se afișează sumele. Sumele salvate nu se convertesc.</div>
         </div>
       </div>
     </div>
@@ -1503,9 +1582,6 @@
             <label id="labelIncMetoda">Metodă Plată</label>
             <select id="incasareMetoda" class="form-control select-faded" onchange="actualizeazaStilSelect(this)">
               <option value="" id="optMetodaPlaceholder">Metoda Plata</option>
-              <option value="Revolut">Revolut</option>
-              <option value="Cash">Cash</option>
-              <option value="ING / Card">ING / Card</option>
             </select>
           </div>
         </div>
@@ -1709,7 +1785,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal140"></script>
-  <script src="app.js?v=fitFinal140"></script>
+  <script src="sabloane.js?v=fitFinal141"></script>
+  <script src="app.js?v=fitFinal141"></script>
 </body>
 </html>

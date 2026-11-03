@@ -132,7 +132,7 @@ const i18n = {
     newPaymentTitle: "Înregistrare Plată Nouă",
     clientNameIncPlaceholder: "Alege din listă sau scrie nume nou",
     selectSubPlaceholder: "Alege tip abonament",
-    sumLabel: "Sumă (RON)",
+    sumLabel: "Sumă",
     sumPresetPlaceholder: "Suma",
     otherSum: "Altă sumă...",
     paymentMethodLabel: "Metodă Plată",
@@ -286,7 +286,7 @@ const i18n = {
     newPaymentTitle: "Register New Payment",
     clientNameIncPlaceholder: "Choose from list or type new name",
     selectSubPlaceholder: "Choose subscription type",
-    sumLabel: "Amount (RON)",
+    sumLabel: "Amount",
     sumPresetPlaceholder: "Amount",
     otherSum: "Other amount...",
     paymentMethodLabel: "Payment Method",
@@ -404,7 +404,7 @@ const TRADUCERI_VALORI_EN = {
   '8 sedinte': '8 sessions', '10 sedinte': '10 sessions', '12 sedinte': '12 sessions', '16 sedinte': '16 sessions',
   '16 sedinte 1:1': '16 sessions 1:1', 'sedinta individuala': 'Single session', 'sedinta gratuita': 'Free session',
   'activ': 'Active', 'finalizat': 'Completed', 'expirat': 'Expired', 'arhivat': 'Archived',
-  'în așteptare': 'Pending', 'sărit': 'Skipped',
+  'în așteptare': 'Pending', 'sărit': 'Skipped', 'transfer bancar': 'Bank transfer',
   'ianuarie': 'January', 'februarie': 'February', 'martie': 'March', 'aprilie': 'April', 'mai': 'May', 'iunie': 'June',
   'iulie': 'July', 'august': 'August', 'septembrie': 'September', 'octombrie': 'October', 'noiembrie': 'November', 'decembrie': 'December'
 };
@@ -828,6 +828,9 @@ function actualizeazaDateProfilUI(user) {
   if (meta.setari_orar && !salvareSetariOrarInCurs && JSON.stringify(meta.setari_orar) !== JSON.stringify(setariOrar)) {
     seteazaSetariOrar(meta.setari_orar, true);
   }
+  if (meta.setari_studio && !salvareSetariStudioInCurs && JSON.stringify(meta.setari_studio) !== JSON.stringify(setariStudio)) {
+    seteazaSetariStudio(meta.setari_studio, true);
+  }
 
   const elName = document.getElementById('drawerUserNameLabel');
   if (elName) elName.innerText = numeComplet;
@@ -856,6 +859,8 @@ function navigheazaSubMeniu(strat) {
     settingsAppearance: document.getElementById('drawerSettingsAppearanceView'),
     settingsLanguage: document.getElementById('drawerSettingsLanguageView'),
     settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
+    settingsWorkouts: document.getElementById('drawerSettingsWorkoutsView'),
+    settingsPayments: document.getElementById('drawerSettingsPaymentsView'),
     settingsSignup: document.getElementById('drawerSettingsSignupView'),
     settingsNotifications: document.getElementById('drawerSettingsNotificationsView'),
     profile: document.getElementById('drawerProfileView'),
@@ -1320,7 +1325,7 @@ async function exportaDateleMele() {
         ['*', 60, 80, '*']);
       sectiune(tr('Încasări', 'Payments'), DB.incasari.length);
       tabel([tr('Data', 'Date'), tr('Client', 'Client'), tr('Sumă', 'Amount'), tr('Metodă', 'Method'), tr('Tip', 'Type'), tr('Luna', 'Month')],
-        DB.incasari.map(i => [data(i.data),i.clienta, i.suma, i.metoda, i.tip, i.luna]), [60, '*', 65, 65, '*', 60]);
+        DB.incasari.map(i => [data(i.data),i.clienta, formateazaSuma(i.suma), i.metoda, i.tip, i.luna]), [60, '*', 65, 65, '*', 60]);
       sectiune(tr('Prezențe', 'Attendance'), DB.prezente.length);
       tabel([tr('Data', 'Date'), tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout')],
         DB.prezente.map(p => [data(p.data),p.zi, p.ora, p.clienta, p.antrenament]), [60, 60, 40, '*', '*']);
@@ -1657,7 +1662,8 @@ let momentIntrareFundal = 0; // la revenire sărim la ora curentă doar după o 
 const PAUZA_SALT_ORA_CURENTA = 5 * 60 * 1000;
 let modalCallback = null;
 
-const optiuniAntrenamentConfig = [
+// Tipurile implicite; antrenorul le schimbă din Setări › Tipuri de antrenament (setariStudio.antrenamente)
+const ANTRENAMENTE_IMPLICITE = [
   { text: "Fesieri", cls: "ant-orange" },
   { text: "Picioare", cls: "ant-orange" },
   { text: "Spate + Brate", cls: "ant-darkblue" },
@@ -1673,6 +1679,33 @@ const optiuniAntrenamentConfig = [
   { text: "Cardio + Abdomen", cls: "ant-burgundy" },
   { text: "Sedinta Gratuita", cls: "ant-lightgreen" }
 ];
+const CULORI_ANTRENAMENT = ['ant-orange', 'ant-yellow', 'ant-red', 'ant-burgundy', 'ant-pink', 'ant-purple', 'ant-darkblue', 'ant-lightblue', 'ant-turquoise', 'ant-lightgreen'];
+const METODE_PLATA_IMPLICITE = ['Cash', 'Card', 'Revolut', 'ING', 'Transfer bancar'];
+const MONEDE = ['RON', 'EUR', 'USD', 'GBP', 'HUF', 'CHF'];
+
+// Tipuri de antrenament, metode de plată și moneda: în contul Supabase (user_metadata.setari_studio), cu o copie locală,
+// ca setariOrar. În bază rămâne textul ales atunci, așa că un tip șters sau redenumit apare în continuare la rândurile vechi.
+let setariStudio = { antrenamente: ANTRENAMENTE_IMPLICITE.map(a => ({ ...a })), metodePlata: METODE_PLATA_IMPLICITE.slice(), moneda: 'RON' };
+try { Object.assign(setariStudio, JSON.parse(localStorage.getItem('beatrix_setari_studio') || '{}')); } catch(e) {}
+let salvareSetariStudioInCurs = 0;
+const optiuniAntrenamentConfig = setariStudio.antrenamente;
+
+// Culoarea unui tip: din lista curentă, altfel din cea implicită (tipurile vechi din istoric își păstrează culoarea)
+function culoareAntrenament(text) {
+  const t = (text || '').trim().toLowerCase();
+  if (!t) return '';
+  const cfg = optiuniAntrenamentConfig.find(a => a.text.toLowerCase() === t) || ANTRENAMENTE_IMPLICITE.find(a => a.text.toLowerCase() === t);
+  return cfg ? cfg.cls : '';
+}
+
+// Suma fără monedă („400 RON” din rândurile vechi → „400”) și cu moneda din setări
+function sumaFaraMoneda(s) {
+  return String(s || '').replace(/[^\d.,\-]/g, '').trim();
+}
+function formateazaSuma(s) {
+  const n = sumaFaraMoneda(s);
+  return n ? `${n} ${setariStudio.moneda}` : '-';
+}
 
 const preturiAbonament = {
   "18 trainers (12)": "400",
@@ -1747,11 +1780,9 @@ function leagaAscultatoriCuratareErori() {
 function aplicaCuloareAntrenament(sel) {
   if (!sel || !sel.classList) return;
   actualizeazaStilSelect(sel);
-  optiuniAntrenamentConfig.forEach(item => sel.classList.remove(item.cls));
-  let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === (sel.value || "").toLowerCase());
-  if (cfg && cfg.cls) {
-    sel.classList.add(cfg.cls);
-  }
+  sel.classList.remove(...CULORI_ANTRENAMENT);
+  let cls = culoareAntrenament(sel.value);
+  if (cls) sel.classList.add(cls);
 }
 
 function formateazaDataRoLocal(d) {
@@ -1945,7 +1976,7 @@ async function executaActiuneSupabase(actionName, payload) {
         row: i.row,
         data: i.data || "-",
         clienta: cl,
-        suma: sVal && sVal !== "-" ? (sVal.indexOf("RON") !== -1 ? sVal : sVal + " RON") : "-",
+        suma: sumaFaraMoneda(sVal) || "-",
         metoda: i.metoda || "-",
         tip: i.tip || "-",
         luna: i.luna || "-"
@@ -2275,7 +2306,7 @@ async function executaActiuneSupabase(actionName, payload) {
     const dataRo = formateazaDataRoLocal(dObj);
     const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
     const lunaNume = luniRoNume[dObj.getMonth()];
-    const sumaCurata = payload.suma ? payload.suma.toString().replace(/RON/i, "").trim() : "";
+    const sumaCurata = sumaFaraMoneda(payload.suma);
     const idCli = await gasesteIdDupaNume(payload.clienta);
 
     await sb.from('incasari').update({
@@ -2990,11 +3021,10 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('incasareNume').placeholder = t('clientNameIncPlaceholder');
   document.getElementById('labelIncTip').innerText = t('subTypeLabel');
   document.getElementById('optSelectSubPlaceholder').innerText = t('selectSubPlaceholder');
-  document.getElementById('labelIncSuma').innerText = t('sumLabel');
   document.getElementById('optSumaPlaceholder').innerText = t('sumPresetPlaceholder');
-  document.getElementById('incasareSumaCustom').placeholder = t('sumLabel');
   document.getElementById('labelIncMetoda').innerText = t('paymentMethodLabel');
   document.getElementById('optMetodaPlaceholder').innerText = t('paymentMethodPlaceholder');
+  aplicaSetariPlatiUI();
   document.getElementById('labelIncDataPlata').innerText = t('payDateLabel');
   document.getElementById('labelIncDataStart').innerText = t('payStartLabel');
   document.getElementById('submitAbonamentBtn').innerText = t('paySubmitBtn');
@@ -5300,7 +5330,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ---- Butonul Înapoi al telefonului: închide pe rând ce e deschis, apoi revine pe Orar (Acasă la client); de acolo iese din aplicație ----
 // Cât timp e ceva de închis ținem o intrare în plus în istoric; Înapoi o consumă (popstate) și facem un singur pas.
-const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings' };
+const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings', settingsWorkouts: 'settings', settingsPayments: 'settings' };
 const MODALE_INAPOI = [
   ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
   ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
@@ -5366,7 +5396,12 @@ window.addEventListener('popstate', () => {
   }
   const pas = pasInapoiTelefon();
   if (pas) pas();
-  sincronizeazaIstoricInapoi();
+  // A rămas ceva deschis (ex. din Plan înapoi la meniu): refolosim intrarea consumată (înainte), nu adăugăm alta.
+  // Chrome sare la Înapoi peste intrările adăugate fără o atingere, așa că un pushState aici ar face aplicația să iasă.
+  if (pasInapoiTelefon()) {
+    ignoraPopstateGarda = true;
+    history.forward();
+  }
   // Unele închideri au animație sau cer confirmare (plan nesalvat): verificăm din nou după ce s-au așezat
   setTimeout(sincronizeazaIstoricInapoi, 350);
 });
@@ -6055,8 +6090,7 @@ function randeazaOrarInstant() {
           <div class="hour-slots-wrapper">
       `;
       lista.forEach((s, idx) => {
-        let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === (s.antrenament || "").toLowerCase());
-        let colorCls = cfg ? cfg.cls : "";
+        let colorCls = culoareAntrenament(s.antrenament);
 
         if (!s.bifat) {
           // Aceleași ID-uri ca în orarul curent: bifeazaPrezentaSlot / anuleazaSlot citesc numele și antrenamentul din ele
@@ -6191,20 +6225,19 @@ function randeazaOrarInstant() {
       let antVal = (slot && slot.antrenament) ? slot.antrenament : "";
       let slotDomKey = `${ora.replace(':', '')}_${slotIdx}`;
 
-      let colorCls = "";
-      if (antVal) {
-        let cfg = optiuniAntrenamentConfig.find(item => item.text.toLowerCase() === antVal.toLowerCase());
-        if (cfg) colorCls = cfg.cls;
-      }
+      let colorCls = culoareAntrenament(antVal);
 
       let tipAntrenamentPlaceholder = currentLang === 'en' ? 'Workout type' : 'Tip antrenament';
       let clientPlaceholder = currentLang === 'en' ? 'Choose existing client...' : 'Alege client existent...';
 
       let selectAntHtml = `<select id="ant_${slotDomKey}" class="slot-select-type ${antVal ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${ziCurentaCheie}', '${ora}', ${slotIdx})">`;
       selectAntHtml += `<option value="" ${!antVal ? 'selected' : ''}>${tipAntrenamentPlaceholder}</option>`;
-      optiuniAntrenamentConfig.forEach(opt => {
-        let selected = (antVal === opt.text) ? 'selected' : '';
-        selectAntHtml += `<option value="${opt.text}" ${selected}>${opt.text}</option>`;
+      // Tip șters sau redenumit între timp: rămâne în listă cât e salvat pe slot
+      let tipuriSlot = optiuniAntrenamentConfig.map(opt => opt.text);
+      if (antVal && !tipuriSlot.includes(antVal)) tipuriSlot.push(antVal);
+      tipuriSlot.forEach(text => {
+        let selected = (antVal === text) ? 'selected' : '';
+        selectAntHtml += `<option value="${escAttr(text)}" ${selected}>${escAttr(text)}</option>`;
       });
       selectAntHtml += `</select>`;
 
@@ -8650,14 +8683,14 @@ function filtreazaIstoricIncasariInstant() {
 
   let totalSuma = 0;
   filtrate.forEach(i => {
-    let s = (i.suma || "").toString().replace(/RON/i, "").replace(/\./g, "").replace(/,/g, ".").trim();
+    let s = sumaFaraMoneda(i.suma).replace(/\./g, "").replace(/,/g, ".");
     let val = parseFloat(s);
     if (!isNaN(val)) totalSuma += val;
   });
 
   let elTotalVal = document.getElementById('totalIncasariVal');
   let elTotalCount = document.getElementById('totalIncasariCount');
-  if (elTotalVal) elTotalVal.innerText = totalSuma.toLocaleString('ro-RO') + ' RON';
+  if (elTotalVal) elTotalVal.innerText = totalSuma.toLocaleString('ro-RO') + ' ' + setariStudio.moneda;
   if (elTotalCount) {
     let countText = filtrate.length === 1 ? t('paymentFound') : t('paymentsFound');
     elTotalCount.innerText = `${filtrate.length} ${countText}`;
@@ -8670,7 +8703,7 @@ function filtreazaIstoricIncasariInstant() {
 
   let html = '';
   filtrate.forEach(item => {
-    let esteGol = !item.suma || item.suma === "-" || item.suma.trim() === "";
+    let esteGol = !sumaFaraMoneda(item.suma);
     let sumaStil = esteGol ? 'color:var(--text-muted); font-weight:700;' : 'color:#27ae60; font-weight:700;';
     
     let metodaContinut = (item.metoda && item.metoda.trim() !== "-" && item.metoda.trim() !== "") 
@@ -8688,7 +8721,7 @@ function filtreazaIstoricIncasariInstant() {
       <tr class="incasare-row-clickable" onclick="deschideModalEditareIncasare('${itemJson}')" title="${currentLang === 'en' ? 'Click to edit this payment' : 'Apasă pentru a edita această plată'}">
         <td style="font-weight:700;">${escAttr(item.data)}</td>
         <td style="font-weight:700; color:var(--primary);">${escAttr(item.clienta)}</td>
-        <td style="${sumaStil}">${escAttr(item.suma)}</td>
+        <td style="${sumaStil}">${escAttr(formateazaSuma(item.suma))}</td>
         <td style="text-align:center;">${metodaContinut}</td>
         <td>${tipContinut}</td>
         <td style="text-align:center; color:var(--text-muted); font-size:0.8rem;"><svg class="plan-btn-svg" style="display:inline-block; vertical-align:-3px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></td>
@@ -8827,11 +8860,11 @@ function deschideModalEditareIncasare(itemEncoded) {
   document.getElementById('editIncClienta').value = item.clienta || "";
   document.getElementById('editIncData').value = item.data || "";
   
-  let sCurata = (item.suma || "").replace(/RON/i, "").trim();
+  let sCurata = sumaFaraMoneda(item.suma);
   document.getElementById('editIncSuma').value = sCurata;
   
   let selMet = document.getElementById('editIncMetoda');
-  if (selMet) selMet.value = (item.metoda && item.metoda !== "-") ? item.metoda : "Revolut";
+  seteazaValoareSelect(selMet, (item.metoda && item.metoda !== "-") ? item.metoda : "-");
 
   let selTip = document.getElementById('editIncTip');
   if (selTip) {
@@ -8872,7 +8905,7 @@ function salveazaModificareIncasare() {
   }
   if (!metoda || metoda === "-" || metoda === "") {
     showToast(currentLang === 'en' ? "Select payment method!" : "Selectează metoda de plată!", "error");
-    document.getElementById('incasareMetoda').focus();
+    document.getElementById('editIncMetoda').focus();
     return;
   }
   if (!tip || tip === "-" || tip === "") {
@@ -11198,6 +11231,10 @@ function actualizeazaRezumatSetari() {
   if (elInscriere) elInscriere.textContent = codInscriereAntrenor
     ? linkInscriere(codInscriereAntrenor).replace(/^https?:\/\//, '')
     : tr('Nesetat', 'Not set');
+  let elAnt = document.getElementById('setariRezumatAntrenamente');
+  if (elAnt) elAnt.textContent = tr(`${setariStudio.antrenamente.length} tipuri`, `${setariStudio.antrenamente.length} types`);
+  let elPlati = document.getElementById('setariRezumatPlati');
+  if (elPlati) elPlati.textContent = tr(`${setariStudio.metodePlata.length} metode`, `${setariStudio.metodePlata.length} methods`) + ' · ' + setariStudio.moneda;
   actualizeazaRezumatNotificari();
 }
 
@@ -11249,6 +11286,145 @@ function seteazaSetariOrar(modificari, dinCont = false) {
     .catch(() => showToast(tr("Eroare sincronizare", "Sync error"), "error"))
     .finally(() => { salvareSetariOrarInCurs--; });
 }
+
+// ---- Setări › Tipuri de antrenament / Plăți (setariStudio) ----
+// dinCont = valorile vin din contul Supabase (alt dispozitiv): se aplică fără să le salvăm înapoi
+function seteazaSetariStudio(modificari, dinCont = false) {
+  Object.assign(setariStudio, modificari);
+  const antrenamente = (Array.isArray(setariStudio.antrenamente) ? setariStudio.antrenamente : ANTRENAMENTE_IMPLICITE)
+    .filter(a => a && typeof a.text === 'string' && a.text.trim())
+    .map(a => ({ text: a.text.trim(), cls: CULORI_ANTRENAMENT.includes(a.cls) ? a.cls : CULORI_ANTRENAMENT[0] }));
+  // Aceeași listă (optiuniAntrenamentConfig e o referință la ea)
+  optiuniAntrenamentConfig.splice(0, optiuniAntrenamentConfig.length, ...antrenamente);
+  setariStudio.antrenamente = optiuniAntrenamentConfig;
+  setariStudio.metodePlata = (Array.isArray(setariStudio.metodePlata) ? setariStudio.metodePlata : METODE_PLATA_IMPLICITE)
+    .filter(m => typeof m === 'string' && m.trim()).map(m => m.trim());
+  if (!MONEDE.includes(setariStudio.moneda)) setariStudio.moneda = 'RON';
+  try { localStorage.setItem('beatrix_setari_studio', JSON.stringify(setariStudio)); } catch(e) {}
+
+  aplicaSetariPlatiUI();
+  randeazaOrarInstant();
+  filtreazaIstoricIncasariInstant();
+
+  if (dinCont || !supabaseClient || !utilizatorCurent) return;
+  salvareSetariStudioInCurs++;
+  supabaseClient.auth.updateUser({ data: { setari_studio: JSON.parse(JSON.stringify(setariStudio)) } })
+    .then(({ error }) => { if (error) showToast(tr("Eroare sincronizare", "Sync error"), "error"); })
+    .catch(() => showToast(tr("Eroare sincronizare", "Sync error"), "error"))
+    .finally(() => { salvareSetariStudioInCurs--; });
+}
+
+// Valoarea salvată pe un rând care nu mai e în listă (metodă ștearsă) se adaugă ca opțiune, ca să nu se piardă la salvare
+function seteazaValoareSelect(sel, valoare) {
+  if (!sel) return;
+  if (valoare && ![...sel.options].some(o => o.value === valoare)) sel.add(new Option(traduceValoare(valoare), valoare));
+  sel.value = valoare;
+}
+
+// Moneda în etichete și sumele propuse; metodele de plată în cele două liste (Încasări și editarea unei plăți)
+function aplicaSetariPlatiUI() {
+  const moneda = setariStudio.moneda;
+  const eticheta = `${t('sumLabel')} (${moneda})`;
+  ['labelIncSuma', 'labelEditIncSuma'].forEach(id => { const el = document.getElementById(id); if (el) el.innerText = eticheta; });
+  const inpCustom = document.getElementById('incasareSumaCustom');
+  if (inpCustom) inpCustom.placeholder = eticheta;
+  document.querySelectorAll('#selectSumaPreset option').forEach(o => {
+    if (/^\d+$/.test(o.value)) o.textContent = `${o.value} ${moneda}`;
+  });
+
+  const selNou = document.getElementById('incasareMetoda');
+  if (selNou) {
+    const val = selNou.value;
+    [...selNou.options].forEach(o => { if (o.id !== 'optMetodaPlaceholder') o.remove(); });
+    setariStudio.metodePlata.forEach(m => selNou.add(new Option(traduceValoare(m), m)));
+    selNou.value = setariStudio.metodePlata.includes(val) ? val : '';
+    actualizeazaStilSelect(selNou);
+  }
+  const selEdit = document.getElementById('editIncMetoda');
+  if (selEdit) {
+    const val = selEdit.value;
+    selEdit.innerHTML = '';
+    setariStudio.metodePlata.concat('-').forEach(m => selEdit.add(new Option(traduceValoare(m), m)));
+    if (val) seteazaValoareSelect(selEdit, val);
+  }
+  randeazaSetariStudio();
+  actualizeazaRezumatSetari();
+}
+
+function randeazaSetariStudio() {
+  const randuri = (lista, colorat) => lista.map((el, i) => {
+    const text = colorat ? el.text : el;
+    const cls = colorat ? el.cls : '';
+    return `<div class="setari-lista-rand">
+      ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
+      <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(colorat ? text : traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
+      <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>`;
+  }).join('');
+  const elAnt = document.getElementById('setariListaAntrenamente');
+  if (elAnt) elAnt.innerHTML = randuri(setariStudio.antrenamente, true);
+  const elMet = document.getElementById('setariListaMetode');
+  if (elMet) elMet.innerHTML = randuri(setariStudio.metodePlata, false);
+  const elMon = document.getElementById('setariMonede');
+  if (elMon) elMon.innerHTML = MONEDE.map(m =>
+    `<button type="button" class="theme-option-btn${m === setariStudio.moneda ? ' active' : ''}" onclick="seteazaSetariStudio({ moneda: '${m}' })">${m}</button>`).join('');
+}
+
+const textElementSetari = (lista, el) => lista === 'antrenamente' ? el.text : el;
+
+function existaElementSetari(lista, text, exceptIdx) {
+  return setariStudio[lista].some((el, i) => i !== exceptIdx && textElementSetari(lista, el).toLowerCase() === text.toLowerCase());
+}
+
+function adaugaElementSetari(lista) {
+  const ant = lista === 'antrenamente';
+  customConfirm(ant ? tr('Tip nou de antrenament', 'New workout type') : tr('Metodă nouă de plată', 'New payment method'),
+    ant ? tr('Poate fi și o combinație, de ex. „Fesieri + Abdomen”.', 'It can also be a combination, e.g. “Glutes + Abs”.') : '',
+    (text) => {
+      text = (text || '').slice(0, 40).trim();
+      if (!text) return;
+      if (existaElementSetari(lista, text, -1)) { showToast(tr('Există deja în listă.', 'Already in the list.'), 'error'); return; }
+      const nou = ant ? { text, cls: CULORI_ANTRENAMENT[setariStudio.antrenamente.length % CULORI_ANTRENAMENT.length] } : text;
+      seteazaSetariStudio({ [lista]: setariStudio[lista].concat([nou]) });
+    }, { placeholder: ant ? tr('Nume tip', 'Type name') : tr('Ex. Card, Transfer bancar', 'E.g. Card, Bank transfer') });
+}
+
+// Redenumirea schimbă doar ce se alege de acum; rândurile deja salvate își păstrează textul
+function redenumesteElementSetari(lista, idx, inp) {
+  const vechi = setariStudio[lista][idx];
+  if (vechi === undefined) return;
+  const text = inp.value.trim();
+  if (!text || existaElementSetari(lista, text, idx)) {
+    if (text) showToast(tr('Există deja în listă.', 'Already in the list.'), 'error');
+    inp.value = lista === 'antrenamente' ? vechi.text : traduceValoare(vechi);
+    return;
+  }
+  // Metodă implicită afișată tradus și nemodificată: rămâne valoarea românească
+  if (lista === 'metodePlata' && text === traduceValoare(vechi)) return;
+  const noua = setariStudio[lista].slice();
+  noua[idx] = lista === 'antrenamente' ? { ...vechi, text } : text;
+  seteazaSetariStudio({ [lista]: noua });
+}
+
+function stergeElementSetari(lista, idx) {
+  const el = setariStudio[lista][idx];
+  if (el === undefined) return;
+  const text = lista === 'antrenamente' ? el.text : traduceValoare(el);
+  customConfirm(tr(`Ștergi „${text}”?`, `Delete “${text}”?`),
+    tr('Nu va mai apărea în listă. Ce s-a salvat deja cu el rămâne neschimbat.', 'It will no longer appear in the list. Anything already saved with it stays unchanged.'),
+    () => seteazaSetariStudio({ [lista]: setariStudio[lista].filter((_, i) => i !== idx) }));
+}
+
+function schimbaCuloareAntrenament(idx) {
+  const el = setariStudio.antrenamente[idx];
+  if (!el) return;
+  const noua = setariStudio.antrenamente.slice();
+  noua[idx] = { ...el, cls: CULORI_ANTRENAMENT[(CULORI_ANTRENAMENT.indexOf(el.cls) + 1) % CULORI_ANTRENAMENT.length] };
+  seteazaSetariStudio({ antrenamente: noua });
+}
+
 
 function seteazaAccent(optiune, silent = false) {
   const paleta = PALETE_ACCENT.includes(optiune) ? optiune : 'blue';

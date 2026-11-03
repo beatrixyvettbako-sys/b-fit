@@ -1266,6 +1266,71 @@ header {
   grid-column: span 2;
 }
 
+/* Setări › Tipuri de antrenament / Plăți: rânduri editabile (culoare, nume, șterge) */
+.setari-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setari-lista-rand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setari-lista .setari-lista-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.setari-lista .setari-lista-culoare.slot-input {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  border-width: 3px;
+  cursor: pointer;
+  /* Bulina plină în culoarea textului tipului (clasele ant-* au fundal deschis cu !important) */
+  background-color: currentColor !important;
+}
+
+.setari-lista-sterge {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input-glass-bg);
+  cursor: pointer;
+}
+
+.setari-lista-sterge svg {
+  width: 16px;
+  height: 16px;
+  stroke: #b91c1c;
+}
+
+.setari-lista-adauga {
+  margin-top: 2px;
+  font-size: 0.85rem;
+}
+
+.setari-lista-nota {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* ECRANUL CLIENTEI (rol „clienta”): ecran propriu peste aplicație, sertarul (z-index 10001) rămâne deasupra */
 .clienta-app {
   position: fixed;
