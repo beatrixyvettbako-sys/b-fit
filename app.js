@@ -405,6 +405,9 @@ const TRADUCERI_VALORI_EN = {
   '16 sedinte 1:1': '16 sessions 1:1', 'sedinta individuala': 'Single session', 'sedinta gratuita': 'Free session',
   'activ': 'Active', 'finalizat': 'Completed', 'expirat': 'Expired', 'arhivat': 'Archived',
   'în așteptare': 'Pending', 'sărit': 'Skipped', 'transfer bancar': 'Bank transfer',
+  // Tipurile implicite de antrenament (în bază rămâne textul românesc)
+  'fesieri': 'Glutes', 'picioare': 'Legs', 'spate + brate': 'Back + Arms', 'umeri + piept': 'Shoulders + Chest',
+  'abdomen': 'Abs', 'fesieri + abdomen': 'Glutes + Abs', 'spate + abdomen': 'Back + Abs', 'piept + abdomen': 'Chest + Abs', 'cardio + abdomen': 'Cardio + Abs',
   'ianuarie': 'January', 'februarie': 'February', 'martie': 'March', 'aprilie': 'April', 'mai': 'May', 'iunie': 'June',
   'iulie': 'July', 'august': 'August', 'septembrie': 'September', 'octombrie': 'October', 'noiembrie': 'November', 'decembrie': 'December'
 };
@@ -1317,7 +1320,7 @@ async function exportaDateleMele() {
       });
       sectiune(tr('Orar', 'Schedule'), DB.orarSloturi.length);
       tabel([tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout'), tr('Stare', 'Status')],
-        DB.orarSloturi.map(s => [s.ziRaw.replace(/_/g, ' '), s.ora, s.clienta, s.antrenament, [s.bifat && tr('prezent', 'attended'), s.blocat && (tr('blocat', 'blocked') + (s.motiv ? ': ' + s.motiv : '')), s.deschis && tr('deschis', 'open')].filter(Boolean).join(', ')]),
+        DB.orarSloturi.map(s => [s.ziRaw.replace(/_/g, ' '), s.ora, s.clienta, traduceValoare(s.antrenament), [s.bifat && tr('prezent', 'attended'), s.blocat && (tr('blocat', 'blocked') + (s.motiv ? ': ' + s.motiv : '')), s.deschis && tr('deschis', 'open')].filter(Boolean).join(', ')]),
         [90, 40, '*', '*', 90]);
       sectiune(tr('Confirmări', 'Check-in'), DB.progActive.length + DB.progHold.length);
       tabel([tr('Nume', 'Name'), tr('Secțiune', 'Section'), tr('Prezență', 'Attendance'), tr('Mențiuni', 'Notes')],
@@ -1328,7 +1331,7 @@ async function exportaDateleMele() {
         DB.incasari.map(i => [data(i.data),i.clienta, formateazaSuma(i.suma), i.metoda, i.tip, i.luna]), [60, '*', 65, 65, '*', 60]);
       sectiune(tr('Prezențe', 'Attendance'), DB.prezente.length);
       tabel([tr('Data', 'Date'), tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout')],
-        DB.prezente.map(p => [data(p.data),p.zi, p.ora, p.clienta, p.antrenament]), [60, 60, 40, '*', '*']);
+        DB.prezente.map(p => [data(p.data),p.zi, p.ora, p.clienta, traduceValoare(p.antrenament)]), [60, 60, 40, '*', '*']);
       planuri(DB.planuri || []);
     }
 
@@ -3293,7 +3296,7 @@ function htmlSedintaAcasa() {
     const { poateAnula } = stareAnulareClienta({ bifat: false, rezervat_online: !!a.urmatoareaOnline, data: a.urmatoarea });
     return `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
         <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div>
-        <b>${escAttr(etichetaZiSlot(a.urmatoarea))}, ${oraSlot(a.urmatoarea)}</b>${a.urmatoareaAntrenament ? `<div class="acasa-antrenament-detalii">${escAttr(a.urmatoareaAntrenament)}</div>` : ''}</div>
+        <b>${escAttr(etichetaZiSlot(a.urmatoarea))}, ${oraSlot(a.urmatoarea)}</b>${a.urmatoareaAntrenament ? `<div class="acasa-antrenament-detalii">${escAttr(traduceValoare(a.urmatoareaAntrenament))}</div>` : ''}</div>
         ${poateAnula && a.urmatoareaRow
           ? `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="event.stopPropagation(); anuleazaRezervareClienta(${Number(a.urmatoareaRow)})">${tr('Anulează', 'Cancel')}</button>`
           : '<div class="drawer-nav-arrow">›</div>'}
@@ -4644,7 +4647,7 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     const { poateAnula, motiv } = stareAnulareClienta(o);
     html += `<div class="card" style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
       <div style="min-width:0;"><div style="font-weight:800;">${escAttr(etichetaZiSlot(o.data))}</div>
-      <div style="font-size:0.82rem; color:var(--text-muted);">${oraSlot(o.data)}${o.antrenament ? ' • ' + escAttr(o.antrenament) : ''}</div>
+      <div style="font-size:0.82rem; color:var(--text-muted);">${oraSlot(o.data)}${o.antrenament ? ' • ' + escAttr(traduceValoare(o.antrenament)) : ''}</div>
       ${poateAnula ? '' : `<div style="font-size:0.72rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">${motiv}</div>`}</div>
       ${poateAnula ? `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="anuleazaRezervareClienta(${o.row})">${tr('Anulează', 'Cancel')}</button>` : ''}
     </div>`;
@@ -4922,7 +4925,7 @@ async function randeazaIstoricClienta() {
     }
     html += `<div class="card" style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
       <div><b>${escAttr(p.data)}</b> <span style="font-size:0.8rem; color:var(--text-muted);">${escAttr(p.ora || '')}</span></div>
-      <div style="font-size:0.82rem; font-weight:700; color:var(--primary); text-align:right;">${escAttr(p.antrenament || '-')}</div>
+      <div style="font-size:0.82rem; font-weight:700; color:var(--primary); text-align:right;">${escAttr(traduceValoare(p.antrenament) || '-')}</div>
     </div>`;
   });
   corp.innerHTML = html;
@@ -6100,7 +6103,7 @@ function randeazaOrarInstant() {
             <div class="slot-num">${idx + 1}</div>
             <div class="slot-info">
               <input type="text" id="cli_${cheie}" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
-              <input type="text" id="ant_${cheie}" class="slot-input ${colorCls}" value="${escAttr(s.antrenament)}" placeholder="-" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+              <input type="text" id="ant_${cheie}" class="slot-input ${colorCls}" value="${escAttr(traduceValoare(s.antrenament))}" data-valoare="${escAttr(s.antrenament)}" placeholder="-" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
             </div>
             <div style="display:flex; gap:4px;">
               <button id="btn_save_${cheie}" class="btn btn-save-check" title="${tr('Confirmă prezența (scade o ședință)', 'Confirm attendance (deducts a session)')}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${s.slotIndex})">✓</button>
@@ -6116,7 +6119,7 @@ function randeazaOrarInstant() {
             <div class="slot-num">${idx + 1}</div>
             <div class="slot-info">
               <input type="text" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
-              <input type="text" class="slot-input ${colorCls}" value="${escAttr(s.antrenament || '-')}" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+              <input type="text" class="slot-input ${colorCls}" value="${escAttr(traduceValoare(s.antrenament) || '-')}" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
             </div>
             <div style="font-size:0.82rem; font-weight:800; color:#15803d; padding:0 8px; white-space:nowrap;">${historyText}</div>
           </div>
@@ -6237,7 +6240,7 @@ function randeazaOrarInstant() {
       if (antVal && !tipuriSlot.includes(antVal)) tipuriSlot.push(antVal);
       tipuriSlot.forEach(text => {
         let selected = (antVal === text) ? 'selected' : '';
-        selectAntHtml += `<option value="${escAttr(text)}" ${selected}>${escAttr(text)}</option>`;
+        selectAntHtml += `<option value="${escAttr(text)}" ${selected}>${escAttr(traduceValoare(text))}</option>`;
       });
       selectAntHtml += `</select>`;
 
@@ -6467,7 +6470,7 @@ function peSchimbareNumeClienta(zi, ora, slotIdx, ev) {
   clearTimeout(debounceTimerNume);
   debounceTimerNume = setTimeout(() => {
     let elAnt = document.getElementById('ant_' + slotDomKey);
-    let antrenament = elAnt ? elAnt.value : "";
+    let antrenament = elAnt ? (elAnt.dataset.valoare ?? elAnt.value) : "";
     let saptamanaCheie = getSaptamanaCheie();
     let dataCalendar = getDataCalendaristicaCurenta();
     let tagZi = saptamanaCheie + "_" + zi;
@@ -6557,7 +6560,7 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
   let elAnt = document.getElementById('ant_' + slotDomKey);
   let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
-  let antrenament = elAnt ? elAnt.value : "";
+  let antrenament = elAnt ? (elAnt.dataset.valoare ?? elAnt.value) : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
 
   if (elBtnClear) {
@@ -6613,7 +6616,7 @@ function bifeazaPrezentaSlot(zi, ora, slotIdx) {
   let elCli = document.getElementById('cli_' + slotDomKey);
   let elAnt = document.getElementById('ant_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
-  let antrenament = elAnt ? elAnt.value : "";
+  let antrenament = elAnt ? (elAnt.dataset.valoare ?? elAnt.value) : "";
   let clientaGasita = gasesteClientaValida(textIntrodus);
 
   if (!clientaGasita) {
@@ -6665,7 +6668,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
   let elCli = document.getElementById('cli_' + slotDomKey);
   let elAnt = document.getElementById('ant_' + slotDomKey);
   let textIntrodus = elCli ? elCli.value.trim() : "";
-  let antrenament = elAnt ? elAnt.value : "";
+  let antrenament = elAnt ? (elAnt.dataset.valoare ?? elAnt.value) : "";
 
   let slotExistent = (DB.orarSloturi || []).find(s => {
     if (!s || !s.ziRaw) return false;
@@ -6826,7 +6829,7 @@ function filtreazaIstoricOrarInstant() {
         <td><b>${escAttr(item.data)}</b></td>
         <td style="font-weight:700;">${escAttr(item.ora || '-')}</td>
         <td style="font-weight:700; color:var(--primary);">${escAttr(item.clienta)}</td>
-        <td>${escAttr(item.antrenament || '-')}</td>
+        <td>${escAttr(traduceValoare(item.antrenament) || '-')}</td>
       </tr>
     `;
   });
@@ -8424,7 +8427,7 @@ function filtreazaIstoricFisaInstant() {
   } else {
     let h = '';
     prezenteClienta.forEach(p => {
-      h += `<div style="padding:5px 0; border-bottom:1px solid var(--border);">• <b>${escAttr(p.data)}</b> (${escAttr(p.ora || '-')}) - ${escAttr(p.antrenament || '-')}</div>`;
+      h += `<div style="padding:5px 0; border-bottom:1px solid var(--border);">• <b>${escAttr(p.data)}</b> (${escAttr(p.ora || '-')}) - ${escAttr(traduceValoare(p.antrenament) || '-')}</div>`;
     });
     istoricDiv.innerHTML = h;
   }
@@ -11357,7 +11360,7 @@ function randeazaSetariStudio() {
     const cls = colorat ? el.cls : '';
     return `<div class="setari-lista-rand">
       ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
-      <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(colorat ? text : traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
+      <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
       <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
@@ -11398,11 +11401,11 @@ function redenumesteElementSetari(lista, idx, inp) {
   const text = inp.value.trim();
   if (!text || existaElementSetari(lista, text, idx)) {
     if (text) showToast(tr('Există deja în listă.', 'Already in the list.'), 'error');
-    inp.value = lista === 'antrenamente' ? vechi.text : traduceValoare(vechi);
+    inp.value = traduceValoare(textElementSetari(lista, vechi));
     return;
   }
-  // Metodă implicită afișată tradus și nemodificată: rămâne valoarea românească
-  if (lista === 'metodePlata' && text === traduceValoare(vechi)) return;
+  // Element implicit afișat tradus și nemodificat: rămâne valoarea românească
+  if (text === traduceValoare(textElementSetari(lista, vechi))) return;
   const noua = setariStudio[lista].slice();
   noua[idx] = lista === 'antrenamente' ? { ...vechi, text } : text;
   seteazaSetariStudio({ [lista]: noua });
@@ -11411,7 +11414,7 @@ function redenumesteElementSetari(lista, idx, inp) {
 function stergeElementSetari(lista, idx) {
   const el = setariStudio[lista][idx];
   if (el === undefined) return;
-  const text = lista === 'antrenamente' ? el.text : traduceValoare(el);
+  const text = traduceValoare(textElementSetari(lista, el));
   customConfirm(tr(`Ștergi „${text}”?`, `Delete “${text}”?`),
     tr('Nu va mai apărea în listă. Ce s-a salvat deja cu el rămâne neschimbat.', 'It will no longer appear in the list. Anything already saved with it stays unchanged.'),
     () => seteazaSetariStudio({ [lista]: setariStudio[lista].filter((_, i) => i !== idx) }));
