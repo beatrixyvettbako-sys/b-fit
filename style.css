@@ -5995,6 +5995,25 @@ select.form-control {
   color: var(--text-muted);
 }
 
+/* Planul clientului: începe săptămâna nouă */
+.saptamana-noua {
+  margin: 14px 0 6px;
+  text-align: center;
+}
+
+.saptamana-noua .btn {
+  width: 100%;
+  justify-content: center;
+  padding: 10px;
+}
+
+.saptamana-noua div {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.35;
+}
+
 /* Contururi gri cât se încarcă prima dată */
 .schelet {
   background: linear-gradient(90deg, rgba(var(--primary-rgb), 0.06) 25%, rgba(var(--primary-rgb), 0.12) 50%, rgba(var(--primary-rgb), 0.06) 75%) !important;

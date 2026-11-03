@@ -804,6 +804,8 @@ async function deconectareUtilizator() {
     deconectareInCurs = true;
     document.documentElement.classList.add('deconectare');
     if (supabaseClient) {
+      // Bifele notate fără internet pleacă înainte de ieșire (după ieșire nu mai pot fi trimise)
+      if (rolUtilizator === 'clienta' && Object.keys(progresNetrimis()).length) await trimiteProgresNetrimis();
       await dezaboneazaPush();
       await supabaseClient.auth.signOut();
     }
@@ -3210,9 +3212,10 @@ function htmlAntrenamentAcasa() {
   if (idx === -1) {
     return `<div class="card acasa-antrenament gata">
       <div class="acasa-eticheta">${tr('Planul tău', 'Your plan')}</div>
-      <div class="acasa-antrenament-titlu">${tr('Ai terminat toate zilele planului!', 'You finished every day of the plan!')}</div>
-      <div class="acasa-antrenament-detalii">${tr('Spune-i antrenorului cum a mers și ce urmează.', 'Tell your trainer how it went and what comes next.')}</div>
-      <button type="button" class="btn acasa-incepe" onclick="deschidePlanClienta(0)">${tr('Vezi planul', 'View plan')}</button>
+      <div class="acasa-antrenament-titlu">${tr('Ai terminat săptămâna!', 'You finished the week!')}</div>
+      <div class="acasa-antrenament-detalii">${tr('Toate zilele sunt bifate. Începe săptămâna nouă: ce ai notat rămâne ca „data trecută”.', 'Every day is checked. Start a new week: what you logged stays as “last time”.')}</div>
+      <button type="button" class="btn acasa-incepe" onclick="incepeSaptamanaNouaClienta(0)">${tr('Începe săptămâna nouă', 'Start a new week')}</button>
+      <button type="button" class="btn btn-clear acasa-incepe" style="margin-top:6px;" onclick="deschidePlanClienta(0)">${tr('Vezi planul', 'View plan')}</button>
     </div>`;
   }
   const s = sesiuni[idx];
@@ -3411,8 +3414,10 @@ function randeazaPlanClienta() {
       </button>
     </div>`;
   }
+  const nrSaptamana = (Array.isArray(cj.istoric_saptamani) ? cj.istoric_saptamani.length : 0) + 1;
   if (!paginaZi) {
-    html += `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div></div>`;
+    html += `<div class="plan-header-block"><div style="font-size:0.83rem; font-weight:600; color:var(--text-muted);">${escAttr(p.subtitlu)}</div>
+      ${nrSaptamana > 1 ? `<div class="plan-tags"><span class="plan-tag">${tr('Săptămâna', 'Week')} ${nrSaptamana}</span></div>` : ''}</div>`;
     (cj.sectiuni_inceput || []).forEach(sec => { html += text(sec); });
   }
   sesiuni.forEach((ses, s) => {
@@ -3441,6 +3446,14 @@ function randeazaPlanClienta() {
     </div>`;
     html += `</div>`;
   });
+  // Săptămâna nouă: doar după ce a notat ceva; ce a notat rămâne ca „data trecută”
+  const areProgres = sesiuni.some(s => (s.exercitii || []).some(x => x.status === 'Finalizat' || (x.serii || []).some(r => r.gata)));
+  if (!paginaZi && areProgres) {
+    html += `<div class="saptamana-noua">
+      <button type="button" class="btn" onclick="incepeSaptamanaNouaClienta()">${tr('Începe săptămâna nouă', 'Start a new week')}</button>
+      <div>${tr('Bifele se golesc, iar ce ai notat apare ca „data trecută”.', 'Checkmarks are cleared; what you logged shows as “last time”.')}</div>
+    </div>`;
+  }
   if (!paginaZi) {
     (cj.sectiuni_final || []).forEach(sec => { html += text(sec); });
     if (cj.nota_subsol) html += `<div class="plan-footer-note">${escAttr(cj.nota_subsol)}</div>`;
@@ -3450,6 +3463,39 @@ function randeazaPlanClienta() {
     <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> ${tr('Descarcă PDF', 'Download PDF')}
   </button>`;
   document.getElementById('clientaContinut').innerHTML = html;
+}
+
+// Începe săptămâna nouă: baza mută progresul în istoricul planului și golește bifele (incepe_saptamana_noua).
+// Cere internet; dacă mai sunt bife netrimise, le trimite întâi, ca să intre în săptămâna care se încheie.
+async function incepeSaptamanaNouaClienta(idxPlan) {
+  const plan = idxPlan !== undefined ? dateClienta.planuri[idxPlan] : dateClienta.planCurent;
+  if (!plan) return;
+  customConfirm(tr('Săptămână nouă', 'New week'),
+    tr('Începi săptămâna nouă? Bifele se golesc, iar ce ai notat rămâne ca „data trecută” la fiecare exercițiu.', 'Start a new week? Checkmarks are cleared and what you logged stays as “last time” for each exercise.'),
+    async function() {
+      await trimiteProgresNetrimis();
+      if (timerSalvareProgres !== null) await salveazaProgresClienta();
+      if (progresNetrimis()[plan.id]) {
+        showToast(tr('Ai nevoie de internet ca să începi săptămâna nouă.', 'You need internet to start a new week.'), 'error');
+        return;
+      }
+      const { data, error } = await supabaseClient.rpc('incepe_saptamana_noua', { p_id: plan.id });
+      if (error || !data) {
+        showToast(tr('Nu s-a putut începe săptămâna nouă. Verifică internetul și reîncearcă.', 'Could not start a new week. Check your internet and try again.'), 'error');
+        return;
+      }
+      const i = dateClienta.planuri.findIndex(x => x.id === plan.id);
+      if (i >= 0) dateClienta.planuri[i] = Object.assign({}, dateClienta.planuri[i], { continut_json: data });
+      if (dateClienta.planCurent && dateClienta.planCurent.id === plan.id) {
+        dateClienta.planCurent = JSON.parse(JSON.stringify(dateClienta.planuri[i]));
+        dateClienta.ziCurenta = null;
+        randeazaPlanClienta();
+      } else if (clientaTabCurent === 'acasa') {
+        randeazaHomeClienta();
+      }
+      salveazaCacheClienta();
+      showToast(tr('✓ Săptămână nouă. Spor la antrenamente!', '✓ New week. Enjoy your workouts!'));
+    });
 }
 
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
@@ -3514,6 +3560,15 @@ function seriiExercitiu(ex) {
 function seriiDataTrecuta(nume, idPlan) {
   const cheie = (nume || '').trim().toLowerCase();
   if (!cheie) return [];
+  // Întâi săptămânile anterioare ale aceluiași plan (cea mai recentă prima), apoi celelalte planuri
+  const plan = (dateClienta.planCurent && dateClienta.planCurent.id === idPlan) ? dateClienta.planCurent : (dateClienta.planuri || []).find(p => p.id === idPlan);
+  const istoric = (plan && plan.continut_json && Array.isArray(plan.continut_json.istoric_saptamani)) ? plan.continut_json.istoric_saptamani : [];
+  for (let i = istoric.length - 1; i >= 0; i--) {
+    for (const ses of istoric[i].sesiuni || []) {
+      const ex = (ses.exercitii || []).find(x => (x.exercitiu || '').trim().toLowerCase() === cheie && Array.isArray(x.serii) && x.serii.some(r => r.gata));
+      if (ex) return ex.serii;
+    }
+  }
   for (const p of dateClienta.planuri || []) {
     if (p.id === idPlan) continue;
     for (const ses of p.continut_json?.sesiuni || []) {
@@ -3692,17 +3747,81 @@ async function salveazaProgresClienta() {
       progres.push({ s, e, greutate_kg: ex.greutate_kg || '', seturi_finalizate: ex.seturi_finalizate || '', status: ex.status || '', serii: ex.serii || [], nota: ex.nota_client || '' });
     });
   });
+  const i = dateClienta.planuri.findIndex(x => x.id === p.id);
+  if (i >= 0) dateClienta.planuri[i] = JSON.parse(JSON.stringify(p));
   const { data, error } = await supabaseClient.rpc('salveaza_progres_plan', { p_id: p.id, p_progres: progres });
+  // Fără semnal (des la sală): progresul rămâne pe telefon și se trimite singur când revine internetul
+  if (eroareDeRetea(error)) {
+    memoreazaProgresNetrimis(p.id, progres);
+    salveazaCacheClienta();
+    seteazaStareSalvareClienta('Salvat pe telefon. Se trimite când revine internetul.', 'Saved on your phone. It will sync when you’re back online.');
+    return;
+  }
   if (error || data !== true) {
     seteazaStareSalvareClienta('Nu s-a putut salva. Încearcă din nou.', 'Could not save. Try again.', true);
     showToast(tr('Eroare sincronizare', 'Sync error'), 'error');
     return;
   }
-  const i = dateClienta.planuri.findIndex(x => x.id === p.id);
-  if (i >= 0) dateClienta.planuri[i] = JSON.parse(JSON.stringify(p));
+  stergeProgresNetrimis(p.id);
   seteazaStareSalvareClienta('Salvat ✓', 'Saved ✓');
   salveazaCacheClienta();
 }
+
+// ---- Progresul netrimis (fără internet): ultima variantă a fiecărui plan, pe telefon, până se trimite ----
+function eroareDeRetea(error) {
+  return !navigator.onLine || !!(error && /fetch|network|load failed|timeout|connection/i.test(error.message || ''));
+}
+
+function cheieProgresNetrimis() {
+  return 'BFIT_PROGRES_NETRIMIS_' + (utilizatorCurent ? utilizatorCurent.id : '');
+}
+
+function progresNetrimis() {
+  try { return JSON.parse(localStorage.getItem(cheieProgresNetrimis()) || '{}') || {}; } catch (e) { return {}; }
+}
+
+function memoreazaProgresNetrimis(idPlan, progres) {
+  try { localStorage.setItem(cheieProgresNetrimis(), JSON.stringify(Object.assign(progresNetrimis(), { [idPlan]: progres }))); } catch (e) {}
+}
+
+function stergeProgresNetrimis(idPlan) {
+  const toate = progresNetrimis();
+  if (!(idPlan in toate)) return;
+  delete toate[idPlan];
+  try {
+    if (Object.keys(toate).length) localStorage.setItem(cheieProgresNetrimis(), JSON.stringify(toate));
+    else localStorage.removeItem(cheieProgresNetrimis());
+  } catch (e) {}
+}
+
+// Trimite tot ce a rămas netrimis; se oprește la prima eroare de rețea (reîncearcă la revenirea internetului)
+let trimitereNetrimisInCurs = null;
+function trimiteProgresNetrimis() {
+  if (trimitereNetrimisInCurs) return trimitereNetrimisInCurs;
+  trimitereNetrimisInCurs = (async () => {
+    for (const [idPlan, progres] of Object.entries(progresNetrimis())) {
+      const { data, error } = await supabaseClient.rpc('salveaza_progres_plan', { p_id: idPlan, p_progres: progres });
+      if (eroareDeRetea(error)) return;
+      // Trimis, sau planul nu mai e al clientului (șters de antrenor): nu se mai reîncearcă
+      stergeProgresNetrimis(idPlan);
+      if (!error && data === true && dateClienta.planCurent && dateClienta.planCurent.id === idPlan) seteazaStareSalvareClienta('Salvat ✓', 'Saved ✓');
+    }
+  })().finally(() => { trimitereNetrimisInCurs = null; });
+  return trimitereNetrimisInCurs;
+}
+
+// Planurile cu progres încă netrimis rămân în varianta de pe telefon, nu cea (mai veche) din bază
+function pastreazaPlanuriNetrimise(planuriNoi) {
+  const netrimise = progresNetrimis();
+  return (planuriNoi || []).map(p => netrimise[p.id] ? ((dateClienta.planuri || []).find(x => x.id === p.id) || p) : p);
+}
+
+window.addEventListener('online', () => {
+  if (rolUtilizator === 'clienta' && Object.keys(progresNetrimis()).length) trimiteProgresNetrimis();
+});
+setInterval(() => {
+  if (rolUtilizator === 'clienta' && navigator.onLine && Object.keys(progresNetrimis()).length) trimiteProgresNetrimis();
+}, 30000);
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden' && timerSalvareProgres !== null) salveazaProgresClienta();
@@ -3717,6 +3836,7 @@ document.addEventListener('visibilitychange', () => {
 // Abonamentul și planurile clientului, recitite fără repornirea aplicației (plan nou, notă, reînnoire)
 async function reincarcaDateClienta() {
   if (rolUtilizator !== 'clienta' || !dateClienta.fisa || !supabaseClient || !utilizatorCurent) return;
+  if (Object.keys(progresNetrimis()).length) await trimiteProgresNetrimis();
   const [resFisa, resPlanuri] = await Promise.all([
     supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1),
     supabaseClient.from('planuri_antrenament').select('*').order('updated_at', { ascending: false })
@@ -3724,7 +3844,7 @@ async function reincarcaDateClienta() {
   const c = resFisa.data && resFisa.data[0];
   if (resFisa.error || resPlanuri.error || !c) return;
   dateClienta.fisa = c;
-  dateClienta.planuri = resPlanuri.data || [];
+  dateClienta.planuri = pastreazaPlanuriNetrimise(resPlanuri.data || []);
   // Doar Acasă se redesenează, și nu cât e deschis un plan: progresul bifat acolo nu se pierde
   if (clientaTabCurent === 'acasa' && !dateClienta.planCurent) randeazaHomeClienta();
   salveazaCacheClienta();
@@ -4692,7 +4812,7 @@ function citesteCacheClienta() {
 
 // La ieșirea din cont rămân pe telefon doar preferințele, nu datele clientului
 function stergeCacheClienti() {
-  try { Object.keys(localStorage).filter(k => k.startsWith('BFIT_CLIENT_')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  try { Object.keys(localStorage).filter(k => k.startsWith('BFIT_CLIENT_') || k.startsWith('BFIT_PROGRES_NETRIMIS_')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
 }
 
 // Contururi gri cât se încarcă prima dată (fără date salvate): fără ecran gol și fără sărituri
@@ -4713,11 +4833,18 @@ async function afiseazaEcranClienta() {
     document.getElementById('clientaTitlu').innerText = '';
     document.getElementById('clientaContinut').innerHTML = htmlScheletAcasa();
   }
+  // Ce a rămas netrimis de data trecută (fără internet) pleacă înainte să citim planurile din bază
+  if (Object.keys(progresNetrimis()).length) await trimiteProgresNetrimis();
   const [resFisa, resPlanuri] = await Promise.all([
     supabaseClient.from('cliente').select('*').eq('auth_user_id', utilizatorCurent.id).limit(1),
     supabaseClient.from('planuri_antrenament').select('*').order('updated_at', { ascending: false })
   ]);
   const c = resFisa.data && resFisa.data[0];
+  // Fără internet, cu date salvate: rămâne pe ecran ce era salvat (se actualizează la revenirea internetului)
+  if (salvat && (eroareDeRetea(resFisa.error) || eroareDeRetea(resPlanuri.error))) {
+    showToast(tr('Fără internet: vezi datele salvate pe telefon.', 'Offline: showing data saved on your phone.'));
+    return;
+  }
   if (resFisa.error || !c) {
     document.getElementById('clientaNav').style.display = 'none';
     const { data: stareCerere } = resFisa.error ? { data: null } : await supabaseClient.rpc('stare_cerere_inscriere');
@@ -4743,9 +4870,10 @@ async function afiseazaEcranClienta() {
     salveazaCacheClienta();
   });
   const eraAfisat = !!salvat;
-  const schimbat = !salvat || JSON.stringify([salvat.fisa, salvat.planuri]) !== JSON.stringify([c, resPlanuri.data || []]);
+  const planuriNoi = pastreazaPlanuriNetrimise(resPlanuri.data || []);
+  const schimbat = !salvat || JSON.stringify([salvat.fisa, salvat.planuri]) !== JSON.stringify([c, planuriNoi]);
   dateClienta.fisa = c;
-  dateClienta.planuri = resPlanuri.data || [];
+  dateClienta.planuri = planuriNoi;
   dateClienta.areParola = await verificaParolaClienta();
   conecteazaCanalOrar(c.user_id, laSchimbareOrarClienta);
   actualizeazaBulinaOrar();
@@ -8854,6 +8982,7 @@ function incarcaSablonPlan(idx) {
 // Progresul clientului nu se copiază: planul nou (variantă sau trimis) pornește curat
 function continutFaraProgres(cjson) {
   const continut = JSON.parse(JSON.stringify(cjson || {}));
+  delete continut.istoric_saptamani;
   (continut.sesiuni || []).forEach(ses => {
     delete ses.nota_client;
     (ses.exercitii || []).forEach(ex => {
@@ -9728,6 +9857,13 @@ async function integreazaProgresClientei() {
       preia(ex, dinBaza, dinInitial, ['greutate_kg', 'seturi_finalizate', 'status', 'serii', 'nota_client']);
     });
   });
+  // Istoricul săptămânilor îl scrie doar clientul (incepe_saptamana_noua): se ia mereu din bază
+  const istoricBaza = proaspat.continut_json?.istoric_saptamani;
+  if (planActiv.continut_json && JSON.stringify(istoricBaza ?? null) !== JSON.stringify(planActiv.continut_json.istoric_saptamani ?? null)) {
+    if (istoricBaza === undefined) delete planActiv.continut_json.istoric_saptamani;
+    else planActiv.continut_json.istoric_saptamani = JSON.parse(JSON.stringify(istoricBaza));
+    preluat = true;
+  }
   return preluat;
 }
 
