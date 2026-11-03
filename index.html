@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal139">
+  <link rel="stylesheet" href="style.css?v=fitFinal140">
 </head>
 <body>
 
@@ -99,6 +99,24 @@
       </button>
     </header>
     <div class="clienta-body" id="notificariContinut"></div>
+  </div>
+
+  <!-- MESAJELE dintre antrenor și client (tabelul mesaje); deschiderea: deschideMesaje -->
+  <div id="panouMesaje" class="clienta-app panou-notificari panou-mesaje auth-hidden">
+    <header class="clienta-header">
+      <button type="button" class="header-icon-bubble-btn" onclick="inchidePanouMesaje()" title="Înapoi" data-en-title="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="clienta-title" id="panouMesajeTitlu"></div>
+      <span style="width:40px;"></span>
+    </header>
+    <div class="clienta-body" id="mesajeLista"></div>
+    <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesaj();">
+      <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." oninput="this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 120) + 'px';"></textarea>
+      <button type="submit" class="btn" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+      </button>
+    </form>
   </div>
 
   <!-- POZELE DE PROGRES ale unei săptămâni (Cloudflare R2, prin Worker-ul bfit-poze) -->
@@ -1228,6 +1246,19 @@
             <button type="button" class="btn fisa-link-btn" id="btnSalveazaNotaClient" onclick="salveazaNotaClient()" data-en="Save note">Salvează nota</button>
           </div>
 
+          <!-- Mesajele cu clientul (doar cu cont în aplicație): randeazaBlocMesaje -->
+          <div id="blocMesajeClient" class="fisa-cont" hidden>
+            <div class="fisa-cont-sus">
+              <span class="fisa-cont-titlu">
+                <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
+                <span data-en="Messages">Mesaje</span>
+              </span>
+              <span class="fisa-cont-stare" id="mesajeClientStare"></span>
+            </div>
+            <div class="mesaje-ultimul" id="mesajeClientUltimul"></div>
+            <button type="button" class="btn fisa-link-btn" onclick="deschideMesajeAntrenor()" data-en="Open conversation">Deschide conversația</button>
+          </div>
+
           <!-- Progresul clientei: greutate + check-in-uri; se încarcă la deschidere -->
           <!-- Planurile de antrenament trimise clientului: cel curent primul, cu progresul și notițele -->
           <details id="detailsPlanClienta" open style="margin-top: 16px; padding: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;">
@@ -1678,7 +1709,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal139"></script>
-  <script src="app.js?v=fitFinal139"></script>
+  <script src="sabloane.js?v=fitFinal140"></script>
+  <script src="app.js?v=fitFinal140"></script>
 </body>
 </html>

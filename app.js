@@ -3168,11 +3168,12 @@ function randeazaHomeClienta() {
   document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
   // Fiecare lucru o singură dată, în ordinea importanței: reînnoire, mesajul antrenorului, antrenamentul (cu planul),
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
-  const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta()
-    + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div>`
-    + htmlAntrenamentAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa() + '<div id="cardPushAcasa"></div>';
+  const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
+    + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
+    + htmlAntrenamentAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
+  actualizeazaCardMesajeAcasa();
 }
 
 // Notificările oprite pe telefon: invitația de pornire apare și pe Acasă (până le pornește sau o închide cu ×)
@@ -3579,10 +3580,38 @@ function seriiDataTrecuta(nume, idPlan) {
   return [];
 }
 
+// Recordul personal la un exercițiu: cea mai mare greutate notată vreodată înainte (săptămânile trecute, celelalte planuri,
+// celelalte zile din planul curent), fără exercițiul de acum. 0 = încă nimic notat, deci nici record.
+const numarKg = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return isNaN(n) ? 0 : n; };
+function kgMaxExercitiu(x) {
+  const din = Array.isArray(x.serii) && x.serii.length ? x.serii.filter(r => r.gata).map(r => numarKg(r.kg)) : [numarKg(x.greutate_kg)];
+  return Math.max(0, ...din);
+}
+function recordAnteriorKg(ex, idPlan) {
+  const cheie = (ex.exercitiu || '').trim().toLowerCase();
+  if (!cheie) return 0;
+  let max = 0;
+  const vezi = sesiuni => (sesiuni || []).forEach(ses => (ses.exercitii || []).forEach(x => {
+    if (x !== ex && (x.exercitiu || '').trim().toLowerCase() === cheie) max = Math.max(max, kgMaxExercitiu(x));
+  }));
+  const curent = dateClienta.planCurent && dateClienta.planCurent.id === idPlan ? dateClienta.planCurent : null;
+  for (const p of dateClienta.planuri || []) {
+    const plan = curent && p.id === idPlan ? curent : p;
+    (plan.continut_json?.istoric_saptamani || []).forEach(sapt => vezi(sapt.sesiuni));
+    if (p.id !== idPlan) vezi(plan.continut_json?.sesiuni);
+  }
+  if (curent) vezi(curent.continut_json?.sesiuni);
+  return max;
+}
+
 function htmlSeriiClienta(ex, s, e, idPlan) {
   const tip = ex.tip || 'kg';
   const { tinta } = seriiPlanificate(ex);
   const trecut = seriiDataTrecuta(ex.exercitiu, idPlan);
+  // Seria cu cea mai mare greutate de azi primește eticheta „Record” când depășește tot ce s-a notat înainte
+  const record = tip === 'kg' ? recordAnteriorKg(ex, idPlan) : 0;
+  const kgAzi = tip === 'kg' ? kgMaxExercitiu(ex) : 0;
+  const iRecord = record > 0 && kgAzi > record ? (ex.serii || []).findIndex(r => r.gata && numarKg(r.kg) === kgAzi) : -1;
   const kgVechi = ultimaGreutateClienta(ex.exercitiu, idPlan);
   const unitate = { rep: tr('Rep', 'Reps'), sec: tr('Sec', 'Sec'), min: tr('Min', 'Min') };
   const cuKg = tip === 'kg';
@@ -3595,7 +3624,7 @@ function htmlSeriiClienta(ex, s, e, idPlan) {
     const vechi = trecut[i] || {};
     const phKg = vechi.kg || kgVechi || 'kg';
     const phRep = vechi.rep || (tinta.match(/\d+(?:-\d+)?/) || [''])[0] || '-';
-    return `<div class="serie-rand${r.gata ? ' is-gata' : ''}">
+    return `<div class="serie-rand${r.gata ? ' is-gata' : ''}${i === iRecord ? ' is-record' : ''}">
       <span class="serie-nr">${i + 1}</span>
       ${cuKg ? `<input type="text" inputmode="decimal" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.kg)}" placeholder="${escAttr(phKg)}" oninput="peModificareSerieClienta(${s}, ${e}, ${i}, 'kg', this.value)"><span class="serie-x">×</span>` : ''}
       ${cuRep ? `<input type="text" inputmode="numeric" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.rep)}" placeholder="${escAttr(phRep)}" oninput="peModificareSerieClienta(${s}, ${e}, ${i}, 'rep', this.value)">` : `<span class="serie-camp serie-circuit">${tr('Circuitul', 'Circuit')} ${i + 1}</span>`}
@@ -3628,6 +3657,7 @@ function bifeazaSerieClienta(s, e, i) {
   const ex = ses?.exercitii?.[e];
   if (!ex) return;
   const r = seriiExercitiu(ex)[i];
+  const kgInainte = kgMaxExercitiu(ex);
   r.gata = !r.gata;
   if (r.gata) {
     // De data trecută la aceeași serie; altfel ca seria de deasupra
@@ -3638,6 +3668,15 @@ function bifeazaSerieClienta(s, e, i) {
   }
   actualizeazaDinSerii(ex);
   peModificareProgresClienta(s, e, 'status', ex.status);
+  // Record personal: o singură dată pe exercițiu, când seria bifată trece peste tot ce a ridicat înainte
+  if (r.gata && (ex.tip || 'kg') === 'kg') {
+    const record = recordAnteriorKg(ex, dateClienta.planCurent.id);
+    const kg = numarKg(r.kg);
+    if (record > 0 && kg > record && kg > kgInainte) {
+      showToast(tr(`Record nou: ${formatKg(kg)} kg la ${ex.exercitiu} (înainte ${formatKg(record)} kg)`, `New record: ${formatKg(kg)} kg on ${ex.exercitiu} (was ${formatKg(record)} kg)`));
+      if (navigator.vibrate) navigator.vibrate(80);
+    }
+  }
   const sus = document.getElementById('clientaScreen')?.scrollTop;
   randeazaPlanClienta();
   if (sus !== undefined) document.getElementById('clientaScreen').scrollTop = sus;
@@ -4344,7 +4383,7 @@ function htmlCorpComparatie() {
     return `<div class="poza-comp">
         <div class="poza-comp-eticheta">${eticheta}</div>
         <img data-poza="${escAttr(pozeCurente.client)}|${p.s}|${p.u}|${p.t}" alt="" onclick="deschidePanouPoze('${s}')">
-        <select class="poza-comp-data" aria-label="${tr('Alege săptămâna', 'Choose the week')}" onchange="alegeComparatiePoze('${latura}', this.value)">${optiuni}</select>
+        <select class="form-control poza-comp-data" aria-label="${tr('Alege săptămâna', 'Choose the week')}" onchange="alegeComparatiePoze('${latura}', this.value)">${optiuni}</select>
         <div class="poza-comp-kg">${kg != null ? `${formatKg(kg)} kg` : '&nbsp;'}</div>
       </div>`;
   };
@@ -5278,6 +5317,7 @@ function pasInapoiTelefon() {
   const modal = MODALE_INAPOI.find(([id]) => document.getElementById(id)?.style.display === 'flex');
   if (modal) return modal[1];
   if (vizibil('panouPoze')) return inchidePanouPoze;
+  if (vizibil('panouMesaje')) return inchidePanouMesaje;
   if (vizibil('panouNotificari')) return inchidePanouNotificari;
   if (document.getElementById('appDrawer')?.classList.contains('open')) {
     const strat = document.querySelector('#appDrawer [id^="drawer"][id$="View"].active')?.id.replace(/^drawer|View$/g, '');
@@ -7061,6 +7101,136 @@ function randeazaNotaClient(client) {
   document.getElementById('notaClientText').value = client.notaClient || '';
   document.getElementById('notaClientStare').textContent = client.notaClientLa
     ? `${tr('Actualizată', 'Updated')} ${formatZiLuna(new Date(client.notaClientLa))}` : '';
+  randeazaBlocMesaje(client);
+}
+
+// ---- Mesaje în aplicație între antrenor și client (tabelul mesaje, sql/2026-11-03_mesaje.sql); WhatsApp rămâne în paralel ----
+let conversatie = null; // { clientId, userId, mesaje }
+const autorulMeu = () => rolUtilizator === 'clienta' ? 'client' : 'antrenor';
+
+// Ultimul mesaj și câte sunt necitite (primite de la celălalt), pentru cardul de pe Acasă și blocul din fișă
+async function rezumatMesaje(clientId) {
+  const [ultim, necitite] = await Promise.all([
+    supabaseClient.from('mesaje').select('autor, text, created_at').eq('client_id', clientId).order('created_at', { ascending: false }).limit(1),
+    supabaseClient.from('mesaje').select('id', { count: 'exact', head: true }).eq('client_id', clientId).eq('citit', false).neq('autor', autorulMeu())
+  ]);
+  if (ultim.error) return null;
+  return { ultim: (ultim.data || [])[0] || null, necitite: necitite.count || 0 };
+}
+
+const textUltimulMesaj = r => r && r.ultim
+  ? (r.ultim.autor === autorulMeu() ? tr('Tu: ', 'You: ') : '') + r.ultim.text
+  : '';
+
+// Fișa clientului (antrenor): blocul Mesaje apare doar pentru clienții cu cont în aplicație
+async function randeazaBlocMesaje(client) {
+  const bloc = document.getElementById('blocMesajeClient');
+  if (!bloc) return;
+  bloc.hidden = !client.contConectat;
+  if (!client.contConectat) return;
+  const stare = document.getElementById('mesajeClientStare');
+  const ultimul = document.getElementById('mesajeClientUltimul');
+  const r = await rezumatMesaje(client.id);
+  if (clientaFisaCurenta() !== client) return;
+  stare.textContent = r && r.necitite ? (r.necitite === 1 ? tr('1 necitit', '1 unread') : tr(`${r.necitite} necitite`, `${r.necitite} unread`)) : '';
+  stare.classList.toggle('mesaje-necitite', !!(r && r.necitite));
+  ultimul.textContent = textUltimulMesaj(r) || tr('Niciun mesaj încă. Clientul îți poate răspunde din aplicație.', 'No messages yet. The client can reply in the app.');
+}
+
+function deschideMesajeAntrenor() {
+  const client = clientaFisaCurenta();
+  if (client) deschideMesaje(client.id, utilizatorCurent.id, client.nume);
+}
+
+function deschideMesajeClienta() {
+  const c = dateClienta.fisa;
+  if (!c) return;
+  const prenume = ((dateClienta.contact && dateClienta.contact.nume_antrenor) || '').trim().split(' ')[0];
+  deschideMesaje(c.id, c.user_id, prenume || tr('Antrenorul tău', 'Your trainer'));
+}
+
+async function deschideMesaje(clientId, userId, titlu) {
+  conversatie = { clientId, userId, mesaje: [] };
+  document.getElementById('panouMesajeTitlu').textContent = titlu;
+  document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
+  document.getElementById('panouMesaje').classList.remove('auth-hidden');
+  sincronizeazaIstoricInapoi();
+  await incarcaConversatie();
+}
+
+async function incarcaConversatie() {
+  if (!conversatie) return;
+  const { clientId } = conversatie;
+  const { data, error } = await supabaseClient.from('mesaje').select('id, autor, text, created_at, citit').eq('client_id', clientId).order('created_at').limit(500);
+  if (!conversatie || conversatie.clientId !== clientId) return;
+  if (error) {
+    document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
+    return;
+  }
+  conversatie.mesaje = data || [];
+  randeazaConversatie();
+  if (conversatie.mesaje.some(m => !m.citit && m.autor !== autorulMeu())) {
+    await supabaseClient.rpc('marcheaza_mesaje_citite', { p_client_id: clientId });
+  }
+}
+
+function randeazaConversatie() {
+  const lista = document.getElementById('mesajeLista');
+  if (!conversatie.mesaje.length) {
+    lista.innerHTML = `<div class="mesaje-gol">${rolUtilizator === 'clienta'
+      ? tr('Scrie-i antrenorului tău. Primește mesajul pe telefon.', 'Write to your trainer. They get the message on their phone.')
+      : tr('Scrie-i clientului. Primește mesajul pe telefon.', 'Write to your client. They get the message on their phone.')}</div>`;
+    return;
+  }
+  let ziAnterioara = '';
+  lista.innerHTML = conversatie.mesaje.map(m => {
+    const d = new Date(m.created_at);
+    const zi = d.toDateString();
+    const separator = zi !== ziAnterioara ? `<div class="mesaje-zi">${formatZiLuna(d)}</div>` : '';
+    ziAnterioara = zi;
+    const ora = d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' });
+    return `${separator}<div class="mesaj${m.autor === autorulMeu() ? ' al-meu' : ''}"><div class="mesaj-text">${escAttr(m.text)}</div><small>${ora}</small></div>`;
+  }).join('');
+  lista.scrollTop = lista.scrollHeight;
+}
+
+async function trimiteMesaj() {
+  const camp = document.getElementById('mesajText');
+  const text = camp.value.trim();
+  if (!text || !conversatie) return;
+  const btn = document.getElementById('btnTrimiteMesaj');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('mesaje')
+    .insert({ user_id: conversatie.userId, client_id: conversatie.clientId, autor: autorulMeu(), text })
+    .select('id, autor, text, created_at, citit').single();
+  btn.disabled = false;
+  if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
+  camp.value = '';
+  camp.style.height = '';
+  if (!conversatie) return;
+  conversatie.mesaje.push(data);
+  randeazaConversatie();
+}
+
+function inchidePanouMesaje() {
+  document.getElementById('panouMesaje').classList.add('auth-hidden');
+  conversatie = null;
+  // Necititele s-au citit: se actualizează cardul de pe Acasă și blocul din fișă
+  if (rolUtilizator === 'clienta') actualizeazaCardMesajeAcasa();
+  else { const client = clientaFisaCurenta(); if (client) randeazaBlocMesaje(client); }
+}
+
+// Acasă (client): conversația apare cu ultimul mesaj și bulina de necitite, de îndată ce există un mesaj
+async function actualizeazaCardMesajeAcasa() {
+  const el = document.getElementById('cardMesajeAcasa');
+  if (!el || !dateClienta.fisa) return;
+  const r = await rezumatMesaje(dateClienta.fisa.id);
+  if (!r || !r.ultim) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card acasa-sedinta acasa-mesaje" onclick="deschideMesajeClienta()">
+      <div><div class="acasa-eticheta">${tr('Mesaje', 'Messages')}${r.necitite ? ` <span class="mesaje-bulina">${r.necitite}</span>` : ''}</div>
+      <div class="acasa-mesaje-text${r.necitite ? ' necitit' : ''}">${escAttr(textUltimulMesaj(r))}</div></div>
+      <div class="drawer-nav-arrow">›</div>
+    </div>`;
 }
 
 async function salveazaNotaClient() {
@@ -7093,14 +7263,18 @@ function htmlNotaAntrenor(c) {
   // Ca un mesaj: de la cine, când, și răspunsul direct pe WhatsApp (dacă antrenorul și-a pus telefonul în Profil)
   const contact = dateClienta.contact;
   const prenumeAntrenor = ((contact && contact.nume_antrenor) || '').trim().split(' ')[0];
-  let raspuns = '';
+  // Răspunsul în aplicație (mesaje); WhatsApp rămâne alături, pentru cine îl preferă
+  let raspuns = `<button type="button" class="btn nota-antrenor-raspuns" onclick="deschideMesajeClienta()">
+      <svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg> ${tr('Răspunde', 'Reply')}
+    </button>`;
   if (contact && contact.telefon) {
     let cifre = contact.telefon.replace(/[^\d]/g, '');
     if (cifre.startsWith('0')) cifre = '40' + cifre.slice(1);
-    raspuns = `<a class="btn btn-clear nota-antrenor-raspuns" href="https://wa.me/${cifre}" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg> ${tr('Răspunde pe WhatsApp', 'Reply on WhatsApp')}
+    raspuns += `<a class="btn btn-clear nota-antrenor-raspuns" href="https://wa.me/${cifre}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg> WhatsApp
       </a>`;
   }
+  raspuns = `<div class="nota-antrenor-butoane">${raspuns}</div>`;
   return `<div class="card nota-antrenor-card">
       <div class="nota-antrenor-titlu">${prenumeAntrenor ? tr(`${escAttr(prenumeAntrenor)} îți scrie`, `${escAttr(prenumeAntrenor)} writes`) : tr('Nota antrenorului', 'Note from your trainer')}${c.nota_client_la ? `<small>${formatZiLuna(new Date(c.nota_client_la))}</small>` : ''}</div>
       <div class="nota-antrenor-text">${escAttr(c.nota_client)}</div>
@@ -7705,6 +7879,12 @@ async function incarcaNotificari() {
         notificari.unshift(payload.new);
         actualizeazaBulinaNotificari();
         if (!document.getElementById('panouNotificari').classList.contains('auth-hidden')) randeazaNotificari();
+        // Mesaj nou: conversația deschisă se completează pe loc; altfel se actualizează cardul / blocul cu necitite
+        if (payload.new.tip === 'mesaj_nou') {
+          const d = payload.new.date || {};
+          if (conversatie && (rolUtilizator === 'clienta' || d.client_id === conversatie.clientId)) incarcaConversatie();
+          else if (rolUtilizator !== 'clienta') { const client = clientaFisaCurenta(); if (client && client.id === d.client_id) randeazaBlocMesaje(client); }
+        }
         // Plan nou, notă, abonament: clientul vede imediat și conținutul, nu doar notificarea
         reincarcaDateClienta();
       })
@@ -7754,6 +7934,7 @@ async function activeazaPush() {
         || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cheie });
       if (!(await salveazaAbonamentPush(abonament))) throw new Error('salvare');
       showToast(tr('✓ Notificările sunt pornite pe acest telefon', '✓ Notifications are on for this phone'));
+      actualizeazaCardPushAcasa();
     } catch (e) {
       showToast(tr('Nu s-au putut porni notificările. Reîncearcă.', 'Could not turn on notifications. Try again.'), 'error');
     }
@@ -7820,6 +8001,7 @@ async function comutaNotificariSetari() {
   } else if (stare === 'pornite') {
     customConfirm(tr('Oprești notificările?', 'Turn off notifications?'), tr('Pe acest telefon nu mai primești notificări. Le poți porni oricând de aici.', 'This phone will stop getting notifications. You can turn them back on here anytime.'), async () => {
       await dezaboneazaPush();
+      actualizeazaCardPushAcasa();
       showToast(tr('✓ Notificările sunt oprite pe acest telefon', '✓ Notifications are off for this phone'));
       actualizeazaRezumatNotificari();
       randeazaSetariNotificari();
@@ -7844,11 +8026,13 @@ const TIPURI_NOTIFICARI = {
     [['programare_maine'], ['Antrenament mâine', 'Workout tomorrow'], ['Seara dinainte de ședință', 'The evening before a session']],
     [['loc_liber'], ['Loc liber', 'Spot available'], ['Când se eliberează o oră', 'When an hour opens up']],
     [['plan_nou'], ['Plan nou', 'New plan'], ['Când primești un plan de antrenament', 'When you get a workout plan']],
-    [['nota_noua'], ['Notă de la antrenor', 'Note from your trainer'], ['Când antrenorul îți scrie', 'When your trainer writes to you']],
+    [['mesaj_nou'], ['Mesaje', 'Messages'], ['Când antrenorul îți scrie', 'When your trainer writes to you']],
+    [['nota_noua'], ['Notă de la antrenor', 'Note from your trainer'], ['Când antrenorul îți schimbă nota', 'When your trainer updates your note']],
     [['checkin_memento'], ['Check-in săptămânal', 'Weekly check-in'], ['Memento dacă nu l-ai trimis', 'Reminder if you haven’t sent it']],
     [['abonament_expira', 'sedinte_putine'], ['Abonament', 'Subscription'], ['Când expiră sau mai ai puține ședințe', 'When it ends or few sessions are left']]
   ],
   antrenor: [
+    [['mesaj_nou'], ['Mesaje', 'Messages'], ['Când un client îți scrie', 'When a client writes to you']],
     [['rezervare', 'anulare'], ['Rezervări și anulări', 'Bookings and cancellations'], ['Când un client rezervă sau anulează', 'When a client books or cancels']],
     [['checkin_nou'], ['Check-in nou', 'New check-in'], ['Când un client trimite check-in-ul', 'When a client sends a check-in']],
     [['lipsa_checkin'], ['Check-in-uri lipsă', 'Missing check-ins'], ['Clienții care n-au trimis check-in-ul', 'Clients who didn’t send the check-in']],
@@ -7940,7 +8124,8 @@ function textNotificare(n) {
     sedinte_putine: [tr(`Mai ai ${d.ramase} ședințe`, `${d.ramase} sessions left`), tr('Vorbește cu antrenorul despre reînnoire.', 'Talk to your trainer about renewing.')],
     programare_maine: [tr('Antrenament mâine', 'Workout tomorrow'), tr(`Mâine la ${d.ora || ''} ai antrenament.`, `You have a workout tomorrow at ${d.ora || ''}.`)],
     loc_liber: [tr('Loc liber', 'Spot available'), tr(`S-a eliberat un loc ${zi}, ora ${d.ora || ''}. Rezervă din aplicație.`, `A spot opened up on ${zi} at ${d.ora || ''}. Book it in the app.`)],
-    nota_noua: [tr('Notă nouă de la antrenor', 'New note from your trainer'), tr('Antrenorul ți-a lăsat o notă în aplicație.', 'Your trainer left you a note in the app.')]
+    nota_noua: [tr('Notă nouă de la antrenor', 'New note from your trainer'), tr('Antrenorul ți-a lăsat o notă în aplicație.', 'Your trainer left you a note in the app.')],
+    mesaj_nou: [d.nume ? tr(`Mesaj de la ${d.nume}`, `Message from ${d.nume}`) : tr('Mesaj nou de la antrenor', 'New message from your trainer'), d.text || '']
   }[n.tip];
   return t || [tr('Notificare', 'Notification'), ''];
 }
@@ -8020,8 +8205,8 @@ function stergeToateNotificarile() {
 // Tipurile care duc undeva în aplicație; restul (tip necunoscut, client șters) rămân doar de citit
 function areDestinatieNotificare(n) {
   const d = n.date || {};
-  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber'].includes(n.tip);
-  if (n.tip === 'checkin_nou') return (DB.clienti || []).some(c => c.id === d.client_id);
+  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber', 'mesaj_nou'].includes(n.tip);
+  if (n.tip === 'checkin_nou' || n.tip === 'mesaj_nou') return (DB.clienti || []).some(c => c.id === d.client_id);
   return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira'].includes(n.tip);
 }
 
@@ -8039,6 +8224,7 @@ function deschideNotificare(id) {
   inchidePanouNotificari();
   if (rolUtilizator === 'clienta') {
     if (n.tip === 'checkin_memento') { clientaTab('fisa'); return; }
+    if (n.tip === 'mesaj_nou') { clientaTab('acasa'); deschideMesajeClienta(); return; }
     // Locul liber: Orarul se deschide direct pe ziua locului
     if (n.tip === 'loc_liber' && (n.date || {}).zi) dateClienta.ziSelectata = cheieZiClienta(new Date(n.date.zi + 'T12:00:00'));
     clientaTab(['programare_maine', 'loc_liber'].includes(n.tip) ? 'orar' : 'acasa');
@@ -8053,6 +8239,11 @@ function deschideNotificare(id) {
     // Cererile noi stau sus, deasupra listei de clienți
     inapoiLaListaClienteFisa();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  if (n.tip === 'mesaj_nou') {
+    const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
+    if (client) { deschideClientaDinLista(client.nume); deschideMesajeAntrenor(); }
     return;
   }
   if (n.tip === 'checkin_nou' && n.date && n.date.client_id) {
