@@ -1894,6 +1894,74 @@ html[data-rol="clienta"] #bottomNav {
   padding: 0;
 }
 
+/* Setări › Notificări: un rând pe tip, cu comutator */
+.setari-notificari-lista {
+  padding: 4px 14px;
+}
+
+.setare-notificare {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.setare-notificare + .setare-notificare {
+  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+.setare-notificare > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.setare-notificare small {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.comutator {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 42px;
+  height: 24px;
+  margin: 0;
+  border-radius: 12px;
+  background: var(--text-muted);
+  opacity: 0.45;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+.comutator::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.comutator:checked {
+  background: var(--primary);
+  opacity: 1;
+}
+
+.comutator:checked::after {
+  transform: translateX(18px);
+}
+
 .notificari-gol {
   color: var(--text-muted);
   font-size: 0.85rem;
@@ -5894,12 +5962,6 @@ select.form-control {
 }
 
 /* Acasă la client: următorul antrenament, cifrele, următoarea ședință, planul și abonamentul */
-.acasa-titlu {
-  font-weight: 800;
-  color: var(--primary);
-  margin: 14px 2px 6px;
-}
-
 .acasa-eticheta {
   font-size: 0.7rem;
   font-weight: 800;
@@ -5916,6 +5978,38 @@ select.form-control {
 
 .acasa-antrenament .acasa-eticheta {
   color: var(--primary);
+}
+
+/* Planul din care vine antrenamentul, sus pe card, cu legătura spre toate zilele */
+.acasa-plan {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.15);
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.acasa-plan span {
+  min-width: 0;
+  color: var(--text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acasa-plan b {
+  flex-shrink: 0;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.acasa-cifra[role="button"] {
+  cursor: pointer;
 }
 
 .acasa-antrenament-titlu {
@@ -5982,17 +6076,6 @@ select.form-control {
 
 .acasa-sedinta > div {
   min-width: 0;
-}
-
-.acasa-abonament > div:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.acasa-abonament span {
-  font-size: 0.8rem;
-  color: var(--text-muted);
 }
 
 /* Fișa mea: abonamentul complet */
@@ -6705,6 +6788,27 @@ input.serie-camp {
   line-height: 1.45;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+/* Răspunsul la mesajul antrenorului, direct pe WhatsApp */
+.nota-antrenor-raspuns {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.nota-antrenor-raspuns svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Progres: obiectivul cu bară, cântăririle de la sală și controalele antrenorului */

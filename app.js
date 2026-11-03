@@ -857,6 +857,7 @@ function navigheazaSubMeniu(strat) {
     settingsLanguage: document.getElementById('drawerSettingsLanguageView'),
     settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
     settingsSignup: document.getElementById('drawerSettingsSignupView'),
+    settingsNotifications: document.getElementById('drawerSettingsNotificationsView'),
     profile: document.getElementById('drawerProfileView'),
     feedback: document.getElementById('drawerFeedbackView')
   };
@@ -869,6 +870,8 @@ function navigheazaSubMeniu(strat) {
     layers[strat].classList.add('active');
   }
   if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
+  if (strat === 'settings') actualizeazaRezumatNotificari();
+  if (strat === 'settingsNotifications') randeazaSetariNotificari();
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
   if (strat === 'profile' && rolUtilizator === 'clienta') {
     const inp = document.getElementById('profileInputTelefonClient');
@@ -3163,66 +3166,61 @@ function randeazaHomeClienta() {
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   const prenume = (c.nume || '').trim().split(' ')[0];
   document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
-  const titlu = t => `<div class="acasa-titlu">${t}</div>`;
-  let html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta()
-    + htmlAntrenamentAcasa() + htmlCheckinAcasa() + htmlNotaAntrenor(c) + htmlCifreAcasa() + htmlSedintaAcasa();
-
-  // Planul curent (cel mai nou); cele mai vechi sub „Planuri anterioare”
-  html += titlu(tr('Planul meu', 'My plan'));
-  if (dateClienta.planuri.length === 0) {
-    html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Antrenorul tău nu ți-a trimis încă un plan.', 'Your trainer has not sent you a plan yet.')}</div>`;
-  } else {
-    const cardPlan = (p, i) => {
-      const ex = (p.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim()));
-      const facute = ex.filter(x => x.status === 'Finalizat').length;
-      return `<div class="card drawer-nav-card" style="margin-bottom:8px;" onclick="deschidePlanClienta(${i})">
-        <div class="drawer-nav-card-left"><div>
-          <div class="drawer-nav-title">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</div>
-          <div class="drawer-nav-desc">${(p.continut_json?.sesiuni || []).length} ${tr('zile', 'days')} · ${facute}/${ex.length} ${tr('exerciții făcute', 'exercises done')}</div>
-        </div></div>
-        <div class="drawer-nav-arrow">›</div>
-      </div>`;
-    };
-    html += cardPlan(dateClienta.planuri[0], 0);
-    const vechi = dateClienta.planuri.length - 1;
-    if (vechi > 0) {
-      if (dateClienta.arataToatePlanurile) dateClienta.planuri.slice(1).forEach((p, i) => { html += cardPlan(p, i + 1); });
-      html += `<button type="button" class="btn btn-clear" style="width:100%; padding:8px;" onclick="comutaToatePlanurile()">${dateClienta.arataToatePlanurile
-        ? tr('Ascunde planurile anterioare', 'Hide earlier plans')
-        : tr(`Planuri anterioare (${vechi})`, `Earlier plans (${vechi})`)}</button>`;
-    }
-  }
-
-  // Abonamentul, pe scurt (ședințele rămase sunt sus, la cifre)
-  html += titlu(tr('Abonament', 'Subscription'));
-  html += `<div class="card acasa-abonament acasa-sedinta" onclick="deschideAbonamentDinAcasa()">
-    <div><b>${escAttr(numeAbonamentClienta(c.tipAbonament))}</b>
-    <span>${c.efectuate ?? 0} ${tr('din', 'of')} ${c.incluse ?? 0} ${tr('ședințe', 'sessions')}${c.dataExpirare && c.dataExpirare !== '-' ? ` · ${tr('valabil până la', 'valid until')} ${escAttr(c.dataExpirare)}` : ''}</span></div>
-    <div class="drawer-nav-arrow">›</div>
-  </div>`;
+  // Fiecare lucru o singură dată, în ordinea importanței: reînnoire, mesajul antrenorului, antrenamentul (cu planul),
+  // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
+  const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta()
+    + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div>`
+    + htmlAntrenamentAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa() + '<div id="cardPushAcasa"></div>';
   document.getElementById('clientaContinut').innerHTML = html;
+  actualizeazaCardPushAcasa();
+}
+
+// Notificările oprite pe telefon: invitația de pornire apare și pe Acasă (până le pornește sau o închide cu ×)
+async function actualizeazaCardPushAcasa() {
+  const el = document.getElementById('cardPushAcasa');
+  if (!el) return;
+  let ascuns = false;
+  try { ascuns = !!localStorage.getItem('BFIT_PUSH_ACASA_ASCUNS'); } catch (e) {}
+  if (ascuns || (await stareNotificari()) !== 'oprite') { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="card card-push card-push-blocat">
+      <span>${tr('Pornește notificările ca să afli la timp de programări, planuri și mesajele antrenorului.', 'Turn on notifications to hear in time about bookings, plans and your trainer’s messages.')}</span>
+      <button type="button" class="btn" onclick="activeazaPush().then(actualizeazaCardPushAcasa)">${tr('Pornește', 'Turn on')}</button>
+      <button type="button" class="notificare-x card-push-x" onclick="ascundeCardPushAcasa()" aria-label="${tr('Închide', 'Close')}">×</button>
+    </div>`;
+}
+
+function ascundeCardPushAcasa() {
+  try { localStorage.setItem('BFIT_PUSH_ACASA_ASCUNS', '1'); } catch (e) {}
+  actualizeazaCardPushAcasa();
 }
 
 // Următorul antrenament din planul curent: prima zi nefăcută complet; o atingere până la pagina zilei
 function htmlAntrenamentAcasa() {
   const p = dateClienta.planuri[0];
   const sesiuni = (p && p.continut_json?.sesiuni) || [];
+  if (!p) {
+    return `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Antrenorul tău nu ți-a trimis încă un plan de antrenament.', 'Your trainer has not sent you a workout plan yet.')}</div>`;
+  }
   if (!sesiuni.length) return '';
   const exZi = s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim());
   const idx = sesiuni.findIndex(s => exZi(s).some(x => x.status !== 'Finalizat'));
+  // Planul din care vine antrenamentul, cu săptămâna lui și legătura spre toate zilele
+  const nrSapt = (Array.isArray(p.continut_json.istoric_saptamani) ? p.continut_json.istoric_saptamani.length : 0) + 1;
+  const antetPlan = `<div class="acasa-plan" onclick="deschidePlanClienta(0)">
+      <span>${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}${nrSapt > 1 ? ` · ${tr('Săptămâna', 'Week')} ${nrSapt}` : ''}</span>
+      <b>${tr('Toate zilele', 'All days')} ›</b>
+    </div>`;
   if (idx === -1) {
-    return `<div class="card acasa-antrenament gata">
-      <div class="acasa-eticheta">${tr('Planul tău', 'Your plan')}</div>
+    return `<div class="card acasa-antrenament gata">${antetPlan}
       <div class="acasa-antrenament-titlu">${tr('Ai terminat săptămâna!', 'You finished the week!')}</div>
       <div class="acasa-antrenament-detalii">${tr('Toate zilele sunt bifate. Începe săptămâna nouă: ce ai notat rămâne ca „data trecută”.', 'Every day is checked. Start a new week: what you logged stays as “last time”.')}</div>
       <button type="button" class="btn acasa-incepe" onclick="incepeSaptamanaNouaClienta(0)">${tr('Începe săptămâna nouă', 'Start a new week')}</button>
-      <button type="button" class="btn btn-clear acasa-incepe" style="margin-top:6px;" onclick="deschidePlanClienta(0)">${tr('Vezi planul', 'View plan')}</button>
     </div>`;
   }
   const s = sesiuni[idx];
   const lista = exZi(s);
   const facute = lista.filter(x => x.status === 'Finalizat').length;
-  return `<div class="card acasa-antrenament">
+  return `<div class="card acasa-antrenament">${antetPlan}
     <div class="acasa-eticheta">${tr('Următorul antrenament', 'Next workout')}</div>
     <div class="acasa-antrenament-titlu">${escAttr(s.titlu || tr(`Ziua ${idx + 1}`, `Day ${idx + 1}`))}</div>
     <div class="acasa-antrenament-detalii">${lista.length} ${tr('exerciții', 'exercises')} · ~${durataZiMin(s)} min${facute ? ` · ${facute}/${lista.length} ${tr('făcute', 'done')}` : ''}</div>
@@ -3248,33 +3246,34 @@ function htmlCheckinAcasa() {
 function htmlCifreAcasa() {
   const a = dateClienta.acasa;
   const c = dateClienta.fisa || {};
-  const cifra = (valoare, eticheta) => `<div class="acasa-cifra"><b>${valoare}</b><span>${eticheta}</span></div>`;
+  const cifra = (valoare, eticheta, laClick) => `<div class="acasa-cifra"${laClick ? ` onclick="${laClick}" role="button"` : ''}><b>${valoare}</b><span>${eticheta}</span></div>`;
   return `<div class="acasa-cifre" id="acasaCifre">
-    ${cifra(a ? a.saptamana : '–', tr('săptămâna asta', 'this week'))}
-    ${cifra(c.ramase ?? '–', tr('ședințe rămase', 'sessions left'))}
+    ${cifra(a ? a.saptamana : '–', tr('ședințe săptămâna asta', 'sessions this week'))}
+    ${cifra(c.ramase ?? '–', tr('ședințe rămase ›', 'sessions left ›'), 'deschideAbonamentDinAcasa()')}
     ${cifra(a ? a.serie : '–', a && a.serie === 1 ? tr('săptămână la rând', 'week in a row') : tr('săptămâni la rând', 'weeks in a row'))}
   </div>`;
 }
 
-// Următoarea ședință programată la sală (din Programări)
+// Următoarea ședință la sală: anularea direct de aici când e permisă; fără ședință, câte ore libere sunt de rezervat
 function htmlSedintaAcasa() {
   const a = dateClienta.acasa;
   if (!a) return `<div class="card acasa-sedinta schelet" id="acasaSedinta"></div>`;
-  return a.urmatoarea
-    ? `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
+  if (a.urmatoarea) {
+    const { poateAnula } = stareAnulareClienta({ bifat: false, rezervat_online: !!a.urmatoareaOnline, data: a.urmatoarea });
+    return `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
         <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div>
         <b>${escAttr(etichetaZiSlot(a.urmatoarea))}, ${oraSlot(a.urmatoarea)}</b>${a.urmatoareaAntrenament ? `<div class="acasa-antrenament-detalii">${escAttr(a.urmatoareaAntrenament)}</div>` : ''}</div>
-        <div class="drawer-nav-arrow">›</div>
-      </div>`
-    : `<div class="card acasa-sedinta" id="acasaSedinta">
-        <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div><b>${tr('Nicio ședință programată', 'No session booked')}</b></div>
-        <button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="clientaTab('orar')">${tr('Programează-te', 'Book')}</button>
+        ${poateAnula && a.urmatoareaRow
+          ? `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="event.stopPropagation(); anuleazaRezervareClienta(${Number(a.urmatoareaRow)})">${tr('Anulează', 'Cancel')}</button>`
+          : '<div class="drawer-nav-arrow">›</div>'}
       </div>`;
-}
-
-function comutaToatePlanurile() {
-  dateClienta.arataToatePlanurile = !dateClienta.arataToatePlanurile;
-  randeazaHomeClienta();
+  }
+  const libere = dateClienta.locuriLibere || 0;
+  return `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
+      <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div><b>${tr('Nicio ședință programată', 'No session booked')}</b>
+      ${libere ? `<div class="acasa-antrenament-detalii">${libere === 1 ? tr('O oră liberă de rezervat', '1 open hour to book') : tr(`${libere} ore libere de rezervat`, `${libere} open hours to book`)}</div>` : ''}</div>
+      <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); clientaTab('orar')">${tr('Programează-te', 'Book')}</button>
+    </div>`;
 }
 
 // Prima deschidere ca clientă: parolă (ca să se poată reconecta oricând, mai ales în aplicația instalată) + cum se instalează aplicația
@@ -4035,6 +4034,19 @@ function afiseazaFisaMeaClienta() {
   const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
   let html = `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
   html += titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
+  // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
+  if ((dateClienta.planuri || []).length > 1) {
+    html += titlu(tr('Planuri anterioare', 'Earlier plans')) + `<div class="plan-fisa-lista">` + dateClienta.planuri.slice(1).map((p, i) => {
+      const ex = (p.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim()));
+      return `<button type="button" class="plan-zi-card" onclick="deschidePlanClienta(${i + 1})">
+        <span class="plan-zi-card-text">
+          <span class="plan-zi-card-titlu">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</span>
+          <span class="plan-zi-card-detalii">${(p.continut_json?.sesiuni || []).length} ${tr('zile', 'days')} · ${ex.length} ${tr('exerciții', 'exercises')}</span>
+        </span>
+        <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>`;
+    }).join('') + `</div>`;
+  }
   html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
   html += titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
     ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}</div>`
@@ -4488,6 +4500,13 @@ function grupeazaSloturiDeschise(lista, zileProgramate = new Map()) {
 
 // Bulina de pe Orar: câte ore au locuri deschise pe care clienta le poate rezerva
 function seteazaBulinaOrar(nr) {
+  // Același număr apare pe Acasă, pe cardul ședinței, când clientul nu are nicio ședință programată
+  const schimbat = dateClienta.locuriLibere !== nr;
+  dateClienta.locuriLibere = nr;
+  if (schimbat && clientaTabCurent === 'acasa' && !dateClienta.planCurent && dateClienta.acasa && !dateClienta.acasa.urmatoarea) {
+    const card = document.getElementById('acasaSedinta');
+    if (card) card.outerHTML = htmlSedintaAcasa();
+  }
   const b = document.getElementById('clientaBulinaOrar');
   if (!b) return;
   b.textContent = nr > 9 ? '9+' : String(nr);
@@ -4671,6 +4690,8 @@ function anuleazaRezervareClienta(row) {
     else if (data === 'prea_tarziu') showToast(tr('Prea târziu pentru anulare. Contactează antrenorul.', 'Too late to cancel. Contact your trainer.'), 'error');
     else showToast(tr('Nu s-a putut anula.', 'Could not cancel.'), 'error');
     if (clientaTabCurent === 'orar') randeazaOrarClienta();
+    // Anulată de pe Acasă: cardul ședinței se actualizează (următoarea ședință sau orele libere)
+    if (clientaTabCurent === 'acasa') { incarcaRezumatAcasa(); actualizeazaBulinaOrar(); }
   });
 }
 
@@ -4918,6 +4939,8 @@ async function afiseazaEcranClienta() {
     dateClienta.contact = data || null;
     const card = document.getElementById('cardReinnoireClienta');
     if (card && dateClienta.fisa) card.innerHTML = htmlReinnoireClienta(dateClienta.fisa);
+    const nota = document.getElementById('cardNotaAntrenor');
+    if (nota && dateClienta.fisa) nota.innerHTML = htmlNotaAntrenor(dateClienta.fisa);
     salveazaCacheClienta();
   });
   const eraAfisat = !!salvat;
@@ -4940,7 +4963,7 @@ async function incarcaRezumatAcasa() {
   if (!dateClienta.fisa) return;
   const [resPrez, resOrar, resCheckin] = await Promise.all([
     supabaseClient.from('prezente').select('data, ora').eq('client_id', dateClienta.fisa.id),
-    supabaseClient.from('orar').select('ziRaw, ora, bifat, antrenament').eq('client_id', dateClienta.fisa.id),
+    supabaseClient.from('orar').select('row, ziRaw, ora, bifat, antrenament, rezervat_online').eq('client_id', dateClienta.fisa.id),
     supabaseClient.from('checkin_saptamanal').select('saptamana').eq('client_id', dateClienta.fisa.id).eq('saptamana', lunaSaptamaniiCurente())
   ]);
   if (resPrez.error || resOrar.error) return;
@@ -4950,13 +4973,15 @@ async function incarcaRezumatAcasa() {
   }).filter(p => !isNaN(p.d));
   const acum = new Date();
   const saptamana = lunaSaptamanii(acum);
-  const urm = (resOrar.data || []).filter(o => !o.bifat).map(o => ({ data: dataSlot(o.ziRaw, o.ora), antrenament: o.antrenament || '' }))
+  const urm = (resOrar.data || []).filter(o => !o.bifat).map(o => ({ data: dataSlot(o.ziRaw, o.ora), antrenament: o.antrenament || '', row: o.row, online: !!o.rezervat_online }))
     .filter(o => o.data && o.data > acum).sort((a, b) => a.data - b.data)[0];
   dateClienta.acasa = {
     saptamana: lista.filter(p => lunaSaptamanii(p.d) === saptamana).length,
     serie: calculeazaSerie(lista).serie,
     urmatoarea: urm ? urm.data : null,
     urmatoareaAntrenament: urm ? urm.antrenament : '',
+    urmatoareaRow: urm ? urm.row : null,
+    urmatoareaOnline: urm ? urm.online : false,
     // null = necunoscut (eroare la citire): cardul de check-in nu apare
     checkinFacut: resCheckin.error ? null : (resCheckin.data || []).length > 0,
     checkinSaptamana: lunaSaptamaniiCurente()
@@ -5236,7 +5261,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ---- Butonul Înapoi al telefonului: închide pe rând ce e deschis, apoi revine pe Orar (Acasă la client); de acolo iese din aplicație ----
 // Cât timp e ceva de închis ținem o intrare în plus în istoric; Înapoi o consumă (popstate) și facem un singur pas.
-const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings' };
+const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings' };
 const MODALE_INAPOI = [
   ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
   ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
@@ -7065,9 +7090,21 @@ const semnaturaNota = c => (c.nota_client_la || '') + '|' + (c.nota_client || ''
 function htmlNotaAntrenor(c) {
   if (!(c.nota_client || '').trim()) return '';
   try { if (localStorage.getItem(cheieNotaAscunsa()) === semnaturaNota(c)) return ''; } catch (e) {}
+  // Ca un mesaj: de la cine, când, și răspunsul direct pe WhatsApp (dacă antrenorul și-a pus telefonul în Profil)
+  const contact = dateClienta.contact;
+  const prenumeAntrenor = ((contact && contact.nume_antrenor) || '').trim().split(' ')[0];
+  let raspuns = '';
+  if (contact && contact.telefon) {
+    let cifre = contact.telefon.replace(/[^\d]/g, '');
+    if (cifre.startsWith('0')) cifre = '40' + cifre.slice(1);
+    raspuns = `<a class="btn btn-clear nota-antrenor-raspuns" href="https://wa.me/${cifre}" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg> ${tr('Răspunde pe WhatsApp', 'Reply on WhatsApp')}
+      </a>`;
+  }
   return `<div class="card nota-antrenor-card">
-      <div class="nota-antrenor-titlu">${tr('Nota antrenorului', 'Note from your trainer')}${c.nota_client_la ? `<small>${formatZiLuna(new Date(c.nota_client_la))}</small>` : ''}</div>
+      <div class="nota-antrenor-titlu">${prenumeAntrenor ? tr(`${escAttr(prenumeAntrenor)} îți scrie`, `${escAttr(prenumeAntrenor)} writes`) : tr('Nota antrenorului', 'Note from your trainer')}${c.nota_client_la ? `<small>${formatZiLuna(new Date(c.nota_client_la))}</small>` : ''}</div>
       <div class="nota-antrenor-text">${escAttr(c.nota_client)}</div>
+      ${raspuns}
       <button type="button" class="notificare-x nota-antrenor-x" onclick="ascundeNotaAntrenor()" aria-label="${tr('Închide nota', 'Close note')}">×</button>
     </div>`;
 }
@@ -7758,6 +7795,109 @@ function htmlCardPush() {
     return '';
   }
   return `<div class="card card-push${blocate ? ' card-push-blocat' : ''}"><span>${text}</span>${buton}</div>`;
+}
+
+// Setări › Notificări: starea pe acest telefon și pornirea / oprirea lor (și după ce cardul de la clopoțel a fost închis)
+async function stareNotificari() {
+  if (!suportaPush()) return 'nesuportat';
+  if (Notification.permission === 'denied') return 'blocate';
+  if (Notification.permission !== 'granted') return 'oprite';
+  return (await abonamentPushCurent().catch(() => null)) ? 'pornite' : 'oprite';
+}
+
+async function actualizeazaRezumatNotificari() {
+  const el = document.getElementById('setariRezumatNotificari');
+  if (!el) return;
+  const stare = await stareNotificari();
+  el.textContent = { pornite: tr('Pornite pe acest telefon', 'On for this phone'), oprite: tr('Oprite pe acest telefon', 'Off for this phone'),
+    blocate: tr('Blocate din setările telefonului', 'Blocked in phone settings'), nesuportat: tr('Indisponibile aici', 'Not available here') }[stare];
+}
+
+async function comutaNotificariSetari() {
+  const stare = await stareNotificari();
+  if (stare === 'oprite') {
+    await activeazaPush();
+  } else if (stare === 'pornite') {
+    customConfirm(tr('Oprești notificările?', 'Turn off notifications?'), tr('Pe acest telefon nu mai primești notificări. Le poți porni oricând de aici.', 'This phone will stop getting notifications. You can turn them back on here anytime.'), async () => {
+      await dezaboneazaPush();
+      showToast(tr('✓ Notificările sunt oprite pe acest telefon', '✓ Notifications are off for this phone'));
+      actualizeazaRezumatNotificari();
+      randeazaSetariNotificari();
+    });
+  } else if (stare === 'blocate') {
+    showToast(tr('Notificările sunt blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Notifications are blocked for B-Fit. You can turn them on in your browser or phone settings.'), 'error');
+  } else {
+    const esteIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    showToast(esteIos
+      ? tr('Pe iPhone, notificările merg doar dacă adaugi aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'On iPhone, notifications only work if you add the app to your home screen: Share › “Add to Home Screen”.')
+      : tr('Browserul acesta nu suportă notificări.', 'This browser does not support notifications.'), 'error');
+  }
+  actualizeazaRezumatNotificari();
+  randeazaSetariNotificari();
+}
+
+// Ce notificări pleacă pe telefon, pe tipuri (rândurile cu mai multe tipuri se comută împreună).
+// Tipurile oprite stau în contul utilizatorului (user_metadata.notificari_oprite); trigger-ul trimite_push le sare,
+// dar notificarea rămâne la clopoțel.
+const TIPURI_NOTIFICARI = {
+  clienta: [
+    [['programare_maine'], ['Antrenament mâine', 'Workout tomorrow'], ['Seara dinainte de ședință', 'The evening before a session']],
+    [['loc_liber'], ['Loc liber', 'Spot available'], ['Când se eliberează o oră', 'When an hour opens up']],
+    [['plan_nou'], ['Plan nou', 'New plan'], ['Când primești un plan de antrenament', 'When you get a workout plan']],
+    [['nota_noua'], ['Notă de la antrenor', 'Note from your trainer'], ['Când antrenorul îți scrie', 'When your trainer writes to you']],
+    [['checkin_memento'], ['Check-in săptămânal', 'Weekly check-in'], ['Memento dacă nu l-ai trimis', 'Reminder if you haven’t sent it']],
+    [['abonament_expira', 'sedinte_putine'], ['Abonament', 'Subscription'], ['Când expiră sau mai ai puține ședințe', 'When it ends or few sessions are left']]
+  ],
+  antrenor: [
+    [['rezervare', 'anulare'], ['Rezervări și anulări', 'Bookings and cancellations'], ['Când un client rezervă sau anulează', 'When a client books or cancels']],
+    [['checkin_nou'], ['Check-in nou', 'New check-in'], ['Când un client trimite check-in-ul', 'When a client sends a check-in']],
+    [['lipsa_checkin'], ['Check-in-uri lipsă', 'Missing check-ins'], ['Clienții care n-au trimis check-in-ul', 'Clients who didn’t send the check-in']],
+    [['cerere_noua'], ['Cereri de înscriere', 'Sign-up requests'], ['Când cineva completează fișa', 'When someone fills in the form']],
+    [['abonamente_expira'], ['Abonamente care expiră', 'Subscriptions ending'], ['Abonamentele care se termină în curând', 'Subscriptions ending soon']]
+  ]
+};
+
+const notificariOprite = () => (utilizatorCurent && utilizatorCurent.user_metadata && utilizatorCurent.user_metadata.notificari_oprite) || [];
+
+async function randeazaSetariNotificari() {
+  const corp = document.getElementById('setariNotificariContinut');
+  if (!corp) return;
+  const stare = await stareNotificari();
+  const textStare = {
+    pornite: tr('Pornite pe acest telefon.', 'On for this phone.'),
+    oprite: tr('Oprite pe acest telefon. Pornește-le ca să afli la timp de programări și mesaje, chiar și cu aplicația închisă.', 'Off for this phone. Turn them on to hear about bookings and messages in time, even with the app closed.'),
+    blocate: tr('Blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Blocked for B-Fit. You can turn them on in your browser or phone settings.'),
+    nesuportat: tr('Pe acest dispozitiv notificările nu sunt disponibile. Pe iPhone, adaugă aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'Notifications aren’t available on this device. On iPhone, add the app to your home screen: Share › “Add to Home Screen”.')
+  }[stare];
+  const buton = stare === 'oprite' ? `<button type="button" class="btn" onclick="comutaNotificariSetari()">${tr('Pornește', 'Turn on')}</button>`
+    : stare === 'pornite' ? `<button type="button" class="btn btn-clear" onclick="comutaNotificariSetari()">${tr('Oprește', 'Turn off')}</button>` : '';
+  const oprite = notificariOprite();
+  const randuri = (TIPURI_NOTIFICARI[rolUtilizator === 'clienta' ? 'clienta' : 'antrenor']).map(([tipuri, titlu, desc]) => `
+    <label class="setare-notificare">
+      <span><b>${tr(...titlu)}</b><small>${tr(...desc)}</small></span>
+      <input type="checkbox" class="comutator" ${tipuri.some(x => oprite.includes(x)) ? '' : 'checked'} onchange="seteazaTipNotificare('${tipuri.join(',')}', this.checked, this)">
+    </label>`).join('');
+  corp.innerHTML = `<div class="drawer-section">
+      <div class="card card-push"><span>${textStare}</span>${buton}</div>
+    </div>
+    <div class="drawer-section" style="margin-top:14px;">
+      <div class="drawer-section-title">${tr('Notificări push', 'Push notifications')}</div>
+      <div class="card setari-notificari-lista">${randuri}</div>
+      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">${tr('Cele oprite nu mai sună pe telefon, dar le găsești în continuare la clopoțel.', 'The ones turned off won’t ring your phone, but you’ll still find them under the bell.')}</div>
+    </div>`;
+}
+
+async function seteazaTipNotificare(tipuri, pornit, input) {
+  const lista = tipuri.split(',');
+  const oprite = notificariOprite().filter(x => !lista.includes(x)).concat(pornit ? [] : lista);
+  input.disabled = true;
+  const { data, error } = await supabaseClient.auth.updateUser({ data: { notificari_oprite: oprite } });
+  input.disabled = false;
+  if (error) {
+    input.checked = !pornit;
+    return showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
+  }
+  if (data && data.user) utilizatorCurent = data.user;
 }
 
 function ascundeMesajPushBlocat() {
@@ -10855,6 +10995,7 @@ function actualizeazaRezumatSetari() {
   if (elInscriere) elInscriere.textContent = codInscriereAntrenor
     ? linkInscriere(codInscriereAntrenor).replace(/^https?:\/\//, '')
     : tr('Nesetat', 'Not set');
+  actualizeazaRezumatNotificari();
 }
 
 // Paleta de culori: albastru (implicit; <html data-accent="blue"> din index.html, ca iconița și manifest.json) sau celelalte.
