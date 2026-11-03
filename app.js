@@ -9019,8 +9019,7 @@ function deschideModalEditareIncasare(itemEncoded) {
   let sCurata = sumaFaraMoneda(item.suma);
   document.getElementById('editIncSuma').value = sCurata;
   
-  let selMet = document.getElementById('editIncMetoda');
-  seteazaValoareSelect(selMet, (item.metoda && item.metoda !== "-") ? item.metoda : "-");
+  populeazaMetodeEditare((item.metoda && item.metoda !== "-") ? item.metoda : "-");
 
   let selTip = document.getElementById('editIncTip');
   if (selTip) {
@@ -11477,6 +11476,15 @@ function seteazaValoareSelect(sel, valoare) {
   sel.value = valoare;
 }
 
+// Lista din editarea unei plăți, refăcută la fiecare deschidere: o metodă ștearsă apare doar la plata salvată cu ea
+function populeazaMetodeEditare(valoare) {
+  const sel = document.getElementById('editIncMetoda');
+  if (!sel) return;
+  sel.innerHTML = '';
+  setariStudio.metodePlata.concat('-').forEach(m => sel.add(new Option(traduceValoare(m), m)));
+  if (valoare) seteazaValoareSelect(sel, valoare);
+}
+
 // Moneda în etichete și sumele propuse; metodele de plată în cele două liste (Încasări și editarea unei plăți)
 function aplicaSetariPlatiUI() {
   const moneda = setariStudio.moneda;
@@ -11497,12 +11505,7 @@ function aplicaSetariPlatiUI() {
     actualizeazaStilSelect(selNou);
   }
   const selEdit = document.getElementById('editIncMetoda');
-  if (selEdit) {
-    const val = selEdit.value;
-    selEdit.innerHTML = '';
-    setariStudio.metodePlata.concat('-').forEach(m => selEdit.add(new Option(traduceValoare(m), m)));
-    if (val) seteazaValoareSelect(selEdit, val);
-  }
+  if (selEdit) populeazaMetodeEditare(selEdit.value);
   randeazaSetariStudio();
   actualizeazaRezumatSetari();
 }
