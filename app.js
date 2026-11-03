@@ -3195,9 +3195,10 @@ function randeazaHomeClienta() {
 
   // Abonamentul, pe scurt (ședințele rămase sunt sus, la cifre)
   html += titlu(tr('Abonament', 'Subscription'));
-  html += `<div class="card acasa-abonament">
-    <b>${escAttr(traduceValoare(c.tipAbonament || '-'))}</b>
-    <span>${c.efectuate ?? 0} ${tr('din', 'of')} ${c.incluse ?? 0} ${tr('ședințe', 'sessions')}${c.dataExpirare && c.dataExpirare !== '-' ? ` · ${tr('valabil până la', 'valid until')} ${escAttr(c.dataExpirare)}` : ''}</span>
+  html += `<div class="card acasa-abonament acasa-sedinta" onclick="deschideAbonamentDinAcasa()">
+    <div><b>${escAttr(numeAbonamentClienta(c.tipAbonament))}</b>
+    <span>${c.efectuate ?? 0} ${tr('din', 'of')} ${c.incluse ?? 0} ${tr('ședințe', 'sessions')}${c.dataExpirare && c.dataExpirare !== '-' ? ` · ${tr('valabil până la', 'valid until')} ${escAttr(c.dataExpirare)}` : ''}</span></div>
+    <div class="drawer-nav-arrow">›</div>
   </div>`;
   document.getElementById('clientaContinut').innerHTML = html;
 }
@@ -3972,6 +3973,55 @@ async function randeazaFisaMeaClienta() {
   afiseazaFisaMeaClienta();
 }
 
+// Numele abonamentului pentru client: valoarea din bază („8 sedinte”) cu diacritice, în engleză tradus
+function numeAbonamentClienta(tip) {
+  if (!tip || tip === '-') return '-';
+  if (currentLang === 'en') return traduceValoare(tip);
+  const t = String(tip).trim();
+  const r = t.replace(/sedinta individuala/i, 'Ședință individuală').replace(/sedinta gratuita/i, 'Ședință gratuită').replace(/sedinte/i, 'ședințe');
+  return r.charAt(0).toUpperCase() + r.slice(1);
+}
+
+// Abonamentul complet, în Fișa mea: stare, ședințe folosite din total, perioada de valabilitate.
+// Butoanele de reînnoire (Sună / WhatsApp) rămân pe Acasă, pe cardul care apare când se apropie finalul.
+function htmlAbonamentClienta(c) {
+  if (!c) return '';
+  const incluse = Number(c.incluse) || 0, ramase = Number(c.ramase) || 0, efectuate = Number(c.efectuate) || 0;
+  const s = stareAbonamentClienta(Object.assign({}, c, { incluse, ramase }));
+  if (s.tip === 'nou') {
+    return `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai un abonament activ. După prima plată, aici îți vezi ședințele și valabilitatea.', 'You don’t have an active subscription yet. After your first payment, your sessions and validity show up here.')}</div>`;
+  }
+  const eticheta = { activ: ['badge-activ', tr('Activ', 'Active')], curand: ['badge-curand', s.text], expirat: ['badge-expirat', s.text], arhivat: ['badge-arhivat', s.text] }[s.tip] || ['badge-arhivat', s.text];
+  const procent = incluse ? Math.min(100, Math.round(efectuate / incluse * 100)) : 0;
+  const fara = v => !v || v === '-';
+  const exp = parseazaDataOraRo(c.dataExpirare);
+  const azi = new Date(); azi.setHours(0, 0, 0, 0);
+  const zile = exp ? Math.round((new Date(exp).setHours(0, 0, 0, 0) - azi) / 86400000) : null;
+  const rand = (e, v) => `<div class="abonament-rand"><span>${e}</span><b>${v}</b></div>`;
+  return `<div class="card abonament-card">
+    <div class="abonament-antet"><b>${escAttr(numeAbonamentClienta(c.tipAbonament))}</b><span class="badge ${eticheta[0]}">${escAttr(eticheta[1])}</span></div>
+    <div class="abonament-bara"><span style="width:${procent}%"></span></div>
+    <div class="abonament-sub">${tr(`${efectuate} din ${incluse} ședințe folosite`, `${efectuate} of ${incluse} sessions used`)} · <b>${ramase} ${ramase === 1 ? tr('rămasă', 'left') : tr('rămase', 'left')}</b></div>
+    ${rand(tr('Început', 'Started'), fara(c.dataStart) ? '-' : escAttr(c.dataStart))}
+    ${rand(tr('Valabil până la', 'Valid until'), fara(c.dataExpirare)
+      ? tr('Începe la prima ședință', 'Starts at your first session')
+      : `${escAttr(c.dataExpirare)}${zile !== null && zile >= 0 ? ` <span class="abonament-zile">· ${zile === 0 ? tr('azi', 'today') : tr(`încă ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `${zile} ${zile === 1 ? 'day' : 'days'} left`)}</span>` : ''}`)}
+  </div>`;
+}
+
+function deschideAbonamentDinAcasa() {
+  clientaTab('fisa');
+  // După ce s-a desenat Fișa mea, se derulează la secțiunea abonamentului
+  const asteapta = setInterval(() => {
+    const card = document.querySelector('#clientaContinut .abonament-card');
+    if (card || clientaTabCurent !== 'fisa') {
+      clearInterval(asteapta);
+      if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, 100);
+  setTimeout(() => clearInterval(asteapta), 5000);
+}
+
 // Scurtătura de pe Acasă spre formularul de check-in din Fișa mea
 let deschideCheckinLaIncarcare = false;
 function deschideCheckinDinAcasa() {
@@ -3984,6 +4034,7 @@ function afiseazaFisaMeaClienta() {
   const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
   const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
   let html = `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
+  html += titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
   html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
   html += titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
     ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}</div>`

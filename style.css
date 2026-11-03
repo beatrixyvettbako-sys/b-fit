@@ -5984,7 +5984,7 @@ select.form-control {
   min-width: 0;
 }
 
-.acasa-abonament {
+.acasa-abonament > div:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -5992,6 +5992,68 @@ select.form-control {
 
 .acasa-abonament span {
   font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Fișa mea: abonamentul complet */
+.badge-curand { background: rgba(245, 176, 65, 0.22); color: #9a5b00; }
+
+.abonament-antet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.abonament-antet b {
+  font-size: 0.95rem;
+  color: var(--primary);
+}
+
+.abonament-bara {
+  height: 8px;
+  margin: 10px 0 6px;
+  border-radius: 4px;
+  background: rgba(var(--primary-rgb), 0.1);
+  overflow: hidden;
+}
+
+.abonament-bara span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--primary);
+}
+
+.abonament-sub {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.abonament-sub b {
+  color: var(--primary);
+}
+
+.abonament-rand {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+
+.abonament-rand span {
+  color: var(--text-muted);
+}
+
+.abonament-rand b {
+  text-align: right;
+}
+
+.abonament-zile {
+  font-weight: 600;
   color: var(--text-muted);
 }
 
