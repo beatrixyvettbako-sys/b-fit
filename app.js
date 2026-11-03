@@ -1646,6 +1646,8 @@ let dataReferintaLuni = calculeazaLuniInitial();
 let dataReferintaLuniBaza = new Date(dataReferintaLuni.getTime());
 let ziCurentaCheie = "Luni";
 let dataUltimeiVerificari = new Date().toDateString(); // pentru revenirea din fundal într-o zi nouă
+let momentIntrareFundal = 0; // la revenire sărim la ora curentă doar după o pauză lungă (meniul de partajare, un mesaj scurt nu mută orarul)
+const PAUZA_SALT_ORA_CURENTA = 5 * 60 * 1000;
 let modalCallback = null;
 
 const optiuniAntrenamentConfig = [
@@ -4828,7 +4830,9 @@ function gestioneazaRevenireForeground() {
   // Aplicația a stat în fundal peste miezul nopții sau peste pragul de vineri seara: trecem pe ziua și săptămâna de azi
   let bazaNoua = calculeazaLuniInitial();
   let aziText = new Date().toDateString();
+  let pauzaLunga = !momentIntrareFundal || Date.now() - momentIntrareFundal >= PAUZA_SALT_ORA_CURENTA;
   if (aziText !== dataUltimeiVerificari || bazaNoua.getTime() !== dataReferintaLuniBaza.getTime()) {
+    pauzaLunga = true;
     dataUltimeiVerificari = aziText;
     dataReferintaLuniBaza = bazaNoua;
     dataReferintaLuni = new Date(bazaNoua.getTime());
@@ -4847,11 +4851,11 @@ function gestioneazaRevenireForeground() {
     return;
   }
 
-  if (tipTabCurent === 'orar') {
+  if (tipTabCurent === 'orar' && pauzaLunga) {
     let now = new Date();
     let day = now.getDay();
     let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
-    
+
     if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[day]) {
       autoScrollLaOraCurenta();
     }
@@ -4859,6 +4863,7 @@ function gestioneazaRevenireForeground() {
 }
 
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') momentIntrareFundal = Date.now();
   if (document.visibilityState === 'visible') {
     gestioneazaRevenireForeground();
     // La revenirea în aplicație aducem datele noi (ex. rezervări făcute de cliente), fără redeschidere
@@ -4868,6 +4873,81 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });
+
+// ---- Butonul Înapoi al telefonului: închide pe rând ce e deschis, apoi revine pe Orar (Acasă la client); de acolo iese din aplicație ----
+// Cât timp e ceva de închis ținem o intrare în plus în istoric; Înapoi o consumă (popstate) și facem un singur pas.
+const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings' };
+const MODALE_INAPOI = [
+  ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
+  ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
+  ['modalSharePlanBackdrop', () => inchideModalSharePlan()],
+  ['modalQrBackdrop', () => inchideModalQr()],
+  ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()]
+];
+let ignoraPopstateGarda = false;
+
+// Pasul pe care îl face Înapoi acum, sau null când suntem la rădăcină
+function pasInapoiTelefon() {
+  const vizibil = id => { const el = document.getElementById(id); return el && !el.classList.contains('auth-hidden'); };
+  if (document.getElementById('customModalBackdrop').style.display === 'flex') return () => closeCustomModal(false);
+  const modal = MODALE_INAPOI.find(([id]) => document.getElementById(id)?.style.display === 'flex');
+  if (modal) return modal[1];
+  if (vizibil('panouPoze')) return inchidePanouPoze;
+  if (vizibil('panouNotificari')) return inchidePanouNotificari;
+  if (document.getElementById('appDrawer')?.classList.contains('open')) {
+    const strat = document.querySelector('#appDrawer [id^="drawer"][id$="View"].active')?.id.replace(/^drawer|View$/g, '');
+    const cheie = strat ? strat.charAt(0).toLowerCase() + strat.slice(1) : 'main';
+    if (cheie !== 'main') return () => navigheazaSubMeniu(PARINTE_SUBMENIU[cheie] || 'main');
+    return inchideMeniuLateral;
+  }
+  if (vizibil('authScreenOverlay') || vizibil('inscriereScreen')) return null;
+
+  if (rolUtilizator === 'clienta' && vizibil('clientaScreen')) {
+    if (document.getElementById('clientaBtnInapoi').style.visibility === 'visible') return clientaInapoi;
+    if (clientaTabCurent !== 'acasa') return () => clientaTab('acasa');
+    return null;
+  }
+
+  if (tipTabCurent === 'plan') {
+    if (document.getElementById('planMeniuMaiMulte')?.style.display !== 'none') return () => comutaMeniuMaiMulte(false);
+    // Linkul de plan trimis clientului: Înapoi închide doar ziua deschisă
+    if (esteModClientaShare) return indexZiDeschisaPlan() !== null ? inchideZiPlan : null;
+    // Ca săgeata ‹ din header: ziua → planul → biblioteca → meniul din care s-a deschis planul
+    return () => gestioneazaClickStangaHeader();
+  }
+  if (tipTabCurent === 'orar') {
+    return document.getElementById('calendarExpandableCard')?.classList.contains('is-expanded') ? () => comutaExpandareBaraCalendar() : null;
+  }
+  return () => comutaTab(tabsOrder[0].id, '', document.querySelectorAll('#bottomNav button')[0], 'orar', 0);
+}
+
+function sincronizeazaIstoricInapoi() {
+  if (ignoraPopstateGarda) return;
+  const areGarda = !!(history.state && history.state.bfitInapoi);
+  const arePas = !!pasInapoiTelefon();
+  if (arePas && !areGarda) {
+    history.pushState({ bfitInapoi: 1 }, '');
+  } else if (!arePas && areGarda) {
+    // S-a închis din interfață (X, click pe fundal): scoatem intrarea în plus, ca Înapoi de la rădăcină să iasă din prima
+    ignoraPopstateGarda = true;
+    history.back();
+  }
+}
+
+window.addEventListener('popstate', () => {
+  if (ignoraPopstateGarda) {
+    ignoraPopstateGarda = false;
+    return;
+  }
+  const pas = pasInapoiTelefon();
+  if (pas) pas();
+  sincronizeazaIstoricInapoi();
+  // Unele închideri au animație sau cer confirmare (plan nesalvat): verificăm din nou după ce s-au așezat
+  setTimeout(sincronizeazaIstoricInapoi, 350);
+});
+
+// În faza de captură: unele butoane opresc propagarea (ex. sertarul calendarului din header)
+['click', 'touchend'].forEach(ev => document.addEventListener(ev, () => setTimeout(sincronizeazaIstoricInapoi, 350), { capture: true, passive: true }));
 
 function initSwipeNavigation() {
   let touchStartX = 0;
@@ -7376,6 +7456,7 @@ function cand(dataIso) {
 
 async function deschidePanouNotificari() {
   document.getElementById('panouNotificari').classList.remove('auth-hidden');
+  sincronizeazaIstoricInapoi(); // se deschide și din notificarea push, fără click în aplicație
   randeazaNotificari();
   // Deschiderea panoului le marchează pe toate ca citite (bulina dispare)
   const necitite = notificari.filter(n => !n.citit).map(n => n.id);
@@ -8203,8 +8284,14 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
 
   // Planul deschis și neatins se reia din baza de date (clienta poate fi completat progresul între timp)
   const eraNemodificat = !!(planActiv.id && !estePlanModificat());
+  const idPlanLaDeschidere = planActiv.id;
 
-  // Preluare proaspătă din Supabase pentru lista de planuri din dropdown
+  // Pagina se desenează imediat din datele locale; lista se actualizează când vin cele din Supabase
+  populeazaSelectorPlanuri();
+  randeazaPlanAntrenamentUI();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+
+  // Preluare proaspătă din Supabase pentru lista de planuri
   if (USE_SUPABASE && supabaseClient) {
     try {
       const { data: planuriNoi, error } = await supabaseClient
@@ -8223,7 +8310,9 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
           updated_at: pl.updated_at
         }));
         try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
-        const proaspat = eraNemodificat ? DB.planuri.find(p => String(p.id) === String(planActiv.id)) : null;
+        // Doar dacă e tot planul de la deschidere, neatins între timp
+        const proaspat = eraNemodificat && planActiv && planActiv.id === idPlanLaDeschidere && !estePlanModificat()
+          ? DB.planuri.find(p => String(p.id) === String(planActiv.id)) : null;
         if (proaspat) { planActiv = JSON.parse(JSON.stringify(proaspat)); retinePlanInitial(); }
       }
     } catch (err) {
@@ -8231,9 +8320,12 @@ async function deschideSectiunePlanAntrenamentDinMeniu() {
     }
   }
 
+  // Cât timp a venit răspunsul, antrenorul poate fi ieșit din plan: atunci nu se mai redesenează nimic
+  if (tipTabCurent !== 'plan') return;
   populeazaSelectorPlanuri();
-  randeazaPlanAntrenamentUI();
-  window.scrollTo({ top: 0, behavior: 'auto' });
+  // Lista bibliotecii se actualizează pe loc, fără a șterge căutarea sau a muta pagina
+  if (bibliotecaPlanuri && document.getElementById('bibliotecaLista')) actualizeazaListaBiblioteca();
+  else randeazaPlanAntrenamentUI();
 }
 
 function populeazaSelectorPlanuri() {
