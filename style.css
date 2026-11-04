@@ -5002,8 +5002,9 @@ select.form-control {
 .badge-expirat { background: #f8d7da; color: #721c24; }
 .badge-arhivat { background: var(--border); color: var(--text); }
 
-/* Bifa „Arată și arhivate”: în stilul aplicației, nu pătratul alb standard */
-#checkArataArhivate {
+/* Bifa „Arată și arhivate” și bifele din listele de clienți (Anunț, Trimite planul): în stilul aplicației, nu pătratul alb standard */
+#checkArataArhivate,
+.trimite-plan-rand input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   width: 16px;
@@ -5017,7 +5018,8 @@ select.form-control {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-#checkArataArhivate:checked {
+#checkArataArhivate:checked,
+.trimite-plan-rand input[type="checkbox"]:checked {
   background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L19 7'/%3E%3C/svg%3E") center / 12px no-repeat;
   border-color: var(--primary);
 }
@@ -5829,11 +5831,6 @@ select.form-control {
   flex-shrink: 0;
   accent-color: var(--primary);
   margin: 0;
-}
-
-/* Pe tema întunecată căsuța nebifată e închisă la culoare, nu albă */
-[data-theme="dark"] .trimite-plan-rand input {
-  color-scheme: dark;
 }
 
 .trimite-plan-text {

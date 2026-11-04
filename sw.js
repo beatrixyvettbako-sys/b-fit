@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v148';
+const CACHE_NAME = 'bfit-cache-v149';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -46,8 +46,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) {}
+  // Fără icon/badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com)
   event.waitUntil(self.registration.showNotification(m.titlu || 'B-Fit', {
     body: m.corp || '',
+    icon: './icon-192.png',
+    badge: './badge-96.png',
     tag: m.tag || undefined,
     data: { url: m.url || './' }
   }));

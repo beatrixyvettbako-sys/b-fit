@@ -7347,6 +7347,7 @@ async function incarcaConversatii() {
   if (!conversatiiDate.length) corp.innerHTML = `<div class="mesaje-gol" style="padding-top:40px;">${tr('Se încarcă...', 'Loading...')}</div>`;
   const { data, error } = await supabaseClient.from('mesaje').select('client_id, autor, text, created_at, citit, tip, context').order('created_at', { ascending: false }).limit(2000);
   if (error) {
+    if (selectieMesaj) return; // Mesaj nou rămâne deschis; lista se reîncearcă la următoarea deschidere
     corp.innerHTML = `<div class="mesaje-gol" style="padding-top:40px;">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
     return;
   }
