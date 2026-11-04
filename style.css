@@ -6978,6 +6978,13 @@ input.serie-camp {
   padding-bottom: 12px;
 }
 
+/* Iconiță în mijlocul unui text (ex. „Apasă [Mesaj nou]”) */
+.icon-inline {
+  width: 1.1em;
+  height: 1.1em;
+  vertical-align: -0.2em;
+}
+
 .mesaje-gol {
   margin: auto 0;
   text-align: center;

@@ -7358,6 +7358,8 @@ async function incarcaConversatii() {
 
 // ---- Mesaj nou (antrenor): alege unul sau mai mulți clienți; fiecare îl primește în conversația lui ----
 let selectieMesaj = null; // Set cu id-urile clienților aleși, cât timp e deschisă alegerea
+// Iconița „Mesaj nou” (pătrat cu creion), aceeași ca în antetul listei de conversații
+const SVG_MESAJ_NOU = '<svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
 
 function clientiMesajNou() {
   return (DB.clienti || []).filter(c => c.contConectat && !/^(arhivat|archived)$/i.test(c.status || ''))
@@ -7458,7 +7460,6 @@ function randeazaConversatii() {
   const corp = document.getElementById('conversatiiContinut');
   const cuMesaje = conversatiiDate.filter(x => x.ultim)
     .sort((a, b) => (b.necitite > 0) - (a.necitite > 0) || b.ultim.created_at.localeCompare(a.ultim.created_at));
-  const faraMesaje = conversatiiDate.filter(x => !x.ultim).sort((a, b) => a.client.nume.localeCompare(b.client.nume));
   const totalNecitite = cuMesaje.filter(x => x.necitite).length;
   const lista = conversatiiDoarNecitite ? cuMesaje.filter(x => x.necitite) : cuMesaje;
   const cand = iso => {
@@ -7476,12 +7477,10 @@ function randeazaConversatii() {
       <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? '' : ' active'}" onclick="comutaFiltruConversatii(false)">${tr('Toate', 'All')}</button>
       <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? ' active' : ''}" onclick="comutaFiltruConversatii(true)">${tr('Necitite', 'Unread')}${totalNecitite ? ` (${totalNecitite})` : ''}</button>
     </div>`;
+  // Un client nou se alege din „Mesaj nou” (butonul din antet), nu dintr-o listă cu toți clienții
   if (lista.length) html += `<div class="card conversatii-lista">${lista.map(rand).join('')}</div>`;
-  else html += `<div class="mesaje-gol" style="padding:24px 20px;">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.') : tr('Nicio conversație încă.', 'No conversations yet.')}</div>`;
-  if (!conversatiiDoarNecitite && faraMesaje.length) {
-    html += `<div class="drawer-section-title" style="margin:16px 4px 6px;">${tr('Scrie unui client', 'Write to a client')}</div>
-      <div class="card conversatii-lista">${faraMesaje.map(rand).join('')}</div>`;
-  }
+  else html += `<div class="mesaje-gol" style="padding:24px 20px;">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.')
+    : tr(`Nicio conversație încă. Apasă ${SVG_MESAJ_NOU} ca să scrii unui client.`, `No conversations yet. Tap ${SVG_MESAJ_NOU} to write to a client.`)}</div>`;
   if (!conversatiiDate.length) html += `<div class="mesaje-gol" style="padding:0 20px;">${tr('Mesajele apar pentru clienții care au cont în aplicație.', 'Messages are available for clients with an app account.')}</div>`;
   corp.innerHTML = html;
 }
@@ -11651,9 +11650,7 @@ function randeazaSetariStudio() {
     return `<div class="setari-lista-rand">
       ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls || 'fara-culoare'}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
       <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
-      <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
+      <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">${SVG_COS_PLAN}</button>
     </div>`;
   }).join('');
   const elAnt = document.getElementById('setariListaAntrenamente');
