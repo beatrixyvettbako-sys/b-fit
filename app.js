@@ -3568,7 +3568,7 @@ function randeazaPlanClienta() {
     html += `<div class="plan-session-block"><div class="plan-session-header"><div style="font-size:0.95rem; font-weight:800; color:var(--primary);">${escAttr(ses.titlu)}</div><span class="plan-progres-ses" id="progresSesClienta${s}">${textProgresSesiune(ses)}</span></div>`;
     (ses.exercitii || []).forEach((ex, e) => {
       html += `<div style="padding:8px 10px; border-top:1px solid var(--border);">
-        <div style="font-weight:800; color:var(--primary); font-size:0.84rem;">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}</div>
+        <button type="button" class="progres-ex-nume" style="font-size:0.84rem;" data-ex="${escAttr(ex.exercitiu)}" onclick="deschideProgresExercitiuDupaNume(this.dataset.ex)">${ex.nr || (e + 1)}. ${escAttr(ex.exercitiu)}${ICON_PROGRES_EX}</button>
         ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}
         <div style="font-size:0.75rem; font-weight:700; margin-top:2px;">${ex.seturi_repetari ? `${tr('Serii × repetări', 'Sets × reps')}: ${escAttr(ex.seturi_repetari)}` : ''}${ex.seturi_repetari && ex.pauza ? ' • ' : ''}${ex.pauza ? `${tr('Pauză', 'Rest')}: ${escAttr(ex.pauza)}` : ''}</div>
         ${ex.indicatii ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.35;">${escAttr(ex.indicatii)}</div>` : ''}
@@ -3895,7 +3895,7 @@ function randeazaEditorAntrPers() {
     <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul îl vede în fișa ta (doar citire).', 'Your trainer sees it in your profile (read only).')}</small></span>
     <input type="checkbox" class="comutator" ${c.vizibil_antrenor ? 'checked' : ''} onchange="antrPersCamp('vizibil_antrenor', this.checked)">
   </label>`}</div>`;
-  html += `<div class="antr-pers-actiuni">
+  html += `<div class="antr-pers-actiuni antr-pers-final">
     <button type="button" class="btn" onclick="antrPersSalveaza()">${rutina ? tr('Salvează rutina', 'Save routine') : tr('Salvează antrenamentul', 'Save workout')}</button>
     ${!rutina && sala && (c.exercitii || []).length ? `<button type="button" class="btn btn-clear" onclick="antrPersSalveazaCaRutina()">${tr('Salvează ca rutină', 'Save as routine')}</button>` : ''}
     ${c.id ? `<button type="button" class="btn btn-clear antr-pers-sterge" onclick="antrPersSterge()">${tr('Șterge', 'Delete')}</button>` : ''}
@@ -3919,7 +3919,7 @@ function htmlExercitiuAntrPers(ex, e, rutina) {
   }).join('');
   return `<div class="plan-session-block antr-pers-ex">
     <div class="antr-pers-ex-antet">
-      <div><div style="font-weight:800; color:var(--primary); font-size:0.88rem;">${escAttr(ex.exercitiu)}</div>
+      <div><button type="button" class="progres-ex-nume" style="font-size:0.88rem;" data-ex="${escAttr(ex.exercitiu)}" onclick="deschideProgresExercitiuDupaNume(this.dataset.ex)">${escAttr(ex.exercitiu)}${ICON_PROGRES_EX}</button>
       ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}</div>
       <button type="button" class="notificare-x" onclick="antrPersStergeExercitiu(${e})" aria-label="${tr('Scoate exercițiul', 'Remove exercise')}">×</button>
     </div>
@@ -4034,7 +4034,7 @@ function randAntrPers(c) {
   return {
     user_id: dateClienta.fisa.user_id, client_id: dateClienta.fisa.id, fel: c.fel, data: c.data || aziIsoAntrPers(),
     titlu: (c.titlu || '').trim().slice(0, 80), activitate: c.fel === 'rutina' ? 'sala' : c.activitate,
-    durata_min: c.durata_min ?? null, distanta_km: sala ? null : (c.distanta_km ?? null),
+    durata_min: c.fel === 'rutina' ? null : (c.durata_min ?? null), distanta_km: sala ? null : (c.distanta_km ?? null),
     exercitii: sala ? (c.exercitii || []).filter(e => (e.exercitiu || '').trim()) : [],
     nota: (c.nota || '').slice(0, 1000), vizibil_antrenor: c.fel === 'rutina' ? false : !!c.vizibil_antrenor,
     updated_at: new Date().toISOString()
@@ -4136,6 +4136,162 @@ function htmlAntrPersAntrenor(lista) {
       ${x.nota ? `<div class="acasa-antrenament-detalii">„${escAttr(x.nota)}”</div>` : ''}
     </details>`;
   }).join('');
+}
+
+// ---- Progresul pe exerciții: kg maxim / repetări maxime / volum (kg × rep) pe fiecare antrenament, în timp ----
+// Datele: planurile (săptămânile trecute din istoric_saptamani + săptămâna curentă) și antrenamentele proprii.
+// Sursa o dă cine afișează: clientul (ale lui) sau antrenorul (planurile clientului + antrenamentele lăsate vizibile).
+let sursaProgresEx = { planuri: [], antrenamente: [] };
+let listaProgresEx = [];
+const ICON_PROGRES_EX = '<svg class="progres-ex-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>';
+let progresExDeschis = null;
+
+// Valorile unui exercițiu dintr-un antrenament (doar seriile bifate); null = nimic notat
+function valoriSeriiEx(ex) {
+  const facute = Array.isArray(ex.serii) ? ex.serii.filter(r => r.gata) : [];
+  if (facute.length) {
+    return {
+      kg: Math.max(0, ...facute.map(r => numarKg(r.kg))),
+      rep: Math.max(0, ...facute.map(r => numarKg(r.rep))),
+      volum: facute.reduce((s, r) => s + numarKg(r.kg) * numarKg(r.rep), 0),
+      detaliu: facute.map(r => {
+        const kg = String(r.kg || '').trim(), rep = String(r.rep || '').trim() || '-';
+        return kg ? `${kg} × ${rep}` : `${rep} rep`;
+      }).join(', ')
+    };
+  }
+  // Exercițiile bifate „Făcut” înainte de notarea pe serii: doar greutatea
+  const kg = numarKg(ex.greutate_kg);
+  return ex.status === 'Finalizat' && kg ? { kg, rep: 0, volum: 0, detaliu: `${formatKg(kg)} kg` } : null;
+}
+
+function istoricExercitii(sursa) {
+  const harta = new Map();
+  // d = data de rezervă (săptămâna din istoric / ultima actualizare a planului); ziua din plan o are pe a ei în data_client
+  const adauga = (sesiuni, d) => (sesiuni || []).forEach(s => {
+    const [a, l, z] = String(s.data_client || '').split('-').map(Number);
+    const dz = a ? new Date(a, l - 1, z) : d;
+    if (!dz || isNaN(dz)) return;
+    const zi = new Date(dz.getFullYear(), dz.getMonth(), dz.getDate());
+    (s.exercitii || []).forEach(ex => {
+      const nume = (ex.exercitiu || '').trim();
+      const v = nume ? valoriSeriiEx(ex) : null;
+      if (!v) return;
+      const cheie = nume.toLowerCase();
+      if (!harta.has(cheie)) harta.set(cheie, { nume, puncte: [] });
+      const puncte = harta.get(cheie).puncte;
+      // Aceeași zi (două antrenamente): maximele rămân maxime, volumul se adună
+      const p = puncte.find(x => x.d.getTime() === zi.getTime());
+      if (p) Object.assign(p, { kg: Math.max(p.kg, v.kg), rep: Math.max(p.rep, v.rep), volum: p.volum + v.volum, detaliu: p.detaliu + '; ' + v.detaliu });
+      else puncte.push(Object.assign({ d: zi }, v));
+    });
+  });
+  (sursa.planuri || []).forEach(p => {
+    (p.continut_json?.istoric_saptamani || []).forEach(sapt => adauga(sapt.sesiuni, new Date(sapt.data)));
+    adauga(p.continut_json?.sesiuni, new Date(p.updated_at || Date.now()));
+  });
+  (sursa.antrenamente || []).filter(x => x.fel === 'antrenament').forEach(x => {
+    const [a, l, z] = String(x.data || '').split('-').map(Number);
+    if (a) adauga([{ exercitii: x.exercitii }], new Date(a, l - 1, z));
+  });
+  return [...harta.values()].map(o => { o.puncte.sort((a, b) => a.d - b.d); return o; })
+    .sort((a, b) => b.puncte.length - a.puncte.length || b.puncte[b.puncte.length - 1].d - a.puncte[a.puncte.length - 1].d);
+}
+
+// Clientul: planurile lui (cel deschis cu ce a notat chiar acum) + antrenamentele proprii (și cel în lucru)
+function sursaProgresClient() {
+  const planuri = (dateClienta.planuri || []).map(p => dateClienta.planCurent && dateClienta.planCurent.id === p.id ? dateClienta.planCurent : p);
+  let antrenamente = antrenamentePers();
+  const c = antrPers.curent;
+  if (c && c.fel === 'antrenament') antrenamente = antrenamente.filter(x => x.id !== c.id).concat([c]);
+  return { planuri, antrenamente };
+}
+
+function textSchimbareEx(o) {
+  const p = o.puncte, prim = p[0], ultim = p[p.length - 1];
+  if (p.length < 2) return { text: tr('o dată', 'once'), sus: false };
+  const cuKg = p.some(x => x.kg > 0);
+  const dif = cuKg ? ultim.kg - prim.kg : ultim.rep - prim.rep;
+  if (Math.abs(dif) < 0.05) return { text: tr('la fel', 'same'), sus: false };
+  return { text: `${dif > 0 ? '+' : '−'}${formatKg(Math.abs(dif))} ${cuKg ? 'kg' : 'rep'}`, sus: dif > 0 };
+}
+
+// Lista exercițiilor cu progres (Fișa mea / Fișă › Progres); primele 6, restul la „Toate exercițiile”
+function htmlProgresExercitii(sursa) {
+  sursaProgresEx = sursa;
+  listaProgresEx = istoricExercitii(sursa);
+  if (!listaProgresEx.length) {
+    return `<div class="progres-gol">${tr('Graficele apar după primele serii bifate la exerciții.', 'Charts appear after the first checked sets.')}</div>`;
+  }
+  const rand = (o, i) => {
+    const maxKg = Math.max(...o.puncte.map(x => x.kg)), maxRep = Math.max(...o.puncte.map(x => x.rep));
+    const sch = textSchimbareEx(o);
+    return `<button type="button" class="plan-zi-card progres-ex-rand" onclick="deschideProgresExercitiu(${i})">
+      <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(o.nume)}</span>
+      <span class="plan-zi-card-detalii">${o.puncte.length} ${o.puncte.length === 1 ? tr('antrenament', 'workout') : tr('antrenamente', 'workouts')}${maxKg ? ` · ${tr('record', 'best')} ${formatKg(maxKg)} kg` : maxRep ? ` · max ${formatKg(maxRep)} rep` : ''}</span></span>
+      <span class="progres-ex-dif${sch.sus ? ' sus' : ''}">${sch.text}</span>
+    </button>`;
+  };
+  const primele = listaProgresEx.slice(0, 6).map(rand).join('');
+  const rest = listaProgresEx.slice(6);
+  return `<div class="plan-fisa-lista">${primele}</div>` + (rest.length ? `<details class="progres-ex-toate"><summary>${tr('Toate exercițiile', 'All exercises')} (${listaProgresEx.length})</summary>
+    <div class="plan-fisa-lista">${rest.map((o, i) => rand(o, i + 6)).join('')}</div></details>` : '');
+}
+
+// idx = poziția din lista afișată (Fișa mea / Fișă › Progres)
+function deschideProgresExercitiu(idx) {
+  const o = listaProgresEx[idx];
+  if (!o) return;
+  progresExDeschis = { o, masura: o.puncte.some(x => x.kg > 0) ? 'kg' : 'rep' };
+  randeazaProgresExercitiu();
+  document.getElementById('modalProgresExBackdrop').style.display = 'flex';
+}
+
+// Atingerea numelui exercițiului în plan sau în antrenamentul propriu (doar pe ecranele clientului)
+function deschideProgresExercitiuDupaNume(nume) {
+  const cheie = (nume || '').trim().toLowerCase();
+  listaProgresEx = istoricExercitii(sursaProgresClient());
+  const i = listaProgresEx.findIndex(o => o.nume.toLowerCase() === cheie);
+  if (i === -1) return showToast(tr('Graficul apare după prima serie bifată la acest exercițiu.', 'The chart appears after the first checked set on this exercise.'));
+  deschideProgresExercitiu(i);
+}
+
+function inchideProgresExercitiu() {
+  document.getElementById('modalProgresExBackdrop').style.display = 'none';
+  progresExDeschis = null;
+}
+
+function alegeMasuraProgresEx(masura) {
+  if (!progresExDeschis) return;
+  progresExDeschis.masura = masura;
+  randeazaProgresExercitiu();
+}
+
+function randeazaProgresExercitiu() {
+  const { o, masura } = progresExDeschis;
+  document.getElementById('progresExTitlu').innerText = o.nume;
+  const masuri = [['kg', tr('Kg maxim', 'Max kg')], ['rep', tr('Repetări', 'Reps')], ['volum', tr('Volum', 'Volume')]]
+    .filter(([m]) => o.puncte.some(x => x[m] > 0));
+  const puncte = o.puncte.filter(x => x[masura] > 0).map(x => ({ d: x.d, kg: x[masura] }));
+  const unitate = masura === 'rep' ? 'rep' : 'kg';
+  const valori = puncte.map(p => p.kg);
+  const cifra = (eticheta, val) => `<div class="metric-box"><div style="font-size:0.66rem; color:var(--text-muted); text-transform:uppercase;">${eticheta}</div><div class="metric-val">${val}</div></div>`;
+  let html = masuri.length > 1 ? `<div class="antr-pers-activitati">${masuri.map(([m, et]) =>
+    `<button type="button" class="antr-pers-activitate${m === masura ? ' activ' : ''}" onclick="alegeMasuraProgresEx('${m}')">${et}</button>`).join('')}</div>` : '';
+  if (valori.length) {
+    const dif = valori[valori.length - 1] - valori[0];
+    html += `<div class="metric-grid" style="grid-template-columns:repeat(3, 1fr);">
+      ${cifra(tr('Record', 'Best'), `${formatKg(Math.max(...valori))} <small>${unitate}</small>`)}
+      ${cifra(tr('Ultima dată', 'Last time'), `${formatKg(valori[valori.length - 1])} <small>${unitate}</small>`)}
+      ${cifra(tr('Progres', 'Change'), valori.length < 2 ? '–' : `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${formatKg(Math.abs(dif))}`)}
+    </div>`;
+  }
+  html += htmlGraficGreutate(puncte, {
+    unitate, aria: `${o.nume}: ${masuri.find(([m]) => m === masura)?.[1] || ''}`,
+    gol: tr('Graficul apare de la al doilea antrenament cu acest exercițiu.', 'The chart appears from the second workout with this exercise.')
+  });
+  html += `<div class="progres-ex-istoric">${o.puncte.slice(-6).reverse().map(p => `<div><b>${escAttr(formatZiLuna(p.d))}</b><span>${escAttr(p.detaliu)}</span></div>`).join('')}</div>`;
+  document.getElementById('progresExContinut').innerHTML = html;
 }
 
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
@@ -4306,6 +4462,10 @@ function bifeazaSerieClienta(s, e, i) {
     if (!String(r.rep).trim()) r.rep = vechi.rep || (/^\d+$/.test(tinta.replace(/\s*(rep|s|sec)\.?$/i, '')) ? tinta.replace(/\D+$/, '') : '');
   }
   actualizeazaDinSerii(ex);
+  // Ziua antrenamentului: data primei serii bifate în ziua din plan (graficele de progres); fără nicio bifă se golește
+  const bifeZi = (ses.exercitii || []).some(x => (x.serii || []).some(z => z.gata));
+  if (r.gata && !ses.data_client) ses.data_client = aziIsoAntrPers();
+  else if (!bifeZi) ses.data_client = '';
   peModificareProgresClienta(s, e, 'status', ex.status);
   // Record personal: o singură dată pe exercițiu, când seria bifată trece peste tot ce a ridicat înainte
   if (r.gata && (ex.tip || 'kg') === 'kg') {
@@ -4426,7 +4586,7 @@ async function salveazaProgresClienta() {
   timerSalvareProgres = null;
   const progres = [];
   (p.continut_json?.sesiuni || []).forEach((ses, s) => {
-    progres.push({ s, nota_sesiune: ses.nota_client || '' });
+    progres.push({ s, nota_sesiune: ses.nota_client || '', data: ses.data_client || '' });
     (ses.exercitii || []).forEach((ex, e) => {
       progres.push({ s, e, greutate_kg: ex.greutate_kg || '', seturi_finalizate: ex.seturi_finalizate || '', status: ex.status || '', serii: ex.serii || [], nota: ex.nota_client || '' });
     });
@@ -4643,7 +4803,8 @@ async function randeazaFisaMeaClienta() {
   const [{ data, error }, resGreutati] = await Promise.all([
     supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', dateClienta.fisa.id),
     supabaseClient.from('greutati').select('*').eq('client_id', dateClienta.fisa.id),
-    incarcaListaPoze(dateClienta.fisa.id)
+    incarcaListaPoze(dateClienta.fisa.id),
+    antrPers.lista === null ? incarcaAntrPers() : null
   ]);
   if (clientaTabCurent !== 'fisa') return;
   checkinuriClienta = error ? [] : (data || []);
@@ -4736,6 +4897,7 @@ function afiseazaFisaMeaClienta() {
     }).join('') + `</div>`;
   }
   html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
+  html += titlu(tr('Progres la exerciții', 'Exercise progress')) + htmlProgresExercitii(sursaProgresClient());
   html += titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
     ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}</div>`
     : `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. Cere-i antrenorului tău link-ul formularului.', 'You don’t have a goal-setting form yet. Ask your trainer for the form link.')}</div>`);
@@ -8628,9 +8790,11 @@ const formatZiLuna = d => d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 
 
 // Grafic cu o singură serie (fără legendă; titlul o numește): linie 2px, puncte cu inel de suprafață,
 // etichete doar pe primul și ultimul punct; atingerea unui punct îi arată valoarea dedesubt
-function htmlGraficGreutate(puncte) {
+// opt (graficul de progres pe exerciții): { unitate, aria, gol } în locul textelor pentru greutatea corporală
+function htmlGraficGreutate(puncte, opt = {}) {
+  const unitate = opt.unitate ?? 'kg';
   if (puncte.length < 2) {
-    return `<div class="progres-gol">${tr('Graficul apare de la a doua greutate înregistrată.', 'The chart appears from the second recorded weight.')}</div>`;
+    return `<div class="progres-gol">${opt.gol || tr('Graficul apare de la a doua greutate înregistrată.', 'The chart appears from the second recorded weight.')}</div>`;
   }
   const L = 320, H = 150, st = 30, dr = 14, sus = 18, jos = 26;
   const kg = puncte.map(p => p.kg);
@@ -8642,7 +8806,7 @@ function htmlGraficGreutate(puncte) {
   const linii = [max, (max + min) / 2, min].map(v => `<line x1="${st}" x2="${L - dr}" y1="${y(v)}" y2="${y(v)}" class="grafic-grila"/><text x="${st - 6}" y="${y(v) + 3}" class="grafic-axa" text-anchor="end">${formatKg(Math.round(v * 10) / 10)}</text>`).join('');
   const traseu = puncte.map((p, i) => `${i ? 'L' : 'M'}${x(p.d).toFixed(1)},${y(p.kg).toFixed(1)}`).join(' ');
   const cercuri = puncte.map((p, i) => {
-    const eticheta = `${formatZiLuna(p.d)}: ${formatKg(p.kg)} kg`;
+    const eticheta = `${formatZiLuna(p.d)}: ${formatKg(p.kg)}${unitate ? ' ' + unitate : ''}`;
     // Valoarea doar pe primul și ultimul punct, aliniată spre interior (nu peste cifrele axei sau peste margine)
     const capat = i === 0 ? 'start' : i === puncte.length - 1 ? 'end' : '';
     return `<g class="grafic-punct" onclick="arataPunctGrafic(this)" data-text="${escAttr(eticheta)}">
@@ -8652,7 +8816,7 @@ function htmlGraficGreutate(puncte) {
         <title>${escAttr(eticheta)}</title>
       </g>`;
   }).join('');
-  return `<svg class="grafic-greutate" viewBox="0 0 ${L} ${H}" role="img" aria-label="${tr('Greutatea în timp', 'Weight over time')}">
+  return `<svg class="grafic-greutate" viewBox="0 0 ${L} ${H}" role="img" aria-label="${escAttr(opt.aria || tr('Greutatea în timp', 'Weight over time'))}">
       ${linii}
       <path d="${traseu}" class="grafic-linie"/>
       ${cercuri}
@@ -9427,7 +9591,7 @@ async function incarcaProgresFisa() {
     supabaseClient.from('greutati').select('*').eq('client_id', client.id),
     incarcaListaPoze(client.id),
     supabaseClient.from('antrenamente_personale').select('*').eq('client_id', client.id).eq('fel', 'antrenament')
-      .order('data', { ascending: false }).limit(20)
+      .order('data', { ascending: false }).limit(150)
   ]);
   if (clientaFisaCurenta() !== client || !det.open) return;
   const checkinuri = error ? [] : (data || []);
@@ -9437,7 +9601,12 @@ async function incarcaProgresFisa() {
     + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
       ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
       : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`)
-    + htmlAntrPersAntrenor(resAntrPers && !resAntrPers.error ? resAntrPers.data : []);
+    + `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Progres la exerciții', 'Exercise progress')}</div>`
+    + htmlProgresExercitii({
+      planuri: (DB.planuri || []).filter(p => randulClientei(p, client, p.clienta)),
+      antrenamente: resAntrPers && !resAntrPers.error ? resAntrPers.data : []
+    })
+    + htmlAntrPersAntrenor(resAntrPers && !resAntrPers.error ? resAntrPers.data.slice(0, 20) : []);
   umplePoze(corp);
 }
 

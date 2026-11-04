@@ -7983,3 +7983,99 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-size: 0.8rem;
   line-height: 1.45;
 }
+
+/* Loc sub butoanele de salvare: timerul de pauză plutește deasupra meniului și nu le mai acoperă */
+.antr-pers-final {
+  margin-bottom: 64px;
+}
+
+/* Progres pe exerciții: numele exercițiului se atinge pentru grafic; lista din fișă; fereastra cu graficul */
+.progres-ex-nume {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-weight: 800;
+  color: var(--primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.progres-ex-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: var(--accent-purple, #8b5cf6);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.progres-ex-dif {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.progres-ex-dif.sus {
+  color: #15803d;
+}
+
+.progres-ex-toate {
+  margin-top: 8px;
+}
+
+.progres-ex-toate summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--primary);
+  padding: 4px 2px 8px;
+}
+
+.progres-ex-card {
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+
+.progres-ex-card .metric-grid {
+  margin-bottom: 8px;
+}
+
+.progres-ex-card .metric-val small {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.progres-ex-istoric {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.progres-ex-istoric > div {
+  display: flex;
+  gap: 10px;
+  padding: 5px 2px;
+  border-top: 1px solid var(--border);
+}
+
+.progres-ex-istoric b {
+  flex-shrink: 0;
+  width: 54px;
+  color: var(--primary);
+}
+
+.progres-ex-istoric span {
+  min-width: 0;
+  color: var(--text-muted);
+}

@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal161">
+  <link rel="stylesheet" href="style.css?v=fitFinal162">
 </head>
 <body>
 
@@ -353,6 +353,19 @@
       <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; line-height: 1.35;" id="inlocuiesteDesc"></div>
       <input type="search" id="cautareInlocuieste" class="form-control" style="margin-bottom:8px;" placeholder="Caută exercițiu sau mușchi" data-en-placeholder="Search exercise or muscle" oninput="randeazaListaInlocuieste(this.value)">
       <div id="listaInlocuieste" class="sabloane-plan-lista"></div>
+    </div>
+  </div>
+
+  <!-- MODAL PROGRES PE EXERCIȚIU: kg / repetări / volum în timp (client și antrenor) -->
+  <div id="modalProgresExBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideProgresExercitiu()">
+    <div class="modal-edit-card progres-ex-card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom: 10px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary); min-width:0;" id="progresExTitlu"></div>
+        <button type="button" onclick="inchideProgresExercitiu()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px; flex-shrink:0;" title="Închide" data-en-title="Close">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="progresExContinut"></div>
     </div>
   </div>
 
@@ -1843,7 +1856,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal161"></script>
-  <script src="app.js?v=fitFinal161"></script>
+  <script src="sabloane.js?v=fitFinal162"></script>
+  <script src="app.js?v=fitFinal162"></script>
 </body>
 </html>
