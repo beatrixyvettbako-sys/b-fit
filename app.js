@@ -1516,7 +1516,7 @@ if ('serviceWorker' in navigator) {
     div.id = 'invitatieInstalare';
     div.className = 'invitatie-instalare';
     div.innerHTML = `<img src="icon-192.png" alt="" class="invitatie-instalare-icon">
-      <div class="invitatie-instalare-text"><b>${tr('Instalează B-Fit', 'Install B-Fit')}</b><span>${esteIos ? pasiIos : tr('Deschide-o direct de pe ecranul telefonului.', 'Open it straight from your home screen.')}</span></div>
+      <div class="invitatie-instalare-text"><b>${tr('Instalează B-Fit', 'Install B-Fit')}</b><span>${esteIos ? pasiIos : tr('O deschizi direct, ca pe orice aplicație.', 'Open it directly, like any app.')}</span></div>
       ${esteIos ? '' : `<button type="button" class="btn" id="btnInstaleaza">${tr('Instalează', 'Install')}</button>`}
       <button type="button" class="notificare-x" id="btnInchideInstalare" aria-label="${tr('Închide', 'Close')}">×</button>`;
     document.body.appendChild(div);
@@ -3837,7 +3837,7 @@ async function salveazaProgresClienta() {
   if (eroareDeRetea(error)) {
     memoreazaProgresNetrimis(p.id, progres);
     salveazaCacheClienta();
-    seteazaStareSalvareClienta('Salvat pe telefon. Se trimite când revine internetul.', 'Saved on your phone. It will sync when you’re back online.');
+    seteazaStareSalvareClienta('Salvat pe acest dispozitiv. Se trimite când revine internetul.', 'Saved on this device. It will sync when you’re back online.');
     return;
   }
   if (error || data !== true) {
@@ -4993,7 +4993,7 @@ async function afiseazaEcranClienta() {
   const c = resFisa.data && resFisa.data[0];
   // Fără internet, cu date salvate: rămâne pe ecran ce era salvat (se actualizează la revenirea internetului)
   if (salvat && (eroareDeRetea(resFisa.error) || eroareDeRetea(resPlanuri.error))) {
-    showToast(tr('Fără internet: vezi datele salvate pe telefon.', 'Offline: showing data saved on your phone.'));
+    showToast(tr('Fără internet: vezi datele salvate pe acest dispozitiv.', 'Offline: showing data saved on this device.'));
     return;
   }
   if (resFisa.error || !c) {
@@ -7195,6 +7195,7 @@ function randeazaNotaClient(client) {
 
 // ---- Mesaje în aplicație între antrenor și client (tabelul mesaje, sql/2026-11-03_mesaje.sql); WhatsApp rămâne în paralel ----
 let conversatie = null; // { clientId, userId, mesaje }
+let mesajEditat = null; // mesajul (din conversatie.mesaje) care se editează în câmpul de jos
 const autorulMeu = () => rolUtilizator === 'clienta' ? 'client' : 'antrenor';
 
 // Ultimul mesaj și câte sunt necitite (primite de la celălalt), pentru cardul de pe Acasă și blocul din fișă
@@ -7269,6 +7270,8 @@ async function deschideMesaje(clientId, userId, titlu) {
   const camp = document.getElementById('mesajText');
   camp.value = '';
   camp.style.height = '';
+  seteazaEditareMesaj(null);
+  document.getElementById('btnStergeConversatia').hidden = true;
   document.getElementById('panouMesajeTitlu').textContent = titlu;
   document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
   raspunsuriEditare = false;
@@ -7281,7 +7284,7 @@ async function deschideMesaje(clientId, userId, titlu) {
 async function incarcaConversatie() {
   if (!conversatie) return;
   const { clientId } = conversatie;
-  const { data, error } = await supabaseClient.from('mesaje').select('id, autor, text, created_at, citit, tip, context').eq('client_id', clientId).order('created_at').limit(500);
+  const { data, error } = await supabaseClient.from('mesaje').select('id, autor, text, created_at, citit, tip, context, editat_la').eq('client_id', clientId).order('created_at').limit(500);
   if (!conversatie || conversatie.clientId !== clientId) return;
   if (error) {
     document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
@@ -7296,14 +7299,15 @@ async function incarcaConversatie() {
 
 function randeazaConversatie() {
   const lista = document.getElementById('mesajeLista');
+  document.getElementById('btnStergeConversatia').hidden = rolUtilizator === 'clienta' || !conversatie.mesaje.length;
   if (!conversatie.mesaje.length) {
     lista.innerHTML = `<div class="mesaje-gol">${rolUtilizator === 'clienta'
-      ? tr('Scrie-i antrenorului tău. Primește mesajul pe telefon.', 'Write to your trainer. They get the message on their phone.')
-      : tr('Scrie-i clientului. Primește mesajul pe telefon.', 'Write to your client. They get the message on their phone.')}</div>`;
+      ? tr('Scrie-i antrenorului tău. Vede mesajul în aplicație și primește o notificare.', 'Write to your trainer. They see it in the app and get a notification.')
+      : tr('Scrie-i clientului. Vede mesajul în aplicație și primește o notificare.', 'Write to your client. They see it in the app and get a notification.')}</div>`;
     return;
   }
   let ziAnterioara = '';
-  lista.innerHTML = conversatie.mesaje.map(m => {
+  lista.innerHTML = conversatie.mesaje.map((m, i) => {
     const d = new Date(m.created_at);
     const zi = d.toDateString();
     const separator = zi !== ziAnterioara ? `<div class="mesaje-zi">${formatZiLuna(d)}</div>` : '';
@@ -7314,7 +7318,10 @@ function randeazaConversatie() {
     const antet = m.tip === 'nota' ? `📝 ${tr('Notiță', 'Note')}` : m.tip === 'record' ? `🏆 ${tr('Record nou', 'New record')}` : '';
     const unde = [cx.exercitiu, cx.zi].filter(Boolean).map(escAttr).join(' · ');
     const context = antet ? `<div class="mesaj-context"><b>${antet}</b>${unde ? `<span>${unde}</span>` : ''}</div>` : '';
-    return `${separator}<div class="mesaj${m.autor === autorulMeu() ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}">${context}<div class="mesaj-text">${escAttr(m.text)}</div><small>${ora}</small></div>`;
+    // Mesajele proprii: atingerea deschide Editează / Șterge
+    const alMeu = m.autor === autorulMeu();
+    const editat = m.editat_la ? `${tr('editat', 'edited')} · ` : '';
+    return `${separator}<div class="mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}"${alMeu ? ` onclick="actiuniMesaj(${i})"` : ''}>${context}<div class="mesaj-text">${escAttr(m.text)}</div><small>${editat}${ora}</small></div>`;
   }).join('');
   // „Văzut” sub ultimul mesaj trimis, după ce celălalt a deschis conversația
   const ultim = conversatie.mesaje[conversatie.mesaje.length - 1];
@@ -7336,9 +7343,21 @@ async function trimiteMesaj() {
   if (!text || !conversatie) return;
   const btn = document.getElementById('btnTrimiteMesaj');
   btn.disabled = true;
+  if (mesajEditat) {
+    const m = mesajEditat;
+    const { data: rez, error: err } = await supabaseClient.rpc('editeaza_mesaj', { p_id: m.id, p_text: text });
+    btn.disabled = false;
+    if (err || rez !== 'ok') return showToast(tr('Mesajul nu s-a modificat. Verifică internetul și reîncearcă.', 'The message was not changed. Check your internet and try again.'), 'error');
+    // Conversația se poate reîncărca între timp (mesaj nou): se actualizează rândul din lista curentă
+    const x = (conversatie && conversatie.mesaje.find(y => y.id === m.id)) || m;
+    x.text = text;
+    x.editat_la = new Date().toISOString();
+    seteazaEditareMesaj(null);
+    return randeazaConversatie();
+  }
   const { data, error } = await supabaseClient.from('mesaje')
     .insert({ user_id: conversatie.userId, client_id: conversatie.clientId, autor: autorulMeu(), text })
-    .select('id, autor, text, created_at, citit, tip, context').single();
+    .select('id, autor, text, created_at, citit, tip, context, editat_la').single();
   btn.disabled = false;
   if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
   camp.value = '';
@@ -7348,9 +7367,64 @@ async function trimiteMesaj() {
   randeazaConversatie();
 }
 
+// ---- Editarea și ștergerea mesajelor proprii (pentru amândoi); antrenorul poate șterge toată conversația ----
+function actiuniMesaj(i) {
+  const m = conversatie && conversatie.mesaje[i];
+  if (!m || m.autor !== autorulMeu()) return;
+  if (String(window.getSelection ? window.getSelection() : '')) return; // pe calculator, selectarea textului nu deschide meniul
+  // Notițele și recordurile din antrenament nu se editează aici (rămân ca în plan): doar se pot șterge
+  if (m.tip !== 'text') return confirmaStergereMesaj(m);
+  customConfirm(tr('Mesajul tău', 'Your message'), m.text.length > 160 ? m.text.slice(0, 160) + '…' : m.text, () => seteazaEditareMesaj(m));
+  document.getElementById('modalBtnConfirm').innerText = tr('Editează', 'Edit');
+  aratButonAlternativModal(tr('Șterge', 'Delete'), () => confirmaStergereMesaj(m));
+}
+
+function confirmaStergereMesaj(m) {
+  customConfirm(tr('Ștergi mesajul?', 'Delete this message?'), tr('Se șterge pentru amândoi.', 'It will be deleted for both of you.'), () => stergeMesaj(m));
+  document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Delete');
+}
+
+async function stergeMesaj(m) {
+  const { data, error } = await supabaseClient.rpc('sterge_mesaj', { p_id: m.id });
+  if (error || data !== 'ok') return showToast(tr('Mesajul nu s-a șters. Verifică internetul și reîncearcă.', 'The message was not deleted. Check your internet and try again.'), 'error');
+  if (!conversatie) return;
+  conversatie.mesaje = conversatie.mesaje.filter(x => x.id !== m.id);
+  if (mesajEditat && mesajEditat.id === m.id) seteazaEditareMesaj(null);
+  randeazaConversatie();
+}
+
+// Editarea se face în câmpul de jos, cu bara „Editezi mesajul” deasupra; null = înapoi la mesaj nou
+function seteazaEditareMesaj(m) {
+  mesajEditat = m;
+  const camp = document.getElementById('mesajText');
+  document.getElementById('mesajEditare').hidden = !m;
+  camp.value = m ? m.text : '';
+  camp.style.height = '';
+  if (m) { potrivesteCampMesaj(camp); camp.focus(); }
+  if (conversatie && conversatie.mesaje.length) randeazaConversatie();
+}
+
+function anuleazaEditareMesaj() {
+  seteazaEditareMesaj(null);
+}
+
+function stergeConversatia() {
+  if (!conversatie || rolUtilizator === 'clienta') return;
+  const nume = document.getElementById('panouMesajeTitlu').textContent;
+  customConfirm(tr('Ștergi conversația?', 'Delete the conversation?'),
+    tr(`Toate mesajele cu ${nume} se șterg pentru amândoi. Nu se poate anula.`, `All messages with ${nume} will be deleted for both of you. This can’t be undone.`), async () => {
+      const { error } = await supabaseClient.rpc('sterge_conversatia', { p_client_id: conversatie.clientId });
+      if (error) return showToast(tr('Conversația nu s-a șters. Verifică internetul și reîncearcă.', 'The conversation was not deleted. Check your internet and try again.'), 'error');
+      showToast(tr('✓ Conversația a fost ștearsă', '✓ Conversation deleted'));
+      inchidePanouMesaje();
+    });
+  document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Delete');
+}
+
 function inchidePanouMesaje() {
   document.getElementById('panouMesaje').classList.add('auth-hidden');
   conversatie = null;
+  mesajEditat = null;
   // Necititele s-au citit: se actualizează bulina din antet, cardul de pe Acasă, blocul din fișă și lista conversațiilor
   actualizeazaBulinaMesaje();
   if (rolUtilizator === 'clienta') actualizeazaCardMesajeAcasa();
@@ -8338,7 +8412,7 @@ async function activeazaPush() {
       const abonament = await reg.pushManager.getSubscription()
         || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cheie });
       if (!(await salveazaAbonamentPush(abonament))) throw new Error('salvare');
-      showToast(tr('✓ Notificările sunt pornite pe acest telefon', '✓ Notifications are on for this phone'));
+      showToast(tr('✓ Notificările sunt pornite pe acest dispozitiv', '✓ Notifications are on for this device'));
       actualizeazaCardPushAcasa();
     } catch (e) {
       showToast(tr('Nu s-au putut porni notificările. Reîncearcă.', 'Could not turn on notifications. Try again.'), 'error');
@@ -8372,7 +8446,7 @@ function htmlCardPush() {
     if (!esteIos || instalata) return '';
     text = tr('Pe iPhone, notificările ajung doar dacă adaugi aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'On iPhone, notifications only arrive if you add the app to your home screen: Share › “Add to Home Screen”.');
   } else if (Notification.permission === 'default') {
-    text = tr('Primește notificările pe telefon, chiar și cu aplicația închisă.', 'Get notifications on your phone, even with the app closed.');
+    text = tr('Primește notificările pe acest dispozitiv, chiar și cu aplicația închisă.', 'Get notifications on this device, even with the app closed.');
     buton = `<button type="button" class="btn" onclick="activeazaPush()">${tr('Pornește', 'Turn on')}</button>`;
   } else if (Notification.permission === 'denied') {
     text = tr('Notificările sunt blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Notifications are blocked for B-Fit. You can turn them on in your browser or phone settings.');
@@ -8395,8 +8469,8 @@ async function actualizeazaRezumatNotificari() {
   const el = document.getElementById('setariRezumatNotificari');
   if (!el) return;
   const stare = await stareNotificari();
-  el.textContent = { pornite: tr('Pornite pe acest telefon', 'On for this phone'), oprite: tr('Oprite pe acest telefon', 'Off for this phone'),
-    blocate: tr('Blocate din setările telefonului', 'Blocked in phone settings'), nesuportat: tr('Indisponibile aici', 'Not available here') }[stare];
+  el.textContent = { pornite: tr('Pornite pe acest dispozitiv', 'On for this device'), oprite: tr('Oprite pe acest dispozitiv', 'Off for this device'),
+    blocate: tr('Blocate din setări', 'Blocked in settings'), nesuportat: tr('Indisponibile aici', 'Not available here') }[stare];
 }
 
 async function comutaNotificariSetari() {
@@ -8404,10 +8478,10 @@ async function comutaNotificariSetari() {
   if (stare === 'oprite') {
     await activeazaPush();
   } else if (stare === 'pornite') {
-    customConfirm(tr('Oprești notificările?', 'Turn off notifications?'), tr('Pe acest telefon nu mai primești notificări. Le poți porni oricând de aici.', 'This phone will stop getting notifications. You can turn them back on here anytime.'), async () => {
+    customConfirm(tr('Oprești notificările?', 'Turn off notifications?'), tr('Pe acest dispozitiv nu mai primești notificări. Le poți porni oricând de aici.', 'This device will stop getting notifications. You can turn them back on here anytime.'), async () => {
       await dezaboneazaPush();
       actualizeazaCardPushAcasa();
-      showToast(tr('✓ Notificările sunt oprite pe acest telefon', '✓ Notifications are off for this phone'));
+      showToast(tr('✓ Notificările sunt oprite pe acest dispozitiv', '✓ Notifications are off for this device'));
       actualizeazaRezumatNotificari();
       randeazaSetariNotificari();
     });
@@ -8453,8 +8527,8 @@ async function randeazaSetariNotificari() {
   if (!corp) return;
   const stare = await stareNotificari();
   const textStare = {
-    pornite: tr('Pornite pe acest telefon.', 'On for this phone.'),
-    oprite: tr('Oprite pe acest telefon. Pornește-le ca să afli la timp de programări și mesaje, chiar și cu aplicația închisă.', 'Off for this phone. Turn them on to hear about bookings and messages in time, even with the app closed.'),
+    pornite: tr('Pornite pe acest dispozitiv.', 'On for this device.'),
+    oprite: tr('Oprite pe acest dispozitiv. Pornește-le ca să afli la timp de programări și mesaje, chiar și cu aplicația închisă.', 'Off for this device. Turn them on to hear about bookings and messages in time, even with the app closed.'),
     blocate: tr('Blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Blocked for B-Fit. You can turn them on in your browser or phone settings.'),
     nesuportat: tr('Pe acest dispozitiv notificările nu sunt disponibile. Pe iPhone, adaugă aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'Notifications aren’t available on this device. On iPhone, add the app to your home screen: Share › “Add to Home Screen”.')
   }[stare];
@@ -8472,7 +8546,7 @@ async function randeazaSetariNotificari() {
     <div class="drawer-section" style="margin-top:14px;">
       <div class="drawer-section-title">${tr('Notificări push', 'Push notifications')}</div>
       <div class="card setari-notificari-lista">${randuri}</div>
-      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">${tr('Cele oprite nu mai sună pe telefon, dar le găsești în continuare la clopoțel.', 'The ones turned off won’t ring your phone, but you’ll still find them under the bell.')}</div>
+      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">${tr('Cele oprite nu te mai anunță, dar le găsești în continuare la clopoțel.', 'The ones turned off won’t alert you, but you’ll still find them under the bell.')}</div>
     </div>`;
 }
 

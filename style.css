@@ -7091,6 +7091,39 @@ input.serie-camp {
   color: #fff;
 }
 
+/* Mesajele proprii se ating pentru Editează / Șterge; cel editat e marcat */
+.mesaj.al-meu {
+  cursor: pointer;
+}
+
+.mesaj.in-editare {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+.mesaj-editare {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 6px 12px 0 18px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #8b5cf6;
+}
+
+.mesaj-editare[hidden] {
+  display: none;
+}
+
+.mesaj-editare .btn {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
 .mesaj-text {
   white-space: pre-line;
   overflow-wrap: anywhere;

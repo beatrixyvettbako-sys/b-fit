@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal156">
+  <link rel="stylesheet" href="style.css?v=fitFinal157">
 </head>
 <body>
 
@@ -138,10 +138,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
       <div class="clienta-title" id="panouMesajeTitlu"></div>
-      <span style="width:40px;"></span>
+      <span style="width:40px; display:flex; justify-content:flex-end;">
+        <button type="button" class="header-icon-bubble-btn" id="btnStergeConversatia" onclick="stergeConversatia()" title="Șterge conversația" data-en-title="Delete conversation" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
+        </button>
+      </span>
     </header>
     <div class="clienta-body" id="mesajeLista"></div>
     <div class="raspunsuri-rapide" id="raspunsuriRapide" hidden></div>
+    <div class="mesaj-editare" id="mesajEditare" hidden>
+      <span data-en="Editing message">Editezi mesajul</span>
+      <button type="button" class="btn btn-clear" onclick="anuleazaEditareMesaj()" data-en="Cancel">Renunță</button>
+    </div>
     <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesaj();">
       <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." oninput="potrivesteCampMesaj(this)"></textarea>
       <button type="submit" class="btn" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
@@ -1834,7 +1842,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal156"></script>
-  <script src="app.js?v=fitFinal156"></script>
+  <script src="sabloane.js?v=fitFinal157"></script>
+  <script src="app.js?v=fitFinal157"></script>
 </body>
 </html>
