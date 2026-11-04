@@ -7415,7 +7415,7 @@ async function incarcaConversatie() {
 
 function randeazaConversatie() {
   const lista = document.getElementById('mesajeLista');
-  document.getElementById('btnStergeConversatia').hidden = rolUtilizator === 'clienta' || !conversatie.mesaje.length;
+  document.getElementById('btnStergeConversatia').hidden = !conversatie.mesaje.length;
   if (!conversatie.mesaje.length) {
     lista.innerHTML = `<div class="mesaje-gol">${rolUtilizator === 'clienta'
       ? tr('Scrie-i antrenorului tău. Vede mesajul în aplicație și primește o notificare.', 'Write to your trainer. They see it in the app and get a notification.')
@@ -7483,7 +7483,7 @@ async function trimiteMesaj() {
   randeazaConversatie();
 }
 
-// ---- Editarea și ștergerea mesajelor proprii (pentru amândoi); antrenorul poate șterge toată conversația ----
+// ---- Editarea și ștergerea mesajelor proprii (pentru amândoi); conversația se șterge doar pentru cel care o șterge ----
 function actiuniMesaj(i) {
   const m = conversatie && conversatie.mesaje[i];
   if (!m || m.autor !== autorulMeu()) return;
@@ -7525,10 +7525,11 @@ function anuleazaEditareMesaj() {
 }
 
 function stergeConversatia() {
-  if (!conversatie || rolUtilizator === 'clienta') return;
+  if (!conversatie) return;
+  // Dispare doar la cel care o șterge; celălalt își păstrează mesajele
   const nume = document.getElementById('panouMesajeTitlu').textContent;
   customConfirm(tr('Ștergi conversația?', 'Delete the conversation?'),
-    tr(`Toate mesajele cu ${nume} se șterg pentru amândoi. Nu se poate anula.`, `All messages with ${nume} will be deleted for both of you. This can’t be undone.`), async () => {
+    tr(`Conversația dispare doar din lista ta. ${nume} își păstrează mesajele.`, `The conversation is removed only from your list. ${nume} keeps the messages.`), async () => {
       const { error } = await supabaseClient.rpc('sterge_conversatia', { p_client_id: conversatie.clientId });
       if (error) return showToast(tr('Conversația nu s-a șters. Verifică internetul și reîncearcă.', 'The conversation was not deleted. Check your internet and try again.'), 'error');
       showToast(tr('✓ Conversația a fost ștearsă', '✓ Conversation deleted'));
