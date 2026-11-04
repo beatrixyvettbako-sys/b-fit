@@ -4761,7 +4761,7 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     </div>`;
   });
 
-  html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Programările făcute de tine aici le poți anula tu, cu cel puțin 24 de ore înainte.', 'Bookings you make here can be cancelled on your own up to 24 hours before.')}</div>`;
+  html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Programările făcute de tine în aplicație le poți anula cu cel puțin 24 de ore înainte.', 'Bookings you make in the app can be cancelled up to 24 hours before.')}</div>`;
   corp.innerHTML = html;
   ajusteazaNumeZile(document.getElementById('clientaZile'));
   document.querySelector('#clientaZile .day-btn.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
