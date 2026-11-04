@@ -1396,6 +1396,98 @@ header {
   line-height: 1.4;
 }
 
+/* Setări › Abonamente: rânduri (nume + rezumat) și formularul de editare */
+.setari-abonament-rand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.setari-abonament-rand > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setari-abonament-rand b {
+  font-size: 0.92rem;
+}
+
+.setari-abonament-rand small {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.setari-abonament-form {
+  background: var(--card-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.setari-abonament-campuri {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: 0 8px;
+}
+
+.setari-abonament-campuri .form-group[hidden],
+.setari-lista-adauga[hidden] {
+  display: none;
+}
+
+.setari-abonament-bifa {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.setari-abonament-bifa[hidden] {
+  display: none;
+}
+
+.setari-abonament-bifa input {
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--primary);
+}
+
+.setari-abonament-bifa small {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.setari-abonament-butoane {
+  display: flex;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+
+.setari-abonament-butoane .btn {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+}
+
 /* ECRANUL CLIENTEI (rol „clienta”): ecran propriu peste aplicație, sertarul (z-index 10001) rămâne deasupra */
 .clienta-app {
   position: fixed;
@@ -4585,6 +4677,14 @@ select.form-control {
   border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
+/* Abonament înghețat (pauză): albastru rece, neutru, nu de alarmă */
+.lista-stare.inghetat {
+  color: #0369a1;
+  background: rgba(3, 105, 161, 0.08);
+  border: 1px solid rgba(3, 105, 161, 0.3);
+}
+
+[data-theme="dark"] .lista-stare.inghetat { color: #7dd3fc; }
 [data-theme="dark"] .lista-stare.activ { color: #4ade80; }
 [data-theme="dark"] .lista-stare.curand { color: #f5b041; }
 [data-theme="dark"] .lista-stare.expirat { color: #f87171; }

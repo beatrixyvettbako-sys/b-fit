@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal157">
+  <link rel="stylesheet" href="style.css?v=fitFinal158">
 </head>
 <body>
 
@@ -428,14 +428,6 @@
         <div class="form-group">
           <label data-en="Subscription Type">Tip Abonament</label>
           <select id="editIncTip" class="form-control">
-            <option value="8 sedinte">8 sedinte</option>
-            <option value="10 sedinte">10 sedinte</option>
-            <option value="12 sedinte">12 sedinte</option>
-            <option value="16 sedinte">16 sedinte</option>
-            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="18 trainers (12)">18 trainers (12)</option>
-            <option value="Sedinta Individuala">sedinta individuala</option>
-            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
         </div>
       </div>
@@ -617,6 +609,19 @@
             <div>
               <div class="drawer-nav-title" data-en="Workout types">Tipuri de antrenament</div>
               <div class="drawer-nav-desc" id="setariRezumatAntrenamente"></div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <div class="drawer-nav-card doar-antrenor" onclick="navigheazaSubMeniu('settingsSubscriptions')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16v12H4z"/><path d="M8 3v4M16 3v4M8 12h8M8 16h5"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Subscriptions">Abonamente</div>
+              <div class="drawer-nav-desc" id="setariRezumatAbonamente"></div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -892,6 +897,32 @@
           <div class="drawer-section-title" data-en="Currency">Monedă</div>
           <div class="theme-selector-grid" id="setariMonede"></div>
           <div class="setari-lista-nota" data-en="Only changes how amounts are shown. Saved amounts are not converted.">Schimbă doar cum se afișează sumele. Sumele salvate nu se convertesc.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATUL 2f: SETĂRI › ABONAMENTE (lista și formularul se randează în randeazaSetariStudio / deschideFormAbonament) -->
+    <div id="drawerSettingsSubscriptionsView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('settings')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Subscriptions">Abonamente</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div class="setari-lista-nota" data-en="Shown in Payments and in the client profile. Tap one to change its price, sessions or days.">Apar la Încasări și în fișa clientului. Atinge unul ca să-i schimbi prețul, ședințele sau zilele.</div>
+          <div id="setariListaAbonamente" class="setari-lista"></div>
+          <button type="button" class="theme-option-btn setari-lista-adauga" id="btnAdaugaAbonament" onclick="deschideFormAbonament(null)" data-en="+ Add subscription">+ Adaugă abonament</button>
         </div>
       </div>
     </div>
@@ -1241,14 +1272,6 @@
           <input type="text" id="nouNumeClienta" class="form-control" placeholder="Nume și prenume client">
           <input type="tel" id="nouTelefonClienta" class="form-control" placeholder="Telefon (opțional)" data-en-placeholder="Phone (optional)" autocomplete="off">
           <select id="nouTipAbonament" class="form-control">
-            <option value="8 sedinte">8 sedinte</option>
-            <option value="10 sedinte">10 sedinte</option>
-            <option value="12 sedinte">12 sedinte</option>
-            <option value="16 sedinte">16 sedinte</option>
-            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="18 trainers (12)">18 trainers (12)</option>
-            <option value="Sedinta Individuala">sedinta individuala</option>
-            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
           <button class="btn" id="saveClientDirectBtn" onclick="creeazaClientaNouaDirect()">Salvează Clientul</button>
         </div>
@@ -1329,12 +1352,6 @@
             <div style="display: flex; gap: 6px; align-items: center;">
               <select id="activareTip" class="form-control select-faded" onchange="actualizeazaStilSelect(this)" style="flex: 1; min-width: 0; padding: 6px;">
                 <option value="" data-en="Subscription type">Tip abonament</option>
-                <option value="8 sedinte">8 sedinte</option>
-                <option value="10 sedinte">10 sedinte</option>
-                <option value="12 sedinte">12 sedinte</option>
-                <option value="16 sedinte">16 sedinte</option>
-                <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-                <option value="18 trainers (12)">18 trainers (12)</option>
               </select>
               <button class="btn" style="padding: 6px 10px; font-size: 0.8rem;" id="btnActiveazaAbonament" onclick="activeazaAbonamentFaraPlata()" data-en="Activate">Activează</button>
             </div>
@@ -1354,6 +1371,13 @@
                 <svg class="camp-data-icona" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
               </div>
               <button class="btn" style="padding: 6px 10px; font-size: 0.8rem;" id="setManualDateBtn" onclick="seteazaDataManuala()">Setează</button>
+            </div>
+
+            <!-- Pauză: textul butonului și nota le pune afiseazaFisaClientaInstant (Îngheață / Reia) -->
+            <div id="blocInghetareAbonament" hidden>
+              <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin: 14px 0 5px; padding-top: 10px; border-top: 1px solid var(--border);" data-en="Pause">Pauză</div>
+              <button class="btn btn-clear" style="width: 100%; padding: 6px; font-size: 0.8rem;" id="btnInghetareAbonament" onclick="comutaInghetareAbonament()"></button>
+              <div class="setari-lista-nota" id="notaInghetareAbonament" style="margin-top: 5px;"></div>
             </div>
           </div>
 
@@ -1490,14 +1514,6 @@
                 <label id="labelEditTip">Tip Abonament</label>
                 <select id="editTip" class="form-control" onchange="recalculeazaSedinteEditare()">
                   <option value="-" data-en="No subscription">Fără abonament</option>
-                  <option value="8 sedinte">8 sedinte</option>
-                  <option value="10 sedinte">10 sedinte</option>
-                  <option value="12 sedinte">12 sedinte</option>
-                  <option value="16 sedinte">16 sedinte</option>
-                  <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-                  <option value="18 trainers (12)">18 trainers (12)</option>
-                  <option value="Sedinta Individuala">sedinta individuala</option>
-                  <option value="Sedinta Gratuita">sedinta gratuita</option>
                 </select>
               </div>
 
@@ -1541,6 +1557,7 @@
                   <option value="Activ">Activ</option>
                   <option value="Finalizat">Finalizat</option>
                   <option value="Expirat">Expirat</option>
+                  <option value="Inghetat">Înghețat</option>
                   <option value="Arhivat">Arhivat</option>
                 </select>
               </div>
@@ -1607,14 +1624,6 @@
           <label id="labelIncTip">Tip Abonament</label>
           <select id="incasareTip" class="form-control select-faded" onchange="actualizeazaStilSelect(this); autoSelecteazaSuma()">
             <option value="" id="optSelectSubPlaceholder">Alege tip abonament</option>
-            <option value="8 sedinte">8 sedinte</option>
-            <option value="10 sedinte">10 sedinte</option>
-            <option value="12 sedinte">12 sedinte</option>
-            <option value="16 sedinte">16 sedinte</option>
-            <option value="16 sedinte 1:1">16 sedinte 1:1</option>
-            <option value="18 trainers (12)">18 trainers (12)</option>
-            <option value="Sedinta Individuala">sedinta individuala</option>
-            <option value="Sedinta Gratuita">sedinta gratuita</option>
           </select>
         </div>
 
@@ -1623,14 +1632,6 @@
             <label id="labelIncSuma">Sumă (RON)</label>
             <select id="selectSumaPreset" class="form-control select-faded" onchange="actualizeazaStilSelect(this); gestioneazaSchimbareSumaPreset()">
               <option value="" id="optSumaPlaceholder">Suma</option>
-              <option value="400">400 RON</option>
-              <option value="450">450 RON</option>
-              <option value="520">520 RON</option>
-              <option value="600">600 RON</option>
-              <option value="750">750 RON</option>
-              <option value="900">900 RON</option>
-              <option value="70">70 RON</option>
-              <option value="0">0 RON</option>
               <option value="custom" data-en="Other amount...">Altă sumă...</option>
             </select>
             <input type="number" id="incasareSumaCustom" class="form-control" placeholder="Sumă (RON)" style="margin-top:6px; display:none;">
@@ -1842,7 +1843,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal157"></script>
-  <script src="app.js?v=fitFinal157"></script>
+  <script src="sabloane.js?v=fitFinal158"></script>
+  <script src="app.js?v=fitFinal158"></script>
 </body>
 </html>

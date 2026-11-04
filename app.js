@@ -403,7 +403,7 @@ function tr(ro, en) {
 const TRADUCERI_VALORI_EN = {
   '8 sedinte': '8 sessions', '10 sedinte': '10 sessions', '12 sedinte': '12 sessions', '16 sedinte': '16 sessions',
   '16 sedinte 1:1': '16 sessions 1:1', 'sedinta individuala': 'Single session', 'sedinta gratuita': 'Free session',
-  'activ': 'Active', 'finalizat': 'Completed', 'expirat': 'Expired', 'arhivat': 'Archived',
+  'activ': 'Active', 'finalizat': 'Completed', 'expirat': 'Expired', 'arhivat': 'Archived', 'înghețat': 'Frozen', 'inghetat': 'Frozen',
   'în așteptare': 'Pending', 'sărit': 'Skipped', 'transfer bancar': 'Bank transfer',
   // Tipurile implicite de antrenament (în bază rămâne textul românesc)
   'fesieri': 'Glutes', 'picioare': 'Legs', 'spate + brate': 'Back + Arms', 'umeri + piept': 'Shoulders + Chest',
@@ -864,6 +864,7 @@ function navigheazaSubMeniu(strat) {
     settingsSchedule: document.getElementById('drawerSettingsScheduleView'),
     settingsWorkouts: document.getElementById('drawerSettingsWorkoutsView'),
     settingsPayments: document.getElementById('drawerSettingsPaymentsView'),
+    settingsSubscriptions: document.getElementById('drawerSettingsSubscriptionsView'),
     settingsSignup: document.getElementById('drawerSettingsSignupView'),
     settingsNotifications: document.getElementById('drawerSettingsNotificationsView'),
     profile: document.getElementById('drawerProfileView'),
@@ -1717,6 +1718,63 @@ const preturiAbonament = {
   "16 sedinte": "750", "16 sedinte 1:1": "900", "sedinta individuala": "70", "sedinta gratuita": "0"
 };
 
+// Tipurile implicite de abonament (Setări › Abonamente pornește de la ele). fel: abonament (ședințe numărate, valabil `zile`
+// de la prima ședință) | unica (valabilă în ziua plății, nu peste un abonament activ) | gratuita (ca unica, o dată per client)
+const FELURI_ABONAMENT = ['abonament', 'unica', 'gratuita'];
+const ABONAMENTE_IMPLICITE = [
+  { nume: "8 sedinte", pret: 450, sedinte: 8, zile: 30, fel: 'abonament' },
+  { nume: "10 sedinte", pret: 520, sedinte: 10, zile: 30, fel: 'abonament' },
+  { nume: "12 sedinte", pret: 600, sedinte: 12, zile: 30, fel: 'abonament' },
+  { nume: "16 sedinte", pret: 750, sedinte: 16, zile: 30, fel: 'abonament' },
+  { nume: "16 sedinte 1:1", pret: 900, sedinte: 16, zile: 30, fel: 'abonament' },
+  { nume: "18 trainers (12)", pret: 400, sedinte: 12, zile: 30, fel: 'abonament' },
+  { nume: "Sedinta Individuala", pret: 70, sedinte: 1, zile: 30, fel: 'unica' },
+  { nume: "Sedinta Gratuita", pret: 0, sedinte: 1, zile: 30, fel: 'gratuita' }
+];
+if (!Array.isArray(setariStudio.abonamente)) setariStudio.abonamente = ABONAMENTE_IMPLICITE.map(a => ({ ...a }));
+
+// Numele salvate au variante („8 sedinte ”, „Sedinta Individuala” / „sedinta individuala”): se compară fără spații în plus, majuscule și diacritice
+function cheieAbonament(tip) {
+  return String(tip || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// Regulile unui abonament după numele salvat: din Setări (inclusiv tipurile șterse sau redenumite, păstrate pentru rândurile vechi),
+// altfel deduse din nume ca înainte de Setări › Abonamente
+function regulaAbonament(tip) {
+  const cheie = cheieAbonament(tip);
+  const gasit = cheie && setariStudio.abonamente.find(a => cheieAbonament(a.nume) === cheie || (a.alias || []).some(x => cheieAbonament(x) === cheie));
+  if (gasit) return gasit;
+  const pret = preturiAbonament[normalizeazaTipAbonament(tip)];
+  return {
+    nume: String(tip || '').trim(), pret: pret !== undefined ? Number(pret) : null, sedinte: getNrSedinteDinNume(tip), zile: 30,
+    fel: cheie.indexOf('gratuit') !== -1 ? 'gratuita' : cheie.indexOf('individual') !== -1 ? 'unica' : 'abonament'
+  };
+}
+
+// Zilele de valabilitate de la start: ședința unică și cea gratuită sunt valabile doar în ziua lor
+function zileValabilitateAbonament(tip) {
+  const r = regulaAbonament(tip);
+  return r.fel === 'abonament' ? r.zile : 0;
+}
+
+const abonamenteVizibile = () => setariStudio.abonamente.filter(a => !a.sters);
+
+// Abonament înghețat (Fișă › Îngheață): status 'Inghetat' (fără diacritice, ca să-l compare și SQL-ul cu lower()),
+// expirarea '-' cât durează pauza, iar data înghețării și expirarea de dinainte în coloana `inghetare`
+const esteInghetat = c => !!c && (c.status || '').toLowerCase() === 'inghetat';
+
+// La reluare (din fișă sau la prima ședință bifată): expirarea de dinainte + zilele de pauză, până la `dataRo`
+function campuriReluareInghetare(c, dataRo) {
+  const g = c.inghetare || {};
+  const dela = parseazaDataOraRo(g.de_la);
+  const pana = parseazaDataOraRo(dataRo) || new Date().setHours(0, 0, 0, 0);
+  const zile = dela ? Math.max(0, Math.round((new Date(pana).setHours(0, 0, 0, 0) - new Date(dela).setHours(0, 0, 0, 0)) / 86400000)) : 0;
+  const exp = parseazaDataOraRo(g.exp);
+  let dataExpirare = g.exp && g.exp !== '-' ? g.exp : '-';
+  if (exp) { const d = new Date(exp); d.setDate(d.getDate() + zile); dataExpirare = formateazaDataRoLocal(d); }
+  return { status: 'Activ', dataExpirare, inghetare: null };
+}
+
 function esteSaptamanaActiva() {
   return dataReferintaLuni.getTime() === dataReferintaLuniBaza.getTime();
 }
@@ -1814,6 +1872,11 @@ function construiesteTagZiLocal(saptamanaCheie, zi) {
 }
 
 function getNrSedinteAbonamentLocal(tip) {
+  return regulaAbonament(tip).sedinte;
+}
+
+// Numărul de ședințe dedus din nume (abonamentele de dinainte de Setări › Abonamente)
+function getNrSedinteDinNume(tip) {
   let t = (tip || "").toLowerCase();
   if (t.indexOf("gratuit") !== -1) return 1;
   if (t.indexOf("trainers") !== -1 || t.indexOf("18") !== -1) return 12;
@@ -1939,7 +2002,8 @@ async function executaActiuneSupabase(actionName, payload) {
       fisaInscriere: c.fisa_inscriere || null,
       notaClient: c.nota_client || '',
       notaClientLa: c.nota_client_la || null,
-      obiectiv: c.obiectiv || null
+      obiectiv: c.obiectiv || null,
+      inghetare: c.inghetare || null
     })).filter(c => c.nume !== "");
 
     clienti.sort((a, b) => a.nume.localeCompare(b.nume));
@@ -2069,12 +2133,14 @@ async function executaActiuneSupabase(actionName, payload) {
         const efectuate = (Number(cl.efectuate) || 0) + 1;
         const ramase = Math.max(0, incluse - efectuate);
         const upd = { efectuate, ramase };
+        // Clientul înghețat a venit la o ședință: abonamentul se reia, cu zilele de pauză până azi
+        if (esteInghetat(cl)) Object.assign(upd, campuriReluareInghetare(cl, payload.dataCalendar));
         if (ramase === 0 && incluse > 0) upd.status = "Finalizat";
-        // Abonament fără dată de start: pornește la prima ședință bifată, valabil 30 de zile
+        // Abonament fără dată de start: pornește la prima ședință bifată, valabil câte zile are tipul (implicit 30)
         if ((!cl.dataStart || cl.dataStart === "-") && payload.dataCalendar) {
           const dStart = new Date(parseazaDataOraRo(payload.dataCalendar));
           const dExp = new Date(dStart.getTime());
-          dExp.setDate(dExp.getDate() + 30);
+          dExp.setDate(dExp.getDate() + zileValabilitateAbonament(cl.tipAbonament));
           upd.dataStart = formateazaDataRoLocal(dStart);
           upd.dataExpirare = formateazaDataRoLocal(dExp);
         }
@@ -2119,8 +2185,9 @@ async function executaActiuneSupabase(actionName, payload) {
         const efectuate = Math.max(0, (Number(cl.efectuate) || 0) - 1);
         const ramase = Math.max(0, incluse - efectuate);
         const upd = { efectuate, ramase, status: "Activ" };
+        if (esteInghetat(cl)) delete upd.status;
         // A fost anulată chiar ședința care a pornit abonamentul: așteaptă din nou prima ședință
-        if (efectuate === 0 && cl.dataStart === payload.dataCalendar && !/gratuit|individual/i.test(cl.tipAbonament || "")) {
+        if (efectuate === 0 && cl.dataStart === payload.dataCalendar && regulaAbonament(cl.tipAbonament).fel === 'abonament') {
           upd.dataStart = "-";
           upd.dataExpirare = "-";
         }
@@ -2210,17 +2277,17 @@ async function executaActiuneSupabase(actionName, payload) {
   }
 
   if (actionName === "inregistreazaAbonament") {
-    const tipLower = (payload.tip || "").toLowerCase();
-    const esteGratuita = tipLower.indexOf("gratuit") !== -1;
-    // Ședința gratuită și cea individuală se plătesc pe loc: valabile doar în ziua plății
-    const esteSedintaUnica = esteGratuita || tipLower.indexOf("individual") !== -1;
+    const regula = regulaAbonament(payload.tip);
+    const esteGratuita = regula.fel === 'gratuita';
+    // Ședința gratuită și cea unică (individuală) se plătesc pe loc: valabile doar în ziua plății
+    const esteSedintaUnica = regula.fel !== 'abonament';
     const dPlata = payload.dataPlata ? new Date(payload.dataPlata) : new Date();
     // Fără dată de start, abonamentul pornește la prima ședință bifată (vezi bifeazaPrezenta)
     const dStart = esteSedintaUnica ? new Date(dPlata.getTime()) : (payload.dataStart ? new Date(payload.dataStart) : null);
     const dExp = dStart ? new Date(dStart.getTime()) : null;
-    if (dExp && !esteSedintaUnica) dExp.setDate(dExp.getDate() + 30);
+    if (dExp && !esteSedintaUnica) dExp.setDate(dExp.getDate() + regula.zile);
 
-    const totalSedinte = getNrSedinteAbonamentLocal(payload.tip);
+    const totalSedinte = regula.sedinte;
     const dataPlataRo = formateazaDataRoLocal(dPlata);
     const dataStartRo = dStart ? formateazaDataRoLocal(dStart) : "-";
     const dataExpRo = dExp ? formateazaDataRoLocal(dExp) : "-";
@@ -2238,10 +2305,19 @@ async function executaActiuneSupabase(actionName, payload) {
     const neplatit = !!(exCli && exCli.length > 0 && exCli[0].platit === false);
     if (!esteSedintaUnica && (abonamentActiv || neplatit) && !payload.mod) return { success: false, refuz: 'confirma_abonament_activ', neplatit };
     if (esteGratuita) {
-      let qG = sb.from('incasari').select('row').ilike('clienta', payload.nume.trim()).ilike('tip', '%gratuit%');
+      // Orice tip gratuit (din Setări sau cu „gratuit” în nume), nu doar cel ales acum
+      let qG = sb.from('incasari').select('tip').ilike('clienta', payload.nume.trim());
       if (uid) qG = qG.eq('user_id', uid);
-      const { data: gratuite } = await qG.limit(1);
-      if (gratuite && gratuite.length > 0) return { success: false, refuz: 'gratuita_folosita' };
+      const { data: platiClient } = await qG;
+      if ((platiClient || []).some(i => regulaAbonament(i.tip).fel === 'gratuita')) return { success: false, refuz: 'gratuita_folosita' };
+    } else if (regula.oData && payload.mod !== 'doar_plata') {
+      // Ofertă „o singură dată per client”: refuzată dacă a mai fost plătită sau e chiar abonamentul lui de acum (inclusiv sub un nume vechi)
+      let qO = sb.from('incasari').select('tip').ilike('clienta', payload.nume.trim());
+      if (uid) qO = qO.eq('user_id', uid);
+      const { data: platiClient } = await qO;
+      const folosita = (platiClient || []).some(i => regulaAbonament(i.tip) === regula)
+        || !!(exCli && exCli.length > 0 && regulaAbonament(exCli[0].tipAbonament) === regula);
+      if (folosita) return { success: false, refuz: 'oferta_folosita' };
     }
 
     // null (clienții de dinainte de coloană) contează ca plătit
@@ -2276,7 +2352,9 @@ async function executaActiuneSupabase(actionName, payload) {
         dataStart: dataStartRo,
         dataExpirare: dataExpRo,
         status: "Activ",
-        platit
+        platit,
+        // Abonamentul nou înlocuiește și o pauză în curs
+        ...(exCli[0].inghetare ? { inghetare: null } : {})
       }).eq('row', exCli[0].row);
     }
     // Activat din fișă, înainte de plată: nimic la încasări
@@ -2457,6 +2535,22 @@ async function executaActiuneSupabase(actionName, payload) {
     if (uid) q = q.eq('user_id', uid);
     await q;
     return { success: true, nouaData: dataFinalaRo };
+  }
+
+  // Pauză: zilele abonamentului se opresc (fără rezervări și fără notificări de expirare) până la Reia
+  if (actionName === "ingheataAbonament" || actionName === "reiaAbonament") {
+    let qC = sb.from('cliente').select('*').ilike('nume', payload.nume.trim());
+    if (uid) qC = qC.eq('user_id', uid);
+    const { data: lista } = await qC.limit(1);
+    const cl = lista && lista[0];
+    if (!cl) return { success: false };
+    const azi = formateazaDataRoLocal(new Date());
+    const upd = actionName === "ingheataAbonament"
+      ? (esteInghetat(cl) ? null : { status: 'Inghetat', dataExpirare: '-', inghetare: { de_la: azi, exp: cl.dataExpirare || '-' } })
+      : (esteInghetat(cl) ? campuriReluareInghetare(cl, azi) : null);
+    if (!upd) return { success: true };
+    const { error } = await sb.from('cliente').update(upd).eq('row', cl.row);
+    return error ? { success: false, eroare: error.message } : { success: true, ...upd };
   }
 
   if (actionName === "seteazaEmailInvitatie") {
@@ -3167,6 +3261,9 @@ function htmlReinnoireClienta(c) {
       ? tr('Ai folosit toate ședințele', 'You’ve used all your sessions')
       : tr('Abonamentul tău a expirat', 'Your subscription has expired');
     text = tr('Reînnoiește abonamentul cu antrenorul tău ca să poți rezerva în continuare.', 'Renew with your trainer to keep booking sessions.');
+  } else if (s.tip === 'inghetat') {
+    titlu = tr('Abonamentul tău e în pauză', 'Your subscription is paused');
+    text = tr('Zilele sunt oprite. Când revii, antrenorul îl reia și zilele de pauză se adaugă la final.', 'The days are on hold. When you come back, your trainer resumes it and the paused days are added at the end.');
   } else if (s.tip === 'nou') {
     titlu = tr('Încă nu ai un abonament activ', 'You don’t have an active subscription yet');
     text = tr('După prima plată, aici îți vezi ședințele și valabilitatea.', 'After your first payment, your sessions and validity show up here.');
@@ -4085,7 +4182,9 @@ function htmlAbonamentClienta(c) {
     <div class="abonament-bara"><span style="width:${procent}%"></span></div>
     <div class="abonament-sub">${tr(`${efectuate} din ${incluse} ședințe folosite`, `${efectuate} of ${incluse} sessions used`)} · <b>${ramase} ${ramase === 1 ? tr('rămasă', 'left') : tr('rămase', 'left')}</b></div>
     ${rand(tr('Început', 'Started'), fara(c.dataStart) ? '-' : escAttr(c.dataStart))}
-    ${rand(tr('Valabil până la', 'Valid until'), fara(c.dataExpirare)
+    ${rand(tr('Valabil până la', 'Valid until'), s.tip === 'inghetat'
+      ? tr('în pauză (zilele sunt oprite)', 'paused (days on hold)')
+      : fara(c.dataExpirare)
       ? tr('Începe la prima ședință', 'Starts at your first session')
       : `${escAttr(c.dataExpirare)}${zile !== null && zile >= 0 ? ` <span class="abonament-zile">· ${zile === 0 ? tr('azi', 'today') : tr(`încă ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `${zile} ${zile === 1 ? 'day' : 'days'} left`)}</span>` : ''}`)}
   </div>`;
@@ -4557,7 +4656,9 @@ function mesajRezervare(cod) {
     inchis: ['Locul nu mai e deschis pentru programări.', 'This spot is no longer open for booking.'],
     trecut: ['Ora a trecut deja.', 'This time has already passed.'],
     in_afara_ferestrei: ['Poți rezerva doar în săptămâna curentă. Săptămâna următoare se deschide vineri la ora 20:00.', 'You can only book in the current week. Next week opens on Friday at 8 PM.'],
-    abonament_inactiv: ['Abonamentul tău nu e activ. Contactează antrenorul.', 'Your subscription is not active. Contact your trainer.'],
+    abonament_inactiv: esteInghetat(dateClienta.fisa)
+      ? ['Abonamentul tău e în pauză. Antrenorul îl reia când revii.', 'Your subscription is paused. Your trainer resumes it when you come back.']
+      : ['Abonamentul tău nu e activ. Contactează antrenorul.', 'Your subscription is not active. Contact your trainer.'],
     abonament_expirat: ['Abonamentul tău expiră înainte de această ședință.', 'Your subscription expires before this session.'],
     fara_sedinte: ['Nu mai ai ședințe disponibile pentru programare.', 'You have no sessions left to book.'],
     deja_rezervat: ['Ai deja o programare în această zi. Pentru o programare nouă, anuleaz-o întâi pe cea existentă sau contactează antrenorul.', 'You already have a booking on this day. To book another, first cancel the existing one or contact your trainer.']
@@ -5340,7 +5441,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ---- Butonul Înapoi al telefonului: închide pe rând ce e deschis, apoi revine pe Orar (Acasă la client); de acolo iese din aplicație ----
 // Cât timp e ceva de închis ținem o intrare în plus în istoric; Înapoi o consumă (popstate) și facem un singur pas.
-const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings', settingsWorkouts: 'settings', settingsPayments: 'settings' };
+const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings', settingsWorkouts: 'settings', settingsPayments: 'settings', settingsSubscriptions: 'settings' };
 const MODALE_INAPOI = [
   ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
   ['modalCuloareTipBackdrop', () => inchideCuloareTip()],
@@ -5825,6 +5926,10 @@ let filtruListaFisa = 'toate';
 function stareAbonamentClienta(c) {
   const st = (c.status || '').toLowerCase();
   if (st === 'arhivat' || st === 'archived') return { tip: 'arhivat', text: tr('Arhivată', 'Archived'), urmarit: false };
+  if (st === 'inghetat') {
+    const dela = c.inghetare && c.inghetare.de_la;
+    return { tip: 'inghetat', text: dela ? tr(`Înghețat din ${dela}`, `Frozen since ${dela}`) : tr('Înghețat', 'Frozen'), urmarit: false };
+  }
   if (!c.incluse || !c.tipAbonament || c.tipAbonament === '-') return { tip: 'nou', text: tr('Fără abonament', 'No subscription'), urmarit: true };
   const exp = parseazaDataOraRo(c.dataExpirare);
   const azi = new Date(); azi.setHours(0, 0, 0, 0);
@@ -5842,7 +5947,7 @@ function stareAbonamentClienta(c) {
 // Semafor de retenție: clienții care nu mai vin. Galben = 14–29 de zile fără prezență; roșu = 30+ zile,
 // sau abonament terminat și nereînnoit de cel puțin 7 zile. Peste 180 de zile nu mai apar (de arhivat, nu de reactivat).
 function stareRetentie(c, s) {
-  if (s.tip === 'arhivat' || s.tip === 'nou') return null;
+  if (s.tip === 'arhivat' || s.tip === 'nou' || s.tip === 'inghetat') return null;
   const ultima = (DB.prezente || []).filter(p => randulClientei(p, c, p.clienta))
     .reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0);
   if (!ultima) return null;
@@ -5882,7 +5987,7 @@ function deschideMesajeCuText(c, text) {
 
 // Abonament propriu-zis (nu ședință gratuită / individuală) încă valabil
 function areAbonamentActiv(c) {
-  return !/gratuit|individual/i.test(c.tipAbonament || '') && ['activ', 'curand'].includes(stareAbonamentClienta(c).tip);
+  return regulaAbonament(c.tipAbonament).fel === 'abonament' && ['activ', 'curand', 'inghetat'].includes(stareAbonamentClienta(c).tip);
 }
 
 function randeazaListaClienteFisa() {
@@ -5907,7 +6012,7 @@ function randeazaListaClienteFisa() {
   const deUrmarit = toate.filter(x => x.s.urmarit).length;
   const deReactivat = toate.filter(x => x.r).length;
   if ((filtruListaFisa === 'urmarit' && !deUrmarit) || (filtruListaFisa === 'reactivat' && !deReactivat)) filtruListaFisa = 'toate';
-  const ordine = { expirat: 0, curand: 1, nou: 2, activ: 3, arhivat: 4 };
+  const ordine = { expirat: 0, curand: 1, nou: 2, activ: 3, inghetat: 3, arhivat: 4 };
   const reactivare = filtruListaFisa === 'reactivat';
   const vizibile = toate
     .filter(x => filtruListaFisa === 'toate' || (reactivare ? x.r : x.s.urmarit))
@@ -7034,7 +7139,9 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('fisaSedinteRamase').innerText = client.ramase;
   // Abonament activat fără dată: valabilitatea pornește la prima ședință bifată
   const asteaptaStart = client.incluse > 0 && (!client.dataExpirare || client.dataExpirare === '-');
-  document.getElementById('fisaValabilitate').innerText = asteaptaStart ? tr('La prima ședință', 'At first session') : client.dataExpirare;
+  // Înghețat: expirarea e oprită până la Reia (cea de dinainte stă în client.inghetare)
+  document.getElementById('fisaValabilitate').innerText = esteInghetat(client) ? tr('În pauză', 'Paused')
+    : asteaptaStart ? tr('La prima ședință', 'At first session') : client.dataExpirare;
   
   let progresText = currentLang === 'en' ? `Progress: ${client.efectuate} of ${client.incluse} sessions` : `Progres: ${client.efectuate} din ${client.incluse} ședințe`;
   document.getElementById('fisaProgres').innerText = `${client.efectuate} ${currentLang === 'en' ? 'of' : 'din'} ${client.incluse}`;
@@ -7050,6 +7157,16 @@ function afiseazaFisaClientaInstant() {
   let badge = document.getElementById('fisaStatusBadge');
   let stLower = (client.status || '').toLowerCase();
   const stare = stareAbonamentClienta(client);
+  // Îngheață / Reia: doar cât există un abonament propriu-zis în desfășurare (sau deja înghețat)
+  const btnIngh = document.getElementById('btnInghetareAbonament');
+  if (btnIngh) {
+    const poate = stare.tip === 'inghetat' || (['activ', 'curand'].includes(stare.tip) && regulaAbonament(client.tipAbonament).fel === 'abonament');
+    document.getElementById('blocInghetareAbonament').hidden = !poate;
+    btnIngh.innerText = stare.tip === 'inghetat' ? tr('Reia abonamentul', 'Resume subscription') : tr('Îngheață abonamentul', 'Freeze subscription');
+    document.getElementById('notaInghetareAbonament').innerText = stare.tip === 'inghetat'
+      ? tr(`${stare.text}. Zilele de pauză se adaugă la expirare când îl reiei.`, `${stare.text}. The paused days are added to the expiry when you resume.`)
+      : tr('Pentru concediu sau boală: zilele se opresc, ședințele rămân.', 'For holidays or illness: the days stop, the sessions stay.');
+  }
   if (stare.tip === 'activ' || stare.tip === 'curand') {
     badge.innerHTML = `<span class="badge badge-activ">${tr('Activ', 'Active')}</span>`;
   } else if (stare.tip === 'expirat') {
@@ -7072,8 +7189,7 @@ function afiseazaFisaClientaInstant() {
   }
 
   document.getElementById('editNume').value = client.nume;
-  let tipNormalizat = normalizeazaTipAbonament(client.tipAbonament);
-  document.getElementById('editTip').value = tipNormalizat;
+  seteazaTipAbonamentSelect(document.getElementById('editTip'), client.tipAbonament);
   document.getElementById('editDataStart').value = dataRoInIso(client.dataStart);
   document.getElementById('editDataExpirare').value = dataRoInIso(client.dataExpirare);
   document.getElementById('editIncluse').value = client.incluse;
@@ -8938,7 +9054,7 @@ function completeazaExpirareEditare() {
   const elExp = document.getElementById('editDataExpirare');
   if (!start || elExp.value) return;
   const d = new Date(parseazaDataOraRo(start));
-  d.setDate(d.getDate() + 30);
+  d.setDate(d.getDate() + zileValabilitateAbonament(document.getElementById('editTip').value));
   elExp.value = dataRoInIso(formateazaDataRoLocal(d));
 }
 
@@ -9027,11 +9143,40 @@ function comutaArhivareClienta() {
   });
 }
 
+// Prelungirea unui abonament înghețat ar strica pauza: întâi Reia (zilele de pauză se adaugă singure)
+function refuzaDacaInghetat(nume) {
+  if (!esteInghetat(gasesteClientaValida(nume))) return false;
+  showToast(tr('Abonamentul e înghețat. Apasă întâi „Reia abonamentul”.', 'The subscription is frozen. Press “Resume subscription” first.'), 'error');
+  return true;
+}
+
+// Fișă › Îngheață / Reia abonamentul
+function comutaInghetareAbonament() {
+  const nume = (document.getElementById('selectClientaFisa').value || '').trim();
+  const client = gasesteClientaValida(nume);
+  if (!client) return;
+  const reia = esteInghetat(client);
+  const zile = reia && client.inghetare && parseazaDataOraRo(client.inghetare.de_la)
+    ? Math.max(0, Math.round((new Date().setHours(0, 0, 0, 0) - new Date(parseazaDataOraRo(client.inghetare.de_la)).setHours(0, 0, 0, 0)) / 86400000)) : 0;
+  customConfirm(reia ? tr('Reia abonamentul', 'Resume subscription') : tr('Îngheață abonamentul', 'Freeze subscription'),
+    reia
+      ? tr(`${client.nume} poate rezerva din nou. ` + (zile === 0 ? 'Pauza a început azi, deci expirarea rămâne aceeași.' : `${zile === 1 ? 'Ziua' : `Cele ${zile} zile`} de pauză se adaugă la expirare.`),
+           `${client.nume} can book again. ` + (zile === 0 ? 'The pause started today, so the expiry stays the same.' : `The ${zile} paused ${zile === 1 ? 'day is' : 'days are'} added to the expiry date.`))
+      : tr(`Zilele abonamentului lui ${client.nume} se opresc de azi: nu poate rezerva și nu primește notificări de expirare. Ședințele rămase se păstrează. Dacă vine la o ședință, abonamentul se reia singur.`,
+           `${client.nume}'s subscription days stop from today: no booking and no expiry notifications. Remaining sessions are kept. If they come to a session, the subscription resumes by itself.`),
+    () => callBackend(reia ? "reiaAbonament" : "ingheataAbonament", { nume: client.nume }, res => {
+      if (!res || !res.success) { showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error'); return; }
+      showToast(reia ? tr('✓ Abonament reluat', '✓ Subscription resumed') : tr('✓ Abonament înghețat', '✓ Subscription frozen'));
+      incarcaBazaDateSilencios(client.nume);
+    }));
+}
+
 function adaugaZile(nrZile) {
   let sel = document.getElementById('selectClientaFisa');
   if (!sel) return;
   let nume = sel.value.trim();
   if (!nume) return;
+  if (refuzaDacaInghetat(nume)) return;
   callBackend("prelungesteValabilitate", { nume: nume, zile: nrZile, dataManuala: null }, function(res) {
     showToast(t('toastExtended') + res.nouaData);
     incarcaBazaDateSilencios(nume);
@@ -9045,6 +9190,7 @@ function seteazaDataManuala() {
   let nume = sel.value.trim();
   let d = inp.value;
   if (!nume || !d) return;
+  if (refuzaDacaInghetat(nume)) return;
   callBackend("prelungesteValabilitate", { nume: nume, zile: 0, dataManuala: d }, function(res) {
     showToast(t('toastValiditySet') + res.nouaData);
     incarcaBazaDateSilencios(nume);
@@ -9067,7 +9213,8 @@ function activeazaAbonamentFaraPlata() {
     (inlocuieste ? tr('Abonamentul activ va fi înlocuit. ', 'The active subscription will be replaced. ') : '') +
     tr(`${tip} pornește la prima ședință bifată. Când clientul plătește, la Încasări alegi „Doar plata”.`,
        `${tip} starts at the first checked session. When the client pays, choose "Payment only" in Payments.`),
-    () => callBackend("inregistreazaAbonament", { nume: nume, tip: tip, mod: 'fara_plata' }, () => {
+    () => callBackend("inregistreazaAbonament", { nume: nume, tip: tip, mod: 'fara_plata' }, (res) => {
+      if (res && res.refuz === 'oferta_folosita') return showToast(textOfertaFolosita(tip), 'error');
       showToast(tr('Abonament activat', 'Subscription activated'));
       selTip.value = '';
       actualizeazaStilSelect(selTip);
@@ -9088,9 +9235,9 @@ function autoSelecteazaSuma() {
     return;
   }
 
-  let tipNorm = normalizeazaTipAbonament(tip);
-  if (preturiAbonament[tipNorm] !== undefined) {
-    selPreset.value = preturiAbonament[tipNorm];
+  const pret = regulaAbonament(tip).pret;
+  if (pret !== null && pret !== undefined) {
+    seteazaValoareSelect(selPreset, String(pret));
     if (customInp) customInp.style.display = 'none';
   }
   actualizeazaStilSelect(selPreset);
@@ -9273,6 +9420,7 @@ function salveazaIncasare(mod) {
       }
       showToast(res.refuz === 'gratuita_folosita'
         ? tr('Clientul a beneficiat deja de o ședință gratuită.', 'This client already had a free session.')
+        : res.refuz === 'oferta_folosita' ? textOfertaFolosita(tip)
         : tr('Clientul are deja un abonament activ.', 'This client already has an active subscription.'), 'error');
       return;
     }
@@ -9331,8 +9479,7 @@ function deschideModalEditareIncasare(itemEncoded) {
 
   let selTip = document.getElementById('editIncTip');
   if (selTip) {
-    let tipNormalizat = normalizeazaTipAbonament(item.tip);
-    selTip.value = tipNormalizat || "8 sedinte";
+    seteazaTipAbonamentSelect(selTip, item.tip);
   }
 
   document.getElementById('modalEditareIncasareBackdrop').style.display = 'flex';
@@ -11696,6 +11843,8 @@ function actualizeazaRezumatSetari() {
     : tr('Nesetat', 'Not set');
   let elAnt = document.getElementById('setariRezumatAntrenamente');
   if (elAnt) elAnt.textContent = tr(`${setariStudio.antrenamente.length} tipuri`, `${setariStudio.antrenamente.length} types`);
+  let elAbonamente = document.getElementById('setariRezumatAbonamente');
+  if (elAbonamente) { const n = abonamenteVizibile().length; elAbonamente.textContent = tr(`${n} ${n === 1 ? 'tip' : 'tipuri'}`, `${n} ${n === 1 ? 'type' : 'types'}`); }
   let elPlati = document.getElementById('setariRezumatPlati');
   if (elPlati) elPlati.textContent = tr(`${setariStudio.metodePlata.length} metode`, `${setariStudio.metodePlata.length} methods`) + ' · ' + setariStudio.moneda;
   actualizeazaRezumatNotificari();
@@ -11763,6 +11912,17 @@ function seteazaSetariStudio(modificari, dinCont = false) {
   setariStudio.metodePlata = (Array.isArray(setariStudio.metodePlata) ? setariStudio.metodePlata : METODE_PLATA_IMPLICITE)
     .filter(m => typeof m === 'string' && m.trim()).map(m => m.trim());
   if (!MONEDE.includes(setariStudio.moneda)) setariStudio.moneda = 'RON';
+  const nr = (v, min, max, implicit) => { const n = Math.round(Number(v)); return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : implicit; };
+  setariStudio.abonamente = (Array.isArray(setariStudio.abonamente) ? setariStudio.abonamente : ABONAMENTE_IMPLICITE)
+    .filter(a => a && typeof a.nume === 'string' && a.nume.trim())
+    .map(a => {
+      const fel = FELURI_ABONAMENT.includes(a.fel) ? a.fel : 'abonament';
+      const ab = { nume: a.nume.trim(), pret: nr(a.pret, 0, 1000000, 0), sedinte: fel === 'abonament' ? nr(a.sedinte, 1, 200, 8) : 1, zile: nr(a.zile, 1, 730, 30), fel };
+      if (a.oData && fel !== 'gratuita') ab.oData = true;
+      if (Array.isArray(a.alias) && a.alias.length) ab.alias = a.alias.filter(x => typeof x === 'string').slice(-10);
+      if (a.sters) ab.sters = true;
+      return ab;
+    });
   try { localStorage.setItem('beatrix_setari_studio', JSON.stringify(setariStudio)); } catch(e) {}
 
   aplicaSetariPlatiUI();
@@ -11819,8 +11979,45 @@ function aplicaSetariPlatiUI() {
   }
   const selEdit = document.getElementById('editIncMetoda');
   if (selEdit) populeazaMetodeEditare(selEdit.value);
+  aplicaAbonamenteUI();
   randeazaSetariStudio();
   actualizeazaRezumatSetari();
+}
+
+// Numele afișat al unui abonament: cu diacritice în română, tradus în engleză (în bază rămâne textul salvat)
+const numeAbonamentAfisat = tip => numeAbonamentClienta(tip);
+
+// Alege în listă tipul salvat (și scris puțin altfel, ex. cu spațiu la final); un tip care nu mai e în listă se adaugă ca opțiune
+function seteazaTipAbonamentSelect(sel, tip) {
+  if (!sel) return;
+  const cheie = cheieAbonament(tip);
+  const opt = cheie && cheie !== '-' && [...sel.options].find(o => o.value && cheieAbonament(o.value) === cheie);
+  if (opt) { sel.value = opt.value; return; }
+  if (cheie && cheie !== '-') { sel.add(new Option(numeAbonamentAfisat(tip), String(tip).trim())); sel.value = String(tip).trim(); return; }
+  sel.value = [...sel.options].some(o => o.value === '-') ? '-' : (sel.options[0] ? sel.options[0].value : '');
+}
+
+// Cele 5 liste de abonamente (Încasări, editarea plății, client nou, activarea și editarea fișei) și sumele propuse, din Setări › Abonamente.
+// Opțiunile fixe din index.html (alegerea goală, „Fără abonament”) rămân; activarea fără plată arată doar abonamentele propriu-zise.
+function aplicaAbonamenteUI() {
+  const vizibile = abonamenteVizibile();
+  [['incasareTip', false], ['editIncTip', false], ['nouTipAbonament', false], ['activareTip', true], ['editTip', false]].forEach(([id, doarAbonamente]) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const val = sel.value;
+    [...sel.options].forEach(o => { if (o.value !== '' && o.value !== '-') o.remove(); });
+    vizibile.filter(a => !doarAbonamente || a.fel === 'abonament').forEach(a => sel.add(new Option(numeAbonamentAfisat(a.nume), a.nume)));
+    if (val) seteazaTipAbonamentSelect(sel, val);
+    if (sel.classList.contains('select-faded') || sel.classList.contains('select-active')) actualizeazaStilSelect(sel);
+  });
+  const selSuma = document.getElementById('selectSumaPreset');
+  if (selSuma) {
+    const val = selSuma.value;
+    const custom = selSuma.querySelector('option[value="custom"]');
+    [...selSuma.options].forEach(o => { if (/^\d+$/.test(o.value)) o.remove(); });
+    [...new Set(vizibile.map(a => String(a.pret)))].forEach(pret => selSuma.add(new Option(`${pret} ${setariStudio.moneda}`, pret), custom));
+    if (val) seteazaValoareSelect(selSuma, val);
+  }
 }
 
 function randeazaSetariStudio() {
@@ -11837,6 +12034,11 @@ function randeazaSetariStudio() {
   if (elAnt) elAnt.innerHTML = randuri(setariStudio.antrenamente, true);
   const elMet = document.getElementById('setariListaMetode');
   if (elMet) elMet.innerHTML = randuri(setariStudio.metodePlata, false);
+  const elAb = document.getElementById('setariListaAbonamente');
+  if (elAb && !elAb.querySelector('.setari-abonament-form')) elAb.innerHTML = setariStudio.abonamente.map((a, i) => a.sters ? '' :
+    `<button type="button" class="setari-abonament-rand" onclick="deschideFormAbonament(${i})">
+      <span><b>${escAttr(numeAbonamentAfisat(a.nume))}</b><small>${escAttr(rezumatAbonament(a))}</small></span><span class="drawer-nav-arrow">›</span>
+    </button>`).join('');
   const elMon = document.getElementById('setariMonede');
   if (elMon) elMon.innerHTML = MONEDE.map(m =>
     `<button type="button" class="theme-option-btn${m === setariStudio.moneda ? ' active' : ''}" onclick="seteazaSetariStudio({ moneda: '${m}' })">${m}</button>`).join('');
@@ -11914,6 +12116,135 @@ function alegeCuloareTip(cls) {
 
 function inchideCuloareTip() {
   document.getElementById('modalCuloareTipBackdrop').style.display = 'none';
+}
+
+// ---- Setări › Abonamente: lista, iar la atingere formularul (nume, fel, preț, ședințe, zile, o dată per client) ----
+function rezumatAbonament(a) {
+  const pret = `${a.pret} ${setariStudio.moneda}`;
+  const oData = a.oData ? ` · ${tr('o dată per client', 'once per client')}` : '';
+  if (a.fel === 'gratuita') return tr('Gratuită · o dată per client', 'Free · once per client');
+  if (a.fel === 'unica') return `${pret} · ${tr('valabilă în ziua plății', 'valid on the payment day')}${oData}`;
+  return `${pret} · ${a.sedinte} ${tr(a.sedinte === 1 ? 'ședință' : 'ședințe', a.sedinte === 1 ? 'session' : 'sessions')} · ${a.zile} ${tr(a.zile === 1 ? 'zi' : 'zile', a.zile === 1 ? 'day' : 'days')}${oData}`;
+}
+
+function textOfertaFolosita(tip) {
+  const nume = numeAbonamentAfisat(tip);
+  return tr(`Clientul a folosit deja „${nume}” (o dată per client).`, `This client already used “${nume}” (once per client).`);
+}
+
+let idxFormAbonament = null; // null = abonament nou
+let felFormAbonament = 'abonament';
+
+function deschideFormAbonament(idx) {
+  const a = idx === null ? { nume: '', pret: '', sedinte: 8, zile: 30, fel: 'abonament' } : setariStudio.abonamente[idx];
+  if (!a) return;
+  idxFormAbonament = idx;
+  const el = document.getElementById('setariListaAbonamente');
+  el.innerHTML = `<div class="setari-abonament-form">
+    <div class="form-group"><label>${tr('Nume', 'Name')}</label>
+      <input type="text" id="formAbNume" class="form-control" maxlength="40" value="${escAttr(idx === null ? '' : numeAbonamentAfisat(a.nume))}" placeholder="${tr('Ex. 8 ședințe', 'E.g. 8 sessions')}"></div>
+    <div class="form-group"><label>${tr('Fel', 'Kind')}</label>
+      <div class="theme-selector-grid" id="formAbFel">
+        ${[['abonament', tr('Abonament', 'Subscription')], ['unica', tr('Ședință unică', 'Single session')], ['gratuita', tr('Gratuită', 'Free')]]
+          .map(([f, txt]) => `<button type="button" class="theme-option-btn" data-fel="${f}" onclick="alegeFelAbonament('${f}')">${txt}</button>`).join('')}
+      </div>
+      <div class="setari-lista-nota" id="formAbFelNota"></div></div>
+    <div class="setari-abonament-campuri">
+      <div class="form-group" id="formAbPretGrup"><label>${tr('Preț', 'Price')} (${setariStudio.moneda})</label>
+        <input type="number" id="formAbPret" class="form-control" min="0" inputmode="numeric" value="${escAttr(a.pret)}"></div>
+      <div class="form-group" id="formAbSedinteGrup"><label>${tr('Ședințe', 'Sessions')}</label>
+        <input type="number" id="formAbSedinte" class="form-control" min="1" max="200" inputmode="numeric" value="${escAttr(a.sedinte)}"></div>
+      <div class="form-group" id="formAbZileGrup"><label>${tr('Valabil (zile)', 'Valid (days)')}</label>
+        <input type="number" id="formAbZile" class="form-control" min="1" max="730" inputmode="numeric" value="${escAttr(a.zile)}"></div>
+    </div>
+    <label class="setari-abonament-bifa" id="formAbODataGrup"><input type="checkbox" id="formAbOData"${a.oData ? ' checked' : ''}>
+      <span>${tr('O singură dată per client', 'Once per client')}<small>${tr('Ex. ofertă pentru primul abonament', 'E.g. a first-subscription offer')}</small></span></label>
+    <div class="setari-abonament-butoane">
+      ${idx === null ? '' : `<button type="button" class="btn btn-clear" onclick="stergeAbonamentSetari()">${tr('Șterge', 'Delete')}</button>`}
+      <button type="button" class="btn btn-clear" onclick="inchideFormAbonament()">${tr('Renunță', 'Cancel')}</button>
+      <button type="button" class="btn" onclick="salveazaFormAbonament()">${tr('Salvează', 'Save')}</button>
+    </div>
+    <div class="setari-lista-nota">${tr('Schimbările se aplică abonamentelor activate de acum. Fișele și încasările existente rămân cum sunt.', 'Changes apply to subscriptions activated from now on. Existing profiles and payments stay as they are.')}</div>
+  </div>`;
+  alegeFelAbonament(a.fel);
+  document.getElementById('btnAdaugaAbonament').hidden = true;
+  if (idx === null) document.getElementById('formAbNume').focus();
+}
+
+function alegeFelAbonament(fel) {
+  felFormAbonament = fel;
+  document.querySelectorAll('#formAbFel .theme-option-btn').forEach(b => b.classList.toggle('active', b.dataset.fel === fel));
+  document.getElementById('formAbSedinteGrup').hidden = fel !== 'abonament';
+  document.getElementById('formAbZileGrup').hidden = fel !== 'abonament';
+  document.getElementById('formAbPretGrup').hidden = fel === 'gratuita';
+  // Gratuita e oricum o dată per client
+  document.getElementById('formAbODataGrup').hidden = fel === 'gratuita';
+  document.getElementById('formAbFelNota').textContent = {
+    abonament: tr('Ședințele se numără; zilele încep de la prima ședință bifată (sau de la data de start aleasă).', 'Sessions are counted; the days start at the first checked session (or the chosen start date).'),
+    unica: tr('O ședință, valabilă în ziua plății. Nu se poate da peste un abonament activ.', 'One session, valid on the payment day. Not allowed over an active subscription.'),
+    gratuita: tr('O ședință gratuită, valabilă în ziua ei, o singură dată per client.', 'One free session, valid on its day, once per client.')
+  }[fel];
+}
+
+function inchideFormAbonament() {
+  idxFormAbonament = null;
+  document.getElementById('setariListaAbonamente').innerHTML = '';
+  document.getElementById('btnAdaugaAbonament').hidden = false;
+  randeazaSetariStudio();
+}
+
+function salveazaFormAbonament() {
+  const idx = idxFormAbonament;
+  const vechi = idx === null ? null : setariStudio.abonamente[idx];
+  let nume = document.getElementById('formAbNume').value.trim().slice(0, 40);
+  // Nume implicit afișat cu diacritice sau tradus și nemodificat: rămâne cel salvat
+  if (vechi && nume === numeAbonamentAfisat(vechi.nume)) nume = vechi.nume;
+  if (!nume) { showToast(tr('Completează numele!', 'Enter the name!'), 'error'); return; }
+  const fel = felFormAbonament;
+  const campPret = document.getElementById('formAbPret').value;
+  const pret = fel === 'gratuita' ? 0 : Number(campPret);
+  const sedinte = fel === 'abonament' ? Number(document.getElementById('formAbSedinte').value) : 1;
+  const zile = fel === 'abonament' ? Number(document.getElementById('formAbZile').value) : (vechi ? vechi.zile : 30);
+  if (fel !== 'gratuita' && (campPret === '' || !(pret >= 0))) { showToast(tr('Completează prețul!', 'Enter the price!'), 'error'); return; }
+  if (!(sedinte >= 1 && sedinte <= 200)) { showToast(tr('Ședințe: între 1 și 200.', 'Sessions: between 1 and 200.'), 'error'); return; }
+  if (!(zile >= 1 && zile <= 730)) { showToast(tr('Zile: între 1 și 730.', 'Days: between 1 and 730.'), 'error'); return; }
+  const cheie = cheieAbonament(nume);
+  if (setariStudio.abonamente.some((a, i) => i !== idx && !a.sters && cheieAbonament(a.nume) === cheie)) { showToast(tr('Există deja în listă.', 'Already in the list.'), 'error'); return; }
+
+  // Un tip șters cu același nume e înlocuit de cel nou; numele vechi al unui tip redenumit rămâne ca alias, ca fișele vechi să-și păstreze regulile
+  const lista = setariStudio.abonamente.filter((a, i) => i === idx || !(a.sters && cheieAbonament(a.nume) === cheie));
+  const nou = { nume, pret, sedinte, zile, fel };
+  if (fel !== 'gratuita' && document.getElementById('formAbOData').checked) nou.oData = true;
+  if (vechi) {
+    const alias = (vechi.alias || []).slice();
+    if (cheieAbonament(vechi.nume) !== cheie) alias.push(vechi.nume);
+    if (alias.length) nou.alias = alias;
+    lista[lista.indexOf(vechi)] = nou;
+  } else lista.push(nou);
+  idxFormAbonament = null;
+  document.getElementById('setariListaAbonamente').innerHTML = '';
+  document.getElementById('btnAdaugaAbonament').hidden = false;
+  seteazaSetariStudio({ abonamente: lista });
+  showToast(tr('✓ Abonament salvat', '✓ Subscription saved'));
+}
+
+// Ștergerea îl scoate din liste; regulile lui rămân pentru fișele și încasările vechi
+function stergeAbonamentSetari() {
+  const idx = idxFormAbonament;
+  const a = setariStudio.abonamente[idx];
+  if (!a) return;
+  if (abonamenteVizibile().length <= 1) { showToast(tr('Păstrează cel puțin un abonament.', 'Keep at least one subscription.'), 'error'); return; }
+  const nume = numeAbonamentAfisat(a.nume);
+  customConfirm(tr(`Ștergi „${nume}”?`, `Delete “${nume}”?`),
+    tr('Nu va mai apărea în liste. Clienții care îl au deja și încasările lui rămân neschimbate.', 'It will no longer appear in the lists. Clients who already have it and its payments stay unchanged.'),
+    () => {
+      const lista = setariStudio.abonamente.slice();
+      lista[idx] = { ...a, sters: true };
+      idxFormAbonament = null;
+      document.getElementById('setariListaAbonamente').innerHTML = '';
+      document.getElementById('btnAdaugaAbonament').hidden = false;
+      seteazaSetariStudio({ abonamente: lista });
+    });
 }
 
 
