@@ -16,7 +16,17 @@
   <!-- Culoarea implicită e albastrul (data-accent="blue" pe <html>). Petrolul, singura paletă fără bloc propriu în CSS
        (valorile lui sunt în :root), apare doar dacă a fost ales în Setări: atributul se scoate înainte de prima afișare,
        ca să nu pâlpâie albastru. „beatrix_paleta_v96” = migrarea de la petrolul implicit a fost făcută (vezi app.js). -->
-  <script>try { if (localStorage.getItem('beatrix_paleta_v96') && localStorage.getItem('beatrix_accent') === 'petrol') document.documentElement.removeAttribute('data-accent'); } catch (e) {}</script>
+  <!-- Paleta aleasă și culoarea barei de stare (--status-bar-color din style.css) se aplică înainte de prima afișare,
+       ca pornirea (continuarea splash-ului) să nu schimbe culoarea după încărcarea app.js -->
+  <script>try {
+    const p = localStorage.getItem('beatrix_paleta_v96') && localStorage.getItem('beatrix_accent');
+    const bara = { petrol: '#0f5e63', mov: '#5c4d7d', red: '#9f2a3a', green: '#267048', graphite: '#343a43' }[p];
+    if (bara) {
+      if (p === 'petrol') document.documentElement.removeAttribute('data-accent');
+      else document.documentElement.setAttribute('data-accent', p);
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', bara);
+    }
+  } catch (e) {}</script>
 
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
@@ -24,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal153">
+  <link rel="stylesheet" href="style.css?v=fitFinal154">
 </head>
 <body>
 
@@ -1824,7 +1834,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal153"></script>
-  <script src="app.js?v=fitFinal153"></script>
+  <script src="sabloane.js?v=fitFinal154"></script>
+  <script src="app.js?v=fitFinal154"></script>
 </body>
 </html>

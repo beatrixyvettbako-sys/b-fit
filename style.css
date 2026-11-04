@@ -405,6 +405,22 @@ html.app-pornire body {
   height: 100dvh;
 }
 
+/* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: culoarea barei de stare și sigla
+   (iconița paletei are exact fundalul ei, deci se vede doar sigla). Login-ul și ecranul clientului au fundal propriu. */
+html.app-pornire {
+  background: var(--status-bar-color);
+}
+
+html.app-pornire body {
+  background: var(--status-bar-color) url('icon-blue.png') center / 128px no-repeat;
+}
+
+html.app-pornire:not([data-accent]) body { background-image: url('icon-petrol.png'); }
+html.app-pornire[data-accent="mov"] body { background-image: url('icon-mov.png'); }
+html.app-pornire[data-accent="red"] body { background-image: url('icon-red.png'); }
+html.app-pornire[data-accent="green"] body { background-image: url('icon-green.png'); }
+html.app-pornire[data-accent="graphite"] body { background-image: url('icon-graphite.png'); }
+
 /* Deconectare: ecranul curent se estompează și rămâne neschimbat până la reîncărcare (fără scrollbar temporar) */
 html.deconectare {
   overflow: hidden;
@@ -3327,6 +3343,8 @@ nav button.active span {
   opacity: 0;
   margin: 0;
   padding: 0 8px;
+  /* Închis, fără chenar: altfel cei 2px de chenar lasă o linie între header și bara zilelor (sus de tot) */
+  border-width: 0;
   pointer-events: none;
   transform: translateY(-6px);
   transition: max-height 0.24s cubic-bezier(0.4, 0, 0.2, 1),
@@ -3344,6 +3362,7 @@ nav button.active span {
   margin-bottom: 6px;
   padding: 8px 10px 8px;
   background: var(--card-bg);
+  border-width: 1px;
   border-color: var(--primary);
   box-shadow: var(--glass-shadow);
 }
