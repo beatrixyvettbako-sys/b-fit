@@ -5359,6 +5359,7 @@ function pasInapoiTelefon() {
   if (modal) return modal[1];
   if (vizibil('panouPoze')) return inchidePanouPoze;
   if (vizibil('panouMesaje')) return inchidePanouMesaje;
+  if (vizibil('panouConversatii') && selectieMesaj) return anuntMesaj ? deschideMesajNou : anuleazaMesajNou;
   if (vizibil('panouConversatii')) return inchidePanouConversatii;
   if (vizibil('panouNotificari')) return inchidePanouNotificari;
   if (document.getElementById('appDrawer')?.classList.contains('open')) {
@@ -7328,7 +7329,9 @@ let conversatiiDoarNecitite = false;
 let conversatiiDate = [];
 
 function deschideConversatii() {
-  document.getElementById('panouConversatii').classList.remove('auth-hidden');
+  const panou = document.getElementById('panouConversatii');
+  panou.classList.remove('auth-hidden');
+  panou.scrollTop = 0;
   sincronizeazaIstoricInapoi();
   incarcaConversatii();
 }
@@ -7336,6 +7339,7 @@ function deschideConversatii() {
 function inchidePanouConversatii() {
   document.getElementById('panouConversatii').classList.add('auth-hidden');
   selectieMesaj = null;
+  anuntMesaj = false;
 }
 
 async function incarcaConversatii() {
@@ -7356,8 +7360,11 @@ async function incarcaConversatii() {
   randeazaConversatii();
 }
 
-// ---- Mesaj nou (antrenor): alege unul sau mai mulți clienți; fiecare îl primește în conversația lui ----
-let selectieMesaj = null; // Set cu id-urile clienților aleși, cât timp e deschisă alegerea
+// ---- Mesaj nou (antrenor): atingerea unui client îi deschide conversația; „Anunț” trimite același mesaj la mai mulți ----
+let selectieMesaj = null; // Set cu id-urile clienților aleși, cât timp e deschis Mesaj nou (și lista nu se redesenează peste el)
+let anuntMesaj = false; // true în ecranul Anunț (bife + mesaj), false în lista de clienți
+// Megafonul de la „Anunț către mai mulți clienți”
+const SVG_ANUNT = '<svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
 // Iconița „Mesaj nou” (pătrat cu creion), aceeași ca în antetul listei de conversații
 const SVG_MESAJ_NOU = '<svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>';
 
@@ -7368,15 +7375,45 @@ function clientiMesajNou() {
 
 function deschideMesajNou() {
   if (document.getElementById('panouConversatii').classList.contains('auth-hidden')) deschideConversatii();
-  selectieMesaj = new Set();
   const clienti = clientiMesajNou();
-  const corp = document.getElementById('conversatiiContinut');
   if (!clienti.length) {
     selectieMesaj = null;
     return showToast(tr('Niciun client nu are încă cont în aplicație.', 'No client has an app account yet.'), 'error');
   }
-  corp.innerHTML = `<div class="mesaj-nou-antet"><b>${tr('Mesaj nou', 'New message')}</b>
+  selectieMesaj = new Set();
+  anuntMesaj = false;
+  document.getElementById('conversatiiContinut').innerHTML = `<div class="mesaj-nou-antet"><b>${tr('Mesaj nou', 'New message')}</b>
       <button type="button" class="btn btn-clear" onclick="anuleazaMesajNou()">${tr('Renunță', 'Cancel')}</button></div>
+    <input type="text" class="form-control" placeholder="${tr('Caută client...', 'Search client...')}" oninput="filtreazaMesajNou(this.value)" style="margin-bottom:8px;">
+    <div class="card conversatii-lista">
+      <button type="button" class="conversatie-rand" onclick="deschideAnuntMesaj()">
+        <span class="conversatie-initiala">${SVG_ANUNT}</span>
+        <span class="conversatie-text"><b>${tr('Anunț către mai mulți clienți', 'Message several clients')}</b><small>${tr('Același mesaj, fiecăruia în conversația lui', 'Same message, each in their own conversation')}</small></span>
+      </button>
+    </div>
+    <div class="card conversatii-lista" style="margin-top:10px;">
+      ${clienti.map(c => `<button type="button" class="conversatie-rand" data-nume="${escAttr(cheieNume(c.nume))}" onclick="alegeClientMesajNou('${escAttr(c.id)}')">
+        <span class="conversatie-initiala">${escAttr((c.nume || '?').trim().charAt(0).toUpperCase())}</span>
+        <span class="conversatie-text"><b>${escAttr(c.nume)}</b></span>
+      </button>`).join('')}
+    </div>`;
+  document.getElementById('panouConversatii').scrollTop = 0;
+}
+
+// Un singur client: se deschide conversația, unde se vede și ce v-ați scris înainte
+function alegeClientMesajNou(id) {
+  const c = clientiMesajNou().find(x => x.id === id);
+  anuleazaMesajNou();
+  if (c) deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+}
+
+function deschideAnuntMesaj() {
+  const clienti = clientiMesajNou();
+  const corp = document.getElementById('conversatiiContinut');
+  selectieMesaj = new Set();
+  anuntMesaj = true;
+  corp.innerHTML = `<div class="mesaj-nou-antet"><b>${tr('Anunț către mai mulți', 'Message several clients')}</b>
+      <button type="button" class="btn btn-clear" onclick="deschideMesajNou()">${tr('Înapoi', 'Back')}</button></div>
     <input type="text" class="form-control" placeholder="${tr('Caută client...', 'Search client...')}" oninput="filtreazaMesajNou(this.value)" style="margin-bottom:8px;">
     <div class="card trimite-plan-lista">
       <label class="trimite-plan-rand"><input type="checkbox" id="mesajNouToti" onchange="selecteazaTotiMesajNou(this.checked)">
@@ -7389,19 +7426,22 @@ function deschideMesajNou() {
       <div class="mesaj-nou-info" id="mesajNouInfo">${tr('Alege cui trimiți. Fiecare îl primește în conversația lui.', 'Choose who gets it. Each client receives it in their own conversation.')}</div>
       <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesajNou();">
         <textarea id="mesajNouText" class="form-control" rows="1" maxlength="2000" placeholder="${tr('Scrie un mesaj...', 'Write a message...')}" oninput="potrivesteCampMesaj(this)"></textarea>
-        <button type="submit" class="btn" id="btnTrimiteMesajNou" aria-label="${tr('Trimite', 'Send')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button type="submit" class="btn" id="btnTrimiteMesajNou" aria-label="${tr('Trimite', 'Send')}"><svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>
       </form>
     </div>`;
+  document.getElementById('panouConversatii').scrollTop = 0;
 }
 
 function anuleazaMesajNou() {
   selectieMesaj = null;
+  anuntMesaj = false;
   randeazaConversatii();
+  document.getElementById('panouConversatii').scrollTop = 0;
 }
 
 function filtreazaMesajNou(text) {
   const cauta = cheieNume(text);
-  document.querySelectorAll('#conversatiiContinut .trimite-plan-rand[data-nume]').forEach(r => { r.hidden = !!cauta && !r.dataset.nume.includes(cauta); });
+  document.querySelectorAll('#conversatiiContinut [data-nume]').forEach(r => { r.hidden = !!cauta && !r.dataset.nume.includes(cauta); });
 }
 
 function comutaClientMesajNou(id, ales) {
@@ -7437,6 +7477,7 @@ async function trimiteMesajNou() {
   if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
   showToast(ids.length === 1 ? tr('✓ Mesaj trimis', '✓ Message sent') : tr(`✓ Trimis la ${ids.length} clienți`, `✓ Sent to ${ids.length} clients`));
   selectieMesaj = null;
+  anuntMesaj = false;
   await incarcaConversatii();
   // La un singur client, conversația se deschide direct
   if (ids.length === 1) {
@@ -7480,7 +7521,7 @@ function randeazaConversatii() {
   // Un client nou se alege din „Mesaj nou” (butonul din antet), nu dintr-o listă cu toți clienții
   if (lista.length) html += `<div class="card conversatii-lista">${lista.map(rand).join('')}</div>`;
   else html += `<div class="mesaje-gol" style="padding:24px 20px;">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.')
-    : tr(`Nicio conversație încă. Apasă ${SVG_MESAJ_NOU} ca să scrii unui client.`, `No conversations yet. Tap ${SVG_MESAJ_NOU} to write to a client.`)}</div>`;
+    : tr(`Nicio conversație încă. Apasă ${SVG_MESAJ_NOU} ca să scrii unuia sau mai multor clienți.`, `No conversations yet. Tap ${SVG_MESAJ_NOU} to message one or more clients.`)}</div>`;
   if (!conversatiiDate.length) html += `<div class="mesaje-gol" style="padding:0 20px;">${tr('Mesajele apar pentru clienții care au cont în aplicație.', 'Messages are available for clients with an app account.')}</div>`;
   corp.innerHTML = html;
 }
@@ -8183,9 +8224,8 @@ async function incarcaNotificari() {
   if (!supabaseClient || !utilizatorCurent) return;
   const { data, error } = await supabaseClient.from('notificari').select('*')
     .eq('user_id', utilizatorCurent.id).eq('ascuns', false).order('created_at', { ascending: false }).limit(60);
-  if (error) return; // tabelul nu există încă (scriptul SQL nerulat): fără clopoțel
+  if (error) return;
   notificari = data || [];
-  document.querySelectorAll('.btn-notificari').forEach(b => { b.hidden = false; });
   actualizeazaBulinaNotificari();
   actualizeazaBulinaMesaje();
   if (!canalNotificari) {

@@ -5831,6 +5831,11 @@ select.form-control {
   margin: 0;
 }
 
+/* Pe tema întunecată căsuța nebifată e închisă la culoare, nu albă */
+[data-theme="dark"] .trimite-plan-rand input {
+  color-scheme: dark;
+}
+
 .trimite-plan-text {
   min-width: 0;
   display: flex;
@@ -6985,6 +6990,13 @@ input.serie-camp {
   vertical-align: -0.2em;
 }
 
+/* Megafonul de la „Anunț către mai mulți clienți”, în cercul inițialei */
+.conversatie-initiala .icon-inline {
+  width: 18px;
+  height: 18px;
+  vertical-align: 0;
+}
+
 .mesaje-gol {
   margin: auto 0;
   text-align: center;
@@ -7048,6 +7060,7 @@ input.serie-camp {
   flex: 1;
   min-width: 0;
   resize: none;
+  min-height: 40px; /* cât butonul Trimite, ca pe un rând să fie aliniate */
   max-height: 120px;
   overflow-y: hidden;
   border-radius: 18px;
@@ -7068,6 +7081,11 @@ input.serie-camp {
 .mesaje-scrie .btn svg {
   width: 18px;
   height: 18px;
+}
+
+/* Avionul de hârtie are vârful sus-dreapta: îl mutăm puțin ca să pară centrat în cerc */
+.mesaje-scrie .btn svg.icon-trimite {
+  transform: translate(-1px, 1px);
 }
 
 /* Notițele și recordurile din antrenament: card cu exercițiul și ziua */

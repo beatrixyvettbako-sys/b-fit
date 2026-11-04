@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal147">
+  <link rel="stylesheet" href="style.css?v=fitFinal148">
 </head>
 <body>
 
@@ -40,11 +40,11 @@
       <div class="clienta-title" id="clientaTitlu">B-Fit</div>
       <!-- Mesaje, notificări și meniu, grupate în dreapta; titlul rămâne la mijloc (clienta-header-centrat) -->
       <div class="clienta-header-dreapta">
-      <button type="button" class="header-icon-bubble-btn btn-notificari btn-mesaje" onclick="deschideMesajeClienta()" title="Mesaje" data-en-title="Messages" hidden>
+      <button type="button" class="header-icon-bubble-btn btn-notificari btn-mesaje" onclick="deschideMesajeClienta()" title="Mesaje" data-en-title="Messages">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
         <b class="notificari-bulina mesaje-bulina-antet" hidden></b>
       </button>
-      <button type="button" class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications" hidden>
+      <button type="button" class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
         <b class="notificari-bulina" hidden></b>
       </button>
@@ -136,7 +136,7 @@
     <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesaj();">
       <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." oninput="potrivesteCampMesaj(this)"></textarea>
       <button type="submit" class="btn" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
       </button>
     </form>
   </div>
@@ -1051,12 +1051,12 @@
       <span id="pageTitle">Orar Săptămânal</span>
     </div>
 
-    <!-- Mesajele cu clienții (lista conversațiilor) și clopoțelul de notificări (apar după conectare) -->
-    <button class="header-icon-bubble-btn btn-notificari btn-mesaje" onclick="deschideConversatii()" title="Mesaje" data-en-title="Messages" hidden style="margin-left: auto;">
+    <!-- Mesajele cu clienții (lista conversațiilor) și clopoțelul de notificări: vizibile de la deschidere -->
+    <button class="header-icon-bubble-btn btn-notificari btn-mesaje" onclick="deschideConversatii()" title="Mesaje" data-en-title="Messages" style="margin-left: auto;">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>
       <b class="notificari-bulina mesaje-bulina-antet" hidden></b>
     </button>
-    <button class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications" hidden style="margin-left: auto;">
+    <button class="header-icon-bubble-btn btn-notificari" onclick="deschidePanouNotificari()" title="Notificări" data-en-title="Notifications" style="margin-left: auto;">
       <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
       <b class="notificari-bulina" hidden></b>
     </button>
@@ -1825,7 +1825,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal147"></script>
-  <script src="app.js?v=fitFinal147"></script>
+  <script src="sabloane.js?v=fitFinal148"></script>
+  <script src="app.js?v=fitFinal148"></script>
 </body>
 </html>
