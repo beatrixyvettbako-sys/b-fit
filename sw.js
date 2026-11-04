@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v155';
+const CACHE_NAME = 'bfit-cache-v156';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -43,18 +43,44 @@ self.addEventListener('activate', (event) => {
 });
 
 // Notificări push: mesajul vine criptat de la Worker-ul B-Fit, cu titlul și textul deja compuse
+// Fără icon sau badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com).
+// La mesaje, iconița mare e cercul cu inițialele celui care scrie (ca un contact fără poză în WhatsApp); la rest, sigla.
 self.addEventListener('push', (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) {}
-  // Fără badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com).
-  // Fără icon (sigla mare din dreapta): în stânga e deja iconița aplicației, ca la WhatsApp; în probă din v152
-  event.waitUntil(self.registration.showNotification(m.titlu || 'B-Fit', {
-    body: m.corp || '',
-    badge: './badge-96.png',
-    tag: m.tag || undefined,
-    data: { url: m.url || './' }
-  }));
+  event.waitUntil((async () => {
+    const icon = m.tip === 'mesaj_nou' ? await avatarInitiale(m.titlu).catch(() => null) : null;
+    await self.registration.showNotification(m.titlu || 'B-Fit', {
+      body: m.corp || '',
+      icon: icon || './icon-192.png',
+      badge: './badge-96.png',
+      tag: m.tag || undefined,
+      data: { url: m.url || './' }
+    });
+  })());
 });
+
+// Cerc în culoarea aplicației cu inițialele numelui („Ana Pop” → „AP”), ca imagine data: pentru notificare
+async function avatarInitiale(nume) {
+  const initiale = (nume || '').trim().split(/\s+/).slice(0, 2).map((p) => p.charAt(0)).join('').toUpperCase();
+  if (!initiale || typeof OffscreenCanvas === 'undefined') return null;
+  const latura = 192;
+  const canvas = new OffscreenCanvas(latura, latura);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#335c8f';
+  ctx.beginPath();
+  ctx.arc(latura / 2, latura / 2, latura / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 ${initiale.length > 1 ? 76 : 92}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(initiale, latura / 2, latura / 2 + 4);
+  const octeti = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
+  let binar = '';
+  for (let i = 0; i < octeti.length; i += 0x8000) binar += String.fromCharCode.apply(null, octeti.subarray(i, i + 0x8000));
+  return 'data:image/png;base64,' + btoa(binar);
+}
 
 // Atingerea notificării: aplicația deschisă trece în prim-plan cu panoul de notificări; altfel se deschide
 self.addEventListener('notificationclick', (event) => {

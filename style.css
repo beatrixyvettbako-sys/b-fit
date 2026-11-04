@@ -6542,7 +6542,9 @@ input.serie-camp {
   flex-shrink: 0;
   white-space: nowrap;
   font-size: 0.78rem;
-  padding: 5px 10px;
+  /* line-height 1 + padding mai mare: textul stă în mijlocul casetei și cu fontul Android (cu „normal” coboară) */
+  line-height: 1;
+  padding: 7px 10px;
 }
 
 .plan-zi-bara-titlu {
