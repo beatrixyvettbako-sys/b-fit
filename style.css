@@ -8144,3 +8144,35 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-size: 0.72rem;
   color: var(--text-muted);
 }
+
+/* Programări (client): ziua aleasă în care clientul are deja programare, ca o confirmare (nu ca un blocaj) */
+.programare-zi-confirmata {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.programare-zi-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #15803d;
+  color: #fff;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.programare-zi-confirmata > div:last-child {
+  min-width: 0;
+}
+
+.programare-zi-nota {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+}

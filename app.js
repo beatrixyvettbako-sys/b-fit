@@ -5664,21 +5664,22 @@ function htmlZileSiOreClienta(grupuri) {
       <span class="day-date-sub">${d.getDate()} ${escAttr(d.toLocaleDateString(locale, { month: 'short' }).replace('.', ''))}</span>
     </button>`;
   });
-  html += `</div><div style="font-weight:800; color:var(--primary); margin:6px 2px 6px;">${tr('Locuri deschise', 'Open spots')}</div>`;
   const indici = peZi[dateClienta.ziSelectata] || [];
   const programataAzi = dateClienta.zileProgramate && dateClienta.zileProgramate.get(dateClienta.ziSelectata);
+  html += `</div>${programataAzi ? '<div style="height:6px;"></div>' : `<div style="font-weight:800; color:var(--primary); margin:6px 2px 6px;">${tr('Locuri deschise', 'Open spots')}</div>`}`;
   if (programataAzi) {
-    // O singură programare pe zi: anularea (sau motivul pentru care nu se poate) chiar aici, nu doar în lista de mai jos
+    // O singură programare pe zi: ziua aleasă arată programarea ca o confirmare (anularea e o singură dată, în „Programările mele”)
     const d = programataAzi.data;
-    const { poateAnula, motiv } = stareAnulareClienta(programataAzi);
-    const text = programataAzi.bifat
-      ? tr(`Ai avut deja o ședință ${etichetaZiSlot(d).toLowerCase()}, la ${oraSlot(d)}.`, `You already had a session on ${etichetaZiSlot(d)} at ${oraSlot(d)}.`)
-      : tr(`Ai deja o programare ${etichetaZiSlot(d).toLowerCase()} la ${oraSlot(d)}.`, `You already have a booking on ${etichetaZiSlot(d)} at ${oraSlot(d)}.`)
-        + (poateAnula ? tr(' Pentru altă oră, anuleaz-o întâi.', ' To pick another time, cancel it first.') : '');
-    html += `<div class="card" style="font-size:0.85rem; line-height:1.4;">${escAttr(text)}
-      ${programataAzi.bifat ? '' : poateAnula
-        ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="anuleazaRezervareClienta(${programataAzi.row})">${tr('Anulează programarea', 'Cancel booking')}</button>`
-        : `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">${motiv}</div>`}</div>`;
+    const titlu = programataAzi.bifat ? tr('Ședința ta din această zi', 'Your session on this day') : tr('Programarea ta', 'Your booking');
+    const nota = programataAzi.bifat
+      ? tr('Ședința e deja bifată. Poți avea o singură ședință pe zi.', 'This session is already checked off. You can have one session per day.')
+      : tr('Poți avea o singură programare pe zi. Detaliile și anularea sunt mai jos, la Programările mele.', 'You can have one booking per day. Details and cancelling are below, under My bookings.');
+    html += `<div class="card programare-zi-confirmata">
+      <div class="programare-zi-icon">✓</div>
+      <div><div class="acasa-eticheta">${titlu}</div>
+      <b>${escAttr(etichetaZiSlot(d))}, ${oraSlot(d)}</b>${programataAzi.antrenament ? `<div class="acasa-antrenament-detalii">${escAttr(traduceValoare(programataAzi.antrenament))}</div>` : ''}
+      <div class="programare-zi-nota">${nota}</div></div>
+    </div>`;
   } else if (indici.length === 0) {
     html += `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${grupuri.length ? tr('Nicio oră liberă în această zi.', 'No open spots on this day.') : tr('Momentan nu sunt locuri deschise pentru rezervări.', 'There are no open spots right now.')}</div>`;
   }
