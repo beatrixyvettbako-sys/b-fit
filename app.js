@@ -2775,6 +2775,9 @@ function autoScrollLaOraCurenta(faraHighlight = false) {
   }
 }
 
+// Istoricul deschis urcă sub antet (pe Orar, sub bara zilelor), cu un spațiu mic între ele
+const SPATIU_SUB_ISTORIC = 6;
+
 function peComutareIstoricIncasari(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {
@@ -2782,7 +2785,7 @@ function peComutareIstoricIncasari(detailsEl) {
       let hOffset = headerEl ? headerEl.offsetHeight : 50;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
-        top: Math.max(0, Math.round(elTop - hOffset - 12)),
+        top: Math.max(0, Math.round(elTop - hOffset - SPATIU_SUB_ISTORIC)),
         behavior: 'smooth'
       });
     }, 80);
@@ -2794,10 +2797,11 @@ function peComutareIstoricOrar(detailsEl) {
     setTimeout(() => {
       let headerEl = document.getElementById('mainAppHeader');
       let daySelector = document.getElementById('dayButtonsContainer');
-      let hOffset = (headerEl ? headerEl.offsetHeight : 50) + (daySelector ? daySelector.offsetHeight : 45);
+      // Bara zilelor lipită stă cu 1px peste header (top: calc(var(--header-height) - 1px))
+      let hOffset = (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45);
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
-        top: Math.max(0, Math.round(elTop - hOffset - 12)),
+        top: Math.max(0, Math.round(elTop - hOffset - SPATIU_SUB_ISTORIC)),
         behavior: 'smooth'
       });
     }, 80);
@@ -2819,7 +2823,7 @@ function peComutareIstoricFisa(detailsEl) {
       let hOffset = headerEl ? headerEl.offsetHeight : 50;
       let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
       window.scrollTo({
-        top: Math.max(0, Math.round(elTop - hOffset - 12)),
+        top: Math.max(0, Math.round(elTop - hOffset - SPATIU_SUB_ISTORIC)),
         behavior: 'smooth'
       });
     }, 80);
