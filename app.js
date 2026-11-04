@@ -4155,8 +4155,8 @@ function valoriSeriiEx(ex) {
       rep: Math.max(0, ...facute.map(r => numarKg(r.rep))),
       volum: facute.reduce((s, r) => s + numarKg(r.kg) * numarKg(r.rep), 0),
       detaliu: facute.map(r => {
-        const kg = String(r.kg || '').trim(), rep = String(r.rep || '').trim() || '-';
-        return kg ? `${kg} × ${rep}` : `${rep} rep`;
+        const kg = String(r.kg || '').trim(), rep = String(r.rep || '').trim();
+        return kg && rep ? `${kg} × ${rep}` : kg ? `${kg} kg` : `${rep || '-'} rep`;
       }).join(', ')
     };
   }
@@ -4346,9 +4346,9 @@ function seriiPlanificate(ex) {
 function seriiExercitiu(ex) {
   if (!Array.isArray(ex.serii)) ex.serii = [];
   const nr = seriiPlanificate(ex).nr;
-  // Exercițiile bifate „Făcut” înainte de notarea pe serii apar cu toate seriile bifate
+  // Exercițiile bifate „Făcut” înainte de notarea pe serii apar cu toate seriile bifate, cu greutatea notată atunci
   const faraSerii = ex.serii.length === 0 && ex.status === 'Finalizat';
-  while (ex.serii.length < nr) ex.serii.push({ kg: '', rep: '', gata: faraSerii });
+  while (ex.serii.length < nr) ex.serii.push({ kg: faraSerii ? String(ex.greutate_kg || '').trim() : '', rep: '', gata: faraSerii });
   return ex.serii;
 }
 
@@ -8799,7 +8799,8 @@ function htmlGraficGreutate(puncte, opt = {}) {
   const L = 320, H = 150, st = 30, dr = 14, sus = 18, jos = 26;
   const kg = puncte.map(p => p.kg);
   let min = Math.min(...kg), max = Math.max(...kg);
-  if (max - min < 2) { min -= 1; max += 1; }
+  // Interval minim de 2 unități, fără să coboare sub zero (kg / repetări mici la exerciții)
+  if (max - min < 2) { min = Math.max(0, min - 1); max = min + Math.max(2, max - min + 1); }
   const t0 = puncte[0].d.getTime(), t1 = puncte[puncte.length - 1].d.getTime();
   const x = d => st + (t1 === t0 ? (L - st - dr) / 2 : (d.getTime() - t0) / (t1 - t0) * (L - st - dr));
   const y = v => sus + (max - v) / (max - min) * (H - sus - jos);
