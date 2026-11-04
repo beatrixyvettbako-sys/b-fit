@@ -1901,8 +1901,31 @@ html[data-rol="clienta"] #bottomNav {
   margin-left: 8px !important;
 }
 
+/* Antetul clientului: Înapoi | titlu | Mesaje, notificări, meniu. Coloanele laterale egale țin titlul la mijlocul
+   ecranului; un titlu prea lung pentru spațiul simetric se mută spre stânga, nu peste butoane. */
+.clienta-header.clienta-header-centrat {
+  display: grid;
+  grid-template-columns: minmax(36px, 1fr) minmax(0, auto) minmax(max-content, 1fr);
+  column-gap: 10px;
+}
+
+.clienta-header-centrat .clienta-title {
+  flex: none;
+}
+
+.clienta-header-dreapta {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .clienta-header .btn-notificari:not([hidden]) {
   margin-right: -2px;
+}
+
+.clienta-header-dreapta .btn-notificari:not([hidden]) {
+  margin: 0 !important;
 }
 
 .notificari-bulina {
@@ -6881,6 +6904,14 @@ input.serie-camp {
   white-space: nowrap;
 }
 
+/* WhatsApp: verde, ca să se recunoască din prima */
+.btn.nota-antrenor-whatsapp {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(21, 128, 61, 0.25);
+}
+
 /* Mesaje: fereastra de conversație (antrenor și client) */
 .panou-mesaje {
   display: flex;
@@ -6983,6 +7014,34 @@ input.serie-camp {
   height: 18px;
 }
 
+/* Notițele și recordurile din antrenament: card cu exercițiul și ziua */
+.mesaj.mesaj-nota,
+.mesaj.mesaj-record {
+  border-left: 3px solid var(--primary);
+}
+
+.mesaj.mesaj-record {
+  border-left-color: #f5b041;
+  background: rgba(245, 176, 65, 0.12);
+}
+
+.mesaj.al-meu.mesaj-nota,
+.mesaj.al-meu.mesaj-record {
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+
+.mesaj-context {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+  font-size: 0.72rem;
+}
+
+.mesaj-context span {
+  opacity: 0.75;
+}
+
 .mesaj-vazut {
   align-self: flex-end;
   margin-top: -2px;
@@ -7032,6 +7091,33 @@ input.serie-camp {
 .raspuns-rapid.adauga {
   border-style: dashed;
   color: var(--text-muted);
+}
+
+/* Mesaj nou (antrenor): alegerea clienților și câmpul de scris, lipit de marginea de jos */
+.mesaj-nou-antet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.mesaj-nou-antet .btn {
+  width: auto;
+}
+
+.mesaj-nou-scrie {
+  position: sticky;
+  bottom: 0;
+  margin: 10px -12px 0;
+  padding-top: 6px;
+  background: var(--bg);
+}
+
+.mesaj-nou-info {
+  padding: 0 14px;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  line-height: 1.35;
 }
 
 /* Lista conversațiilor (antrenor) */
