@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v151';
+const CACHE_NAME = 'bfit-cache-v152';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -46,10 +46,10 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('push', (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) {}
-  // Fără icon/badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com)
+  // Fără badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com).
+  // Fără icon (sigla mare din dreapta): în stânga e deja iconița aplicației, ca la WhatsApp; în probă din v152
   event.waitUntil(self.registration.showNotification(m.titlu || 'B-Fit', {
     body: m.corp || '',
-    icon: './icon-192.png',
     badge: './badge-96.png',
     tag: m.tag || undefined,
     data: { url: m.url || './' }
