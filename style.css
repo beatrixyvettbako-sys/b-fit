@@ -1432,27 +1432,6 @@ body:has(.clienta-app:not(.auth-hidden)) {
 
 /* Bara clientei folosește stilurile „nav” ale antrenorului, tot cu 4 butoane (bula de 25%) */
 
-/* Bulina cu numărul de ore cu locuri deschise, pe iconița Orar */
-.nav-bulina {
-  position: absolute;
-  top: -4px;
-  left: calc(50% + 6px);
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: #b91c1c;
-  color: #fff;
-  font-size: 0.6rem;
-  font-weight: 800;
-  line-height: 16px;
-  text-align: center;
-}
-
-.nav-bulina[hidden] {
-  display: none;
-}
-
 .clienta-body {
   padding: 12px 12px calc(84px + env(safe-area-inset-bottom, 0px));
   max-width: 640px;

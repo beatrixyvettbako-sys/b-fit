@@ -4577,8 +4577,8 @@ function grupeazaSloturiDeschise(lista, zileProgramate = new Map()) {
   return grupuri.sort((a, b) => a.data - b.data);
 }
 
-// Bulina de pe Orar: câte ore au locuri deschise pe care clienta le poate rezerva
-function seteazaBulinaOrar(nr) {
+// Câte ore au locuri deschise pe care clientul le poate rezerva (fără bulină pe Programări: ar sta mereu pe „9+”)
+function seteazaLocuriLibere(nr) {
   // Același număr apare pe Acasă, pe cardul ședinței, când clientul nu are nicio ședință programată
   const schimbat = dateClienta.locuriLibere !== nr;
   dateClienta.locuriLibere = nr;
@@ -4586,10 +4586,6 @@ function seteazaBulinaOrar(nr) {
     const card = document.getElementById('acasaSedinta');
     if (card) card.outerHTML = htmlSedintaAcasa();
   }
-  const b = document.getElementById('clientaBulinaOrar');
-  if (!b) return;
-  b.textContent = nr > 9 ? '9+' : String(nr);
-  b.hidden = !nr;
 }
 
 // Zilele în care clienta are deja o programare (inclusiv una deja efectuată azi): cheie zi -> rândul programării, cu `data`
@@ -4615,7 +4611,7 @@ async function actualizeazaBulinaOrar() {
     supabaseClient.rpc('sloturi_deschise'),
     supabaseClient.from('orar').select('ziRaw, ora, bifat').eq('client_id', dateClienta.fisa.id)
   ]);
-  if (!resDeschise.error) seteazaBulinaOrar(grupeazaSloturiDeschise(resDeschise.data, programariPeZiClienta(resRezervari.data)).length);
+  if (!resDeschise.error) seteazaLocuriLibere(grupeazaSloturiDeschise(resDeschise.data, programariPeZiClienta(resRezervari.data)).length);
 }
 
 // faraIncarcare: actualizare în fundal (timp real), fără „Se încarcă...” peste lista existentă
@@ -4641,7 +4637,7 @@ async function randeazaOrarClienta(faraIncarcare = false) {
   dateClienta.zileProgramate = programariPeZiClienta(resRezervari.data);
   const grupuri = grupeazaSloturiDeschise(resDeschise.data, dateClienta.zileProgramate);
   dateClienta.grupuri = grupuri;
-  seteazaBulinaOrar(grupuri.length);
+  seteazaLocuriLibere(grupuri.length);
 
   const titlu = (txt) => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 6px;">${txt}</div>`;
   // Sus: bara de zile și orele libere din ziua aleasă; dedesubt, programările ei
@@ -4660,7 +4656,7 @@ async function randeazaOrarClienta(faraIncarcare = false) {
     </div>`;
   });
 
-  html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Programările făcute de tine aici le poți anula singură cu cel puțin 24 de ore înainte.', 'Bookings you make here can be cancelled on your own up to 24 hours before.')}</div>`;
+  html += `<div style="font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:12px; line-height:1.4;">${tr('Programările făcute de tine aici le poți anula tu, cu cel puțin 24 de ore înainte.', 'Bookings you make here can be cancelled on your own up to 24 hours before.')}</div>`;
   corp.innerHTML = html;
   ajusteazaNumeZile(document.getElementById('clientaZile'));
   document.querySelector('#clientaZile .day-btn.active')?.scrollIntoView({ block: 'nearest', inline: 'center' });
