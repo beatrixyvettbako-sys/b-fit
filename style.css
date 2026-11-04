@@ -7827,3 +7827,159 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   text-align: center;
   margin-bottom: 6px;
 }
+
+/* Antrenamente proprii (client): listă, editor sală / cardio, vizualizare la antrenor */
+.antr-pers-actiuni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.antr-pers-actiuni .btn {
+  flex: 1 1 140px;
+  white-space: nowrap;
+}
+
+.antr-pers-sterge {
+  color: #b91c1c;
+}
+
+.antr-pers-sectiune {
+  font-weight: 800;
+  color: var(--primary);
+  margin: 14px 2px 6px;
+}
+
+.antr-pers-gol {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  padding: 2px 2px 8px;
+}
+
+.antr-pers-editor {
+  padding: 10px;
+}
+
+.antr-pers-activitati {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.antr-pers-activitate {
+  border: 1.5px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.antr-pers-activitate.activ {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.antr-pers-campuri {
+  display: flex;
+  gap: 8px;
+}
+
+.antr-pers-campuri + .antr-pers-campuri {
+  margin-top: 8px;
+}
+
+.antr-pers-campuri label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.antr-pers-campuri .plan-ex-input,
+.antr-pers-adauga .plan-ex-input {
+  font-size: 0.88rem;
+  padding: 7px 8px;
+  min-width: 0;
+}
+
+.antr-pers-ex {
+  padding: 8px 10px 10px;
+}
+
+.antr-pers-ex-antet {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.antr-pers-ex-antet > div {
+  min-width: 0;
+}
+
+.antr-pers-ex-antet .notificare-x {
+  position: static;
+  flex-shrink: 0;
+}
+
+.antr-pers-serii-btn {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.antr-pers-serii-btn .btn {
+  padding: 5px 12px;
+  font-size: 0.78rem;
+}
+
+.antr-pers-adauga {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.antr-pers-adauga .plan-ex-input {
+  flex: 1;
+}
+
+.antr-pers-vizibil {
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.antr-pers-antrenor {
+  margin-bottom: 6px;
+}
+
+.antr-pers-antrenor summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.antr-pers-antrenor summary .acasa-eticheta {
+  width: 100%;
+}
+
+.antr-pers-antrenor ul {
+  margin: 8px 0 4px;
+  padding-left: 18px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}

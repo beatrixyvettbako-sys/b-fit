@@ -3298,6 +3298,7 @@ function htmlReinnoireClienta(c) {
 function randeazaHomeClienta() {
   const c = dateClienta.fisa;
   dateClienta.planCurent = null;
+  antrPers.ecran = null;
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   const prenume = (c.nume || '').trim().split(' ')[0];
   document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
@@ -3305,10 +3306,11 @@ function randeazaHomeClienta() {
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
   const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
     + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + htmlAntrenamentAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
+    + htmlAntrenamentAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
   actualizeazaCardMesajeAcasa();
+  if (antrPers.lista === null) incarcaAntrPers();
 }
 
 // Notificările oprite pe telefon: invitația de pornire apare și pe Acasă (până le pornește sau o închide cu ×)
@@ -3502,6 +3504,7 @@ function inchideOnboardingClienta() {
 
 // Înapoi: din ziua deschisă la lista zilelor, din listă la Acasă
 function clientaInapoi() {
+  if (antrPers.ecran) return inapoiAntrPers();
   salveazaProgresClienta();
   if (dateClienta.ziCurenta !== null && dateClienta.ziCurenta !== undefined && (dateClienta.planCurent?.continut_json?.sesiuni || []).length > 1) {
     inchideZiClienta();
@@ -3632,6 +3635,507 @@ async function incepeSaptamanaNouaClienta(idxPlan) {
       salveazaCacheClienta();
       showToast(tr('✓ Săptămână nouă. Spor la antrenamente!', '✓ New week. Enjoy your workouts!'));
     });
+}
+
+// ---- Antrenamente proprii (clientul, pe lângă planul antrenorului): jurnal de sală / cardio + rutine salvate ----
+// Tabelul antrenamente_personale (sql/2026-11-04_antrenamente_personale.sql). Antrenamentul în lucru rămâne pe dispozitiv
+// (ciornă) până la „Salvează”, ca să nu se piardă la închiderea aplicației sau fără internet.
+let antrPers = { lista: null, curent: null, ecran: null, start: 0 };
+
+const ACTIVITATI_PERS = {
+  sala: ['Sală', 'Gym'], alergare: ['Alergare', 'Running'], bicicleta: ['Bicicletă', 'Cycling'],
+  inot: ['Înot', 'Swimming'], plimbare: ['Plimbare', 'Walking'], altele: ['Altă activitate', 'Other activity']
+};
+
+function cheieCiornaAntrPers() {
+  return 'BFIT_CLIENT_CIORNA_' + (utilizatorCurent ? utilizatorCurent.id : '');
+}
+
+function citesteCiornaAntrPers() {
+  try { return JSON.parse(localStorage.getItem(cheieCiornaAntrPers()) || 'null'); } catch (e) { return null; }
+}
+
+function salveazaCiornaAntrPers() {
+  try { localStorage.setItem(cheieCiornaAntrPers(), JSON.stringify({ curent: antrPers.curent, start: antrPers.start })); } catch (e) {}
+}
+
+function stergeCiornaAntrPers() {
+  try { localStorage.removeItem(cheieCiornaAntrPers()); } catch (e) {}
+}
+
+function aziIsoAntrPers() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function etichetaDataAntrPers(iso) {
+  const [a, l, z] = String(iso || '').split('-').map(Number);
+  if (!a) return '';
+  const text = new Date(a, l - 1, z).toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { weekday: 'short', day: 'numeric', month: 'short' });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+async function incarcaAntrPers() {
+  if (!supabaseClient || !dateClienta.fisa) return;
+  const { data, error } = await supabaseClient.from('antrenamente_personale').select('*')
+    .eq('client_id', dateClienta.fisa.id).order('data', { ascending: false }).order('created_at', { ascending: false }).limit(200);
+  if (error) return;
+  antrPers.lista = data || [];
+  const card = document.getElementById('cardAntrPersAcasa');
+  if (card && clientaTabCurent === 'acasa' && !dateClienta.planCurent && !antrPers.ecran) card.outerHTML = htmlAntrPersAcasa();
+}
+
+function antrenamentePers() {
+  return (antrPers.lista || []).filter(x => x.fel === 'antrenament');
+}
+
+function rezumatAntrPers(x) {
+  const parti = [];
+  const ex = (x.exercitii || []).filter(e => (e.exercitiu || '').trim());
+  if (ex.length) parti.push(`${ex.length} ${ex.length === 1 ? tr('exercițiu', 'exercise') : tr('exerciții', 'exercises')}`);
+  if (x.distanta_km) parti.push(`${formatKg(Number(x.distanta_km))} km`);
+  if (x.durata_min) parti.push(`${x.durata_min} min`);
+  return parti.join(' · ');
+}
+
+function titluAntrPers(x) {
+  return (x.titlu || '').trim() || tr(...(ACTIVITATI_PERS[x.activitate] || ACTIVITATI_PERS.altele));
+}
+
+// Cardul de pe Acasă: ultimul antrenament propriu și „+ Nou”
+function htmlAntrPersAcasa() {
+  const ultim = antrenamentePers()[0];
+  const ciorna = citesteCiornaAntrPers();
+  const detalii = ciorna && ciorna.curent ? tr('Ai un antrenament început. Continuă-l de aici.', 'You have a workout in progress. Continue it here.')
+    : ultim ? `${tr('Ultimul', 'Last')}: ${escAttr(titluAntrPers(ultim))}, ${escAttr(etichetaDataAntrPers(ultim.data))}`
+    : tr('Notează și ce faci în afara planului: sală, alergare, bicicletă.', 'Log what you do outside your plan too: gym, running, cycling.');
+  return `<div class="card acasa-sedinta" id="cardAntrPersAcasa" onclick="deschideAntrPers()">
+    <div><div class="acasa-eticheta">${tr('Antrenamente proprii', 'My workouts')}</div>
+    <div class="acasa-antrenament-detalii">${detalii}</div></div>
+    <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); ${ciorna && ciorna.curent ? 'continuaCiornaAntrPers()' : 'antrPersNou()'}">${ciorna && ciorna.curent ? tr('Continuă', 'Continue') : tr('+ Nou', '+ New')}</button>
+  </div>`;
+}
+
+function arataInapoiAntrPers() {
+  document.getElementById('clientaBtnInapoi').style.visibility = 'visible';
+}
+
+async function deschideAntrPers() {
+  antrPers.ecran = 'lista';
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  randeazaListaAntrPers();
+  await incarcaAntrPers();
+  if (antrPers.ecran === 'lista') randeazaListaAntrPers();
+}
+
+function randeazaListaAntrPers() {
+  document.getElementById('clientaTitlu').innerText = tr('Antrenamente', 'My workouts');
+  const corp = document.getElementById('clientaContinut');
+  if (antrPers.lista === null) {
+    corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+    return;
+  }
+  const ciorna = citesteCiornaAntrPers();
+  let html = '';
+  if (ciorna && ciorna.curent) {
+    html += `<div class="card acasa-sedinta" onclick="continuaCiornaAntrPers()">
+      <div><div class="acasa-eticheta">${tr('Neterminat', 'In progress')}</div><b>${escAttr(titluAntrPers(ciorna.curent))}</b></div>
+      <div style="display:flex; gap:6px;"><button type="button" class="btn btn-clear" onclick="event.stopPropagation(); renuntaCiornaAntrPers()">${tr('Renunță', 'Discard')}</button>
+      <button type="button" class="btn" onclick="event.stopPropagation(); continuaCiornaAntrPers()">${tr('Continuă', 'Continue')}</button></div>
+    </div>`;
+  }
+  html += `<div class="antr-pers-actiuni">
+    <button type="button" class="btn" onclick="antrPersNou()">${tr('+ Antrenament nou', '+ New workout')}</button>
+    <button type="button" class="btn btn-clear" onclick="antrPersNou(null, 'rutina')">${tr('+ Rutină', '+ Routine')}</button>
+  </div>`;
+  const rutine = (antrPers.lista || []).map((x, i) => ({ x, i })).filter(o => o.x.fel === 'rutina');
+  html += `<div class="antr-pers-sectiune">${tr('Rutinele mele', 'My routines')}</div>`;
+  html += rutine.length ? rutine.map(({ x, i }) => `<div class="card acasa-sedinta" onclick="antrPersEditeaza(${i})">
+      <div><b>${escAttr(titluAntrPers(x))}</b><div class="acasa-antrenament-detalii">${rezumatAntrPers(x)}</div></div>
+      <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); antrPersNou(${i})">${tr('Începe', 'Start')}</button>
+    </div>`).join('')
+    : `<div class="antr-pers-gol">${tr('Salvează exercițiile pe care le faci des ca rutină și pornește-le cu o atingere.', 'Save the exercises you do often as a routine and start them with one tap.')}</div>`;
+  const facute = (antrPers.lista || []).map((x, i) => ({ x, i })).filter(o => o.x.fel === 'antrenament');
+  html += `<div class="antr-pers-sectiune">${tr('Istoric', 'History')}</div>`;
+  html += facute.length ? facute.map(({ x, i }) => `<div class="card acasa-sedinta" onclick="antrPersEditeaza(${i})">
+      <div><div class="acasa-eticheta">${escAttr(etichetaDataAntrPers(x.data))}${x.vizibil_antrenor ? '' : ` · ${tr('privat', 'private')}`}</div>
+      <b>${escAttr(titluAntrPers(x))}</b><div class="acasa-antrenament-detalii">${rezumatAntrPers(x)}</div></div>
+      <div class="drawer-nav-arrow">›</div>
+    </div>`).join('')
+    : `<div class="antr-pers-gol">${tr('Încă nu ai notat niciun antrenament propriu.', 'You haven’t logged any workouts of your own yet.')}</div>`;
+  corp.innerHTML = html;
+}
+
+// Antrenament nou: gol, sau din rutina de pe poziția idxRutina (exercițiile și seriile ei, nebifate)
+function antrPersNou(idxRutina, fel) {
+  const ciorna = citesteCiornaAntrPers();
+  const porneste = () => {
+    const rutina = idxRutina !== undefined && idxRutina !== null ? antrPers.lista[idxRutina] : null;
+    antrPers.curent = {
+      id: null, fel: fel || 'antrenament', data: aziIsoAntrPers(), titlu: rutina ? rutina.titlu : '', activitate: 'sala',
+      durata_min: null, distanta_km: null, nota: '', vizibil_antrenor: true,
+      exercitii: rutina ? JSON.parse(JSON.stringify(rutina.exercitii || [])).map(e => Object.assign(e, { serii: (e.serii || []).map(r => ({ kg: r.kg || '', rep: r.rep || '', gata: false })) })) : []
+    };
+    antrPers.start = Date.now();
+    deschideEditorAntrPers();
+  };
+  if (ciorna && ciorna.curent && (fel || 'antrenament') === 'antrenament' && ciorna.curent.fel === 'antrenament' && !ciorna.curent.id) {
+    customConfirm(tr('Antrenament neterminat', 'Workout in progress'),
+      tr('Ai deja un antrenament început. Îl înlocuiești cu unul nou?', 'You already have a workout in progress. Replace it with a new one?'), porneste);
+    return;
+  }
+  porneste();
+}
+
+function antrPersEditeaza(idx) {
+  const x = antrPers.lista && antrPers.lista[idx];
+  if (!x) return;
+  antrPers.curent = JSON.parse(JSON.stringify(x));
+  antrPers.start = 0;
+  deschideEditorAntrPers();
+}
+
+function continuaCiornaAntrPers() {
+  const ciorna = citesteCiornaAntrPers();
+  if (!ciorna || !ciorna.curent) return;
+  antrPers.curent = ciorna.curent;
+  antrPers.start = ciorna.start || 0;
+  if (antrPers.lista === null) incarcaAntrPers();
+  deschideEditorAntrPers();
+}
+
+function renuntaCiornaAntrPers() {
+  customConfirm(tr('Renunță', 'Discard'), tr('Ștergi antrenamentul neterminat?', 'Discard the unfinished workout?'), () => {
+    stergeCiornaAntrPers();
+    randeazaListaAntrPers();
+  });
+}
+
+function deschideEditorAntrPers() {
+  antrPers.ecran = 'editor';
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  salveazaCiornaAntrPers();
+  randeazaEditorAntrPers();
+  document.getElementById('clientaScreen')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+// Exercițiile cunoscute (șabloanele B-Fit, planurile clientului, antrenamentele lui), pentru sugestii și mușchi
+function exercitiiCunoscuteAntrPers() {
+  const harta = new Map();
+  const adauga = ex => {
+    const nume = (ex.exercitiu || '').trim();
+    if (nume && !harta.has(nume.toLowerCase())) harta.set(nume.toLowerCase(), { exercitiu: nume, muschi: ex.muschi || '', tip: ex.tip || 'kg' });
+  };
+  (antrPers.lista || []).forEach(x => (x.exercitii || []).forEach(adauga));
+  (dateClienta.planuri || []).forEach(p => (p.continut_json?.sesiuni || []).forEach(s => (s.exercitii || []).forEach(adauga)));
+  if (typeof SABLOANE_PLAN !== 'undefined') SABLOANE_PLAN.forEach(p => (p.continut_json?.sesiuni || []).forEach(s => (s.exercitii || []).forEach(adauga)));
+  return harta;
+}
+
+// Seriile de data trecută la exercițiu: întâi antrenamentele proprii (cel mai recent primul), apoi planurile
+function seriiTrecutAntrPers(nume) {
+  const cheie = (nume || '').trim().toLowerCase();
+  for (const x of antrenamentePers()) {
+    if (antrPers.curent && x.id === antrPers.curent.id) continue;
+    const ex = (x.exercitii || []).find(e => (e.exercitiu || '').trim().toLowerCase() === cheie && (e.serii || []).some(r => r.gata));
+    if (ex) return ex.serii;
+  }
+  return seriiDataTrecuta(nume, null);
+}
+
+// Recordul de până acum (kg): planurile + celelalte antrenamente proprii
+function recordAntrPers(nume) {
+  const cheie = (nume || '').trim().toLowerCase();
+  let max = recordAnteriorKg({ exercitiu: nume }, null);
+  antrenamentePers().forEach(x => {
+    if (antrPers.curent && x.id === antrPers.curent.id) return;
+    (x.exercitii || []).forEach(e => { if ((e.exercitiu || '').trim().toLowerCase() === cheie) max = Math.max(max, kgMaxExercitiu(e)); });
+  });
+  return max;
+}
+
+function randeazaEditorAntrPers() {
+  const c = antrPers.curent;
+  if (!c) return;
+  const rutina = c.fel === 'rutina';
+  document.getElementById('clientaTitlu').innerText = rutina ? tr('Rutină', 'Routine') : (c.id ? tr('Antrenament', 'Workout') : tr('Antrenament nou', 'New workout'));
+  const sala = rutina || c.activitate === 'sala';
+  let html = '<div class="plan-session-block antr-pers-editor">';
+  if (!rutina) {
+    html += `<div class="antr-pers-activitati">${Object.entries(ACTIVITATI_PERS).map(([cod, et]) =>
+      `<button type="button" class="antr-pers-activitate${c.activitate === cod ? ' activ' : ''}" onclick="antrPersActivitate('${cod}')">${tr(...et)}</button>`).join('')}</div>`;
+  }
+  html += `<div class="antr-pers-campuri">
+    <label>${tr('Titlu', 'Title')}<input type="text" class="plan-ex-input" maxlength="80" value="${escAttr(c.titlu)}" placeholder="${escAttr(rutina ? tr('Ex: Picioare acasă', 'E.g. Home legs') : titluAntrPers(Object.assign({}, c, { titlu: '' })))}" oninput="antrPersCamp('titlu', this.value)"></label>
+    ${rutina ? '' : `<label>${tr('Data', 'Date')}<input type="date" class="plan-ex-input" value="${escAttr(c.data)}" max="${aziIsoAntrPers()}" onchange="antrPersCamp('data', this.value)"></label>`}
+  </div>`;
+  if (!rutina) {
+    html += `<div class="antr-pers-campuri">
+      <label>${tr('Durată (min)', 'Duration (min)')}<input type="text" inputmode="numeric" maxlength="4" class="plan-ex-input" value="${escAttr(c.durata_min ?? '')}" placeholder="${sala && antrPers.start ? tr('automat', 'auto') : '-'}" oninput="antrPersCamp('durata_min', this.value)"></label>
+      ${sala ? '' : `<label>${tr('Distanță (km)', 'Distance (km)')}<input type="text" inputmode="decimal" maxlength="7" class="plan-ex-input" value="${escAttr(c.distanta_km ?? '')}" placeholder="-" oninput="antrPersCamp('distanta_km', this.value)"></label>`}
+    </div>`;
+  }
+  html += '</div>';
+  if (sala) {
+    (c.exercitii || []).forEach((ex, e) => { html += htmlExercitiuAntrPers(ex, e, rutina); });
+    const sugestii = [...exercitiiCunoscuteAntrPers().values()].map(x => `<option value="${escAttr(x.exercitiu)}"></option>`).join('');
+    html += `<div class="antr-pers-adauga">
+      <input type="text" id="antrPersExNou" class="plan-ex-input" maxlength="80" list="listaExercitiiPers" placeholder="${tr('Caută sau scrie un exercițiu', 'Search or type an exercise')}" onkeydown="if (event.key === 'Enter') antrPersAdaugaExercitiu()">
+      <datalist id="listaExercitiiPers">${sugestii}</datalist>
+      <button type="button" class="btn" onclick="antrPersAdaugaExercitiu()">${tr('Adaugă', 'Add')}</button>
+    </div>`;
+  }
+  html += `<div class="plan-session-block"><div class="nota-sesiune" style="border-top:0;">
+    <label>${rutina ? tr('Notiță', 'Note') : tr('Cum a mers?', 'How did it go?')}</label>
+    <textarea class="plan-ex-textarea" maxlength="1000" oninput="antrPersCamp('nota', this.value)">${escAttr(c.nota)}</textarea>
+  </div>
+  ${rutina ? '' : `<label class="setare-notificare antr-pers-vizibil">
+    <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul îl vede în fișa ta (doar citire).', 'Your trainer sees it in your profile (read only).')}</small></span>
+    <input type="checkbox" class="comutator" ${c.vizibil_antrenor ? 'checked' : ''} onchange="antrPersCamp('vizibil_antrenor', this.checked)">
+  </label>`}</div>`;
+  html += `<div class="antr-pers-actiuni">
+    <button type="button" class="btn" onclick="antrPersSalveaza()">${rutina ? tr('Salvează rutina', 'Save routine') : tr('Salvează antrenamentul', 'Save workout')}</button>
+    ${!rutina && sala && (c.exercitii || []).length ? `<button type="button" class="btn btn-clear" onclick="antrPersSalveazaCaRutina()">${tr('Salvează ca rutină', 'Save as routine')}</button>` : ''}
+    ${c.id ? `<button type="button" class="btn btn-clear antr-pers-sterge" onclick="antrPersSterge()">${tr('Șterge', 'Delete')}</button>` : ''}
+  </div>`;
+  document.getElementById('clientaContinut').innerHTML = html;
+}
+
+function htmlExercitiuAntrPers(ex, e, rutina) {
+  const trecut = rutina ? [] : seriiTrecutAntrPers(ex.exercitiu);
+  const record = rutina ? 0 : recordAntrPers(ex.exercitiu);
+  const kgAzi = kgMaxExercitiu(ex);
+  const iRecord = record > 0 && kgAzi > record ? (ex.serii || []).findIndex(r => r.gata && numarKg(r.kg) === kgAzi) : -1;
+  const randuri = (ex.serii || []).map((r, i) => {
+    const vechi = trecut[i] || {};
+    return `<div class="serie-rand${r.gata ? ' is-gata' : ''}${i === iRecord ? ' is-record' : ''}">
+      <span class="serie-nr">${i + 1}</span>
+      <input type="text" inputmode="decimal" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.kg)}" placeholder="${escAttr(vechi.kg || 'kg')}" oninput="antrPersSerie(${e}, ${i}, 'kg', this.value)"><span class="serie-x">×</span>
+      <input type="text" inputmode="numeric" maxlength="10" class="plan-ex-input serie-camp" value="${escAttr(r.rep)}" placeholder="${escAttr(vechi.rep || '-')}" oninput="antrPersSerie(${e}, ${i}, 'rep', this.value)">
+      ${rutina ? '<span class="serie-bifa-loc"></span>' : `<button type="button" class="serie-bifa" aria-pressed="${!!r.gata}" aria-label="${tr('Serie făcută', 'Set done')}" onclick="antrPersBifa(${e}, ${i})">✓</button>`}
+    </div>`;
+  }).join('');
+  return `<div class="plan-session-block antr-pers-ex">
+    <div class="antr-pers-ex-antet">
+      <div><div style="font-weight:800; color:var(--primary); font-size:0.88rem;">${escAttr(ex.exercitiu)}</div>
+      ${ex.muschi ? `<div class="plan-ex-muschi">${escAttr(ex.muschi)}</div>` : ''}</div>
+      <button type="button" class="notificare-x" onclick="antrPersStergeExercitiu(${e})" aria-label="${tr('Scoate exercițiul', 'Remove exercise')}">×</button>
+    </div>
+    <div class="serii-lista"><div class="serie-rand serie-cap"><span class="serie-nr">${tr('Seria', 'Set')}</span><span class="serie-camp">Kg</span><span class="serie-x"></span><span class="serie-camp">${tr('Rep', 'Reps')}</span><span class="serie-bifa-loc"></span></div>${randuri}</div>
+    <div class="antr-pers-serii-btn">
+      <button type="button" class="btn btn-clear" onclick="antrPersSerieNoua(${e})">${tr('+ Serie', '+ Set')}</button>
+      ${(ex.serii || []).length > 1 ? `<button type="button" class="btn btn-clear" onclick="antrPersScoateSerie(${e})">${tr('− Serie', '− Set')}</button>` : ''}
+    </div>
+  </div>`;
+}
+
+// Re-randare cu scroll păstrat (bifă, serie nouă, exercițiu nou)
+function reRandeazaEditorAntrPers() {
+  const ecran = document.getElementById('clientaScreen');
+  const sus = ecran ? ecran.scrollTop : 0;
+  randeazaEditorAntrPers();
+  if (ecran) ecran.scrollTop = sus;
+}
+
+function antrPersCamp(camp, valoare) {
+  const c = antrPers.curent;
+  if (!c) return;
+  if (camp === 'durata_min') valoare = String(valoare).replace(/\D/g, '') ? parseInt(String(valoare).replace(/\D/g, ''), 10) : null;
+  if (camp === 'distanta_km') { const n = parseFloat(String(valoare).replace(',', '.')); valoare = isNaN(n) ? null : n; }
+  c[camp] = valoare;
+  salveazaCiornaAntrPers();
+}
+
+function antrPersActivitate(cod) {
+  if (!antrPers.curent) return;
+  antrPers.curent.activitate = cod;
+  salveazaCiornaAntrPers();
+  reRandeazaEditorAntrPers();
+}
+
+function antrPersSerie(e, i, camp, valoare) {
+  const r = antrPers.curent?.exercitii?.[e]?.serii?.[i];
+  if (!r) return;
+  r[camp] = valoare;
+  salveazaCiornaAntrPers();
+}
+
+// Bifa pe o serie goală preia valorile de data trecută sau de la seria de deasupra (ca la plan); record → toast
+function antrPersBifa(e, i) {
+  const ex = antrPers.curent?.exercitii?.[e];
+  const r = ex?.serii?.[i];
+  if (!r) return;
+  const kgInainte = kgMaxExercitiu(ex);
+  r.gata = !r.gata;
+  if (r.gata) {
+    const vechi = seriiTrecutAntrPers(ex.exercitiu)[i] || ex.serii[i - 1] || {};
+    if (!String(r.kg).trim()) r.kg = vechi.kg || '';
+    if (!String(r.rep).trim()) r.rep = vechi.rep || '';
+    const record = recordAntrPers(ex.exercitiu);
+    const kg = numarKg(r.kg);
+    if (record > 0 && kg > record && kg > kgInainte) {
+      showToast(tr(`Record nou: ${formatKg(kg)} kg la ${ex.exercitiu} (înainte ${formatKg(record)} kg)`, `New record: ${formatKg(kg)} kg on ${ex.exercitiu} (was ${formatKg(record)} kg)`));
+      if (navigator.vibrate) navigator.vibrate(80);
+    }
+  }
+  salveazaCiornaAntrPers();
+  reRandeazaEditorAntrPers();
+  const ultima = e === antrPers.curent.exercitii.length - 1 && i === ex.serii.length - 1;
+  if (r.gata && !ultima) pornesteTimerPauza(ex.pauza);
+  else opresteTimerPauza();
+}
+
+function antrPersSerieNoua(e) {
+  const ex = antrPers.curent?.exercitii?.[e];
+  if (!ex || ex.serii.length >= 10) return;
+  ex.serii.push({ kg: '', rep: '', gata: false });
+  salveazaCiornaAntrPers();
+  reRandeazaEditorAntrPers();
+}
+
+function antrPersScoateSerie(e) {
+  const ex = antrPers.curent?.exercitii?.[e];
+  if (!ex || ex.serii.length <= 1) return;
+  ex.serii.pop();
+  salveazaCiornaAntrPers();
+  reRandeazaEditorAntrPers();
+}
+
+function antrPersAdaugaExercitiu() {
+  const inp = document.getElementById('antrPersExNou');
+  const nume = (inp && inp.value || '').trim().slice(0, 80);
+  if (!nume || !antrPers.curent) return;
+  const cunoscut = exercitiiCunoscuteAntrPers().get(nume.toLowerCase());
+  const nr = Math.max(seriiTrecutAntrPers(nume).length, 3);
+  antrPers.curent.exercitii.push({
+    exercitiu: cunoscut ? cunoscut.exercitiu : nume, muschi: cunoscut ? cunoscut.muschi : '',
+    serii: Array.from({ length: Math.min(nr, 10) }, () => ({ kg: '', rep: '', gata: false }))
+  });
+  salveazaCiornaAntrPers();
+  reRandeazaEditorAntrPers();
+  document.getElementById('antrPersExNou')?.scrollIntoView({ block: 'center', behavior: 'auto' });
+}
+
+function antrPersStergeExercitiu(e) {
+  const ex = antrPers.curent?.exercitii?.[e];
+  if (!ex) return;
+  customConfirm(tr('Scoate exercițiul', 'Remove exercise'), tr(`Scoți „${ex.exercitiu}” din antrenament?`, `Remove “${ex.exercitiu}” from the workout?`), () => {
+    antrPers.curent.exercitii.splice(e, 1);
+    salveazaCiornaAntrPers();
+    reRandeazaEditorAntrPers();
+  });
+}
+
+// Rândul de salvat: la sală doar exercițiile cu nume; la cardio fără exerciții
+function randAntrPers(c) {
+  const sala = c.fel === 'rutina' || c.activitate === 'sala';
+  return {
+    user_id: dateClienta.fisa.user_id, client_id: dateClienta.fisa.id, fel: c.fel, data: c.data || aziIsoAntrPers(),
+    titlu: (c.titlu || '').trim().slice(0, 80), activitate: c.fel === 'rutina' ? 'sala' : c.activitate,
+    durata_min: c.durata_min ?? null, distanta_km: sala ? null : (c.distanta_km ?? null),
+    exercitii: sala ? (c.exercitii || []).filter(e => (e.exercitiu || '').trim()) : [],
+    nota: (c.nota || '').slice(0, 1000), vizibil_antrenor: c.fel === 'rutina' ? false : !!c.vizibil_antrenor,
+    updated_at: new Date().toISOString()
+  };
+}
+
+async function scrieAntrPers(rand, id) {
+  const q = id ? supabaseClient.from('antrenamente_personale').update(rand).eq('id', id)
+    : supabaseClient.from('antrenamente_personale').insert(rand);
+  const { data, error } = await q.select().single();
+  if (error || !data) {
+    showToast(eroareDeRetea(error)
+      ? tr('Fără internet. Antrenamentul rămâne pe dispozitiv; salvează-l când revine conexiunea.', 'No internet. The workout stays on this device; save it when you’re back online.')
+      : tr('Nu s-a putut salva. Încearcă din nou.', 'Could not save. Try again.'), 'error');
+    return null;
+  }
+  antrPers.lista = (antrPers.lista || []).filter(x => x.id !== data.id);
+  antrPers.lista.push(data);
+  antrPers.lista.sort((a, b) => String(b.data).localeCompare(String(a.data)) || String(b.created_at).localeCompare(String(a.created_at)));
+  return data;
+}
+
+async function antrPersSalveaza() {
+  const c = antrPers.curent;
+  if (!c) return;
+  const sala = c.fel === 'rutina' || c.activitate === 'sala';
+  const cuExercitii = (c.exercitii || []).some(e => (e.exercitiu || '').trim());
+  if (sala && !cuExercitii) return showToast(tr('Adaugă cel puțin un exercițiu.', 'Add at least one exercise.'), 'error');
+  if (c.fel === 'rutina' && !(c.titlu || '').trim()) return showToast(tr('Dă un nume rutinei.', 'Give the routine a name.'), 'error');
+  if (!sala && !c.durata_min && !c.distanta_km) return showToast(tr('Completează durata sau distanța.', 'Fill in the duration or distance.'), 'error');
+  // Durata la sală, dacă n-a scris-o: de la începutul antrenamentului (doar dacă a început azi, maxim 4 ore)
+  if (sala && c.fel === 'antrenament' && !c.durata_min && antrPers.start) {
+    const min = Math.round((Date.now() - antrPers.start) / 60000);
+    if (min > 0 && min <= 240) c.durata_min = min;
+  }
+  const salvat = await scrieAntrPers(randAntrPers(c), c.id);
+  if (!salvat) return;
+  opresteTimerPauza();
+  stergeCiornaAntrPers();
+  antrPers.curent = null;
+  showToast(c.fel === 'rutina' ? tr('✓ Rutină salvată', '✓ Routine saved') : tr('✓ Antrenament salvat. Bravo!', '✓ Workout saved. Well done!'));
+  antrPers.ecran = 'lista';
+  randeazaListaAntrPers();
+  document.getElementById('clientaScreen')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+// Rutină nouă din antrenamentul deschis: aceleași exerciții și serii (kg/rep ca reper), fără bife
+async function antrPersSalveazaCaRutina() {
+  const c = antrPers.curent;
+  if (!c) return;
+  const rutina = Object.assign({}, c, {
+    id: null, fel: 'rutina', titlu: (c.titlu || '').trim() || tr('Rutina mea', 'My routine'), nota: '',
+    exercitii: (c.exercitii || []).map(e => Object.assign({}, e, { serii: (e.serii || []).map(r => ({ kg: r.kg || '', rep: r.rep || '', gata: false })) }))
+  });
+  if (await scrieAntrPers(randAntrPers(rutina), null)) showToast(tr('✓ Salvat ca rutină', '✓ Saved as routine'));
+}
+
+function antrPersSterge() {
+  const c = antrPers.curent;
+  if (!c || !c.id) return;
+  customConfirm(tr('Șterge', 'Delete'), c.fel === 'rutina' ? tr('Ștergi rutina?', 'Delete this routine?') : tr('Ștergi antrenamentul?', 'Delete this workout?'), async () => {
+    const { error } = await supabaseClient.from('antrenamente_personale').delete().eq('id', c.id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    antrPers.lista = (antrPers.lista || []).filter(x => x.id !== c.id);
+    if ((citesteCiornaAntrPers()?.curent || {}).id === c.id) stergeCiornaAntrPers();
+    antrPers.curent = null;
+    antrPers.ecran = 'lista';
+    randeazaListaAntrPers();
+  });
+}
+
+// Înapoi din editor: la listă (ciorna rămâne pe dispozitiv doar pentru un antrenament nou, nesalvat)
+function inapoiAntrPers() {
+  opresteTimerPauza();
+  if (antrPers.ecran === 'editor') {
+    if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
+    else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
+    antrPers.curent = null;
+    antrPers.ecran = 'lista';
+    randeazaListaAntrPers();
+    return;
+  }
+  antrPers.ecran = null;
+  randeazaHomeClienta();
+}
+
+// La antrenor (Fișă › Progres): antrenamentele proprii lăsate vizibile de client, doar citire
+function htmlAntrPersAntrenor(lista) {
+  if (!lista || !lista.length) return '';
+  return `<div class="antr-pers-sectiune">${tr('Antrenamente proprii ale clientului', 'Client’s own workouts')}</div>` + lista.map(x => {
+    const ex = (x.exercitii || []).filter(e => (e.exercitiu || '').trim()).map(e => {
+      const facute = (e.serii || []).filter(r => r.gata);
+      const kg = kgMaxExercitiu(e);
+      return `${escAttr(e.exercitiu)}${facute.length ? ` · ${facute.length} × ${kg ? formatKg(kg) + ' kg' : ''}${facute.map(r => r.rep).filter(Boolean).length ? ` (${facute.map(r => escAttr(r.rep)).filter(Boolean).join('/')} rep)` : ''}` : ''}`;
+    });
+    return `<details class="card antr-pers-antrenor"><summary><span class="acasa-eticheta">${escAttr(etichetaDataAntrPers(x.data))}</span>
+      <b>${escAttr(titluAntrPers(x))}</b> <span class="acasa-antrenament-detalii">${rezumatAntrPers(x)}</span></summary>
+      ${ex.length ? `<ul>${ex.map(t => `<li>${t}</li>`).join('')}</ul>` : ''}
+      ${x.nota ? `<div class="acasa-antrenament-detalii">„${escAttr(x.nota)}”</div>` : ''}
+    </details>`;
+  }).join('');
 }
 
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
@@ -4026,7 +4530,7 @@ async function reincarcaDateClienta() {
   dateClienta.fisa = c;
   dateClienta.planuri = pastreazaPlanuriNetrimise(resPlanuri.data || []);
   // Doar Acasă se redesenează, și nu cât e deschis un plan: progresul bifat acolo nu se pierde
-  if (clientaTabCurent === 'acasa' && !dateClienta.planCurent) randeazaHomeClienta();
+  if (clientaTabCurent === 'acasa' && !dateClienta.planCurent && !antrPers.ecran) randeazaHomeClienta();
   salveazaCacheClienta();
   incarcaRezumatAcasa();
 }
@@ -4110,6 +4614,8 @@ function clientaTab(tab) {
     pill.style.transform = `translateX(${idx * 100}%)`;
   }
   clientaTabCurent = tab;
+  // Antrenamentul propriu început rămâne ca ciornă pe dispozitiv (se continuă de pe Acasă)
+  if (antrPers.ecran) { antrPers.ecran = null; antrPers.curent = null; opresteTimerPauza(); }
   document.getElementById('clientaNav')?.classList.remove('nav-compact');
   TABURI_CLIENTA.forEach(t => document.getElementById('clientaTab_' + t)?.classList.toggle('active', t === tab));
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
@@ -4687,7 +5193,7 @@ function seteazaLocuriLibere(nr) {
   // Același număr apare pe Acasă, pe cardul ședinței, când clientul nu are nicio ședință programată
   const schimbat = dateClienta.locuriLibere !== nr;
   dateClienta.locuriLibere = nr;
-  if (schimbat && clientaTabCurent === 'acasa' && !dateClienta.planCurent && dateClienta.acasa && !dateClienta.acasa.urmatoarea) {
+  if (schimbat && clientaTabCurent === 'acasa' && !dateClienta.planCurent && !antrPers.ecran && dateClienta.acasa && !dateClienta.acasa.urmatoarea) {
     const card = document.getElementById('acasaSedinta');
     if (card) card.outerHTML = htmlSedintaAcasa();
   }
@@ -5133,7 +5639,7 @@ async function afiseazaEcranClienta() {
   actualizeazaBulinaOrar();
   // Cu date salvate, Acasă e deja pe ecran: se redesenează doar dacă s-a schimbat ceva și clientul n-a plecat de pe Acasă
   if (!eraAfisat) clientaTab('acasa');
-  else if (schimbat && clientaTabCurent === 'acasa' && !dateClienta.planCurent) randeazaHomeClienta();
+  else if (schimbat && clientaTabCurent === 'acasa' && !dateClienta.planCurent && !antrPers.ecran) randeazaHomeClienta();
   incarcaRezumatAcasa();
   salveazaCacheClienta();
 }
@@ -5596,7 +6102,7 @@ function initSwipeNavigation() {
       // Ecranul clientei: swipe între Acasă, Orar, Istoric (nu și în interiorul unui plan deschis)
       const i = TABURI_CLIENTA.indexOf(clientaTabCurent);
       const j = i + (deltaX < 0 ? 1 : -1);
-      if (esteOrizontal && absX >= pragMinim && !dateClienta.planCurent && i !== -1 && j >= 0 && j < TABURI_CLIENTA.length) {
+      if (esteOrizontal && absX >= pragMinim && !dateClienta.planCurent && !antrPers.ecran && i !== -1 && j >= 0 && j < TABURI_CLIENTA.length) {
         clientaTab(TABURI_CLIENTA[j]);
       }
     } else if (esteOrizontal && absX >= pragMinim) {
@@ -8916,10 +9422,12 @@ async function incarcaProgresFisa() {
   }
   // Fișa se redesenează și la reîmprospătarea datelor: fără „Se încarcă” peste un progres deja afișat
   if (!corp.innerHTML) corp.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
-  const [{ data, error }, resGreutati] = await Promise.all([
+  const [{ data, error }, resGreutati, , resAntrPers] = await Promise.all([
     supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', client.id),
     supabaseClient.from('greutati').select('*').eq('client_id', client.id),
-    incarcaListaPoze(client.id)
+    incarcaListaPoze(client.id),
+    supabaseClient.from('antrenamente_personale').select('*').eq('client_id', client.id).eq('fel', 'antrenament')
+      .order('data', { ascending: false }).limit(20)
   ]);
   if (clientaFisaCurenta() !== client || !det.open) return;
   const checkinuri = error ? [] : (data || []);
@@ -8928,7 +9436,8 @@ async function incarcaProgresFisa() {
   corp.innerHTML = htmlProgres(client.fisaInscriere, checkinuri, { greutati: greutatiFisa, obiectiv: client.obiectiv, antrenor: true })
     + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
       ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
-      : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`);
+      : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`)
+    + htmlAntrPersAntrenor(resAntrPers && !resAntrPers.error ? resAntrPers.data : []);
   umplePoze(corp);
 }
 
