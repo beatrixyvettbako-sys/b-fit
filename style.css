@@ -1300,6 +1300,55 @@ header {
   background-color: currentColor !important;
 }
 
+/* Tip fără culoare: bulină goală, tăiată */
+.setari-lista .setari-lista-culoare.slot-input.fara-culoare,
+.culoare-tip-fara::before {
+  background: linear-gradient(135deg, transparent 44%, #94a3b8 44%, #94a3b8 56%, transparent 56%), var(--card-bg) !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Fereastra de culori a unui tip de antrenament */
+.culori-tip-grila {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  justify-items: center;
+  margin-bottom: 14px;
+}
+
+.culori-tip-grila .culoare-tip-optiune.slot-input {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border-width: 3px;
+  cursor: pointer;
+  background-color: currentColor !important;
+}
+
+.culori-tip-grila .culoare-tip-optiune.activ {
+  box-shadow: 0 0 0 3px var(--card-bg), 0 0 0 5px var(--primary);
+}
+
+.culoare-tip-fara {
+  width: 100%;
+  flex-direction: row;
+  padding: 10px;
+  font-size: 0.85rem;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.culoare-tip-fara::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid;
+  box-sizing: border-box;
+}
+
 .setari-lista-sterge {
   flex: 0 0 auto;
   width: 34px;

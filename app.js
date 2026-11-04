@@ -1691,6 +1691,7 @@ const MONEDE = ['RON', 'EUR', 'USD', 'GBP', 'HUF', 'CHF'];
 let setariStudio = { antrenamente: ANTRENAMENTE_IMPLICITE.map(a => ({ ...a })), metodePlata: METODE_PLATA_IMPLICITE.slice(), moneda: 'RON' };
 try { Object.assign(setariStudio, JSON.parse(localStorage.getItem('beatrix_setari_studio') || '{}')); } catch(e) {}
 let salvareSetariStudioInCurs = 0;
+let timerSalvareSetariStudio = null;
 const optiuniAntrenamentConfig = setariStudio.antrenamente;
 
 // Culoarea unui tip: din lista curentă, altfel din cea implicită (tipurile vechi din istoric își păstrează culoarea)
@@ -5342,6 +5343,7 @@ document.addEventListener('visibilitychange', () => {
 const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings', settingsWorkouts: 'settings', settingsPayments: 'settings' };
 const MODALE_INAPOI = [
   ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
+  ['modalCuloareTipBackdrop', () => inchideCuloareTip()],
   ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
   ['modalSharePlanBackdrop', () => inchideModalSharePlan()],
   ['modalQrBackdrop', () => inchideModalQr()],
@@ -11575,7 +11577,7 @@ function seteazaSetariStudio(modificari, dinCont = false) {
   Object.assign(setariStudio, modificari);
   const antrenamente = (Array.isArray(setariStudio.antrenamente) ? setariStudio.antrenamente : ANTRENAMENTE_IMPLICITE)
     .filter(a => a && typeof a.text === 'string' && a.text.trim())
-    .map(a => ({ text: a.text.trim(), cls: CULORI_ANTRENAMENT.includes(a.cls) ? a.cls : CULORI_ANTRENAMENT[0] }));
+    .map(a => ({ text: a.text.trim(), cls: a.cls === '' || CULORI_ANTRENAMENT.includes(a.cls) ? a.cls : CULORI_ANTRENAMENT[0] }));
   // Aceeași listă (optiuniAntrenamentConfig e o referință la ea)
   optiuniAntrenamentConfig.splice(0, optiuniAntrenamentConfig.length, ...antrenamente);
   setariStudio.antrenamente = optiuniAntrenamentConfig;
@@ -11589,11 +11591,16 @@ function seteazaSetariStudio(modificari, dinCont = false) {
   filtreazaIstoricIncasariInstant();
 
   if (dinCont || !supabaseClient || !utilizatorCurent) return;
-  salvareSetariStudioInCurs++;
-  supabaseClient.auth.updateUser({ data: { setari_studio: JSON.parse(JSON.stringify(setariStudio)) } })
-    .then(({ error }) => { if (error) showToast(tr("Eroare sincronizare", "Sync error"), "error"); })
-    .catch(() => showToast(tr("Eroare sincronizare", "Sync error"), "error"))
-    .finally(() => { salvareSetariStudioInCurs--; });
+  // Schimbările făcute una după alta pleacă într-o singură salvare: mai multe updateUser simultane sunt refuzate
+  if (!timerSalvareSetariStudio) salvareSetariStudioInCurs++;
+  clearTimeout(timerSalvareSetariStudio);
+  timerSalvareSetariStudio = setTimeout(() => {
+    timerSalvareSetariStudio = null;
+    supabaseClient.auth.updateUser({ data: { setari_studio: JSON.parse(JSON.stringify(setariStudio)) } })
+      .then(({ error }) => { if (error) showToast(tr("Eroare sincronizare", "Sync error"), "error"); })
+      .catch(() => showToast(tr("Eroare sincronizare", "Sync error"), "error"))
+      .finally(() => { salvareSetariStudioInCurs--; });
+  }, 800);
 }
 
 // Valoarea salvată pe un rând care nu mai e în listă (metodă ștearsă) se adaugă ca opțiune, ca să nu se piardă la salvare
@@ -11642,7 +11649,7 @@ function randeazaSetariStudio() {
     const text = colorat ? el.text : el;
     const cls = colorat ? el.cls : '';
     return `<div class="setari-lista-rand">
-      ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
+      ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls || 'fara-culoare'}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
       <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
       <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -11703,12 +11710,33 @@ function stergeElementSetari(lista, idx) {
     () => seteazaSetariStudio({ [lista]: setariStudio[lista].filter((_, i) => i !== idx) }));
 }
 
+// Culoarea se alege dintr-o fereastră cu toate culorile, plus „Fără culoare”
+let idxCuloareTip = null;
+
 function schimbaCuloareAntrenament(idx) {
   const el = setariStudio.antrenamente[idx];
   if (!el) return;
+  idxCuloareTip = idx;
+  const nume = traduceValoare(el.text);
+  document.getElementById('culoareTipTitlu').innerText = tr(`Culoarea pentru „${nume}”`, `Colour for “${nume}”`);
+  document.getElementById('listaCuloriTip').innerHTML = CULORI_ANTRENAMENT.map(cls =>
+    `<button type="button" class="culoare-tip-optiune slot-input ${cls}${cls === el.cls ? ' activ' : ''}" onclick="alegeCuloareTip('${cls}')"></button>`).join('');
+  const fara = document.getElementById('btnFaraCuloareTip');
+  fara.classList.toggle('active', !el.cls);
+  document.getElementById('modalCuloareTipBackdrop').style.display = 'flex';
+}
+
+function alegeCuloareTip(cls) {
+  const el = setariStudio.antrenamente[idxCuloareTip];
+  inchideCuloareTip();
+  if (!el || el.cls === cls) return;
   const noua = setariStudio.antrenamente.slice();
-  noua[idx] = { ...el, cls: CULORI_ANTRENAMENT[(CULORI_ANTRENAMENT.indexOf(el.cls) + 1) % CULORI_ANTRENAMENT.length] };
+  noua[idxCuloareTip] = { ...el, cls };
   seteazaSetariStudio({ antrenamente: noua });
+}
+
+function inchideCuloareTip() {
+  document.getElementById('modalCuloareTipBackdrop').style.display = 'none';
 }
 
 

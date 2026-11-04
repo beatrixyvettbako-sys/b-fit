@@ -24,7 +24,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal145">
+  <link rel="stylesheet" href="style.css?v=fitFinal146">
 </head>
 <body>
 
@@ -307,6 +307,20 @@
           <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg> <span id="btnShareExportPdfText" data-en="Send as PDF">Trimite ca PDF</span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL CULOARE TIP DE ANTRENAMENT: toate culorile deodată, plus „Fără culoare” -->
+  <div id="modalCuloareTipBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideCuloareTip()">
+    <div class="modal-edit-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom: 12px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" id="culoareTipTitlu"></div>
+        <button type="button" onclick="inchideCuloareTip()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px;">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="listaCuloriTip" class="culori-tip-grila"></div>
+      <button type="button" id="btnFaraCuloareTip" class="theme-option-btn culoare-tip-fara" onclick="alegeCuloareTip('')" data-en="No colour">Fără culoare</button>
     </div>
   </div>
 
@@ -1811,7 +1825,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal145"></script>
-  <script src="app.js?v=fitFinal145"></script>
+  <script src="sabloane.js?v=fitFinal146"></script>
+  <script src="app.js?v=fitFinal146"></script>
 </body>
 </html>
