@@ -5389,7 +5389,31 @@ function pasInapoiTelefon() {
   return () => comutaTab(tabsOrder[0].id, '', document.querySelectorAll('#bottomNav button')[0], 'orar', 0);
 }
 
+// Chrome (Android): Înapoi ajunge la un CloseWatcher, fără pași în istoric. Navigarea prin istoric ar arăta
+// pentru o clipă captura ecranului anterior (animația de Înapoi a Chrome). Fără CloseWatcher (Safari): garda din istoric.
+let paznicInapoi = null;
+
 function sincronizeazaIstoricInapoi() {
+  if (typeof CloseWatcher === 'function') {
+    const arePas = !!pasInapoiTelefon();
+    if (arePas && !paznicInapoi) {
+      paznicInapoi = new CloseWatcher();
+      paznicInapoi.onclose = () => {
+        paznicInapoi = null;
+        const pas = pasInapoiTelefon();
+        if (pas) pas();
+        sincronizeazaIstoricInapoi();
+        // Unele închideri au animație sau cer confirmare (plan nesalvat): verificăm din nou după ce s-au așezat
+        setTimeout(sincronizeazaIstoricInapoi, 350);
+      };
+    } else if (!arePas && paznicInapoi) {
+      // S-a închis din interfață (X, click pe fundal): Înapoi de la rădăcină iese din aplicație din prima
+      const p = paznicInapoi;
+      paznicInapoi = null;
+      p.destroy();
+    }
+    return;
+  }
   if (ignoraPopstateGarda) return;
   const areGarda = !!(history.state && history.state.bfitInapoi);
   const arePas = !!pasInapoiTelefon();
@@ -8459,6 +8483,14 @@ function actualizeazaBulinaNotificari() {
     b.hidden = necitite === 0;
     b.textContent = necitite > 9 ? '9+' : necitite;
   });
+  // Bulina de pe iconița aplicației (Android) stă cât timp notificarea push e în bara telefonului:
+  // fără nimic necitit în aplicație, le închidem și pe acelea
+  if (necitite === 0 && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration()
+      .then(reg => reg ? reg.getNotifications() : [])
+      .then(lista => lista.forEach(n => n.close()))
+      .catch(() => {});
+  }
 }
 
 function textNotificare(n) {
@@ -8542,7 +8574,16 @@ async function ascundeNotificare(id) {
   notificari = notificari.filter(n => n.id !== id);
   randeazaNotificari();
   actualizeazaBulinaNotificari();
-  await supabaseClient.from('notificari').update({ ascuns: true }).eq('id', id);
+  const { data, error } = await supabaseClient.from('notificari').update({ ascuns: true }).eq('id', id).select('id');
+  if (error || !(data || []).length) eroareAscundereNotificari();
+}
+
+// Baza n-a salvat ascunderea (fără internet sau fără drept de modificare): lista revine la ce e în bază
+function eroareAscundereNotificari() {
+  showToast(tr('Notificarea nu s-a putut șterge. Verifică internetul și reîncearcă.', 'The notification could not be removed. Check your internet and try again.'), 'error');
+  incarcaNotificari().then(() => {
+    if (!document.getElementById('panouNotificari').classList.contains('auth-hidden')) randeazaNotificari();
+  });
 }
 
 function stergeToateNotificarile() {
@@ -8554,7 +8595,8 @@ function stergeToateNotificarile() {
       notificari = [];
       randeazaNotificari();
       actualizeazaBulinaNotificari();
-      await supabaseClient.from('notificari').update({ ascuns: true }).in('id', ids);
+      const { data, error } = await supabaseClient.from('notificari').update({ ascuns: true }).in('id', ids).select('id');
+      if (error || (data || []).length < ids.length) eroareAscundereNotificari();
     });
   document.getElementById('modalBtnConfirm').innerText = tr('Șterge toate', 'Clear all');
 }
