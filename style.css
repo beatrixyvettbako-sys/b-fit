@@ -8176,3 +8176,125 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   line-height: 1.4;
   margin-top: 4px;
 }
+
+/* Obiective și motivație: inelul săptămânii pe Acasă, „încă puțin până la...”, lista și formularul de obiective */
+.saptamana-acasa .saptamana-sus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.saptamana-acasa .saptamana-sus > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.saptamana-schimba {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  font-size: 0.76rem;
+}
+
+.saptamana-alege {
+  margin: 10px 0 0;
+}
+
+.saptamana-alege .antr-pers-activitate {
+  min-width: 40px;
+}
+
+.inel-progres {
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.inel-fundal,
+.inel-valoare {
+  fill: none;
+  stroke-width: 6;
+}
+
+.inel-fundal {
+  stroke: var(--border);
+}
+
+.inel-valoare {
+  stroke: var(--primary);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.inel-progres.atins .inel-valoare {
+  stroke: #15803d;
+}
+
+.inel-text {
+  font-size: 14px;
+  font-weight: 800;
+  fill: var(--primary);
+}
+
+.inel-progres.atins .inel-text {
+  fill: #15803d;
+}
+
+.saptamana-acasa.atins {
+  border-color: rgba(21, 128, 61, 0.35);
+}
+
+.inca-putin {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.inca-putin span {
+  color: var(--accent-purple, #8b5cf6);
+  font-weight: 800;
+}
+
+.obiectiv-card {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+.obiectiv-cine {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.obiectiv-actiuni {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.obiectiv-actiuni .btn {
+  padding: 4px 10px;
+  font-size: 0.74rem;
+}
+
+.obiectiv-adauga {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.obiectiv-form {
+  margin-bottom: 8px;
+}
+
+.obiectiv-form .antr-pers-campuri + .antr-pers-campuri {
+  margin-top: 8px;
+}
+
+.obiectiv-form .antr-pers-actiuni {
+  margin: 10px 0 0;
+}
