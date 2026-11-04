@@ -5853,8 +5853,27 @@ function trimiteMesajReactivare(nume) {
   const c = (DB.clienti || []).find(x => x.nume === nume);
   if (!c) return;
   const prenume = c.nume.trim().split(/\s+/)[0];
-  partajeaza(tr(`Bună, ${prenume}! Ne-a fost dor de tine la antrenamente. Vrei să-ți rezerv un loc săptămâna asta?`,
+  trimiteMesajClient(c, tr(`Bună, ${prenume}! Ne-a fost dor de tine la antrenamente. Vrei să-ți rezerv un loc săptămâna asta?`,
     `Hi ${prenume}! We’ve missed you at training. Shall I book you a spot this week?`), c.contConectat ? URL_APLICATIE : undefined);
+}
+
+// Clientul cu cont: alegi conversația din aplicație (textul e gata scris, se poate modifica) sau meniul de partajare.
+// Fără cont: direct meniul de partajare.
+function trimiteMesajClient(c, text, link) {
+  if (!c.contConectat) return partajeaza(text, link);
+  customConfirm(tr(`Mesaj către ${c.nume}`, `Message to ${c.nume}`),
+    tr('Textul e deja scris; îl poți modifica înainte să-l trimiți.', 'The text is ready; you can edit it before sending.'),
+    () => deschideMesajeCuText(c, text));
+  document.getElementById('modalBtnConfirm').innerText = tr('În aplicație', 'In the app');
+  aratButonAlternativModal(tr('WhatsApp, SMS…', 'WhatsApp, SMS…'), () => partajeaza(text, link));
+}
+
+function deschideMesajeCuText(c, text) {
+  deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+  const camp = document.getElementById('mesajText');
+  camp.value = text;
+  potrivesteCampMesaj(camp);
+  camp.focus();
 }
 
 // Abonament propriu-zis (nu ședință gratuită / individuală) încă valabil
@@ -7242,6 +7261,10 @@ function deschideMesajeClienta() {
 
 async function deschideMesaje(clientId, userId, titlu) {
   conversatie = { clientId, userId, mesaje: [] };
+  // Câmpul pornește gol: o ciornă nescrisă nu trece la conversația altui client
+  const camp = document.getElementById('mesajText');
+  camp.value = '';
+  camp.style.height = '';
   document.getElementById('panouMesajeTitlu').textContent = titlu;
   document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
   raspunsuriEditare = false;
@@ -8684,7 +8707,7 @@ function trimiteMementoCheckin(i) {
   const c = window.__lipsaCheckin[i];
   if (!c) return;
   const text = tr(`Bună, ${c.nume.split(' ')[0]}! Nu uita de check-in-ul săptămânal 🙂`, `Hi ${c.nume.split(' ')[0]}! Don’t forget your weekly check-in 🙂`);
-  partajeaza(text, c.checkinToken ? `${URL_APLICATIE}?checkin=${c.checkinToken}` : URL_APLICATIE);
+  trimiteMesajClient(c, text, c.checkinToken ? `${URL_APLICATIE}?checkin=${c.checkinToken}` : URL_APLICATIE);
 }
 
 // Check-in-urile se citesc din Supabase doar când secțiunea „Progres” e deschisă (nu intră în cache-ul DB)
