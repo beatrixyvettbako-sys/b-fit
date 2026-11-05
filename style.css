@@ -8298,3 +8298,177 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .obiectiv-form .antr-pers-actiuni {
   margin: 10px 0 0;
 }
+
+/* Nutriție: cardul de pe Acasă, ziua (totaluri + mese), adăugarea, cantitatea și scanarea codului de bare */
+.nutritie-bara-mica {
+  margin: 6px 0 2px;
+}
+
+.nutritie-zi-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 8px;
+  color: var(--primary);
+}
+
+.nutritie-totaluri .nutritie-bara + .nutritie-bara {
+  margin-top: 10px;
+}
+
+.nutritie-bara.peste .progress-fill {
+  background: #b91c1c;
+}
+
+.nutritie-masa {
+  margin-bottom: 8px;
+}
+
+.nutritie-masa-sus {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.nutritie-masa-sus span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.nutritie-rand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.nutritie-rand > div {
+  min-width: 0;
+}
+
+.nutritie-rand-nume {
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.nutritie-rand-nume small {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.nutritie-sterge {
+  position: static;
+  flex-shrink: 0;
+}
+
+.nutritie-adauga-btn {
+  width: 100%;
+  margin-top: 6px;
+  padding: 5px 10px;
+  font-size: 0.8rem;
+}
+
+.nutritie-tinte {
+  flex-wrap: wrap;
+}
+
+.nutritie-tinte label {
+  flex: 1 1 40%;
+}
+
+.nutritie-sursa {
+  margin: 12px 4px 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.nutritie-scaneaza {
+  width: 100%;
+  padding: 12px;
+  font-size: 0.95rem;
+}
+
+.nutritie-scaneaza svg {
+  width: 22px;
+  height: 22px;
+}
+
+.nutritie-produs-nume {
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+.nutritie-calcul {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(var(--primary-rgb), 0.07);
+}
+
+.nutritie-calcul b {
+  font-size: 1.15rem;
+  color: var(--primary);
+}
+
+.nutritie-calcul span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.scanare-strat {
+  position: fixed;
+  inset: 0;
+  z-index: 10005;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.scanare-strat video {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: cover;
+}
+
+.scanare-cadru {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  top: 30%;
+  height: 22%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.scanare-jos {
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: var(--card-bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.scanare-strat.fara-camera video,
+.scanare-strat.fara-camera .scanare-cadru {
+  display: none;
+}
+
+.scanare-strat.fara-camera {
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.6);
+}

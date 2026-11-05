@@ -3308,7 +3308,7 @@ function randeazaHomeClienta() {
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
   const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
     + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + htmlAntrenamentAcasa() + htmlSaptamanaAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
+    + htmlAntrenamentAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
   actualizeazaCardMesajeAcasa();
@@ -4288,6 +4288,7 @@ function antrPersSterge() {
 // Înapoi din editor: la listă (ciorna rămâne pe dispozitiv doar pentru un antrenament nou, nesalvat)
 function inapoiAntrPers() {
   opresteTimerPauza();
+  if (String(antrPers.ecran).startsWith('nutritie')) return inapoiNutritie();
   if (antrPers.ecran === 'editor') {
     if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
     else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
@@ -4809,6 +4810,520 @@ function zileActiveSaptamanaAntrenor(client, planuri, antrenamente) {
   return zile.size;
 }
 
+// ---- Nutriție: jurnalul alimentar al clientului (sql/2026-11-05_nutritie.sql) ----
+// Produsele vin din baza noastră (alimente, adăugate de clienți și văzute de toți) sau din Open Food Facts (gratuit, fără cheie).
+// Ecranele folosesc antrPers.ecran ('nutritie', 'nutritie-adauga', 'nutritie-cantitate', 'nutritie-produs'), ca re-randările
+// automate de pe Acasă să nu le acopere (aceleași verificări ca la antrenamentele proprii).
+const URL_OFF = 'https://world.openfoodfacts.org';
+const MESE_NUTRITIE = [
+  ['mic_dejun', 'Mic dejun', 'Breakfast'], ['pranz', 'Prânz', 'Lunch'], ['cina', 'Cină', 'Dinner'], ['gustare', 'Gustări', 'Snacks']
+];
+let nutritie = { zi: null, lista: [], setari: null, azi: null, masa: 'pranz', produs: null, rezultate: [], cautare: '', recente: [] };
+
+function rotunjeste1(n) { return Math.round((Number(n) || 0) * 10) / 10; }
+
+// Totalurile unei liste de rânduri din jurnal
+function totaluriNutritie(lista) {
+  return (lista || []).reduce((t, x) => ({ kcal: t.kcal + Number(x.kcal || 0), proteine: t.proteine + Number(x.proteine || 0),
+    carbo: t.carbo + Number(x.carbo || 0), grasimi: t.grasimi + Number(x.grasimi || 0) }), { kcal: 0, proteine: 0, carbo: 0, grasimi: 0 });
+}
+
+// Totalurile de azi pentru cardul de pe Acasă; null = nimic notat azi
+function totaluriAzi(lista) {
+  return lista && lista.length ? totaluriNutritie(lista) : null;
+}
+
+async function incarcaNutritieZi(zi) {
+  if (!supabaseClient || !dateClienta.fisa) return;
+  const [resJ, resS] = await Promise.all([
+    supabaseClient.from('jurnal_alimente').select('*').eq('client_id', dateClienta.fisa.id).eq('data', zi).order('created_at'),
+    supabaseClient.from('setari_nutritie').select('*').eq('client_id', dateClienta.fisa.id).maybeSingle()
+  ]);
+  if (!resJ.error) {
+    if (zi === aziIsoAntrPers()) nutritie.azi = totaluriAzi(resJ.data);
+    // Reîncărcarea de pe Acasă (azi) nu înlocuiește altă zi deschisă în ecranul de nutriție
+    if (!String(antrPers.ecran).startsWith('nutritie') || !nutritie.zi || nutritie.zi === zi) { nutritie.zi = zi; nutritie.lista = resJ.data || []; }
+  }
+  if (!resS.error) nutritie.setari = resS.data || null;
+}
+
+// Acasă: totalul de azi față de ținta de calorii
+function htmlNutritieAcasa() {
+  const t = nutritie.azi, s = nutritie.setari;
+  const tinta = s && s.kcal ? Number(s.kcal) : 0;
+  const kcal = t ? Math.round(t.kcal) : 0;
+  const procent = tinta ? Math.min(100, Math.round(kcal / tinta * 100)) : 0;
+  const detalii = !t ? tr('Notează ce mănânci: scanezi codul de bare sau cauți produsul.', 'Log what you eat: scan the barcode or search the product.')
+    : `${tr('Proteine', 'Protein')} ${Math.round(t.proteine)} g${s && s.proteine ? ` / ${s.proteine} g` : ''} · ${tr('Carbo', 'Carbs')} ${Math.round(t.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(t.grasimi)} g`;
+  return `<div class="card acasa-sedinta nutritie-acasa" id="cardNutritieAcasa" onclick="deschideNutritie()">
+    <div><div class="acasa-eticheta">${tr('Nutriție azi', 'Nutrition today')}</div>
+    <b>${t ? `${kcal}${tinta ? ` / ${tinta}` : ''} kcal` : tr('Nimic notat azi', 'Nothing logged today')}</b>
+    ${tinta && t ? `<div class="progress-wrapper nutritie-bara-mica"><div class="progress-fill" style="width:${procent}%"></div></div>` : ''}
+    <div class="acasa-antrenament-detalii">${detalii}</div></div>
+    <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideAdaugaAliment('${masaImplicita()}')">${tr('+ Adaugă', '+ Add')}</button>
+  </div>`;
+}
+
+// Masa probabilă după oră (la „+ Adaugă” de pe Acasă)
+function masaImplicita() {
+  const h = new Date().getHours();
+  return h < 11 ? 'mic_dejun' : h < 16 ? 'pranz' : h < 21 ? 'cina' : 'gustare';
+}
+
+async function deschideNutritie(zi) {
+  antrPers.ecran = 'nutritie';
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  document.getElementById('clientaTitlu').innerText = tr('Nutriție', 'Nutrition');
+  const z = zi || nutritie.zi || aziIsoAntrPers();
+  if (nutritie.zi !== z) document.getElementById('clientaContinut').innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  else randeazaNutritieZi();
+  await incarcaNutritieZi(z);
+  if (antrPers.ecran === 'nutritie') randeazaNutritieZi();
+}
+
+function schimbaZiNutritie(directie) {
+  const d = dataDinIso(nutritie.zi || aziIsoAntrPers());
+  d.setDate(d.getDate() + directie);
+  const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (iso > aziIsoAntrPers()) return;
+  nutritie.zi = null;
+  deschideNutritie(iso);
+}
+
+function htmlBaraNutritie(eticheta, valoare, tinta, unitate) {
+  const procent = tinta ? Math.min(100, Math.round(valoare / tinta * 100)) : 0;
+  const peste = tinta && valoare > tinta * 1.05;
+  return `<div class="nutritie-bara${peste ? ' peste' : ''}">
+    <div class="obiectiv-sus"><span>${eticheta}</span><b>${Math.round(valoare)}${tinta ? ` / ${tinta}` : ''} ${unitate}</b></div>
+    ${tinta ? `<div class="progress-wrapper"><div class="progress-fill" style="width:${procent}%"></div></div>` : ''}
+  </div>`;
+}
+
+function randeazaNutritieZi() {
+  const t = totaluriNutritie(nutritie.lista), s = nutritie.setari || {};
+  const esteAzi = nutritie.zi === aziIsoAntrPers();
+  let html = `<div class="nutritie-zi-nav">
+      <button type="button" class="cal-nav" onclick="schimbaZiNutritie(-1)" aria-label="${tr('Ziua anterioară', 'Previous day')}"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+      <b>${esteAzi ? tr('Azi', 'Today') : escAttr(etichetaDataAntrPers(nutritie.zi))}</b>
+      <button type="button" class="cal-nav" onclick="schimbaZiNutritie(1)" ${esteAzi ? 'disabled' : ''} aria-label="${tr('Ziua următoare', 'Next day')}"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+    </div>
+    <div class="card nutritie-totaluri">
+      ${htmlBaraNutritie(tr('Calorii', 'Calories'), t.kcal, s.kcal, 'kcal')}
+      ${htmlBaraNutritie(tr('Proteine', 'Protein'), t.proteine, s.proteine, 'g')}
+      ${htmlBaraNutritie(tr('Carbohidrați', 'Carbs'), t.carbo, s.carbo, 'g')}
+      ${htmlBaraNutritie(tr('Grăsimi', 'Fat'), t.grasimi, s.grasimi, 'g')}
+    </div>`;
+  MESE_NUTRITIE.forEach(([cod, ro, en]) => {
+    const randuri = nutritie.lista.filter(x => x.masa === cod);
+    const tm = totaluriNutritie(randuri);
+    html += `<div class="card nutritie-masa">
+      <div class="nutritie-masa-sus"><b>${tr(ro, en)}</b><span>${randuri.length ? `${Math.round(tm.kcal)} kcal` : ''}</span></div>
+      ${randuri.map(x => `<div class="nutritie-rand">
+        <div><div class="nutritie-rand-nume">${escAttr(x.nume)}${x.marca ? ` <small>${escAttr(x.marca)}</small>` : ''}</div>
+        <div class="acasa-antrenament-detalii">${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal · P ${formatKg(rotunjeste1(x.proteine))} g</div></div>
+        <button type="button" class="notificare-x nutritie-sterge" onclick="stergeAliment('${x.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>
+      </div>`).join('')}
+      <button type="button" class="btn btn-clear nutritie-adauga-btn" onclick="deschideAdaugaAliment('${cod}')">${tr('+ Adaugă', '+ Add')}</button>
+    </div>`;
+  });
+  const deAntrenor = s.tinte_setate_de === 'antrenor';
+  html += `<div class="antr-pers-sectiune">${tr('Ținte zilnice', 'Daily targets')}</div>
+    <div class="card">
+      ${deAntrenor ? `<div class="acasa-antrenament-detalii" style="margin-bottom:8px;">${tr('Setate de antrenorul tău.', 'Set by your trainer.')}</div>` : ''}
+      <div class="antr-pers-campuri nutritie-tinte">
+        ${[['kcal', 'Kcal'], ['proteine', tr('Proteine (g)', 'Protein (g)')], ['carbo', tr('Carbo (g)', 'Carbs (g)')], ['grasimi', tr('Grăsimi (g)', 'Fat (g)')]].map(([k, et]) =>
+          `<label>${et}<input type="number" inputmode="numeric" id="tintaNut_${k}" class="plan-ex-input" value="${s[k] ?? ''}" ${deAntrenor ? 'disabled' : ''}></label>`).join('')}
+      </div>
+      ${deAntrenor ? '' : `<button type="button" class="btn btn-clear" style="margin-top:8px; width:100%;" onclick="salveazaTinteNutritie()">${tr('Salvează țintele', 'Save targets')}</button>`}
+      <label class="setare-notificare" style="margin-top:6px;">
+        <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul vede ce mănânci și totalurile pe zi.', 'Your trainer sees what you eat and the daily totals.')}</small></span>
+        <input type="checkbox" class="comutator" ${s.vizibil_antrenor === false ? '' : 'checked'} onchange="seteazaVizibilNutritie(this.checked, this)">
+      </label>
+    </div>
+    <div class="nutritie-sursa">${tr('Datele despre produse: Open Food Facts (open data) și produsele adăugate de clienții B-Fit.', 'Product data: Open Food Facts (open data) and products added by B-Fit clients.')}</div>`;
+  document.getElementById('clientaTitlu').innerText = tr('Nutriție', 'Nutrition');
+  document.getElementById('clientaContinut').innerHTML = html;
+}
+
+// Rândul din setari_nutritie: creat la prima schimbare (fără el, antrenorul vede jurnalul și nu există ținte)
+async function scrieSetariNutritie(camp) {
+  const c = dateClienta.fisa;
+  const rand = Object.assign({ client_id: c.id, user_id: c.user_id }, camp);
+  const q = nutritie.setari ? supabaseClient.from('setari_nutritie').update(camp).eq('client_id', c.id)
+    : supabaseClient.from('setari_nutritie').insert(rand);
+  const { data, error } = await q.select().single();
+  if (error || !data) { showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); return false; }
+  nutritie.setari = data;
+  return true;
+}
+
+async function salveazaTinteNutritie() {
+  const v = k => { const n = parseInt(document.getElementById('tintaNut_' + k).value, 10); return isNaN(n) ? null : n; };
+  const camp = { kcal: v('kcal'), proteine: v('proteine'), carbo: v('carbo'), grasimi: v('grasimi') };
+  if (camp.kcal !== null && (camp.kcal < 500 || camp.kcal > 10000)) return showToast(tr('Caloriile: între 500 și 10.000.', 'Calories: between 500 and 10,000.'), 'error');
+  if (await scrieSetariNutritie(camp)) { showToast(tr('✓ Ținte salvate', '✓ Targets saved')); randeazaNutritieZi(); }
+}
+
+async function seteazaVizibilNutritie(vizibil, input) {
+  input.disabled = true;
+  const ok = await scrieSetariNutritie({ vizibil_antrenor: vizibil });
+  input.disabled = false;
+  if (!ok) input.checked = !vizibil;
+}
+
+function stergeAliment(id) {
+  customConfirm(tr('Ștergi din jurnal?', 'Remove from the log?'), tr('Alimentul dispare din ziua asta.', 'The food is removed from this day.'), async () => {
+    const { error } = await supabaseClient.from('jurnal_alimente').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    nutritie.lista = nutritie.lista.filter(x => x.id !== id);
+    if (nutritie.zi === aziIsoAntrPers()) nutritie.azi = totaluriAzi(nutritie.lista);
+    randeazaNutritieZi();
+  });
+}
+
+// ---- Adăugare: scanare, căutare, recente, produs nou ----
+async function deschideAdaugaAliment(masa) {
+  nutritie.masa = masa;
+  if (!nutritie.zi) nutritie.zi = aziIsoAntrPers();
+  antrPers.ecran = 'nutritie-adauga';
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  nutritie.rezultate = [];
+  nutritie.cautare = '';
+  randeazaAdaugaAliment();
+  // Recente: ce a mai notat clientul (ultimele 60 de rânduri, fără dubluri)
+  const { data } = await supabaseClient.from('jurnal_alimente').select('nume, marca, cod, cantitate_g, kcal, proteine, carbo, grasimi')
+    .eq('client_id', dateClienta.fisa.id).order('created_at', { ascending: false }).limit(60);
+  const vazute = new Set();
+  nutritie.recente = (data || []).filter(x => { const k = (x.cod || '') + '|' + x.nume.toLowerCase(); if (vazute.has(k)) return false; vazute.add(k); return true; })
+    .slice(0, 12).map(x => produsDinJurnal(x));
+  if (antrPers.ecran === 'nutritie-adauga' && !nutritie.rezultate.length) randeazaAdaugaAliment();
+}
+
+// Produs (valori la 100 g) refăcut dintr-un rând de jurnal
+function produsDinJurnal(x) {
+  const k = 100 / Number(x.cantitate_g || 100);
+  return { nume: x.nume, marca: x.marca || '', cod: x.cod || null, kcal: rotunjeste1(x.kcal * k), proteine: rotunjeste1(x.proteine * k),
+    carbo: rotunjeste1(x.carbo * k), grasimi: rotunjeste1(x.grasimi * k), portie_g: Number(x.cantitate_g), sursa: 'recent' };
+}
+
+function htmlProdusRand(p, i, lista) {
+  return `<button type="button" class="plan-zi-card nutritie-produs" onclick="alegeProdus('${lista}', ${i})">
+    <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(p.nume)}</span>
+    <span class="plan-zi-card-detalii">${p.marca ? escAttr(p.marca) + ' · ' : ''}${Math.round(p.kcal)} kcal / 100 g${p.sursa === 'recent' && p.portie_g ? ` · ${tr('ultima dată', 'last time')} ${formatKg(p.portie_g)} g` : ''}</span></span>
+    <span class="progres-ex-dif">+</span>
+  </button>`;
+}
+
+function randeazaAdaugaAliment() {
+  const masa = MESE_NUTRITIE.find(m => m[0] === nutritie.masa) || MESE_NUTRITIE[1];
+  document.getElementById('clientaTitlu').innerText = tr(masa[1], masa[2]);
+  const rez = nutritie.rezultate;
+  document.getElementById('clientaContinut').innerHTML = `
+    <button type="button" class="btn nutritie-scaneaza" onclick="pornesteScanare()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+      ${tr('Scanează codul de bare', 'Scan the barcode')}</button>
+    <div class="antr-pers-adauga" style="margin-top:10px;">
+      <input type="search" id="nutritieCauta" class="plan-ex-input" maxlength="60" value="${escAttr(nutritie.cautare)}" placeholder="${tr('Caută produsul (ex: iaurt grecesc)', 'Search the product (e.g. greek yogurt)')}" onkeydown="if (event.key === 'Enter') cautaAlimente()">
+      <button type="button" class="btn" onclick="cautaAlimente()">${tr('Caută', 'Search')}</button>
+    </div>
+    <div id="nutritieRezultate">${rez === 'cautare' ? `<div class="progres-gol">${tr('Se caută...', 'Searching...')}</div>`
+      : rez.length ? `<div class="antr-pers-sectiune">${tr('Rezultate', 'Results')}</div>${rez.map((p, i) => htmlProdusRand(p, i, 'rezultate')).join('')}`
+      : nutritie.cautare ? `<div class="progres-gol">${tr('Nu am găsit produsul. Îl poți adăuga tu, o singură dată.', 'Product not found. You can add it yourself, once.')}</div>` : ''}</div>
+    ${nutritie.recente.length && !rez.length ? `<div class="antr-pers-sectiune">${tr('Recente', 'Recent')}</div>${nutritie.recente.map((p, i) => htmlProdusRand(p, i, 'recente')).join('')}` : ''}
+    <button type="button" class="btn btn-clear obiectiv-adauga" style="margin-top:12px;" onclick="deschideProdusNou(null)">${tr('+ Produs care nu e în listă', '+ Product not on the list')}</button>`;
+}
+
+// Open Food Facts → produsul nostru (valori la 100 g); null dacă lipsesc caloriile
+function produsDinOff(p, cod) {
+  const n = p.nutriments || {};
+  const kcal = Number(n['energy-kcal_100g'] ?? (n.energy_100g != null ? n.energy_100g / 4.184 : NaN));
+  const nume = (p.product_name_ro || p.product_name || '').trim();
+  if (!nume) return null;
+  return { nume: nume.slice(0, 120), marca: String(p.brands || '').split(',')[0].trim().slice(0, 80), cod: cod || p.code || null,
+    kcal: isNaN(kcal) ? null : rotunjeste1(kcal), proteine: rotunjeste1(n.proteins_100g), carbo: rotunjeste1(n.carbohydrates_100g),
+    grasimi: rotunjeste1(n.fat_100g), portie_g: Number(p.serving_quantity) > 0 ? Number(p.serving_quantity) : null, sursa: 'off' };
+}
+
+// Căutare după nume: întâi produsele noastre, apoi Open Food Facts (prin Worker; doar la „Caută”, nu la fiecare literă)
+async function cautaAlimente() {
+  const q = (document.getElementById('nutritieCauta').value || '').trim();
+  if (q.length < 2) return;
+  nutritie.cautare = q;
+  nutritie.rezultate = 'cautare';
+  randeazaAdaugaAliment();
+  const [proprii, off] = await Promise.all([
+    supabaseClient.from('alimente').select('*').ilike('nume', `%${q}%`).limit(10),
+    // Prin Worker: căutarea Open Food Facts nu acceptă cereri direct din browser
+    fetch(`${URL_POZE_ANTR}/off-cautare?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : null).catch(() => null)
+  ]);
+  const lista = (proprii.data || []).map(a => Object.assign({}, a, { kcal: Number(a.kcal), proteine: Number(a.proteine), carbo: Number(a.carbo), grasimi: Number(a.grasimi), sursa: 'propriu' }))
+    .concat((Array.isArray(off) ? off : []).map(p => produsDinOff(p)).filter(p => p && p.kcal !== null));
+  if (antrPers.ecran !== 'nutritie-adauga') return;
+  nutritie.rezultate = lista.slice(0, 20);
+  randeazaAdaugaAliment();
+}
+
+function alegeProdus(lista, i) {
+  const p = (lista === 'recente' ? nutritie.recente : nutritie.rezultate)[i];
+  if (p) deschideCantitate(p);
+}
+
+// Codul de bare: întâi baza noastră, apoi Open Food Facts; negăsit (sau fără calorii) → formularul de produs nou, cu ce știm
+async function gasesteDupaCod(cod) {
+  showToast(tr('Caut produsul...', 'Looking up the product...'));
+  const { data: propriu } = await supabaseClient.from('alimente').select('*').eq('cod', cod).maybeSingle();
+  if (propriu) return deschideCantitate(Object.assign({}, propriu, { kcal: Number(propriu.kcal), proteine: Number(propriu.proteine), carbo: Number(propriu.carbo), grasimi: Number(propriu.grasimi), sursa: 'propriu' }));
+  const r = await fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity`)
+    .then(x => x.ok ? x.json() : null).catch(() => null);
+  const p = r && r.status === 1 && r.product ? produsDinOff(r.product, cod) : null;
+  if (p && p.kcal !== null) return deschideCantitate(p);
+  showToast(p ? tr('Produsul nu are valorile nutriționale complete. Completează-le de pe etichetă.', 'The product has incomplete nutrition data. Fill them in from the label.')
+    : tr('Produs negăsit. Adaugă-l de pe etichetă, o singură dată.', 'Product not found. Add it from the label, once.'), 'error');
+  deschideProdusNou(Object.assign({ cod }, p || {}));
+}
+
+// ---- Cantitatea: câte grame, cu calculul pe loc ----
+function deschideCantitate(p) {
+  nutritie.produs = p;
+  antrPers.ecran = 'nutritie-cantitate';
+  randeazaCantitate(p.portie_g || 100);
+}
+
+function randeazaCantitate(grame) {
+  const p = nutritie.produs;
+  const masa = MESE_NUTRITIE.find(m => m[0] === nutritie.masa) || MESE_NUTRITIE[1];
+  document.getElementById('clientaTitlu').innerText = tr(masa[1], masa[2]);
+  const rapide = [...new Set([p.portie_g, 100, 50, 200].filter(Boolean))].slice(0, 4);
+  document.getElementById('clientaContinut').innerHTML = `<div class="card nutritie-cantitate">
+      <b class="nutritie-produs-nume">${escAttr(p.nume)}</b>
+      ${p.marca ? `<div class="acasa-antrenament-detalii">${escAttr(p.marca)}</div>` : ''}
+      <div class="acasa-antrenament-detalii">${tr('La 100 g', 'Per 100 g')}: ${Math.round(p.kcal)} kcal · P ${formatKg(p.proteine)} g · C ${formatKg(p.carbo)} g · G ${formatKg(p.grasimi)} g</div>
+      <div class="antr-pers-campuri" style="margin-top:12px;"><label>${tr('Cantitate (g)', 'Amount (g)')}
+        <input type="number" inputmode="decimal" id="nutritieGrame" class="plan-ex-input" value="${grame}" oninput="actualizeazaCalculCantitate()"></label></div>
+      <div class="antr-pers-activitati" style="margin-top:8px;">${rapide.map(g => `<button type="button" class="antr-pers-activitate" onclick="document.getElementById('nutritieGrame').value=${g}; actualizeazaCalculCantitate()">${g === p.portie_g && g !== 100 ? tr('1 porție', '1 serving') + ` (${formatKg(g)} g)` : formatKg(g) + ' g'}</button>`).join('')}</div>
+      <div class="nutritie-calcul" id="nutritieCalcul"></div>
+      <div class="antr-pers-actiuni" style="margin:12px 0 0;">
+        <button type="button" class="btn" onclick="adaugaInJurnal()">${tr(`Adaugă la ${masa[1].toLowerCase()}`, `Add to ${masa[2].toLowerCase()}`)}</button>
+        <button type="button" class="btn btn-clear" onclick="deschideAdaugaAliment(nutritie.masa)">${tr('Înapoi', 'Back')}</button>
+      </div>
+    </div>`;
+  actualizeazaCalculCantitate();
+}
+
+function valoriPentruGrame(p, g) {
+  const k = g / 100;
+  return { kcal: rotunjeste1(p.kcal * k), proteine: rotunjeste1(p.proteine * k), carbo: rotunjeste1(p.carbo * k), grasimi: rotunjeste1(p.grasimi * k) };
+}
+
+function actualizeazaCalculCantitate() {
+  const g = parseFloat(String(document.getElementById('nutritieGrame').value).replace(',', '.')) || 0;
+  const v = valoriPentruGrame(nutritie.produs, g);
+  document.getElementById('nutritieCalcul').innerHTML = `<b>${Math.round(v.kcal)} kcal</b><span>P ${formatKg(v.proteine)} g · C ${formatKg(v.carbo)} g · G ${formatKg(v.grasimi)} g</span>`;
+}
+
+async function adaugaInJurnal() {
+  const p = nutritie.produs, c = dateClienta.fisa;
+  const g = parseFloat(String(document.getElementById('nutritieGrame').value).replace(',', '.'));
+  if (!(g > 0 && g <= 5000)) return showToast(tr('Scrie cantitatea în grame.', 'Enter the amount in grams.'), 'error');
+  const rand = Object.assign({ user_id: c.user_id, client_id: c.id, data: nutritie.zi || aziIsoAntrPers(), masa: nutritie.masa,
+    nume: p.nume, marca: p.marca || '', cod: p.cod && /^\d{6,14}$/.test(p.cod) ? p.cod : null, cantitate_g: rotunjeste1(g) }, valoriPentruGrame(p, g));
+  const { data, error } = await supabaseClient.from('jurnal_alimente').insert(rand).select().single();
+  if (error || !data) return showToast(tr('Nu s-a putut adăuga. Verifică internetul.', 'Could not add. Check your internet.'), 'error');
+  nutritie.lista.push(data);
+  if (rand.data === aziIsoAntrPers()) nutritie.azi = totaluriAzi(nutritie.lista.filter(x => x.data === rand.data));
+  showToast(tr(`✓ ${p.nume}: ${Math.round(rand.kcal)} kcal`, `✓ ${p.nume}: ${Math.round(rand.kcal)} kcal`));
+  antrPers.ecran = 'nutritie';
+  randeazaNutritieZi();
+}
+
+// ---- Produs nou (lipsește din liste): rămâne în baza comună, pentru toți ----
+function deschideProdusNou(p) {
+  nutritie.produs = p || {};
+  antrPers.ecran = 'nutritie-produs';
+  const x = nutritie.produs;
+  const camp = (id, et, v, mod) => `<label>${et}<input type="${mod || 'text'}" inputmode="${mod === 'text' ? 'text' : 'decimal'}" id="produsNou_${id}" class="plan-ex-input" value="${v ?? ''}"></label>`;
+  document.getElementById('clientaTitlu').innerText = tr('Produs nou', 'New product');
+  document.getElementById('clientaContinut').innerHTML = `<div class="card obiectiv-form">
+      <div class="acasa-antrenament-detalii" style="margin-bottom:8px;">${tr('Valorile de pe etichetă, la 100 g. Produsul rămâne salvat și pentru ceilalți clienți.', 'Values from the label, per 100 g. The product stays saved for other clients too.')}</div>
+      <div class="antr-pers-campuri">${camp('nume', tr('Nume *', 'Name *'), escAttr(x.nume || ''), 'text')}</div>
+      <div class="antr-pers-campuri">${camp('marca', tr('Marcă', 'Brand'), escAttr(x.marca || ''), 'text')}${camp('cod', tr('Cod de bare', 'Barcode'), escAttr(x.cod || ''), 'text')}</div>
+      <div class="antr-pers-campuri">${camp('kcal', 'Kcal *', x.kcal ?? '')}${camp('proteine', tr('Proteine (g)', 'Protein (g)'), x.proteine ?? '')}</div>
+      <div class="antr-pers-campuri">${camp('carbo', tr('Carbo (g)', 'Carbs (g)'), x.carbo ?? '')}${camp('grasimi', tr('Grăsimi (g)', 'Fat (g)'), x.grasimi ?? '')}</div>
+      <div class="antr-pers-campuri">${camp('portie', tr('Porție (g, opțional)', 'Serving (g, optional)'), x.portie_g ?? '')}</div>
+      <div class="antr-pers-actiuni" style="margin:12px 0 0;">
+        <button type="button" class="btn" onclick="salveazaProdusNou()">${tr('Salvează produsul', 'Save product')}</button>
+        <button type="button" class="btn btn-clear" onclick="deschideAdaugaAliment(nutritie.masa)">${tr('Renunță', 'Cancel')}</button>
+      </div>
+    </div>`;
+}
+
+async function salveazaProdusNou() {
+  const v = id => (document.getElementById('produsNou_' + id).value || '').trim();
+  const n = id => { const x = parseFloat(v(id).replace(',', '.')); return isNaN(x) ? null : x; };
+  const rand = { nume: v('nume').slice(0, 120), marca: v('marca').slice(0, 80), cod: v('cod').replace(/\D/g, '') || null,
+    kcal: n('kcal'), proteine: n('proteine') || 0, carbo: n('carbo') || 0, grasimi: n('grasimi') || 0, portie_g: n('portie') };
+  if (!rand.nume) return showToast(tr('Scrie numele produsului.', 'Enter the product name.'), 'error');
+  if (rand.kcal === null || rand.kcal < 0 || rand.kcal > 1000) return showToast(tr('Scrie caloriile la 100 g (de pe etichetă).', 'Enter the calories per 100 g (from the label).'), 'error');
+  if (rand.cod && !/^\d{6,14}$/.test(rand.cod)) rand.cod = null;
+  if ([rand.proteine, rand.carbo, rand.grasimi].some(x => x < 0 || x > 100)) return showToast(tr('Proteinele, carbohidrații și grăsimile: între 0 și 100 g.', 'Protein, carbs and fat: between 0 and 100 g.'), 'error');
+  const { data, error } = await supabaseClient.from('alimente').insert(rand).select().single();
+  // Codul există deja (l-a adăugat altcineva între timp): folosim produsul lor
+  if (error && rand.cod && /duplicate|unique/i.test(error.message || '')) return gasesteDupaCod(rand.cod);
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  showToast(tr('✓ Produs salvat', '✓ Product saved'));
+  deschideCantitate(Object.assign({}, data, { kcal: Number(data.kcal), proteine: Number(data.proteine), carbo: Number(data.carbo), grasimi: Number(data.grasimi), sursa: 'propriu' }));
+}
+
+// ---- Scanarea codului de bare: BarcodeDetector unde există (Android, Chrome), altfel ZXing (iPhone), încărcat doar acum ----
+let scanare = null; // { stream, video, oprit, cititor }
+
+function incarcaZxing() {
+  if (window.ZXing) return Promise.resolve();
+  return new Promise((ok, eroare) => {
+    const s = document.createElement('script');
+    s.src = 'vendor/zxing-library-0.21.3.min.js';
+    s.onload = ok;
+    s.onerror = eroare;
+    document.head.appendChild(s);
+  });
+}
+
+async function pornesteScanare() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return showToast(tr('Camera nu e disponibilă pe acest dispozitiv. Caută produsul după nume.', 'The camera isn’t available on this device. Search the product by name.'), 'error');
+  }
+  const strat = document.createElement('div');
+  strat.id = 'scanareStrat';
+  strat.className = 'scanare-strat';
+  strat.innerHTML = `<video playsinline muted autoplay></video>
+    <div class="scanare-cadru"></div>
+    <div class="scanare-jos">
+      <div>${tr('Ține codul de bare în cadru', 'Keep the barcode inside the frame')}</div>
+      <div class="antr-pers-adauga" style="margin:10px 0 0;">
+        <input type="text" inputmode="numeric" id="scanareCodManual" class="plan-ex-input" maxlength="14" placeholder="${tr('sau scrie codul', 'or type the code')}">
+        <button type="button" class="btn" onclick="codManualScanare()">OK</button>
+      </div>
+      <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="opresteScanare()">${tr('Închide', 'Close')}</button>
+    </div>`;
+  document.body.appendChild(strat);
+  const video = strat.querySelector('video');
+  scanare = { video, oprit: false, stream: null, cititor: null };
+  try {
+    const formate = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+    const areDetector = 'BarcodeDetector' in window && (await BarcodeDetector.getSupportedFormats().catch(() => [])).some(f => formate.includes(f));
+    if (areDetector) {
+      scanare.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = scanare.stream;
+      await video.play().catch(() => {});
+      const detector = new BarcodeDetector({ formats: formate });
+      const bucla = async () => {
+        if (!scanare || scanare.oprit) return;
+        const coduri = await detector.detect(video).catch(() => []);
+        if (coduri.length && /^\d{6,14}$/.test(coduri[0].rawValue)) return codGasitScanare(coduri[0].rawValue);
+        setTimeout(bucla, 250);
+      };
+      bucla();
+    } else {
+      await incarcaZxing();
+      if (!scanare || scanare.oprit) return;
+      const indicii = new Map([[ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E]]]);
+      scanare.cititor = new ZXing.BrowserMultiFormatReader(indicii, 300);
+      await scanare.cititor.decodeFromConstraints({ video: { facingMode: 'environment' }, audio: false }, video, (rezultat) => {
+        if (rezultat && scanare && !scanare.oprit && /^\d{6,14}$/.test(rezultat.getText())) codGasitScanare(rezultat.getText());
+      });
+    }
+  } catch (e) {
+    // Fără cameră (permisiune refuzată): fereastra rămâne pentru codul scris de mână
+    const s = scanare && scanare.stream;
+    if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+    strat.classList.add('fara-camera');
+    strat.querySelector('.scanare-jos > div').textContent = tr('Nu am putut porni camera. Dă voie aplicației să folosească camera (setările telefonului) sau scrie codul de sub bare.', 'Couldn’t start the camera. Allow camera access (phone settings) or type the code under the bars.');
+  }
+}
+
+function opresteScanare() {
+  if (scanare) {
+    scanare.oprit = true;
+    try { scanare.cititor && scanare.cititor.reset(); } catch (e) {}
+    const s = scanare.stream || (scanare.video && scanare.video.srcObject);
+    if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
+  }
+  scanare = null;
+  document.getElementById('scanareStrat')?.remove();
+}
+
+function codGasitScanare(cod) {
+  if (navigator.vibrate) navigator.vibrate(60);
+  opresteScanare();
+  gasesteDupaCod(cod);
+}
+
+function codManualScanare() {
+  const cod = (document.getElementById('scanareCodManual').value || '').replace(/\D/g, '');
+  if (!/^\d{6,14}$/.test(cod)) return showToast(tr('Codul are între 6 și 14 cifre.', 'The code has 6 to 14 digits.'), 'error');
+  codGasitScanare(cod);
+}
+
+// Înapoi din ecranele de nutriție: din adăugare/cantitate/produs nou la ziua deschisă, din zi la Acasă
+function inapoiNutritie() {
+  opresteScanare();
+  if (antrPers.ecran !== 'nutritie') { antrPers.ecran = 'nutritie'; randeazaNutritieZi(); return; }
+  antrPers.ecran = null;
+  randeazaHomeClienta();
+}
+
+// ---- La antrenor (Fișă › Progres): țintele clientului și ultimele 7 zile din jurnal ----
+let nutritieFisa = null; // { client, setari, zile: [{ data, totaluri, randuri }] }
+
+function htmlNutritieAntrenor() {
+  const n = nutritieFisa;
+  if (!n) return '';
+  const s = n.setari || {};
+  const ascuns = s.vizibil_antrenor === false;
+  const zile = n.zile.map(z => `<details class="card antr-pers-antrenor"><summary><span class="acasa-eticheta">${escAttr(etichetaDataAntrPers(z.data))}</span>
+      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${s.kcal}` : ''} kcal</b> <span class="acasa-antrenament-detalii">P ${Math.round(z.totaluri.proteine)} g · C ${Math.round(z.totaluri.carbo)} g · G ${Math.round(z.totaluri.grasimi)} g</span></summary>
+      <ul>${z.randuri.map(x => `<li>${escAttr((MESE_NUTRITIE.find(m => m[0] === x.masa) || [, ''])[1])}: ${escAttr(x.nume)} · ${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal</li>`).join('')}</ul>
+    </details>`).join('');
+  return `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Nutriție', 'Nutrition')}</div>
+    <div class="antr-pers-campuri nutritie-tinte">
+      ${[['kcal', 'Kcal'], ['proteine', tr('Proteine', 'Protein')], ['carbo', tr('Carbo', 'Carbs')], ['grasimi', tr('Grăsimi', 'Fat')]].map(([k, et]) =>
+        `<label>${et}<input type="number" inputmode="numeric" id="tintaNutA_${k}" class="plan-ex-input" value="${s[k] ?? ''}"></label>`).join('')}
+    </div>
+    <button type="button" class="btn btn-clear" style="margin:8px 0; width:100%;" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele zilnice', 'Save daily targets')}</button>
+    ${ascuns ? `<div class="progres-gol">${tr('Clientul a ascuns jurnalul alimentar.', 'The client has hidden their food log.')}</div>`
+      : zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`;
+}
+
+async function incarcaNutritieAntrenor(client) {
+  const de = new Date(); de.setDate(de.getDate() - 6);
+  const iso = `${de.getFullYear()}-${String(de.getMonth() + 1).padStart(2, '0')}-${String(de.getDate()).padStart(2, '0')}`;
+  const [resJ, resS] = await Promise.all([
+    supabaseClient.from('jurnal_alimente').select('*').eq('client_id', client.id).gte('data', iso).order('data', { ascending: false }).order('created_at'),
+    supabaseClient.from('setari_nutritie').select('*').eq('client_id', client.id).maybeSingle()
+  ]);
+  if (resJ.error && resS.error) { nutritieFisa = null; return; }
+  const peZi = new Map();
+  (resJ.data || []).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
+  nutritieFisa = { client, setari: resS.data || null, zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri) })) };
+}
+
+async function salveazaTinteNutritieAntrenor() {
+  const n = nutritieFisa;
+  if (!n) return;
+  const v = k => { const x = parseInt(document.getElementById('tintaNutA_' + k).value, 10); return isNaN(x) ? null : x; };
+  const camp = { kcal: v('kcal'), proteine: v('proteine'), carbo: v('carbo'), grasimi: v('grasimi') };
+  if (camp.kcal !== null && (camp.kcal < 500 || camp.kcal > 10000)) return showToast(tr('Caloriile: între 500 și 10.000.', 'Calories: between 500 and 10,000.'), 'error');
+  const q = n.setari ? supabaseClient.from('setari_nutritie').update(camp).eq('client_id', n.client.id)
+    : supabaseClient.from('setari_nutritie').insert(Object.assign({ client_id: n.client.id, user_id: utilizatorCurent.id }, camp));
+  const { data, error } = await q.select().single();
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  n.setari = data;
+  showToast(tr('✓ Ținte salvate', '✓ Targets saved'));
+  incarcaProgresFisa(); // zilele din jurnal se arată față de țintele noi
+}
+
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
 function htmlCardZiPlan(ses, idx, laClick, cuProgres) {
   const lista = (ses.exercitii || []).filter(ex => (ex.exercitiu || '').trim());
@@ -5292,7 +5807,7 @@ function clientaTab(tab) {
   }
   clientaTabCurent = tab;
   // Antrenamentul propriu început rămâne ca ciornă pe dispozitiv (se continuă de pe Acasă)
-  if (antrPers.ecran) { antrPers.ecran = null; antrPers.curent = null; opresteTimerPauza(); }
+  if (antrPers.ecran) { antrPers.ecran = null; antrPers.curent = null; opresteTimerPauza(); opresteScanare(); }
   document.getElementById('clientaNav')?.classList.remove('nav-compact');
   TABURI_CLIENTA.forEach(t => document.getElementById('clientaTab_' + t)?.classList.toggle('active', t === tab));
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
@@ -6368,7 +6883,8 @@ async function incarcaRezumatAcasa() {
     supabaseClient.from('orar').select('row, ziRaw, ora, bifat, antrenament, rezervat_online').eq('client_id', dateClienta.fisa.id),
     supabaseClient.from('checkin_saptamanal').select('saptamana').eq('client_id', dateClienta.fisa.id).eq('saptamana', lunaSaptamaniiCurente()),
     incarcaAntrPersUsor(),
-    incarcaObiectiveClient()
+    incarcaObiectiveClient(),
+    incarcaNutritieZi(aziIsoAntrPers())
   ]);
   if (resPrez.error || resOrar.error) return;
   const lista = (resPrez.data || []).map(p => {
@@ -6401,6 +6917,8 @@ async function incarcaRezumatAcasa() {
   if (clientaTabCurent !== 'acasa' || dateClienta.planCurent) return;
   const cardSapt = document.getElementById('cardSaptamanaAcasa');
   if (cardSapt && !antrPers.ecran) cardSapt.outerHTML = htmlSaptamanaAcasa();
+  const cardNut = document.getElementById('cardNutritieAcasa');
+  if (cardNut && !antrPers.ecran) cardNut.outerHTML = htmlNutritieAcasa();
   const cifre = document.getElementById('acasaCifre');
   const sedinta = document.getElementById('acasaSedinta');
   const checkin = document.getElementById('acasaCheckin');
@@ -10165,7 +10683,8 @@ async function incarcaProgresFisa() {
     incarcaListaPoze(client.id),
     supabaseClient.from('antrenamente_personale').select('*').eq('client_id', client.id).eq('fel', 'antrenament')
       .order('data', { ascending: false }).limit(150),
-    supabaseClient.from('obiective').select('*').eq('client_id', client.id).order('created_at')
+    supabaseClient.from('obiective').select('*').eq('client_id', client.id).order('created_at'),
+    incarcaNutritieAntrenor(client)
   ]);
   if (clientaFisaCurenta() !== client || !det.open) return;
   const checkinuri = error ? [] : (data || []);
@@ -10183,7 +10702,8 @@ async function incarcaProgresFisa() {
       : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`)
     + `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Progres la exerciții', 'Exercise progress')}</div>`
     + htmlProgresExercitii({ planuri: planuriClient, antrenamente: antrenamenteClient })
-    + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20));
+    + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20))
+    + htmlNutritieAntrenor();
   umplePoze(corp);
   umplePozeAntr(corp);
 }
