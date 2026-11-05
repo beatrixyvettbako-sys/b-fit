@@ -29,6 +29,15 @@ Verifică și că `ASSETS_TO_CACHE` din `sw.js` conține `./`, `./index.html`, `
 
 Fiecare fișier din `ASSETS_TO_CACHE` și din `<script src>` din `index.html` (ex. `vendor/supabase-2.118.0.js`) trebuie să fie în commit: verifică cu `git status` că niciunul nu e netracked. Un fișier lipsă pe GitHub Pages lasă aplicația fără Supabase și blochează instalarea service worker-ului nou.
 
+## 2b. Noutăți (pop-up după actualizare)
+
+Dacă versiunea aduce ceva vizibil pentru utilizatori, adaugă o intrare la începutul listei `NOUTATI` din `app.js`: `{ v: N, data: 'AAAA-LL-ZZ', client: [[ro, en], ...], antrenor: [[ro, en], ...] }`.
+
+- Texte scurte, pe înțelesul oricui, neutre ca gen („client”, „antrenor”), ce poate face acum utilizatorul, nu detalii tehnice.
+- Separat pe rol: fiecare vede doar ce îl privește; un rol fără noutăți primește `[]` (nu i se arată pop-up).
+- Reparațiile mărunte și cele invizibile nu intră. Dacă nu e nimic de anunțat, nu adăuga intrare.
+- Arată utilizatoarei textele înainte de commit.
+
 ## 3. Commit și push
 
 - Mesaj de commit scurt, în română, despre ce s-a schimbat pentru utilizatoare (nu „update files”), plus numărul versiunii. Ex: `Orar: scroll la ora curentă corectat (v53)`.

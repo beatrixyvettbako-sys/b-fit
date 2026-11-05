@@ -8472,3 +8472,16 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   justify-content: flex-end;
   background: rgba(0, 0, 0, 0.6);
 }
+
+/* ==========================================
+   NOUTĂȚI (pop-up după actualizare + meniu › Noutăți)
+   ========================================== */
+.noutati-card { max-height: 80vh; display: flex; flex-direction: column; gap: 12px; }
+.noutati-titlu { font-weight: 800; font-size: 1.1rem; color: var(--primary); }
+.noutati-card .noutati-lista { overflow-y: auto; min-height: 0; }
+#drawerNoutatiView .noutati-lista { overflow-y: auto; flex: 1; min-height: 0; }
+.noutati-versiune + .noutati-versiune { margin-top: 14px; }
+.noutati-meta { font-size: 0.78rem; font-weight: 700; color: #8b5cf6; margin-bottom: 4px; }
+.noutati-versiune ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.noutati-versiune li { font-size: 0.9rem; line-height: 1.4; color: var(--text); }
+.noutati-gol { font-size: 0.9rem; color: #64748b; }

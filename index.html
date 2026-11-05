@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal168">
+  <link rel="stylesheet" href="style.css?v=fitFinal169">
 </head>
 <body>
 
@@ -369,6 +369,15 @@
     </div>
   </div>
 
+  <!-- MODAL NOUTĂȚI: apare o dată după o actualizare cu noutăți pentru rolul utilizatorului -->
+  <div id="modalNoutatiBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideNoutati()">
+    <div class="modal-edit-card noutati-card">
+      <div class="noutati-titlu" data-en="What's new">Ce e nou</div>
+      <div class="noutati-lista" id="noutatiPopupLista"></div>
+      <button type="button" class="btn profile-save-btn" onclick="inchideNoutati()" data-en="Got it">Am înțeles</button>
+    </div>
+  </div>
+
   <!-- MODAL TRIMITE PLANUL: fiecare client ales primește o copie a planului, fără progres -->
   <div id="modalTrimitePlanBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideTrimitePlan()">
     <div class="modal-edit-card sabloane-plan-card">
@@ -517,6 +526,19 @@
             <div>
               <div class="drawer-nav-title" id="drawerMenuSettingsTitle" data-en="App Settings">Setări Aplicație</div>
               <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Appearance, language, schedule" hidden>Aspect, limbă, orar</div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <!-- Card Navigare Noutăți (ce s-a schimbat în ultimele versiuni) -->
+        <div class="drawer-nav-card" onclick="navigheazaSubMeniu('noutati')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1z"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="What's new">Noutăți</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -1082,6 +1104,27 @@
         <div class="feedback-nota" data-en="The app version, current screen and device are sent automatically. Video: max. 50 MB.">Se trimit automat versiunea aplicației, ecranul curent și dispozitivul. Video: max. 50 MB.</div>
 
         <button type="button" class="btn profile-save-btn" id="btnTrimiteFeedback" onclick="trimiteFeedback()" data-en="Send">Trimite</button>
+      </div>
+    </div>
+
+    <!-- STRATUL 5: NOUTĂȚI -->
+    <div id="drawerNoutatiView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('main')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="What's new">Noutăți</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="noutati-lista" id="noutatiLista"></div>
       </div>
     </div>
 
@@ -1856,7 +1899,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal168"></script>
-  <script src="app.js?v=fitFinal168"></script>
+  <script src="sabloane.js?v=fitFinal169"></script>
+  <script src="app.js?v=fitFinal169"></script>
 </body>
 </html>

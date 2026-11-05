@@ -870,7 +870,8 @@ function navigheazaSubMeniu(strat) {
     settingsSignup: document.getElementById('drawerSettingsSignupView'),
     settingsNotifications: document.getElementById('drawerSettingsNotificationsView'),
     profile: document.getElementById('drawerProfileView'),
-    feedback: document.getElementById('drawerFeedbackView')
+    feedback: document.getElementById('drawerFeedbackView'),
+    noutati: document.getElementById('drawerNoutatiView')
   };
 
   Object.values(layers).forEach(el => {
@@ -882,6 +883,7 @@ function navigheazaSubMeniu(strat) {
   }
   if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
   if (strat === 'settings') actualizeazaRezumatNotificari();
+  if (strat === 'noutati') document.getElementById('noutatiLista').innerHTML = htmlNoutati(noutatiPentruRol(), true);
   if (strat === 'settingsNotifications') randeazaSetariNotificari();
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
   if (strat === 'profile' && rolUtilizator === 'clienta') {
@@ -6944,6 +6946,82 @@ function textLinkExpirat() {
 // Aplicația antrenorului devine vizibilă doar după ce știm ce ecran urmează (vezi html.app-pornire în CSS)
 function terminaPornirea() {
   document.documentElement.classList.remove('app-pornire');
+  if (utilizatorCurent) setTimeout(arataNoutatiNevazute, 1200);
+}
+
+// ==========================================
+// NOUTĂȚI: ce s-a schimbat, pe versiuni (cea mai nouă prima), separat pentru client și antrenor.
+// Se adaugă o intrare la fiecare publicare cu ceva vizibil pentru utilizatori (skill-ul publica).
+// Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
+// ==========================================
+const NOUTATI = [
+  { v: 169, data: '2026-11-05',
+    client: [['Noutăți: după fiecare actualizare vezi ce s-a schimbat; le găsești oricând în meniu › Noutăți.', 'What\'s new: after each update you see what changed; find it anytime in the menu › What\'s new.']],
+    antrenor: [['Noutăți: după fiecare actualizare vezi ce s-a schimbat; le găsești oricând în meniu › Noutăți. Clienții văd separat noutățile pentru ei.', 'What\'s new: after each update you see what changed; find it anytime in the menu › What\'s new. Clients see their own news separately.']] },
+  { v: 168, data: '2026-11-05',
+    client: [
+      ['Nutriție: notezi ce mănânci pe mese, cauți produse după nume sau scanezi codul de bare.', 'Nutrition: log what you eat by meal, search foods by name or scan the barcode.'],
+      ['Îți poți seta ținte zilnice de calorii, proteine, carbohidrați și grăsimi; pe Acasă vezi caloriile de azi.', 'Set daily targets for calories, protein, carbs and fat; Home shows today\'s calories.'],
+      ['Tu alegi dacă antrenorul îți vede jurnalul alimentar.', 'You choose whether your trainer sees your food log.']
+    ],
+    antrenor: [
+      ['Nutriție: în fișa clientului, la Progres, vezi jurnalul alimentar (dacă clientul l-a lăsat vizibil) și îi poți seta ținte zilnice.', 'Nutrition: in the client\'s file, under Progress, see the food log (if the client allows it) and set daily targets.']
+    ] },
+  { v: 166, data: '2026-11-05',
+    client: [
+      ['Obiective: pe Acasă vezi inelul săptămânii și cât mai ai până la următoarea insignă sau obiectiv.', 'Goals: Home shows your week ring and how close you are to the next badge or goal.'],
+      ['Îți poți seta obiective la exerciții și pe săptămână; antrenorul află când le atingi.', 'Set goals for exercises and for the week; your trainer is told when you reach them.'],
+      ['Remindere joi și duminică, ca să nu pierzi seria; se pot opri din Setări.', 'Reminders on Thursday and Sunday so you keep your streak; turn them off in Settings.']
+    ],
+    antrenor: [
+      ['Obiective: setezi clienților obiective la exerciții și pe săptămână și primești un mesaj când le ating.', 'Goals: set exercise and weekly goals for clients and get a message when they reach them.']
+    ] },
+  { v: 164, data: '2026-11-04',
+    client: [
+      ['Antrenamente proprii: până la 3 poze pe antrenament, insigne noi; apar în Istoric și țin seria de săptămâni.', 'Own workouts: up to 3 photos per workout and new badges; they show in History and keep your weekly streak.']
+    ],
+    antrenor: [
+      ['Vezi pozele și recordurile din antrenamentele proprii pe care clienții le lasă vizibile.', 'See photos and records from the own workouts clients make visible.']
+    ] }
+];
+const NOUTATI_CHEIE = 'BFIT_NOUTATI_VAZUT';
+
+// Versiunile publicate până acum (din adresa app.js), cu texte pentru rolul curent
+function noutatiPentruRol() {
+  const curenta = Number(((document.querySelector('script[src*="app.js"]')?.getAttribute('src') || '').match(/fitFinal(\d+)/) || [])[1]) || Infinity;
+  const rol = rolUtilizator === 'clienta' ? 'client' : 'antrenor';
+  return NOUTATI.filter(n => n.v <= curenta && n[rol] && n[rol].length).map(n => ({ v: n.v, data: n.data, texte: n[rol] }));
+}
+
+function htmlNoutati(lista, cuVersiune) {
+  if (!lista.length) return `<div class="noutati-gol">${tr('Nicio noutate deocamdată.', 'Nothing new yet.')}</div>`;
+  return lista.map(n => `
+    <div class="noutati-versiune">
+      ${cuVersiune ? `<div class="noutati-meta">${tr('Versiunea', 'Version')} ${n.v} · ${formateazaDataNoutati(n.data)}</div>` : ''}
+      <ul>${n.texte.map(([ro, en]) => `<li>${tr(ro, en)}</li>`).join('')}</ul>
+    </div>`).join('');
+}
+
+function formateazaDataNoutati(iso) {
+  const [a, l, z] = iso.split('-').map(Number);
+  return new Date(a, l - 1, z).toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+// Prima deschidere cu noutăți nevăzute: cel mult ultimele 3 versiuni. Fără cheie salvată, se pornește de la v167 (ultima fără Noutăți).
+function arataNoutatiNevazute() {
+  if (!utilizatorCurent || document.getElementById('modalNoutatiBackdrop').style.display === 'flex') return;
+  let vazut = 167;
+  try { vazut = Number(localStorage.getItem(NOUTATI_CHEIE)) || 167; } catch (e) {}
+  const lista = noutatiPentruRol();
+  const nevazute = lista.filter(n => n.v > vazut).slice(0, 3);
+  if (!nevazute.length) return;
+  document.getElementById('noutatiPopupLista').innerHTML = htmlNoutati(nevazute, nevazute.length > 1);
+  document.getElementById('modalNoutatiBackdrop').style.display = 'flex';
+  try { localStorage.setItem(NOUTATI_CHEIE, String(lista[0].v)); } catch (e) {}
+}
+
+function inchideNoutati() {
+  document.getElementById('modalNoutatiBackdrop').style.display = 'none';
 }
 
 // Linkurile din emailuri duc la adresa aplicației (?token_hash=...&type=...), nu la supabase.co (filtrele anti-spam penalizează
