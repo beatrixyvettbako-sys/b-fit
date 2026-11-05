@@ -871,7 +871,8 @@ function navigheazaSubMeniu(strat) {
     settingsNotifications: document.getElementById('drawerSettingsNotificationsView'),
     profile: document.getElementById('drawerProfileView'),
     feedback: document.getElementById('drawerFeedbackView'),
-    noutati: document.getElementById('drawerNoutatiView')
+    noutati: document.getElementById('drawerNoutatiView'),
+    comunitate: document.getElementById('drawerComunitateView')
   };
 
   Object.values(layers).forEach(el => {
@@ -3310,7 +3311,7 @@ function randeazaHomeClienta() {
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
   const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
     + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + htmlAntrenamentAcasa() + htmlCicluAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
+    + htmlAntrenamentAcasa() + htmlCicluAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlComunitateAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
   actualizeazaCardMesajeAcasa();
@@ -4052,7 +4053,10 @@ function randeazaEditorAntrPers() {
   ${rutina ? '' : `<label class="setare-notificare antr-pers-vizibil">
     <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul îl vede în fișa ta (doar citire).', 'Your trainer sees it in your profile (read only).')}</small></span>
     <input type="checkbox" class="comutator" ${c.vizibil_antrenor ? 'checked' : ''} onchange="antrPersCamp('vizibil_antrenor', this.checked)">
-  </label>`}</div>`;
+  </label>${comunitate.membru ? `<label class="setare-notificare antr-pers-vizibil">
+    <span><b>${tr('Vizibil în comunitate', 'Visible to the community')}</b><small>${tr('Oprit = „Doar tu”. Ceilalți văd titlul și ziua, fără greutăți sau note.', 'Off = “Only you”. Others see the title and day, never weights or notes.')}</small></span>
+    <input type="checkbox" class="comutator" ${antrPersInComunitate(c) ? 'checked' : ''} onchange="antrPersCamp('in_comunitate', this.checked)">
+  </label>` : ''}`}</div>`;
   html += `<div class="antr-pers-actiuni antr-pers-final">
     <button type="button" class="btn" onclick="antrPersSalveaza()">${rutina ? tr('Salvează rutina', 'Save routine') : tr('Salvează antrenamentul', 'Save workout')}</button>
     ${!rutina && sala && (c.exercitii || []).length ? `<button type="button" class="btn btn-clear" onclick="antrPersSalveazaCaRutina()">${tr('Salvează ca rutină', 'Save as routine')}</button>` : ''}
@@ -4237,6 +4241,14 @@ async function antrPersSalveaza() {
   const salvat = await scrieAntrPers(randAntrPers(c), c.id);
   if (!salvat) return;
   const pozeOk = c.fel !== 'antrenament' || await sincronizeazaPozeAntrPers(salvat);
+  // Comunitatea vede doar antrenamentele lăsate vizibile antrenorului (titlul, durata, distanța, câte exerciții)
+  // Comunitatea: separat de „Vizibil antrenorului”; „Doar tu” păstrează activitatea doar pentru autor
+  if (c.fel === 'antrenament' && comunitate.membru) {
+    const nrEx = (salvat.exercitii || []).length;
+    posteazaActivitateComunitate({ tip: 'proprii', data: salvat.data, titlu: titluAntrPers(salvat), sursa: 'proprii:' + salvat.id, ascuns: !antrPersInComunitate(c),
+      detalii: [salvat.durata_min ? `${salvat.durata_min} min` : '', salvat.distanta_km ? `${formatKg(Number(salvat.distanta_km))} km` : '',
+        nrEx ? tr(`${nrEx} ${nrEx === 1 ? 'exercițiu' : 'exerciții'}`, `${nrEx} ${nrEx === 1 ? 'exercise' : 'exercises'}`) : ''].filter(Boolean).join(' · ') });
+  }
   // Antrenorul vede recordurile în conversație, ca la plan (doar din antrenamentele lăsate vizibile, o dată pe exercițiu și greutate)
   recorduri.forEach(r => {
     const cheie = r.exercitiu + '|' + r.kg;
@@ -4279,6 +4291,7 @@ function antrPersSterge() {
     const { error } = await supabaseClient.from('antrenamente_personale').delete().eq('id', c.id);
     if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
     if (antrPers.lista) antrPers.lista = antrPers.lista.filter(x => x.id !== c.id);
+    scoateActivitateComunitate('proprii:' + c.id);
     if (antrPers.usor) antrPers.usor = antrPers.usor.filter(x => x.id !== c.id);
     if ((citesteCiornaAntrPers()?.curent || {}).id === c.id) stergeCiornaAntrPers();
     antrPers.curent = null;
@@ -4291,7 +4304,7 @@ function antrPersSterge() {
 function inapoiAntrPers() {
   opresteTimerPauza();
   if (String(antrPers.ecran).startsWith('nutritie')) return inapoiNutritie();
-  if (antrPers.ecran === 'ciclu') { antrPers.ecran = null; return randeazaHomeClienta(); }
+  if (antrPers.ecran === 'ciclu' || antrPers.ecran === 'comunitate') { antrPers.ecran = null; return randeazaHomeClienta(); }
   if (antrPers.ecran === 'editor') {
     if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
     else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
@@ -5617,6 +5630,468 @@ function htmlCicluAntrenor() {
       : `<div class="progres-gol">${tr('Niciun check-in în ultimele 7 zile.', 'No check-ins in the last 7 days.')}</div>`}`;
 }
 
+// ---- Comunitatea studioului (sql/2026-11-05_comunitate.sql): opțională, clientul alege să intre ----
+// Fluxul are o activitate pe ședință la sală (trigger pe prezente), pe zi din plan și pe antrenament propriu.
+// Clasamentul (zile active, serie de săptămâni) și provocările se calculează din aceleași activități. Fără greutăți.
+// Confidențialitate ca la Strava / Garmin (sql/2026-11-05_comunitate_confidentialitate.sql): membrul alege ce tipuri se văd,
+// dacă se văd detaliile și dacă apare în clasament / la provocări; fiecare activitate poate fi „Doar tu” (ascuns).
+// membru: undefined = neîncărcat (sau fără tabel), null = nu e în comunitate
+let comunitate = { membru: undefined, antrenorId: null, membri: [], activitati: [], bravo: [], provocari: [], tab: 'flux', perioada: 'saptamana' };
+const TIPURI_ACTIVITATE = { sala: ['La sală', 'At the gym'], plan: ['Din plan', 'From the plan'], proprii: ['Antrenament propriu', 'Own workout'] };
+
+async function incarcaMembruComunitate() {
+  if (!supabaseClient || !dateClienta.fisa) return;
+  const { data, error } = await supabaseClient.from('comunitate_membri').select('*').eq('client_id', dateClienta.fisa.id).maybeSingle();
+  if (error) return;
+  comunitate.membru = data || null;
+  if (data) await incarcaComunitate(data.user_id);
+}
+
+// Membrii, activitățile din ultimele ~6 luni, bravo-urile celor mai noi 60 și provocările (client și antrenor)
+async function incarcaComunitate(antrenorId) {
+  const de = new Date(); de.setDate(de.getDate() - 190);
+  const [resM, resA, resP] = await Promise.all([
+    supabaseClient.from('comunitate_membri').select('*').eq('user_id', antrenorId),
+    supabaseClient.from('comunitate_activitati').select('*').eq('user_id', antrenorId).gte('data', isoDinData(de))
+      .order('data', { ascending: false }).order('created_at', { ascending: false }).limit(1500),
+    supabaseClient.from('provocari').select('*').eq('user_id', antrenorId).order('de', { ascending: false }).limit(30)
+  ]);
+  if (resM.error || resA.error) return false;
+  comunitate.antrenorId = antrenorId;
+  comunitate.membri = resM.data || [];
+  comunitate.activitati = resA.data || [];
+  comunitate.provocari = resP.error ? [] : (resP.data || []);
+  const ids = comunitate.activitati.slice(0, 60).map(a => a.id);
+  const resB = ids.length ? await supabaseClient.from('comunitate_bravo').select('*').in('activitate_id', ids) : { data: [] };
+  comunitate.bravo = resB.error ? [] : (resB.data || []);
+  return true;
+}
+
+function numeMembru(clientId) {
+  return (comunitate.membri.find(m => m.client_id === clientId) || {}).nume_afisat || tr('Fost membru', 'Former member');
+}
+function numeBravo(authId) {
+  if (authId === comunitate.antrenorId) return tr('Antrenorul', 'Trainer');
+  return (comunitate.membri.find(m => m.auth_user_id === authId) || {}).nume_afisat || '';
+}
+
+function setariMembru(clientId) {
+  return comunitate.membri.find(m => m.client_id === clientId) || null;
+}
+
+// Ce vede comunitatea: nu „Doar tu” și doar din tipurile lăsate vizibile de autor (aceeași regulă ca în baza de date)
+function activitatePublica(a) {
+  const m = setariMembru(a.client_id);
+  if (!m || a.ascuns) return false;
+  return a.tip === 'sala' ? m.arata_sala !== false : a.tip === 'plan' ? m.arata_plan !== false : m.arata_proprii !== false;
+}
+
+// Zilele active ale unui membru între două date ISO (inclusiv), doar din activitățile publice (la fel pentru toți)
+function zileActiveMembru(clientId, de, pana) {
+  return new Set(comunitate.activitati.filter(a => a.client_id === clientId && a.data >= de && a.data <= pana && activitatePublica(a)).map(a => a.data));
+}
+
+// Săptămâni la rând cu cel puțin o zi activă, numărate de la săptămâna curentă (sau de la cea trecută, dacă asta e încă goală)
+function serieMembru(clientId) {
+  const saptamani = new Set(comunitate.activitati.filter(a => a.client_id === clientId && activitatePublica(a)).map(a => lunaSaptamanii(dataDinIso(a.data))));
+  const d = new Date(lunaSaptamanii(new Date()));
+  if (!saptamani.has(d.getTime())) d.setDate(d.getDate() - 7);
+  let n = 0;
+  while (saptamani.has(lunaSaptamanii(d))) { n++; d.setDate(d.getDate() - 7); }
+  return n;
+}
+
+function intervalPerioada(perioada) {
+  const azi = new Date();
+  const de = perioada === 'luna' ? new Date(azi.getFullYear(), azi.getMonth(), 1) : new Date(lunaSaptamanii(azi));
+  return [isoDinData(de), aziIsoAntrPers()];
+}
+
+function clasamentComunitate(perioada) {
+  const [de, pana] = intervalPerioada(perioada);
+  return comunitate.membri.filter(m => m.in_clasament !== false).map(m => ({ m, zile: zileActiveMembru(m.client_id, de, pana).size, serie: serieMembru(m.client_id) }))
+    .sort((a, b) => b.zile - a.zile || b.serie - a.serie || a.m.nume_afisat.localeCompare(b.m.nume_afisat));
+}
+
+// Locul în clasament: la egalitate de zile active, același loc
+function locClasament(lista, i) {
+  let loc = i;
+  while (loc > 0 && lista[loc - 1].zile === lista[i].zile) loc--;
+  return loc + 1;
+}
+
+// Acasă: invitația (o dată, se poate închide) sau locul în clasamentul săptămânii și provocarea în curs
+function htmlComunitateAcasa() {
+  const m = comunitate.membru;
+  if (m === undefined) return '<div id="cardComunitateAcasa"></div>';
+  if (m === null) {
+    let ascuns = false;
+    try { ascuns = localStorage.getItem('BFIT_COMUNITATE_ASCUNS') === '1'; } catch (e) {}
+    if (ascuns) return '<div id="cardComunitateAcasa"></div>';
+    return `<div class="card acasa-sedinta" id="cardComunitateAcasa" onclick="deschideComunitate()">
+      <div><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
+      <b>${tr('Antrenează-te alături de ceilalți', 'Train alongside the others')}</b>
+      <div class="acasa-antrenament-detalii">${tr('Vezi cine s-a antrenat, dă „Bravo” și intră în provocări. Opțional.', 'See who trained, give “Well done” and join challenges. Optional.')}</div></div>
+      <button type="button" class="notificare-x nutritie-sterge" onclick="event.stopPropagation(); ascundeInvitatieComunitate()" aria-label="${tr('Închide', 'Close')}">×</button>
+    </div>`;
+  }
+  const lista = clasamentComunitate('saptamana');
+  const i = lista.findIndex(x => x.m.client_id === m.client_id);
+  const eu = lista[i];
+  const prov = provocariActive()[0];
+  const progres = prov ? zileActiveMembru(m.client_id, prov.de, prov.pana).size : 0;
+  return `<div class="card acasa-sedinta" id="cardComunitateAcasa" onclick="deschideComunitate()">
+    <div><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
+    <b>${m.in_clasament === false ? tr('Nu apari în clasament', 'You are hidden from the leaderboard')
+      : eu && eu.zile ? tr(`Locul ${locClasament(lista, i)} din ${lista.length} săptămâna asta`, `${ordinalEn(locClasament(lista, i))} of ${lista.length} this week`) : tr('Prima zi activă te urcă în clasament', 'Your first active day puts you on the board')}</b>
+    <div class="acasa-antrenament-detalii">${prov ? `${escAttr(prov.titlu)}: ${Math.min(progres, prov.tinta)}/${prov.tinta} ${tr('zile', 'days')}${progres >= prov.tinta ? ' 🏆' : ''}` : tr('Vezi fluxul și clasamentul.', 'See the feed and the leaderboard.')}</div></div>
+    <div class="drawer-nav-arrow">›</div>
+  </div>`;
+}
+
+function ordinalEn(n) {
+  const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' })[n % 10] || 'th';
+  return n + s;
+}
+
+function ascundeInvitatieComunitate() {
+  try { localStorage.setItem('BFIT_COMUNITATE_ASCUNS', '1'); } catch (e) {}
+  const card = document.getElementById('cardComunitateAcasa');
+  if (card) card.outerHTML = '<div id="cardComunitateAcasa"></div>';
+}
+
+function provocariActive() {
+  const azi = aziIsoAntrPers();
+  return comunitate.provocari.filter(p => p.de <= azi && p.pana >= azi).sort((a, b) => a.pana.localeCompare(b.pana));
+}
+
+async function deschideComunitate() {
+  if (clientaTabCurent !== 'acasa') clientaTab('acasa');
+  antrPers.ecran = 'comunitate';
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  document.getElementById('clientaTitlu').innerText = tr('Comunitatea', 'Community');
+  if (comunitate.membru === undefined) document.getElementById('clientaContinut').innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  else randeazaComunitate();
+  await incarcaMembruComunitate();
+  if (antrPers.ecran === 'comunitate') randeazaComunitate();
+}
+
+function randeazaComunitate() {
+  const el = document.getElementById('clientaContinut');
+  if (comunitate.membru === undefined) {
+    el.innerHTML = `<div class="progres-gol">${tr('Comunitatea nu e disponibilă acum. Verifică internetul.', 'The community is not available right now. Check your internet.')}</div>`;
+    return;
+  }
+  if (!comunitate.membru) {
+    const prenume = ((dateClienta.fisa && dateClienta.fisa.nume) || '').trim().split(' ')[0];
+    el.innerHTML = `<div class="card ciclu-intro">
+        <b>${tr('Comunitatea studioului', 'The studio community')}</b>
+        <p>${tr('Vezi cine s-a antrenat, dă „Bravo”, urcă în clasament și intră în provocările antrenorului.', 'See who trained, give “Well done”, climb the leaderboard and join your trainer’s challenges.')}</p>
+        <div class="comunitate-ce-vad">
+          <b>${tr('Ce văd ceilalți membri', 'What other members see')}</b>
+          <span>✓ ${tr('Numele afișat, ales mai jos', 'Your display name, chosen below')}</span>
+          <span>✓ ${tr('Ziua și titlul antrenamentului: la sală, din plan, antrenamente proprii', 'The day and title of each workout: gym, plan, own workouts')}</span>
+          <span>✓ ${tr('Locul în clasament și provocările terminate', 'Your leaderboard place and completed challenges')}</span>
+          <span>✕ ${tr('Durata și distanța (le poți arăta din Confidențialitate)', 'Duration and distance (you can show them in Privacy)')}</span>
+          <span>✕ ${tr('Greutăți, note, poze sau date despre sănătate. Niciodată.', 'Weights, notes, photos or health data. Never.')}</span>
+        </div>
+        <p>${tr('Alegi oricând ce se vede, din Confidențialitate, și poți face orice activitate „Doar tu”. Poți ieși oricând.', 'Change what is shown anytime in Privacy, and make any activity “Only you”. You can leave anytime.')}</p>
+        <label class="ciclu-camp">${tr('Numele afișat', 'Display name')}
+          <input type="text" id="comunitateNume" class="plan-ex-input" maxlength="40" value="${escAttr(prenume)}"></label>
+        <button type="button" class="btn profile-save-btn" onclick="intraComunitate(this)">${tr('Intră în comunitate', 'Join the community')}</button>
+      </div>`;
+    return;
+  }
+  const taburi = [['flux', 'Flux', 'Feed'], ['clasament', 'Clasament', 'Leaderboard'], ['provocari', 'Provocări', 'Challenges']];
+  let html = `<div class="comunitate-taburi">${taburi.map(([id, ro, en]) => `<button type="button" class="theme-option-btn${comunitate.tab === id ? ' active' : ''}" onclick="comunitate.tab = '${id}'; randeazaComunitate()">${tr(ro, en)}</button>`).join('')}</div>`;
+  if (comunitate.tab === 'clasament') html += htmlClasamentComunitate(false);
+  else if (comunitate.tab === 'provocari') html += htmlProvocariComunitate(false);
+  else html += htmlFluxComunitate(false);
+  const m = comunitate.membru;
+  const comutator = (camp, ro, en, roMic, enMic) => `<label class="setare-notificare">
+      <span><b>${tr(ro, en)}</b>${roMic ? `<small>${tr(roMic, enMic)}</small>` : ''}</span>
+      <input type="checkbox" class="comutator" ${m[camp] !== false ? 'checked' : ''} onchange="seteazaConfComunitate('${camp}', this.checked, this)">
+    </label>`;
+  html += `<div class="antr-pers-sectiune">${tr('Profil', 'Profile')}</div>
+    <div class="card">
+      <label class="ciclu-camp">${tr('Numele afișat', 'Display name')}
+        <span class="ciclu-start" style="margin-top:0;"><input type="text" id="comunitateNume" class="plan-ex-input" maxlength="40" value="${escAttr(m.nume_afisat)}">
+        <button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="schimbaNumeComunitate(this)">${tr('Salvează', 'Save')}</button></span></label>
+    </div>
+    <div class="antr-pers-sectiune">${tr('Confidențialitate', 'Privacy')}</div>
+    <div class="card comunitate-confidentialitate">
+      <div class="checkin-eticheta">${tr('Activități vizibile comunității', 'Activities visible to the community')}</div>
+      ${comutator('arata_sala', 'Ședințele la sală', 'Gym sessions', 'Bifate de antrenor în orar', 'Checked in by your trainer')}
+      ${comutator('arata_plan', 'Zilele din plan', 'Plan days', 'Când bifezi exerciții în planul de la antrenor', 'When you tick exercises in your trainer’s plan')}
+      ${comutator('arata_proprii', 'Antrenamentele proprii', 'Own workouts', 'Implicit pentru cele noi; fiecare se poate schimba din editor', 'Default for new ones; each can be changed in the editor')}
+      <div class="checkin-eticheta">${tr('Detalii', 'Details')}</div>
+      ${comutator('arata_detalii', 'Durata, distanța și exercițiile', 'Duration, distance and exercises', 'Oprit: ceilalți văd doar tipul, titlul și ziua', 'Off: others only see the type, title and day')}
+      <div class="checkin-eticheta">${tr('Clasamente și provocări', 'Leaderboards and challenges')}</div>
+      ${comutator('in_clasament', 'Apar în clasament', 'Show me on the leaderboard', '', '')}
+      ${comutator('in_provocari', 'Apar la provocările terminate', 'Show me on completed challenges', '', '')}
+      <div class="acasa-antrenament-detalii" style="margin-top:8px;">${tr('Doar pentru comunitate. Ce vede antrenorul alegi separat. Greutățile, notele, pozele și datele despre sănătate nu ajung niciodată în comunitate.', 'Community only. What your trainer sees is set separately. Weights, notes, photos and health data never reach the community.')}</div>
+    </div>
+    <button type="button" class="btn btn-clear ciclu-opreste" onclick="iesiComunitate()">${tr('Ieși din comunitate', 'Leave the community')}</button>`;
+  el.innerHTML = html;
+}
+
+// Fluxul: cele mai noi 60 de activități, cu „Bravo”. laAntrenor: fără „Tu”, cu ștergere (moderare)
+function htmlFluxComunitate(laAntrenor) {
+  const eu = utilizatorCurent.id;
+  const euId = !laAntrenor && comunitate.membru ? comunitate.membru.client_id : null;
+  // Ceilalți văd doar ce e public; autorul își vede și activitățile „Doar tu”, marcate
+  const lista = comunitate.activitati.filter(a => a.client_id === euId || activitatePublica(a)).slice(0, 60);
+  if (!lista.length) return `<div class="progres-gol">${tr('Încă nicio activitate. Prima ședință, ziua din plan sau antrenamentul propriu apare aici.', 'No activity yet. The next gym session, plan day or own workout shows up here.')}</div>`;
+  return lista.map(a => {
+    const bravo = comunitate.bravo.filter(b => b.activitate_id === a.id);
+    const dat = bravo.some(b => b.auth_user_id === eu);
+    const alMeu = a.client_id === euId;
+    const publica = activitatePublica(a);
+    const cuDetalii = (setariMembru(a.client_id) || {}).arata_detalii === true;
+    const nume = alMeu ? tr('Tu', 'You') : numeMembru(a.client_id);
+    const cine = bravo.map(b => numeBravo(b.auth_user_id)).filter(Boolean);
+    const tip = TIPURI_ACTIVITATE[a.tip] || ['', ''];
+    return `<div class="card comunitate-activitate">
+      <div class="comunitate-sus"><b>${escAttr(nume)}</b><span class="acasa-antrenament-detalii">${escAttr(etichetaDataAntrPers(a.data))}</span>
+        ${laAntrenor ? `<button type="button" class="notificare-x nutritie-sterge" onclick="stergeActivitateComunitate('${a.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>` : ''}</div>
+      <div class="acasa-eticheta">${tr(tip[0], tip[1])}</div>
+      ${a.titlu ? `<div class="nutritie-rand-nume">${escAttr(traduceValoare(a.titlu))}</div>` : ''}
+      ${a.detalii && cuDetalii ? `<div class="acasa-antrenament-detalii">${escAttr(a.detalii)}</div>` : ''}
+      <div class="comunitate-bravo">
+        ${alMeu ? `<button type="button" class="ciclu-simptom comunitate-cine" onclick="comutaAscunsActivitate('${a.id}', this)" title="${tr('Cine vede', 'Who can see')}">${publica ? `🌐 ${tr('Comunitatea', 'Community')}` : `🔒 ${tr('Doar tu', 'Only you')}`}</button>` : ''}
+        <button type="button" class="ciclu-simptom${dat ? ' active' : ''}" onclick="comutaBravo('${a.id}', this)" ${alMeu ? 'disabled' : ''}>👏 ${tr('Bravo', 'Well done')}${bravo.length ? ` · ${bravo.length}` : ''}</button>
+        ${cine.length ? `<span class="acasa-antrenament-detalii">${escAttr(cine.slice(0, 3).join(', '))}${cine.length > 3 ? ` +${cine.length - 3}` : ''}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function htmlClasamentComunitate(laAntrenor) {
+  const perioade = [['saptamana', 'Săptămâna asta', 'This week'], ['luna', 'Luna asta', 'This month']];
+  const lista = clasamentComunitate(comunitate.perioada);
+  const euId = !laAntrenor && comunitate.membru ? comunitate.membru.client_id : null;
+  const fct = laAntrenor ? 'randeazaComunitateAntrenor()' : 'randeazaComunitate()';
+  return `<div class="comunitate-taburi comunitate-perioade">${perioade.map(([id, ro, en]) => `<button type="button" class="theme-option-btn${comunitate.perioada === id ? ' active' : ''}" onclick="comunitate.perioada = '${id}'; ${fct}">${tr(ro, en)}</button>`).join('')}</div>
+    <div class="card">${lista.length ? lista.map((x, i) => `<div class="comunitate-loc${x.m.client_id === euId ? ' eu' : ''}">
+        <span class="comunitate-nr">${x.zile ? locClasament(lista, i) : '–'}</span>
+        <span class="comunitate-nume">${escAttr(x.m.client_id === euId ? tr('Tu', 'You') : x.m.nume_afisat)}</span>
+        <span class="comunitate-cifre"><b>${x.zile}</b> ${x.zile === 1 ? tr('zi', 'day') : tr('zile', 'days')}${x.serie ? ` · 🔥 ${x.serie}` : ''}</span>
+      </div>`).join('') : `<div class="progres-gol">${tr('Niciun membru încă.', 'No members yet.')}</div>`}</div>
+    <div class="nutritie-sursa">${tr('Zile active: zile cu ședință la sală, zi din plan sau antrenament propriu. 🔥 = săptămâni la rând.', 'Active days: days with a gym session, plan day or own workout. 🔥 = weeks in a row.')}</div>`;
+}
+
+function htmlProvocariComunitate(laAntrenor) {
+  const azi = aziIsoAntrPers();
+  const lista = comunitate.provocari.filter(p => laAntrenor || p.pana >= isoDinData(new Date(Date.now() - 14 * 86400000)));
+  const euId = !laAntrenor && comunitate.membru ? comunitate.membru.client_id : null;
+  let html = lista.map(p => {
+    const terminati = comunitate.membri.filter(m => (m.in_provocari !== false || m.client_id === euId) && zileActiveMembru(m.client_id, p.de, p.pana).size >= p.tinta);
+    const progres = euId ? zileActiveMembru(euId, p.de, p.pana).size : 0;
+    const gata = euId && progres >= p.tinta;
+    const stare = p.de > azi ? tr('Începe', 'Starts') + ' ' + etichetaDataAntrPers(p.de) : p.pana < azi ? tr('Încheiată', 'Ended') : tr(`Până ${etichetaDataAntrPers(p.pana)}`, `Until ${etichetaDataAntrPers(p.pana)}`);
+    return `<div class="card comunitate-provocare${gata ? ' gata' : ''}">
+      <div class="comunitate-sus"><b>${gata ? '🏆 ' : ''}${escAttr(p.titlu)}</b>
+        ${laAntrenor ? `<button type="button" class="notificare-x nutritie-sterge" onclick="stergeProvocare('${p.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>` : ''}</div>
+      <div class="acasa-antrenament-detalii">${p.tinta} ${tr('zile active', 'active days')} · ${escAttr(stare)}</div>
+      ${euId ? `<div class="progress-wrapper nutritie-bara-mica"><div class="progress-fill" style="width:${Math.min(100, Math.round(progres / p.tinta * 100))}%"></div></div>
+        <div class="acasa-antrenament-detalii">${gata ? tr('Terminată. Bravo!', 'Completed. Well done!') : tr(`${progres} din ${p.tinta} zile`, `${progres} of ${p.tinta} days`)}</div>` : ''}
+      <div class="acasa-antrenament-detalii">${terminati.length ? `🏆 ${escAttr(terminati.map(m => m.client_id === euId ? tr('Tu', 'You') : m.nume_afisat).join(', '))}` : tr('Nimeni n-a terminat-o încă.', 'Nobody has completed it yet.')}</div>
+    </div>`;
+  }).join('');
+  if (!lista.length && !laAntrenor) html = `<div class="progres-gol">${tr('Nicio provocare acum. Antrenorul le anunță aici.', 'No challenges right now. Your trainer posts them here.')}</div>`;
+  return html;
+}
+
+async function intraComunitate(btn) {
+  const nume = document.getElementById('comunitateNume').value.trim();
+  if (!nume) return showToast(tr('Alege un nume afișat.', 'Choose a display name.'), 'error');
+  const c = dateClienta.fisa;
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('comunitate_membri').insert({ client_id: c.id, user_id: c.user_id, nume_afisat: nume.slice(0, 40) }).select().single();
+  if (error || !data) { btn.disabled = false; return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); }
+  comunitate.membru = data;
+  await incarcaComunitate(data.user_id);
+  showToast(tr('✓ Bine ai venit în comunitate!', '✓ Welcome to the community!'));
+  randeazaComunitate();
+}
+
+async function schimbaNumeComunitate(btn) {
+  const nume = document.getElementById('comunitateNume').value.trim();
+  if (!nume) return showToast(tr('Alege un nume afișat.', 'Choose a display name.'), 'error');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('comunitate_membri').update({ nume_afisat: nume.slice(0, 40) }).eq('client_id', comunitate.membru.client_id).select().single();
+  btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  comunitate.membru = data;
+  comunitate.membri = comunitate.membri.map(m => m.client_id === data.client_id ? data : m);
+  showToast(tr('✓ Salvat', '✓ Saved'));
+}
+
+function iesiComunitate() {
+  customConfirm(tr('Ieși din comunitate?', 'Leave the community?'), tr('Activitățile tale dispar din flux și din clasament. Poți intra din nou oricând.', 'Your activities disappear from the feed and the leaderboard. You can join again anytime.'), async () => {
+    await supabaseClient.from('comunitate_bravo').delete().eq('auth_user_id', utilizatorCurent.id);
+    const { error } = await supabaseClient.from('comunitate_membri').delete().eq('client_id', comunitate.membru.client_id);
+    if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+    comunitate = { membru: null, antrenorId: null, membri: [], activitati: [], bravo: [], provocari: [], tab: 'flux', perioada: 'saptamana' };
+    showToast(tr('Ai ieșit din comunitate.', 'You left the community.'));
+    randeazaComunitate();
+  });
+}
+
+async function comutaBravo(id, btn) {
+  const eu = utilizatorCurent.id;
+  const dat = comunitate.bravo.some(b => b.activitate_id === id && b.auth_user_id === eu);
+  btn.disabled = true;
+  const { error } = dat
+    ? await supabaseClient.from('comunitate_bravo').delete().eq('activitate_id', id).eq('auth_user_id', eu)
+    : await supabaseClient.from('comunitate_bravo').insert({ activitate_id: id });
+  btn.disabled = false;
+  if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  comunitate.bravo = dat ? comunitate.bravo.filter(b => !(b.activitate_id === id && b.auth_user_id === eu)) : comunitate.bravo.concat({ activitate_id: id, auth_user_id: eu });
+  if (rolUtilizator === 'antrenor') randeazaComunitateAntrenor(); else randeazaComunitate();
+}
+
+// Clientul: activitatea lui în flux (doar dacă e membru). sursa face activitatea unică: a doua scriere o actualizează
+async function posteazaActivitateComunitate(a) {
+  if (!supabaseClient || !dateClienta.fisa) return;
+  if (comunitate.membru === undefined) await incarcaMembruComunitate();
+  const m = comunitate.membru;
+  if (!m) return;
+  // Detaliile oprite nu se salvează deloc; „ascuns” se trimite doar când e ales explicit (altfel rămâne cum era)
+  const rand = { user_id: m.user_id, client_id: m.client_id, data: a.data, tip: a.tip,
+    titlu: (a.titlu || '').slice(0, 120), detalii: m.arata_detalii ? (a.detalii || '').slice(0, 160) : '', sursa: a.sursa };
+  if (a.ascuns !== undefined) rand.ascuns = !!a.ascuns;
+  const { data } = await supabaseClient.from('comunitate_activitati').upsert(rand, { onConflict: 'sursa' }).select().maybeSingle();
+  if (data) comunitate.activitati = [data].concat(comunitate.activitati.filter(x => x.id !== data.id));
+}
+
+// Comutatoarele din Confidențialitate. Detaliile oprite se șterg și din activitățile deja publicate
+async function seteazaConfComunitate(camp, valoare, input) {
+  const m = comunitate.membru;
+  input.disabled = true;
+  const { data, error } = await supabaseClient.from('comunitate_membri').update({ [camp]: valoare }).eq('client_id', m.client_id).select().single();
+  input.disabled = false;
+  if (error || !data) { input.checked = !valoare; return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); }
+  comunitate.membru = data;
+  comunitate.membri = comunitate.membri.map(x => x.client_id === data.client_id ? data : x);
+  if (camp === 'arata_detalii' && !valoare) {
+    await supabaseClient.from('comunitate_activitati').update({ detalii: '' }).eq('client_id', m.client_id).neq('detalii', '');
+    comunitate.activitati.forEach(a => { if (a.client_id === m.client_id) a.detalii = ''; });
+  }
+}
+
+// O activitate proprie: „Comunitatea” ⇄ „Doar tu”
+async function comutaAscunsActivitate(id, btn) {
+  const a = comunitate.activitati.find(x => x.id === id);
+  if (!a) return;
+  const m = comunitate.membru;
+  const tipOprit = a.tip === 'sala' ? m.arata_sala === false : a.tip === 'plan' ? m.arata_plan === false : m.arata_proprii === false;
+  if (tipOprit && !a.ascuns) return showToast(tr('Tipul ăsta de activitate e ascuns din Confidențialitate.', 'This activity type is hidden in Privacy.'));
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('comunitate_activitati').update({ ascuns: !a.ascuns }).eq('id', id);
+  btn.disabled = false;
+  if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  a.ascuns = !a.ascuns;
+  randeazaComunitate();
+}
+
+// Editorul antrenamentului propriu: e în comunitate? (cel salvat: după activitatea lui; unul nou: după Confidențialitate)
+function antrPersInComunitate(c) {
+  if (c.in_comunitate !== undefined) return c.in_comunitate;
+  const m = comunitate.membru;
+  if (!m) return false;
+  const a = c.id ? comunitate.activitati.find(x => x.sursa === 'proprii:' + c.id) : null;
+  return a ? !a.ascuns : m.arata_proprii !== false;
+}
+
+async function scoateActivitateComunitate(sursa) {
+  if (!supabaseClient || !comunitate.membru) return;
+  await supabaseClient.from('comunitate_activitati').delete().eq('sursa', sursa);
+}
+
+// Zilele din plan cu cel puțin o serie bifată în ultimele 2 zile (zilele vechi nu ajung în flux la o salvare târzie)
+function posteazaPlanInComunitate(plan) {
+  if (!comunitate.membru || !plan) return;
+  const ieri = isoDinData(new Date(Date.now() - 86400000));
+  (plan.continut_json?.sesiuni || []).forEach((ses, s) => {
+    if (!ses.data_client || ses.data_client < ieri) return;
+    const facute = (ses.exercitii || []).filter(ex => ex.status === 'Finalizat').length;
+    posteazaActivitateComunitate({ tip: 'plan', data: ses.data_client, titlu: ses.titlu || tr(`Ziua ${s + 1}`, `Day ${s + 1}`),
+      detalii: facute ? tr(`${facute} ${facute === 1 ? 'exercițiu făcut' : 'exerciții făcute'}`, `${facute} ${facute === 1 ? 'exercise' : 'exercises'} done`) : '',
+      sursa: `plan:${plan.id}:${s}:${ses.data_client}` });
+  });
+}
+
+// ---- La antrenor: meniu › Comunitate (provocări, clasament, flux cu moderare) ----
+async function deschideComunitateAntrenor() {
+  navigheazaSubMeniu('comunitate');
+  const el = document.getElementById('comunitateAntrenor');
+  if (!comunitate.antrenorId) el.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const ok = await incarcaComunitate(utilizatorCurent.id);
+  if (!ok) { el.innerHTML = `<div class="progres-gol">${tr('Comunitatea nu e disponibilă acum. Verifică internetul.', 'The community is not available right now. Check your internet.')}</div>`; return; }
+  randeazaComunitateAntrenor();
+}
+
+function randeazaComunitateAntrenor() {
+  const el = document.getElementById('comunitateAntrenor');
+  if (!el) return;
+  const azi = aziIsoAntrPers();
+  const sfarsitLuna = (() => { const d = new Date(); return isoDinData(new Date(d.getFullYear(), d.getMonth() + 1, 0)); })();
+  const taburi = [['provocari', 'Provocări', 'Challenges'], ['clasament', 'Clasament', 'Leaderboard'], ['flux', 'Flux', 'Feed']];
+  if (!['provocari', 'clasament', 'flux'].includes(comunitate.tab)) comunitate.tab = 'provocari';
+  let html = `<div class="acasa-antrenament-detalii">${tr(`${comunitate.membri.length} ${comunitate.membri.length === 1 ? 'membru' : 'membri'}. Clienții intră singuri, din aplicația lor (Acasă › Comunitatea).`, `${comunitate.membri.length} ${comunitate.membri.length === 1 ? 'member' : 'members'}. Clients join themselves, from their app (Home › Community).`)}</div>
+    <div class="comunitate-taburi">${taburi.map(([id, ro, en]) => `<button type="button" class="theme-option-btn${comunitate.tab === id ? ' active' : ''}" onclick="comunitate.tab = '${id}'; randeazaComunitateAntrenor()">${tr(ro, en)}</button>`).join('')}</div>`;
+  if (comunitate.tab === 'clasament') html += htmlClasamentComunitate(true);
+  else if (comunitate.tab === 'flux') html += htmlFluxComunitate(true);
+  else html += `<div class="card ciclu-intro">
+      <b>${tr('Provocare nouă', 'New challenge')}</b>
+      <label class="ciclu-camp">${tr('Titlu', 'Title')}<input type="text" id="provTitlu" class="plan-ex-input" maxlength="80" placeholder="${tr('ex. Noiembrie activ', 'e.g. Active November')}"></label>
+      <div class="antr-pers-campuri nutritie-tinte comunitate-prov-campuri">
+        <label>${tr('Zile active', 'Active days')}<input type="number" inputmode="numeric" id="provTinta" class="plan-ex-input" min="1" max="100" value="12"></label>
+        <label>${tr('De la', 'From')}<input type="date" id="provDe" class="plan-ex-input" value="${azi}"></label>
+        <label>${tr('Până la', 'Until')}<input type="date" id="provPana" class="plan-ex-input" value="${sfarsitLuna}"></label>
+      </div>
+      <button type="button" class="btn profile-save-btn" onclick="adaugaProvocare(this)">${tr('Creează provocarea', 'Create challenge')}</button>
+    </div>` + htmlProvocariComunitate(true);
+  el.innerHTML = html;
+}
+
+async function adaugaProvocare(btn) {
+  const titlu = document.getElementById('provTitlu').value.trim();
+  const tinta = parseInt(document.getElementById('provTinta').value, 10);
+  const de = document.getElementById('provDe').value, pana = document.getElementById('provPana').value;
+  if (!titlu) return showToast(tr('Dă un titlu provocării.', 'Give the challenge a title.'), 'error');
+  if (!(tinta >= 1 && tinta <= 100)) return showToast(tr('Zile active: între 1 și 100.', 'Active days: between 1 and 100.'), 'error');
+  if (!de || !pana || pana < de) return showToast(tr('Verifică datele: „până la” după „de la”.', 'Check the dates: “until” after “from”.'), 'error');
+  if (zileIntre(de, pana) + 1 < tinta) return showToast(tr('Intervalul are mai puține zile decât ținta.', 'The period has fewer days than the target.'), 'error');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('provocari').insert({ titlu, tinta, de, pana }).select().single();
+  btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  comunitate.provocari = [data].concat(comunitate.provocari);
+  showToast(tr('✓ Provocare creată', '✓ Challenge created'));
+  randeazaComunitateAntrenor();
+}
+
+function stergeProvocare(id) {
+  customConfirm(tr('Ștergi provocarea?', 'Delete the challenge?'), tr('Dispare pentru toți membrii.', 'It disappears for all members.'), async () => {
+    const { error } = await supabaseClient.from('provocari').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    comunitate.provocari = comunitate.provocari.filter(p => p.id !== id);
+    randeazaComunitateAntrenor();
+  });
+}
+
+function stergeActivitateComunitate(id) {
+  customConfirm(tr('Scoți activitatea din flux?', 'Remove this activity from the feed?'), tr('Dispare și din clasament și provocări.', 'It also disappears from the leaderboard and challenges.'), async () => {
+    const { error } = await supabaseClient.from('comunitate_activitati').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    comunitate.activitati = comunitate.activitati.filter(a => a.id !== id);
+    randeazaComunitateAntrenor();
+  });
+}
+
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
 function htmlCardZiPlan(ses, idx, laClick, cuProgres) {
   const lista = (ses.exercitii || []).filter(ex => (ex.exercitiu || '').trim());
@@ -5933,6 +6408,7 @@ async function salveazaProgresClienta() {
   }
   stergeProgresNetrimis(p.id);
   seteazaStareSalvareClienta('Salvat ✓', 'Saved ✓');
+  posteazaPlanInComunitate(p);
   salveazaCacheClienta();
 }
 
@@ -7178,7 +7654,8 @@ async function incarcaRezumatAcasa() {
     incarcaAntrPersUsor(),
     incarcaObiectiveClient(),
     incarcaNutritieZi(aziIsoAntrPers()),
-    incarcaCicluClient()
+    incarcaCicluClient(),
+    incarcaMembruComunitate()
   ]);
   if (resPrez.error || resOrar.error) return;
   const lista = (resPrez.data || []).map(p => {
@@ -7215,6 +7692,8 @@ async function incarcaRezumatAcasa() {
   if (cardNut && !antrPers.ecran) cardNut.outerHTML = htmlNutritieAcasa();
   const cardCiclu = document.getElementById('cardCicluAcasa');
   if (cardCiclu && !antrPers.ecran) cardCiclu.outerHTML = htmlCicluAcasa();
+  const cardCom = document.getElementById('cardComunitateAcasa');
+  if (cardCom && !antrPers.ecran) cardCom.outerHTML = htmlComunitateAcasa();
   const cifre = document.getElementById('acasaCifre');
   const sedinta = document.getElementById('acasaSedinta');
   const checkin = document.getElementById('acasaCheckin');
@@ -7249,6 +7728,15 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 171, data: '2026-11-05',
+    client: [
+      ['Comunitatea (opțional): intră de pe Acasă, alege-ți numele afișat și vezi cine s-a antrenat. Dă „Bravo” celorlalți.', 'Community (optional): join from Home, choose your display name and see who trained. Give others a “Well done”.'],
+      ['Clasament pe săptămână și lună, după zilele active, și provocări de la antrenor, cu 🏆 la final.', 'Weekly and monthly leaderboard by active days, plus challenges from your trainer, with a 🏆 at the end.'],
+      ['Confidențialitate ca la Strava: alegi ce tipuri de activitate se văd, dacă apar durata și distanța, dacă apari în clasament, și poți face orice activitate „Doar tu”. Greutățile și datele despre sănătate nu ajung niciodată în comunitate.', 'Strava-style privacy: choose which activity types are shown, whether duration and distance appear, whether you are on the leaderboard, and make any activity “Only you”. Weights and health data never reach the community.']
+    ],
+    antrenor: [
+      ['Comunitate: din meniu › Comunitate creezi provocări („12 zile active în noiembrie”), vezi clasamentul și fluxul și dai „Bravo”. Clienții intră singuri, de pe Acasă.', 'Community: in the menu › Community create challenges (“12 active days in November”), see the leaderboard and the feed, and give “Well done”. Clients join themselves, from Home.']
+    ] },
   { v: 170, data: '2026-11-05',
     client: [
       ['Ciclu menstrual (opțional): pornește-l din meniu › Setări. Pe Acasă vezi faza de azi și la ce să te aștepți la antrenament.', 'Menstrual cycle (optional): turn it on in the menu › Settings. Home shows today\'s phase and what to expect in training.'],

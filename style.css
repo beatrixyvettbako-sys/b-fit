@@ -8507,3 +8507,29 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .ciclu-simptom { border: 1px solid var(--border); background: var(--input-glass-bg); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; }
 .ciclu-simptom.active { background: var(--primary); border-color: var(--primary); color: #fff; }
 .ciclu-opreste { margin-top: 10px; width: 100%; color: #b91c1c; }
+
+/* ==========================================
+   COMUNITATE (client: Acasă › Comunitatea; antrenor: meniu › Comunitate)
+   ========================================== */
+.comunitate-antrenor { overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.comunitate-taburi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.comunitate-taburi.comunitate-perioade { grid-template-columns: repeat(2, 1fr); }
+.comunitate-taburi .theme-option-btn { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.comunitate-activitate { display: flex; flex-direction: column; gap: 3px; }
+.comunitate-sus { display: flex; align-items: center; gap: 8px; }
+.comunitate-sus b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comunitate-bravo { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.comunitate-bravo .ciclu-simptom:disabled { opacity: 0.55; cursor: default; }
+.comunitate-loc { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--border); }
+.comunitate-loc:last-child { border-bottom: none; }
+.comunitate-loc.eu { background: rgba(139, 92, 246, 0.1); border-radius: 10px; }
+.comunitate-nr { width: 26px; text-align: center; font-weight: 800; color: var(--primary); flex-shrink: 0; }
+.comunitate-nume { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.comunitate-cifre { font-size: 0.85rem; white-space: nowrap; color: var(--text); }
+.comunitate-provocare { display: flex; flex-direction: column; gap: 4px; }
+.comunitate-provocare.gata { border-left: 4px solid #15803d !important; }
+.comunitate-ce-vad { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--input-glass-bg); border: 1px solid var(--border); font-size: 0.86rem; line-height: 1.35; color: var(--text); }
+.comunitate-ce-vad b { margin-bottom: 2px; }
+.comunitate-confidentialitate .checkin-eticheta { margin-top: 10px; }
+.comunitate-confidentialitate .checkin-eticheta:first-child { margin-top: 0; }
+.comunitate-cine { font-size: 0.8rem; padding: 5px 10px; }

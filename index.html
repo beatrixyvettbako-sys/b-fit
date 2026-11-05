@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal170">
+  <link rel="stylesheet" href="style.css?v=fitFinal171">
 </head>
 <body>
 
@@ -526,6 +526,19 @@
             <div>
               <div class="drawer-nav-title" id="drawerMenuSettingsTitle" data-en="App Settings">Setări Aplicație</div>
               <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Appearance, language, schedule" hidden>Aspect, limbă, orar</div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <!-- Card Navigare Comunitate (antrenor: provocări, clasament, flux) -->
+        <div class="drawer-nav-card doar-antrenor" onclick="deschideComunitateAntrenor()">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.7 3 4.9"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Community">Comunitate</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -1117,6 +1130,27 @@
         <div class="feedback-nota" data-en="The app version, current screen and device are sent automatically. Video: max. 50 MB.">Se trimit automat versiunea aplicației, ecranul curent și dispozitivul. Video: max. 50 MB.</div>
 
         <button type="button" class="btn profile-save-btn" id="btnTrimiteFeedback" onclick="trimiteFeedback()" data-en="Send">Trimite</button>
+      </div>
+    </div>
+
+    <!-- STRATUL 6: COMUNITATE (antrenor) -->
+    <div id="drawerComunitateView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('main')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Community">Comunitate</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="comunitate-antrenor" id="comunitateAntrenor"></div>
       </div>
     </div>
 
@@ -1912,7 +1946,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal170"></script>
-  <script src="app.js?v=fitFinal170"></script>
+  <script src="sabloane.js?v=fitFinal171"></script>
+  <script src="app.js?v=fitFinal171"></script>
 </body>
 </html>
