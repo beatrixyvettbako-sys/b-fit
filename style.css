@@ -8485,3 +8485,25 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .noutati-versiune ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 .noutati-versiune li { font-size: 0.9rem; line-height: 1.4; color: var(--text); }
 .noutati-gol { font-size: 0.9rem; color: #64748b; }
+
+/* ==========================================
+   CICLU MENSTRUAL (client: Setări › Ciclu menstrual, card pe Acasă; antrenor: Fișă › Progres)
+   ========================================== */
+.ciclu-intro { display: flex; flex-direction: column; gap: 10px; }
+.ciclu-intro p { margin: 0; font-size: 0.9rem; line-height: 1.45; color: var(--text); }
+.ciclu-camp { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; }
+.card.ciclu-faza { border-left: 4px solid #8b5cf6 !important; }
+.card.ciclu-faza.faza-menstruala { border-left-color: #b91c1c !important; }
+.card.ciclu-faza.faza-foliculara { border-left-color: #15803d !important; }
+.card.ciclu-faza.faza-ovulatie { border-left-color: #f5b041 !important; }
+.ciclu-faza p { margin: 6px 0 0; font-size: 0.88rem; line-height: 1.4; color: var(--text); }
+.ciclu-start { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+.ciclu-start input { flex: 1; min-width: 0; }
+.ciclu-checkin { display: flex; flex-direction: column; gap: 8px; }
+.ciclu-checkin .checkin-scala { gap: 8px; }
+.ciclu-checkin .checkin-scala-btn { aspect-ratio: auto; height: 40px; border-radius: 12px; font-size: 0.9rem; }
+.ciclu-checkin .checkin-eticheta small { font-weight: 500; color: #64748b; }
+.ciclu-simptome { display: flex; flex-wrap: wrap; gap: 6px; }
+.ciclu-simptom { border: 1px solid var(--border); background: var(--input-glass-bg); color: var(--text); border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; cursor: pointer; }
+.ciclu-simptom.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.ciclu-opreste { margin-top: 10px; width: 100%; color: #b91c1c; }

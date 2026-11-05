@@ -3310,7 +3310,7 @@ function randeazaHomeClienta() {
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
   const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
     + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + htmlAntrenamentAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
+    + htmlAntrenamentAcasa() + htmlCicluAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
   actualizeazaCardMesajeAcasa();
@@ -4291,6 +4291,7 @@ function antrPersSterge() {
 function inapoiAntrPers() {
   opresteTimerPauza();
   if (String(antrPers.ecran).startsWith('nutritie')) return inapoiNutritie();
+  if (antrPers.ecran === 'ciclu') { antrPers.ecran = null; return randeazaHomeClienta(); }
   if (antrPers.ecran === 'editor') {
     if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
     else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
@@ -5324,6 +5325,296 @@ async function salveazaTinteNutritieAntrenor() {
   n.setari = data;
   showToast(tr('✓ Ținte salvate', '✓ Targets saved'));
   incarcaProgresFisa(); // zilele din jurnal se arată față de țintele noi
+}
+
+// ---- Ciclu menstrual (sql/2026-11-05_ciclu.sql): opțional, pornit de client din Setări, cu acord explicit ----
+// Faza se estimează din prima zi a ultimei menstruații și durata ciclului (media ultimelor cicluri, altfel cea setată).
+// Antrenorul vede faza și check-in-urile doar dacă clientul pornește „Vizibil antrenorului”.
+const FAZE_CICLU = {
+  menstruala: ['Faza menstruală', 'Menstrual phase', 'Energia poate fi mai scăzută: antrenament mai ușor, mobilitate, ascultă-ți corpul.', 'Energy may be lower: lighter training and mobility; listen to your body.'],
+  foliculara: ['Faza foliculară', 'Follicular phase', 'Energia crește de obicei: zi bună pentru greutăți mai mari și intensitate.', 'Energy usually rises: a good time for heavier weights and intensity.'],
+  ovulatie: ['Ovulație', 'Ovulation', 'Forța e de obicei la vârf; încălzește-te bine înainte de greutățile mari.', 'Strength is usually at its peak; warm up well before heavy lifts.'],
+  luteala: ['Faza luteală', 'Luteal phase', 'E normal să ai mai puțină energie spre final: păstrează greutățile, pauze mai lungi între serii.', 'Lower energy towards the end is normal: keep the weights, take longer rests.']
+};
+const SIMPTOME_CICLU = [
+  ['crampe', 'Crampe', 'Cramps'], ['balonare', 'Balonare', 'Bloating'], ['dureri_cap', 'Dureri de cap', 'Headache'], ['oboseala', 'Oboseală', 'Fatigue'],
+  ['pofte', 'Pofte', 'Cravings'], ['dispozitie', 'Schimbări de dispoziție', 'Mood swings'], ['sani', 'Sâni sensibili', 'Tender breasts'], ['acnee', 'Acnee', 'Acne']
+];
+// setari: undefined = neîncărcat, null = urmărirea e oprită
+let ciclu = { setari: undefined, menstruatii: [], zilnic: [], formular: null };
+
+function isoDinData(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function zileIntre(isoA, isoB) {
+  return Math.round((dataDinIso(isoB) - dataDinIso(isoA)) / 86400000);
+}
+
+// { zi, durata, faza, urmatoarea, intarziere } sau null fără nicio menstruație notată. menstruatii: data_start, descrescător
+function calculeazaCiclu(setari, menstruatii, aziIso) {
+  const starturi = (menstruatii || []).map(m => m.data_start).filter(d => d <= aziIso);
+  if (!setari || !starturi.length) return null;
+  const intervale = [];
+  for (let i = 0; i < starturi.length - 1 && intervale.length < 6; i++) {
+    const n = zileIntre(starturi[i + 1], starturi[i]);
+    if (n >= 18 && n <= 50) intervale.push(n);
+  }
+  const durata = intervale.length >= 2 ? Math.round(intervale.reduce((a, b) => a + b, 0) / intervale.length) : setari.durata_ciclu;
+  const zi = zileIntre(starturi[0], aziIso) + 1;
+  const ovulatie = durata - 14;
+  const faza = zi <= setari.durata_menstruatie ? 'menstruala' : zi < ovulatie - 1 ? 'foliculara' : zi <= ovulatie + 1 ? 'ovulatie' : 'luteala';
+  const urm = dataDinIso(starturi[0]); urm.setDate(urm.getDate() + durata);
+  return { zi, durata, faza, urmatoarea: isoDinData(urm), intarziere: zi > durata ? zi - durata : 0, automat: intervale.length >= 2 };
+}
+
+async function incarcaCicluClient() {
+  if (!supabaseClient || !dateClienta.fisa) return;
+  const id = dateClienta.fisa.id;
+  const { data: s, error } = await supabaseClient.from('ciclu_setari').select('*').eq('client_id', id).maybeSingle();
+  if (error) return; // fără tabel (SQL nerulat) sau fără rețea: cardul nu apare
+  if (!s) { ciclu.setari = null; ciclu.menstruatii = []; ciclu.zilnic = []; return; }
+  const de = new Date(); de.setDate(de.getDate() - 6);
+  const [resM, resZ] = await Promise.all([
+    supabaseClient.from('ciclu_menstruatii').select('*').eq('client_id', id).order('data_start', { ascending: false }).limit(13),
+    supabaseClient.from('ciclu_zilnic').select('*').eq('client_id', id).gte('data', isoDinData(de)).order('data', { ascending: false })
+  ]);
+  ciclu.setari = s;
+  if (!resM.error) ciclu.menstruatii = resM.data || [];
+  if (!resZ.error) ciclu.zilnic = resZ.data || [];
+}
+
+function textEstimareCiclu(c) {
+  if (c.intarziere) return tr(`Ziua ${c.zi} · cu ${c.intarziere} ${c.intarziere === 1 ? 'zi' : 'zile'} peste durata obișnuită`, `Day ${c.zi} · ${c.intarziere} ${c.intarziere === 1 ? 'day' : 'days'} past your usual length`);
+  const ramase = c.durata - c.zi + 1;
+  return tr(`Ziua ${c.zi} din ~${c.durata} · următorul ciclu în ~${ramase} ${ramase === 1 ? 'zi' : 'zile'}`, `Day ${c.zi} of ~${c.durata} · next cycle in ~${ramase} ${ramase === 1 ? 'day' : 'days'}`);
+}
+
+// Acasă: faza de azi, lângă antrenamentul zilei (doar dacă urmărirea e pornită)
+function htmlCicluAcasa() {
+  if (!ciclu.setari) return '<div id="cardCicluAcasa"></div>';
+  const c = calculeazaCiclu(ciclu.setari, ciclu.menstruatii, aziIsoAntrPers());
+  const facut = ciclu.zilnic.some(z => z.data === aziIsoAntrPers());
+  const f = c && FAZE_CICLU[c.faza];
+  return `<div class="card acasa-sedinta ciclu-acasa" id="cardCicluAcasa" onclick="deschideCiclu()">
+    <div><div class="acasa-eticheta">${tr('Ciclu', 'Cycle')}</div>
+    <b>${f ? tr(f[0], f[1]) : tr('Notează prima zi a menstruației', 'Log the first day of your period')}</b>
+    <div class="acasa-antrenament-detalii">${f ? `${textEstimareCiclu(c)}<br>${tr(f[2], f[3])}` : tr('Din ea se estimează faza și următorul ciclu.', 'It is used to estimate your phase and next cycle.')}</div></div>
+    ${facut ? '<div class="drawer-nav-arrow">›</div>' : `<button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideCiclu()">${tr('Check-in', 'Check-in')}</button>`}
+  </div>`;
+}
+
+// Din Setări › Ciclu menstrual (și de pe cardul de pe Acasă)
+async function deschideCiclu() {
+  if (clientaTabCurent !== 'acasa') clientaTab('acasa');
+  antrPers.ecran = 'ciclu';
+  ciclu.formular = null;
+  dateClienta.planCurent = null;
+  arataInapoiAntrPers();
+  document.getElementById('clientaTitlu').innerText = tr('Ciclu', 'Cycle');
+  if (ciclu.setari === undefined) document.getElementById('clientaContinut').innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  else randeazaCiclu();
+  await incarcaCicluClient();
+  if (antrPers.ecran === 'ciclu') randeazaCiclu();
+}
+
+function htmlScalaCiclu(camp, valoare) {
+  let h = '';
+  for (let n = 1; n <= 5; n++) h += `<button type="button" class="checkin-scala-btn${valoare === n ? ' active' : ''}" onclick="ciclu.formular.${camp} = ${n}; randeazaCiclu()">${n}</button>`;
+  return `<div class="checkin-scala" style="grid-template-columns: repeat(5, 1fr);">${h}</div>`;
+}
+
+function randeazaCiclu() {
+  const el = document.getElementById('clientaContinut');
+  const azi = aziIsoAntrPers();
+  if (!ciclu.setari) {
+    el.innerHTML = `<div class="card ciclu-intro">
+        <b>${tr('Urmărește-ți ciclul', 'Track your cycle')}</b>
+        <p>${tr('Notezi prima zi a menstruației și, dacă vrei, cum te simți în fiecare zi. Aplicația estimează faza și îți spune pe Acasă la ce să te aștepți la antrenament.', 'Log the first day of your period and, if you like, how you feel each day. The app estimates your phase and shows on Home what to expect in training.')}</p>
+        <p>${tr('Datele sunt doar ale tale. Antrenorul le vede doar dacă pornești „Vizibil antrenorului”. Le poți șterge oricând.', 'The data is yours only. Your trainer sees it only if you turn on “Visible to my trainer”. You can delete it anytime.')}</p>
+        <label class="antr-pers-campuri ciclu-camp">${tr('Prima zi a ultimei menstruații (opțional)', 'First day of your last period (optional)')}
+          <input type="date" id="cicluStartNou" class="plan-ex-input" max="${azi}"></label>
+        <label class="checkin-bifa"><input type="checkbox" id="cicluAcord"><span>${tr('Sunt de acord ca B-Fit să stocheze aceste date despre sănătate, pentru antrenamentul meu (', 'I agree that B-Fit stores this health data for my training (')}<a href="confidentialitate.html" target="_blank" rel="noopener">${tr('confidențialitate', 'privacy')}</a>).</span></label>
+        <button type="button" class="btn profile-save-btn" onclick="pornesteCiclu(this)">${tr('Pornește', 'Turn on')}</button>
+        <div class="nutritie-sursa">${tr('Estimările nu sunt sfat medical și nu sunt o metodă de contracepție.', 'Estimates are not medical advice and not a method of contraception.')}</div>
+      </div>`;
+    return;
+  }
+  const s = ciclu.setari;
+  const c = calculeazaCiclu(s, ciclu.menstruatii, azi);
+  const f = c && FAZE_CICLU[c.faza];
+  const deAzi = ciclu.zilnic.find(z => z.data === azi);
+  if (!ciclu.formular) ciclu.formular = { energie: deAzi?.energie ?? null, somn: deAzi?.somn ?? null, simptome: [...(deAzi?.simptome || [])] };
+  const fo = ciclu.formular;
+  let html = `<div class="card ciclu-faza${c ? ' faza-' + c.faza : ''}">
+      ${f ? `<div class="acasa-eticheta">${tr('Azi', 'Today')}</div><b>${tr(f[0], f[1])}</b>
+        <div class="acasa-antrenament-detalii">${textEstimareCiclu(c)}</div><p>${tr(f[2], f[3])}</p>`
+      : `<b>${tr('Notează prima zi a menstruației', 'Log the first day of your period')}</b><div class="acasa-antrenament-detalii">${tr('Din ea se estimează faza și următorul ciclu.', 'It is used to estimate your phase and next cycle.')}</div>`}
+      <div class="ciclu-start">
+        <input type="date" id="cicluStart" class="plan-ex-input" value="${azi}" max="${azi}">
+        <button type="button" class="btn" style="white-space:nowrap;" onclick="noteazaStartCiclu(this)">${tr('A început menstruația', 'Period started')}</button>
+      </div>
+    </div>
+    <div class="antr-pers-sectiune">${tr('Cum te simți azi?', 'How do you feel today?')}</div>
+    <div class="card ciclu-checkin">
+      <div class="checkin-eticheta">${tr('Energie', 'Energy')} <small>(1 = ${tr('foarte scăzută', 'very low')}, 5 = ${tr('foarte bună', 'very good')})</small></div>
+      ${htmlScalaCiclu('energie', fo.energie)}
+      <div class="checkin-eticheta">${tr('Somn', 'Sleep')} <small>(1 = ${tr('foarte prost', 'very poor')}, 5 = ${tr('foarte bun', 'very good')})</small></div>
+      ${htmlScalaCiclu('somn', fo.somn)}
+      <div class="checkin-eticheta">${tr('Simptome', 'Symptoms')}</div>
+      <div class="ciclu-simptome">${SIMPTOME_CICLU.map(([id, ro, en]) => `<button type="button" class="ciclu-simptom${fo.simptome.includes(id) ? ' active' : ''}" onclick="comutaSimptomCiclu('${id}')">${tr(ro, en)}</button>`).join('')}</div>
+      <button type="button" class="btn profile-save-btn" onclick="salveazaCicluZilnic(this)">${deAzi ? tr('Actualizează', 'Update') : tr('Salvează', 'Save')}</button>
+    </div>`;
+  if (ciclu.menstruatii.length) {
+    html += `<div class="antr-pers-sectiune">${tr('Istoric', 'History')}</div><div class="card">
+      ${ciclu.menstruatii.slice(0, 12).map((m, i) => {
+        const urm = ciclu.menstruatii[i - 1];
+        const lung = urm ? zileIntre(m.data_start, urm.data_start) : null;
+        return `<div class="nutritie-rand"><div><div class="nutritie-rand-nume">${escAttr(etichetaDataAntrPers(m.data_start))}</div>
+          <div class="acasa-antrenament-detalii">${lung ? tr(`ciclu de ${lung} zile`, `${lung}-day cycle`) : tr('ciclul curent', 'current cycle')}</div></div>
+          <button type="button" class="notificare-x nutritie-sterge" onclick="stergeStartCiclu('${m.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button></div>`;
+      }).join('')}</div>`;
+  }
+  html += `<div class="antr-pers-sectiune">${tr('Setări', 'Settings')}</div><div class="card">
+      <div class="antr-pers-campuri nutritie-tinte">
+        <label>${tr('Ciclul (zile)', 'Cycle (days)')}<input type="number" inputmode="numeric" id="cicluDurata" class="plan-ex-input" min="21" max="45" value="${s.durata_ciclu}"></label>
+        <label>${tr('Menstruația (zile)', 'Period (days)')}<input type="number" inputmode="numeric" id="cicluMenstruatie" class="plan-ex-input" min="2" max="10" value="${s.durata_menstruatie}"></label>
+      </div>
+      ${c && c.automat ? `<div class="acasa-antrenament-detalii" style="margin-top:6px;">${tr(`După istoricul tău, ciclul are în medie ${c.durata} zile, iar estimarea folosește media. Durata de mai sus contează doar până ai 3 menstruații notate.`, `From your history your cycle averages ${c.durata} days and the estimate uses that average. The length above only counts until you have 3 periods logged.`)}</div>` : ''}
+      <button type="button" class="btn btn-clear" style="margin-top:8px; width:100%;" onclick="salveazaSetariCiclu(this)">${tr('Salvează', 'Save')}</button>
+      <label class="setare-notificare" style="margin-top:6px;">
+        <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul vede faza și cum te simți, ca să-ți adapteze antrenamentul.', 'Your trainer sees your phase and how you feel, to adapt your training.')}</small></span>
+        <input type="checkbox" class="comutator" ${s.vizibil_antrenor ? 'checked' : ''} onchange="seteazaVizibilCiclu(this.checked, this)">
+      </label>
+      <button type="button" class="btn btn-clear ciclu-opreste" onclick="opresteCiclu()">${tr('Oprește și șterge datele', 'Turn off and delete data')}</button>
+    </div>
+    <div class="nutritie-sursa">${tr('Estimările nu sunt sfat medical și nu sunt o metodă de contracepție.', 'Estimates are not medical advice and not a method of contraception.')}</div>`;
+  el.innerHTML = html;
+}
+
+function eroareCiclu() {
+  showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+}
+
+async function pornesteCiclu(btn) {
+  if (!document.getElementById('cicluAcord').checked) return showToast(tr('Bifează acordul ca să pornești.', 'Tick the consent box to turn it on.'), 'error');
+  const c = dateClienta.fisa;
+  const start = document.getElementById('cicluStartNou').value;
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('ciclu_setari').insert({ client_id: c.id, user_id: c.user_id }).select().single();
+  if (error || !data) { btn.disabled = false; return eroareCiclu(); }
+  ciclu.setari = data;
+  if (start) await supabaseClient.from('ciclu_menstruatii').insert({ client_id: c.id, user_id: c.user_id, data_start: start });
+  await incarcaCicluClient();
+  ciclu.formular = null;
+  randeazaCiclu();
+}
+
+async function noteazaStartCiclu(btn) {
+  const zi = document.getElementById('cicluStart').value;
+  if (!zi || zi > aziIsoAntrPers()) return;
+  if (ciclu.menstruatii.some(m => m.data_start === zi)) return showToast(tr('Ziua asta e deja notată.', 'This day is already logged.'));
+  const c = dateClienta.fisa;
+  btn.disabled = true;
+  const { error } = await supabaseClient.from('ciclu_menstruatii').insert({ client_id: c.id, user_id: c.user_id, data_start: zi });
+  btn.disabled = false;
+  if (error) return eroareCiclu();
+  showToast(tr('✓ Notat', '✓ Logged'));
+  await incarcaCicluClient();
+  randeazaCiclu();
+}
+
+function stergeStartCiclu(id) {
+  customConfirm(tr('Ștergi ziua?', 'Delete this day?'), tr('Estimarea se recalculează fără ea.', 'The estimate is recalculated without it.'), async () => {
+    const { error } = await supabaseClient.from('ciclu_menstruatii').delete().eq('id', id);
+    if (error) return eroareCiclu();
+    ciclu.menstruatii = ciclu.menstruatii.filter(m => m.id !== id);
+    randeazaCiclu();
+  });
+}
+
+function comutaSimptomCiclu(id) {
+  const l = ciclu.formular.simptome;
+  ciclu.formular.simptome = l.includes(id) ? l.filter(x => x !== id) : l.concat(id);
+  randeazaCiclu();
+}
+
+async function salveazaCicluZilnic(btn) {
+  const fo = ciclu.formular, c = dateClienta.fisa;
+  if (!fo.energie && !fo.somn && !fo.simptome.length) return showToast(tr('Alege cel puțin o valoare.', 'Pick at least one value.'), 'error');
+  btn.disabled = true;
+  const rand = { client_id: c.id, user_id: c.user_id, data: aziIsoAntrPers(), energie: fo.energie, somn: fo.somn, simptome: fo.simptome, updated_at: new Date().toISOString() };
+  const { data, error } = await supabaseClient.from('ciclu_zilnic').upsert(rand, { onConflict: 'client_id,data' }).select().single();
+  btn.disabled = false;
+  if (error || !data) return eroareCiclu();
+  ciclu.zilnic = [data].concat(ciclu.zilnic.filter(z => z.data !== data.data));
+  showToast(tr('✓ Salvat', '✓ Saved'));
+  randeazaCiclu();
+}
+
+async function salveazaSetariCiclu(btn) {
+  const durata = parseInt(document.getElementById('cicluDurata').value, 10);
+  const menstruatie = parseInt(document.getElementById('cicluMenstruatie').value, 10);
+  if (!(durata >= 21 && durata <= 45)) return showToast(tr('Ciclul: între 21 și 45 de zile.', 'Cycle: between 21 and 45 days.'), 'error');
+  if (!(menstruatie >= 2 && menstruatie <= 10)) return showToast(tr('Menstruația: între 2 și 10 zile.', 'Period: between 2 and 10 days.'), 'error');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('ciclu_setari').update({ durata_ciclu: durata, durata_menstruatie: menstruatie, updated_at: new Date().toISOString() })
+    .eq('client_id', dateClienta.fisa.id).select().single();
+  btn.disabled = false;
+  if (error || !data) return eroareCiclu();
+  ciclu.setari = data;
+  showToast(tr('✓ Salvat', '✓ Saved'));
+  randeazaCiclu();
+}
+
+async function seteazaVizibilCiclu(vizibil, input) {
+  input.disabled = true;
+  const { data, error } = await supabaseClient.from('ciclu_setari').update({ vizibil_antrenor: vizibil, updated_at: new Date().toISOString() })
+    .eq('client_id', dateClienta.fisa.id).select().single();
+  input.disabled = false;
+  if (error || !data) { input.checked = !vizibil; return eroareCiclu(); }
+  ciclu.setari = data;
+}
+
+function opresteCiclu() {
+  customConfirm(tr('Oprești urmărirea ciclului?', 'Turn off cycle tracking?'), tr('Se șterg definitiv toate datele: zilele notate și check-in-urile.', 'All data is permanently deleted: logged days and check-ins.'), async () => {
+    const { error } = await supabaseClient.from('ciclu_setari').delete().eq('client_id', dateClienta.fisa.id);
+    if (error) return eroareCiclu();
+    ciclu = { setari: null, menstruatii: [], zilnic: [], formular: null };
+    showToast(tr('✓ Datele au fost șterse', '✓ Data deleted'));
+    antrPers.ecran = null;
+    randeazaHomeClienta();
+  });
+}
+
+// ---- La antrenor (Fișă › Progres): faza și ultimele 7 zile, doar dacă clientul le-a lăsat vizibile ----
+let cicluFisa = null;
+
+async function incarcaCicluAntrenor(client) {
+  cicluFisa = null;
+  const { data: s, error } = await supabaseClient.from('ciclu_setari').select('*').eq('client_id', client.id).maybeSingle();
+  if (error || !s) return;
+  const de = new Date(); de.setDate(de.getDate() - 6);
+  const [resM, resZ] = await Promise.all([
+    supabaseClient.from('ciclu_menstruatii').select('data_start').eq('client_id', client.id).order('data_start', { ascending: false }).limit(7),
+    supabaseClient.from('ciclu_zilnic').select('*').eq('client_id', client.id).gte('data', isoDinData(de)).order('data', { ascending: false })
+  ]);
+  cicluFisa = { setari: s, menstruatii: resM.data || [], zilnic: resZ.data || [] };
+}
+
+function htmlCicluAntrenor() {
+  const n = cicluFisa;
+  if (!n) return '';
+  const c = calculeazaCiclu(n.setari, n.menstruatii, aziIsoAntrPers());
+  const f = c && FAZE_CICLU[c.faza];
+  const simptom = id => { const x = SIMPTOME_CICLU.find(s => s[0] === id); return x ? tr(x[1], x[2]) : id; };
+  return `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Ciclu', 'Cycle')}</div>
+    <div class="card ciclu-faza${c ? ' faza-' + c.faza : ''}">${f ? `<b>${tr(f[0], f[1])}</b><div class="acasa-antrenament-detalii">${textEstimareCiclu(c)}</div><p>${tr(f[2], f[3])}</p>`
+      : `<div class="acasa-antrenament-detalii">${tr('Clientul nu a notat încă nicio menstruație.', 'The client has not logged a period yet.')}</div>`}</div>
+    ${n.zilnic.length ? `<div class="card">${n.zilnic.map(z => `<div class="nutritie-rand"><div>
+        <div class="nutritie-rand-nume">${escAttr(etichetaDataAntrPers(z.data))}</div>
+        <div class="acasa-antrenament-detalii">${[z.energie ? `${tr('Energie', 'Energy')} ${z.energie}/5` : '', z.somn ? `${tr('Somn', 'Sleep')} ${z.somn}/5` : '', (z.simptome || []).map(simptom).join(', ')].filter(Boolean).join(' · ')}</div>
+      </div></div>`).join('')}</div>`
+      : `<div class="progres-gol">${tr('Niciun check-in în ultimele 7 zile.', 'No check-ins in the last 7 days.')}</div>`}`;
 }
 
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
@@ -6886,7 +7177,8 @@ async function incarcaRezumatAcasa() {
     supabaseClient.from('checkin_saptamanal').select('saptamana').eq('client_id', dateClienta.fisa.id).eq('saptamana', lunaSaptamaniiCurente()),
     incarcaAntrPersUsor(),
     incarcaObiectiveClient(),
-    incarcaNutritieZi(aziIsoAntrPers())
+    incarcaNutritieZi(aziIsoAntrPers()),
+    incarcaCicluClient()
   ]);
   if (resPrez.error || resOrar.error) return;
   const lista = (resPrez.data || []).map(p => {
@@ -6921,6 +7213,8 @@ async function incarcaRezumatAcasa() {
   if (cardSapt && !antrPers.ecran) cardSapt.outerHTML = htmlSaptamanaAcasa();
   const cardNut = document.getElementById('cardNutritieAcasa');
   if (cardNut && !antrPers.ecran) cardNut.outerHTML = htmlNutritieAcasa();
+  const cardCiclu = document.getElementById('cardCicluAcasa');
+  if (cardCiclu && !antrPers.ecran) cardCiclu.outerHTML = htmlCicluAcasa();
   const cifre = document.getElementById('acasaCifre');
   const sedinta = document.getElementById('acasaSedinta');
   const checkin = document.getElementById('acasaCheckin');
@@ -6955,6 +7249,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 170, data: '2026-11-05',
+    client: [
+      ['Ciclu menstrual (opțional): pornește-l din meniu › Setări. Pe Acasă vezi faza de azi și la ce să te aștepți la antrenament.', 'Menstrual cycle (optional): turn it on in the menu › Settings. Home shows today\'s phase and what to expect in training.'],
+      ['Check-in zilnic de câteva secunde: energie, somn și simptome. Antrenorul le vede doar dacă alegi tu.', 'A few-second daily check-in: energy, sleep and symptoms. Your trainer sees it only if you choose so.']
+    ],
+    antrenor: [
+      ['Ciclu menstrual: dacă un client îl urmărește și ți-l arată, în fișă, la Progres, vezi faza și cum s-a simțit în ultimele 7 zile.', 'Menstrual cycle: if a client tracks it and shares it, the client\'s file shows, under Progress, the phase and how they felt in the last 7 days.']
+    ] },
   { v: 169, data: '2026-11-05',
     client: [['Noutăți: după fiecare actualizare vezi ce s-a schimbat; le găsești oricând în meniu › Noutăți.', 'What\'s new: after each update you see what changed; find it anytime in the menu › What\'s new.']],
     antrenor: [['Noutăți: după fiecare actualizare vezi ce s-a schimbat; le găsești oricând în meniu › Noutăți. Clienții văd separat noutățile pentru ei.', 'What\'s new: after each update you see what changed; find it anytime in the menu › What\'s new. Clients see their own news separately.']] },
@@ -10762,7 +11064,8 @@ async function incarcaProgresFisa() {
     supabaseClient.from('antrenamente_personale').select('*').eq('client_id', client.id).eq('fel', 'antrenament')
       .order('data', { ascending: false }).limit(150),
     supabaseClient.from('obiective').select('*').eq('client_id', client.id).order('created_at'),
-    incarcaNutritieAntrenor(client)
+    incarcaNutritieAntrenor(client),
+    incarcaCicluAntrenor(client)
   ]);
   if (clientaFisaCurenta() !== client || !det.open) return;
   const checkinuri = error ? [] : (data || []);
@@ -10781,7 +11084,8 @@ async function incarcaProgresFisa() {
     + `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Progres la exerciții', 'Exercise progress')}</div>`
     + htmlProgresExercitii({ planuri: planuriClient, antrenamente: antrenamenteClient })
     + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20))
-    + htmlNutritieAntrenor();
+    + htmlNutritieAntrenor()
+    + htmlCicluAntrenor();
   umplePoze(corp);
   umplePozeAntr(corp);
 }
