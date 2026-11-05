@@ -872,7 +872,8 @@ function navigheazaSubMeniu(strat) {
     profile: document.getElementById('drawerProfileView'),
     feedback: document.getElementById('drawerFeedbackView'),
     noutati: document.getElementById('drawerNoutatiView'),
-    comunitate: document.getElementById('drawerComunitateView')
+    comunitate: document.getElementById('drawerComunitateView'),
+    verificaProdus: document.getElementById('drawerVerificaProdusView')
   };
 
   Object.values(layers).forEach(el => {
@@ -5043,7 +5044,7 @@ function htmlProdusRand(p, i, lista) {
     ${htmlImagineProdus(p.imagine, 'mica')}
     <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(p.nume)}</span>
     <span class="plan-zi-card-detalii">${p.marca ? escAttr(p.marca) + ' · ' : ''}<b>${Math.round(p.kcal)} kcal</b> ${tr('la 100 g', 'per 100 g')}${p.sursa === 'recent' && p.portie_g ? ` · ${tr('ultima dată', 'last time')} ${formatKg(p.portie_g)} g` : ''}</span></span>
-    <span class="progres-ex-dif">+</span>
+    <span class="progres-ex-dif">${lista === 'verificare' ? '›' : '+'}</span>
   </button>`;
 }
 
@@ -5087,32 +5088,49 @@ async function cautaAlimente() {
   nutritie.cautare = q;
   nutritie.rezultate = 'cautare';
   randeazaAdaugaAliment();
+  const lista = await cautaProduse(q);
+  if (antrPers.ecran !== 'nutritie-adauga') return;
+  nutritie.rezultate = lista;
+  randeazaAdaugaAliment();
+}
+
+// Produsele noastre, apoi Open Food Facts (cel mult 20, doar cu calorii); client și antrenor
+async function cautaProduse(q) {
   const [proprii, off] = await Promise.all([
     supabaseClient.from('alimente').select('*').ilike('nume', `%${q}%`).limit(10),
     // Prin Worker: căutarea Open Food Facts nu acceptă cereri direct din browser
     fetch(`${URL_POZE_ANTR}/off-cautare?q=${encodeURIComponent(q)}`).then(r => r.ok ? r.json() : null).catch(() => null)
   ]);
-  const lista = (proprii.data || []).map(a => Object.assign({}, a, { kcal: Number(a.kcal), proteine: Number(a.proteine), carbo: Number(a.carbo), grasimi: Number(a.grasimi), sursa: 'propriu' }))
-    .concat((Array.isArray(off) ? off : []).map(p => produsDinOff(p)).filter(p => p && p.kcal !== null));
-  if (antrPers.ecran !== 'nutritie-adauga') return;
-  nutritie.rezultate = lista.slice(0, 20);
-  randeazaAdaugaAliment();
+  return (proprii.data || []).map(produsPropriu)
+    .concat((Array.isArray(off) ? off : []).map(p => produsDinOff(p)).filter(p => p && p.kcal !== null)).slice(0, 20);
+}
+
+function produsPropriu(a) {
+  return Object.assign({}, a, { kcal: Number(a.kcal), proteine: Number(a.proteine), carbo: Number(a.carbo), grasimi: Number(a.grasimi), sursa: 'propriu' });
 }
 
 function alegeProdus(lista, i) {
+  if (lista === 'verificare') { verificare.produs = verificare.rezultate[i] || null; return randeazaVerificaProdus(); }
   const p = (lista === 'recente' ? nutritie.recente : nutritie.rezultate)[i];
   if (p) deschideCantitate(p);
 }
 
 // Codul de bare: întâi baza noastră, apoi Open Food Facts; negăsit (sau fără calorii) → formularul de produs nou, cu ce știm
-async function gasesteDupaCod(cod) {
-  showToast(tr('Caut produsul...', 'Looking up the product...'));
+// { produs, complet }: produs = null dacă nu există nicăieri; complet = are calorii
+async function produsDupaCod(cod) {
   const { data: propriu } = await supabaseClient.from('alimente').select('*').eq('cod', cod).maybeSingle();
-  if (propriu) return deschideCantitate(Object.assign({}, propriu, { kcal: Number(propriu.kcal), proteine: Number(propriu.proteine), carbo: Number(propriu.carbo), grasimi: Number(propriu.grasimi), sursa: 'propriu' }));
+  if (propriu) return { produs: produsPropriu(propriu), complet: true };
   const r = await fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,image_front_url,nutriscore_grade`)
     .then(x => x.ok ? x.json() : null).catch(() => null);
   const p = r && r.status === 1 && r.product ? produsDinOff(r.product, cod) : null;
-  if (p && p.kcal !== null) return deschideCantitate(p);
+  return { produs: p, complet: !!(p && p.kcal !== null) };
+}
+
+async function gasesteDupaCod(cod) {
+  showToast(tr('Caut produsul...', 'Looking up the product...'));
+  if (rolUtilizator === 'antrenor') return verificaProdusCod(cod);
+  const { produs: p, complet } = await produsDupaCod(cod);
+  if (complet) return deschideCantitate(p);
   showToast(p ? tr('Produsul nu are valorile nutriționale complete. Completează-le de pe etichetă.', 'The product has incomplete nutrition data. Fill them in from the label.')
     : tr('Produs negăsit. Adaugă-l de pe etichetă, o singură dată.', 'Product not found. Add it from the label, once.'), 'error');
   deschideProdusNou(Object.assign({ cod }, p || {}));
@@ -5130,34 +5148,55 @@ function randeazaCantitate(grame) {
   const masa = MESE_NUTRITIE.find(m => m[0] === nutritie.masa) || MESE_NUTRITIE[1];
   document.getElementById('clientaTitlu').innerText = tr(masa[1], masa[2]);
   const rapide = [...new Set([p.portie_g, 100, 50, 200].filter(Boolean))].slice(0, 4);
-  const randEticheta = (et, v, sub) => v === null || v === undefined ? '' : `<div class="nutritie-eticheta-rand${sub ? ' sub' : ''}"><span>${et}</span><b>${formatKg(v)} g</b></div>`;
   document.getElementById('clientaContinut').innerHTML = `<div class="card nutritie-cantitate">
-      <div class="nutritie-produs-cap">
-        ${htmlImagineProdus(p.imagineMare || p.imagine, 'mare')}
-        <div class="nutritie-produs-text">
-          <b class="nutritie-produs-nume">${escAttr(p.nume)}</b>
-          ${p.marca ? `<div class="acasa-antrenament-detalii">${escAttr(p.marca)}</div>` : ''}
-          ${htmlNutriScore(p.nutriscore)}
-        </div>
-      </div>
+      ${htmlCapProdus(p)}
       <div class="antr-pers-campuri" style="margin-top:12px;"><label>${tr('Cantitate (g)', 'Amount (g)')}
         <input type="number" inputmode="decimal" id="nutritieGrame" class="plan-ex-input" value="${grame}" oninput="actualizeazaCalculCantitate()"></label></div>
       <div class="antr-pers-activitati" style="margin-top:8px;">${rapide.map(g => `<button type="button" class="antr-pers-activitate" onclick="document.getElementById('nutritieGrame').value=${g}; actualizeazaCalculCantitate()">${g === p.portie_g && g !== 100 ? tr('1 porție', '1 serving') + ` (${formatKg(g)} g)` : formatKg(g) + ' g'}</button>`).join('')}</div>
       <div class="nutritie-calcul" id="nutritieCalcul"></div>
-      <details class="nutritie-eticheta">
-        <summary>${tr('Valori nutriționale la 100 g', 'Nutrition facts per 100 g')}</summary>
-        <div class="nutritie-eticheta-rand"><span>${tr('Energie', 'Energy')}</span><b>${Math.round(p.kcal)} kcal</b></div>
-        ${randEticheta(tr('Grăsimi', 'Fat'), p.grasimi)}${randEticheta(tr('din care saturate', 'of which saturates'), p.saturate, true)}
-        ${randEticheta(tr('Carbohidrați', 'Carbohydrates'), p.carbo)}${randEticheta(tr('din care zaharuri', 'of which sugars'), p.zaharuri, true)}
-        ${randEticheta(tr('Fibre', 'Fibre'), p.fibre)}${randEticheta(tr('Proteine', 'Protein'), p.proteine)}${randEticheta(tr('Sare', 'Salt'), p.sare)}
-        ${p.sursa === 'off' ? `<div class="nutritie-sursa" style="margin-top:6px;">${tr('Sursa: Open Food Facts', 'Source: Open Food Facts')}</div>` : ''}
-      </details>
+      ${htmlEticheta(p, false)}
       <div class="antr-pers-actiuni" style="margin:12px 0 0;">
         <button type="button" class="btn" onclick="adaugaInJurnal()">${tr(`Adaugă la ${masa[1].toLowerCase()}`, `Add to ${masa[2].toLowerCase()}`)}</button>
         <button type="button" class="btn btn-clear" onclick="deschideAdaugaAliment(nutritie.masa)">${tr('Înapoi', 'Back')}</button>
       </div>
     </div>`;
   actualizeazaCalculCantitate();
+}
+
+// Poza, numele, marca și Nutri-Score
+function htmlCapProdus(p) {
+  return `<div class="nutritie-produs-cap">
+      ${htmlImagineProdus(p.imagineMare || p.imagine, 'mare')}
+      <div class="nutritie-produs-text">
+        <b class="nutritie-produs-nume">${escAttr(p.nume)}</b>
+        ${p.marca ? `<div class="acasa-antrenament-detalii">${escAttr(p.marca)}</div>` : ''}
+        ${htmlNutriScore(p.nutriscore)}
+      </div>
+    </div>`;
+}
+
+// Eticheta la 100 g, ca pe ambalaj (rândurile lipsă nu apar)
+function htmlEticheta(p, deschisa) {
+  const rand = (et, v, sub) => v === null || v === undefined ? '' : `<div class="nutritie-eticheta-rand${sub ? ' sub' : ''}"><span>${et}</span><b>${formatKg(v)} g</b></div>`;
+  return `<details class="nutritie-eticheta"${deschisa ? ' open' : ''}>
+      <summary>${tr('Valori nutriționale la 100 g', 'Nutrition facts per 100 g')}</summary>
+      <div class="nutritie-eticheta-rand"><span>${tr('Energie', 'Energy')}</span><b>${Math.round(p.kcal)} kcal</b></div>
+      ${rand(tr('Grăsimi', 'Fat'), p.grasimi)}${rand(tr('din care saturate', 'of which saturates'), p.saturate, true)}
+      ${rand(tr('Carbohidrați', 'Carbohydrates'), p.carbo)}${rand(tr('din care zaharuri', 'of which sugars'), p.zaharuri, true)}
+      ${rand(tr('Fibre', 'Fibre'), p.fibre)}${rand(tr('Proteine', 'Protein'), p.proteine)}${rand(tr('Sare', 'Salt'), p.sare)}
+      ${p.sursa === 'off' ? `<div class="nutritie-sursa" style="margin-top:6px;">${tr('Sursa: Open Food Facts', 'Source: Open Food Facts')}</div>` : ''}
+    </details>`;
+}
+
+// Caloriile mari și plăcile macronutrienților pentru g grame, cu partea lor din calorii (4 / 4 / 9 kcal pe gram)
+function htmlCalculProdus(p, g) {
+  const v = valoriPentruGrame(p, g);
+  const kcalMacro = { proteine: v.proteine * 4, carbo: v.carbo * 4, grasimi: v.grasimi * 9 };
+  const totalMacro = kcalMacro.proteine + kcalMacro.carbo + kcalMacro.grasimi;
+  const placa = (cheie, ro, en) => `<div class="nutritie-macro ${cheie}"><span>${tr(ro, en)}</span><b>${formatKg(v[cheie])} g</b>
+    <i style="width:${totalMacro ? Math.round(kcalMacro[cheie] / totalMacro * 100) : 0}%"></i></div>`;
+  return `<div class="nutritie-kcal-mare"><b>${Math.round(v.kcal)}</b> kcal <span>${tr(`pentru ${formatKg(g)} g`, `for ${formatKg(g)} g`)}</span></div>
+    <div class="nutritie-macro-uri">${placa('proteine', 'Proteine', 'Protein')}${placa('carbo', 'Carbohidrați', 'Carbohydrates')}${placa('grasimi', 'Grăsimi', 'Fat')}</div>`;
 }
 
 function valoriPentruGrame(p, g) {
@@ -5168,16 +5207,10 @@ function valoriPentruGrame(p, g) {
 function actualizeazaCalculCantitate() {
   const g = parseFloat(String(document.getElementById('nutritieGrame').value).replace(',', '.')) || 0;
   const v = valoriPentruGrame(nutritie.produs, g);
-  // Plăcile macronutrienților, cu partea lor din calorii (4 / 4 / 9 kcal pe gram), și ce rămâne din ținta de azi
-  const kcalMacro = { proteine: v.proteine * 4, carbo: v.carbo * 4, grasimi: v.grasimi * 9 };
-  const totalMacro = kcalMacro.proteine + kcalMacro.carbo + kcalMacro.grasimi;
-  const placa = (cheie, ro, en) => `<div class="nutritie-macro ${cheie}"><span>${tr(ro, en)}</span><b>${formatKg(v[cheie])} g</b>
-    <i style="width:${totalMacro ? Math.round(kcalMacro[cheie] / totalMacro * 100) : 0}%"></i></div>`;
+  // Și ce rămâne din ținta de azi
   const s = nutritie.setari || {};
   const deja = nutritie.zi === aziIsoAntrPers() && nutritie.azi ? nutritie.azi.kcal : 0;
-  document.getElementById('nutritieCalcul').innerHTML = `<div class="nutritie-kcal-mare"><b>${Math.round(v.kcal)}</b> kcal
-      <span>${tr(`pentru ${formatKg(g)} g`, `for ${formatKg(g)} g`)}</span></div>
-    <div class="nutritie-macro-uri">${placa('proteine', 'Proteine', 'Protein')}${placa('carbo', 'Carbohidrați', 'Carbohydrates')}${placa('grasimi', 'Grăsimi', 'Fat')}</div>
+  document.getElementById('nutritieCalcul').innerHTML = `${htmlCalculProdus(nutritie.produs, g)}
     ${s.kcal ? `<div class="acasa-antrenament-detalii nutritie-dupa">${tr(`Azi, după asta: ${Math.round(deja + v.kcal)} din ${s.kcal} kcal`, `Today, after this: ${Math.round(deja + v.kcal)} of ${s.kcal} kcal`)}</div>` : ''}`;
 }
 
@@ -5323,6 +5356,65 @@ function codManualScanare() {
   const cod = (document.getElementById('scanareCodManual').value || '').replace(/\D/g, '');
   if (!/^\d{6,14}$/.test(cod)) return showToast(tr('Codul are între 6 și 14 cifre.', 'The code has 6 to 14 digits.'), 'error');
   codGasitScanare(cod);
+}
+
+// ---- Antrenorul: meniu › Verifică un produs. Scanare sau căutare, doar ca să vadă eticheta (nu se notează nicăieri) ----
+let verificare = { cautare: '', rezultate: [], produs: null, negasit: '' };
+
+function deschideVerificaProdus() {
+  verificare = { cautare: '', rezultate: [], produs: null, negasit: '' };
+  navigheazaSubMeniu('verificaProdus');
+  randeazaVerificaProdus();
+}
+
+function randeazaVerificaProdus() {
+  const el = document.getElementById('verificaProdusContinut');
+  if (!el) return;
+  const v = verificare;
+  if (v.produs) {
+    const p = v.produs;
+    el.innerHTML = `<button type="button" class="btn btn-clear" onclick="verificare.produs = null; randeazaVerificaProdus()">‹ ${tr('Alt produs', 'Another product')}</button>
+      <div class="card nutritie-cantitate">
+        ${htmlCapProdus(p)}
+        <div class="nutritie-calcul">${htmlCalculProdus(p, 100)}
+          ${p.portie_g && p.portie_g !== 100 ? `<div class="acasa-antrenament-detalii nutritie-dupa">${tr(`O porție (${formatKg(p.portie_g)} g): ${Math.round(valoriPentruGrame(p, p.portie_g).kcal)} kcal`, `One serving (${formatKg(p.portie_g)} g): ${Math.round(valoriPentruGrame(p, p.portie_g).kcal)} kcal`)}</div>` : ''}
+        </div>
+        ${htmlEticheta(p, true)}
+      </div>`;
+    return;
+  }
+  el.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Vezi eticheta unui produs, de exemplu ca să-i spui unui client dacă e o alegere bună. Nu se salvează nimic.', 'See a product’s label, for example to tell a client whether it is a good choice. Nothing is saved.')}</div>
+    <button type="button" class="btn nutritie-scaneaza" onclick="pornesteScanare()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
+      ${tr('Scanează codul de bare', 'Scan the barcode')}</button>
+    <div class="antr-pers-adauga">
+      <input type="search" id="verificaCauta" class="plan-ex-input" maxlength="60" value="${escAttr(v.cautare)}" placeholder="${tr('Caută produsul (ex: iaurt grecesc)', 'Search the product (e.g. greek yogurt)')}" onkeydown="if (event.key === 'Enter') cautaVerificaProdus()">
+      <button type="button" class="btn" onclick="cautaVerificaProdus()">${tr('Caută', 'Search')}</button>
+    </div>
+    ${v.negasit ? `<div class="progres-gol">${escAttr(v.negasit)}</div>` : ''}
+    ${v.rezultate === 'cautare' ? `<div class="progres-gol">${tr('Se caută...', 'Searching...')}</div>`
+      : v.rezultate.length ? v.rezultate.map((p, i) => htmlProdusRand(p, i, 'verificare')).join('')
+      : v.cautare ? `<div class="progres-gol">${tr('Nu am găsit produsul.', 'Product not found.')}</div>` : ''}`;
+}
+
+async function cautaVerificaProdus() {
+  const q = (document.getElementById('verificaCauta').value || '').trim();
+  if (q.length < 2) return;
+  verificare.cautare = q;
+  verificare.negasit = '';
+  verificare.rezultate = 'cautare';
+  randeazaVerificaProdus();
+  verificare.rezultate = await cautaProduse(q);
+  randeazaVerificaProdus();
+}
+
+async function verificaProdusCod(cod) {
+  const { produs, complet } = await produsDupaCod(cod);
+  verificare.negasit = complet ? '' : produs
+    ? tr(`„${produs.nume}”: produsul nu are valorile nutriționale în Open Food Facts.`, `“${produs.nume}”: the product has no nutrition data in Open Food Facts.`)
+    : tr(`Codul ${cod} nu e în Open Food Facts.`, `Code ${cod} is not in Open Food Facts.`);
+  verificare.produs = complet ? produs : null;
+  randeazaVerificaProdus();
 }
 
 // Înapoi din ecranele de nutriție: din adăugare/cantitate/produs nou la ziua deschisă, din zi la Acasă
@@ -7771,6 +7863,9 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 173, data: '2026-11-05',
+    client: [],
+    antrenor: [['Verifică un produs: din meniu scanezi codul de bare sau cauți după nume și vezi poza, Nutri-Score și eticheta completă. Nu se salvează nimic, e doar pentru sfaturi.', 'Check a product: from the menu scan the barcode or search by name and see the photo, Nutri-Score and the full label. Nothing is saved; it is just for advice.']] },
   { v: 172, data: '2026-11-05',
     client: [
       ['Nutriție: produsele au poză și Nutri-Score, la scanare, în căutare și în jurnal.', 'Nutrition: products show a photo and Nutri-Score, when scanning, in search and in your log.'],
