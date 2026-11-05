@@ -4549,7 +4549,8 @@ function incaPutinClient() {
       const e = istoric.find(x => x.nume.toLowerCase() === o.exercitiu.trim().toLowerCase());
       const acum = e ? Math.max(...e.puncte.map(p => p.kg)) : 0;
       return { o, rest: Number(o.tinta) - acum, acum };
-    }).sort((x, y) => x.rest / Number(x.o.tinta) - y.rest / Number(y.o.tinta))[0];
+    // Doar cele cu o greutate deja notată (altfel „încă 30 kg până la 30 kg” nu spune nimic)
+    }).filter(x => x.acum > 0).sort((x, y) => x.rest / Number(x.o.tinta) - y.rest / Number(y.o.tinta))[0];
     if (cel && cel.rest > 0) randuri.push(tr(`${cel.o.exercitiu}: încă ${formatKg(cel.rest)} kg până la ${formatKg(Number(cel.o.tinta))} kg`, `${cel.o.exercitiu}: ${formatKg(cel.rest)} kg more to ${formatKg(Number(cel.o.tinta))} kg`));
   }
   return randuri.slice(0, 2);
@@ -5427,7 +5428,11 @@ function afiseazaFisaMeaClienta() {
   // Venit de pe Acasă („Obiective”): direct la secțiunea de obiective
   if (deschideObiectiveLaIncarcare) {
     deschideObiectiveLaIncarcare = false;
-    document.getElementById('obiectiveContinut')?.scrollIntoView({ block: 'start', behavior: 'auto' });
+    // Titlul secțiunii chiar sub antetul fix (scrollIntoView l-ar lăsa ascuns sub antet)
+    const titluOb = document.getElementById('obiectiveContinut')?.previousElementSibling;
+    const ecran = document.getElementById('clientaScreen');
+    const antet = document.querySelector('#clientaScreen .clienta-header');
+    if (titluOb && ecran) ecran.scrollTop += titluOb.getBoundingClientRect().top - (antet ? antet.getBoundingClientRect().bottom : 0) - 8;
   }
 }
 
