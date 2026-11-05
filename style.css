@@ -8533,3 +8533,43 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .comunitate-confidentialitate .checkin-eticheta { margin-top: 10px; }
 .comunitate-confidentialitate .checkin-eticheta:first-child { margin-top: 0; }
 .comunitate-cine { font-size: 0.8rem; padding: 5px 10px; }
+
+/* ==========================================
+   NUTRIȚIE: poza produsului, Nutri-Score, totalul pe cantitate și eticheta la 100 g
+   ========================================== */
+.nutritie-imagine { flex-shrink: 0; position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; background: #ffffff; border: 1px solid var(--border); overflow: hidden; }
+.nutritie-imagine.mare { width: 84px; height: 84px; border-radius: 14px; }
+.nutritie-imagine img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #ffffff; }
+.nutritie-imagine svg { width: 46%; height: 46%; fill: none; stroke: #94a3b8; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nutritie-produs { display: flex; align-items: center; gap: 10px; }
+.nutritie-rand { justify-content: flex-start; }
+.nutritie-rand-text { flex: 1; min-width: 0; }
+.nutritie-rand .nutritie-imagine { width: 38px; height: 38px; }
+.nutritie-produs-cap { display: flex; gap: 12px; align-items: center; }
+.nutritie-produs-text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.nutritie-produs-text .nutritie-produs-nume { line-height: 1.25; }
+.nutriscore { display: inline-flex; gap: 2px; margin-top: 2px; }
+.nutriscore i { font-style: normal; font-weight: 800; font-size: 0.7rem; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; color: #ffffff; opacity: 0.35; }
+.nutriscore i.activ { opacity: 1; transform: scale(1.18); }
+.nutriscore .ns-a { background: #038141; } .nutriscore .ns-b { background: #85bb2f; } .nutriscore .ns-c { background: #e6a700; }
+.nutriscore .ns-d { background: #ee8100; } .nutriscore .ns-e { background: #e63e11; }
+.nutritie-calcul { gap: 10px; }
+.nutritie-kcal-mare { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-weight: 700; color: var(--primary); }
+.nutritie-calcul .nutritie-kcal-mare b { font-size: 1.9rem; line-height: 1; }
+.nutritie-kcal-mare span { font-weight: 500; }
+.nutritie-macro-uri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.nutritie-macro { position: relative; display: flex; flex-direction: column; gap: 2px; padding: 8px 8px 10px; border-radius: 10px; background: var(--card-bg); border: 1px solid var(--border); overflow: hidden; min-width: 0; }
+.nutritie-calcul .nutritie-macro span { font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nutritie-calcul .nutritie-macro b { font-size: 1rem; color: var(--text); }
+.nutritie-macro i { position: absolute; left: 0; bottom: 0; height: 4px; border-radius: 0 4px 4px 0; }
+.nutritie-macro.proteine i { background: #8b5cf6; }
+.nutritie-macro.carbo i { background: #f5b041; }
+.nutritie-macro.grasimi i { background: #15803d; }
+.nutritie-calcul .nutritie-dupa { font-size: 0.8rem; }
+.nutritie-eticheta { margin-top: 10px; border: 1px solid var(--border) !important; border-radius: 10px; padding: 8px 10px; box-shadow: none; }
+.nutritie-eticheta summary { cursor: pointer; font-weight: 700; font-size: 0.85rem; }
+.nutritie-eticheta-rand { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-top: 1px solid var(--border); font-size: 0.85rem; }
+.nutritie-eticheta summary + .nutritie-eticheta-rand { margin-top: 6px; }
+.nutritie-eticheta-rand.sub span { padding-left: 12px; color: var(--text-muted); }
+.nutritie-eticheta-rand.sub b { font-weight: 500; }
+.nutritie-produs .plan-zi-card-detalii { white-space: normal; overflow: visible; text-overflow: clip; }

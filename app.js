@@ -4870,7 +4870,7 @@ function htmlNutritieAcasa() {
   const kcal = t ? Math.round(t.kcal) : 0;
   const procent = tinta ? Math.min(100, Math.round(kcal / tinta * 100)) : 0;
   const detalii = !t ? tr('Notează ce mănânci: scanezi codul de bare sau cauți produsul.', 'Log what you eat: scan the barcode or search the product.')
-    : `${tr('Proteine', 'Protein')} ${Math.round(t.proteine)} g${s && s.proteine ? ` / ${s.proteine} g` : ''} · ${tr('Carbo', 'Carbs')} ${Math.round(t.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(t.grasimi)} g`;
+    : `${tr('Proteine', 'Protein')} ${Math.round(t.proteine)} g${s && s.proteine ? ` / ${s.proteine} g` : ''} · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(t.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(t.grasimi)} g`;
   return `<div class="card acasa-sedinta nutritie-acasa" id="cardNutritieAcasa" onclick="deschideNutritie()">
     <div><div class="acasa-eticheta">${tr('Nutriție azi', 'Nutrition today')}</div>
     <b>${t ? `${kcal}${tinta ? ` / ${tinta}` : ''} kcal` : tr('Nimic notat azi', 'Nothing logged today')}</b>
@@ -4927,7 +4927,7 @@ function randeazaNutritieZi() {
     <div class="card nutritie-totaluri">
       ${htmlBaraNutritie(tr('Calorii', 'Calories'), t.kcal, s.kcal, 'kcal')}
       ${htmlBaraNutritie(tr('Proteine', 'Protein'), t.proteine, s.proteine, 'g')}
-      ${htmlBaraNutritie(tr('Carbohidrați', 'Carbs'), t.carbo, s.carbo, 'g')}
+      ${htmlBaraNutritie(tr('Carbohidrați', 'Carbohydrates'), t.carbo, s.carbo, 'g')}
       ${htmlBaraNutritie(tr('Grăsimi', 'Fat'), t.grasimi, s.grasimi, 'g')}
     </div>`;
   MESE_NUTRITIE.forEach(([cod, ro, en]) => {
@@ -4936,8 +4936,9 @@ function randeazaNutritieZi() {
     html += `<div class="card nutritie-masa">
       <div class="nutritie-masa-sus"><b>${tr(ro, en)}</b><span>${randuri.length ? `${Math.round(tm.kcal)} kcal` : ''}</span></div>
       ${randuri.map(x => `<div class="nutritie-rand">
-        <div><div class="nutritie-rand-nume">${escAttr(x.nume)}${x.marca ? ` <small>${escAttr(x.marca)}</small>` : ''}</div>
-        <div class="acasa-antrenament-detalii">${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal · P ${formatKg(rotunjeste1(x.proteine))} g</div></div>
+        ${htmlImagineProdus(x.imagine, 'mica')}
+        <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(x.nume)}${x.marca ? ` <small>${escAttr(x.marca)}</small>` : ''}</div>
+        <div class="acasa-antrenament-detalii">${formatKg(Number(x.cantitate_g))} g · <b>${Math.round(x.kcal)} kcal</b> · ${tr('Proteine', 'Protein')} ${formatKg(rotunjeste1(x.proteine))} g</div></div>
         <button type="button" class="notificare-x nutritie-sterge" onclick="stergeAliment('${x.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>
       </div>`).join('')}
       <button type="button" class="btn btn-clear nutritie-adauga-btn" onclick="deschideAdaugaAliment('${cod}')">${tr('+ Adaugă', '+ Add')}</button>
@@ -4948,7 +4949,7 @@ function randeazaNutritieZi() {
     <div class="card">
       ${deAntrenor ? `<div class="acasa-antrenament-detalii" style="margin-bottom:8px;">${tr('Setate de antrenorul tău.', 'Set by your trainer.')}</div>` : ''}
       <div class="antr-pers-campuri nutritie-tinte">
-        ${[['kcal', 'Kcal'], ['proteine', tr('Proteine (g)', 'Protein (g)')], ['carbo', tr('Carbo (g)', 'Carbs (g)')], ['grasimi', tr('Grăsimi (g)', 'Fat (g)')]].map(([k, et]) =>
+        ${[['kcal', tr('Calorii (kcal)', 'Calories (kcal)')], ['proteine', tr('Proteine (g)', 'Protein (g)')], ['carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)')], ['grasimi', tr('Grăsimi (g)', 'Fat (g)')]].map(([k, et]) =>
           `<label>${et}<input type="number" inputmode="numeric" id="tintaNut_${k}" class="plan-ex-input" value="${s[k] ?? ''}" ${deAntrenor ? 'disabled' : ''}></label>`).join('')}
       </div>
       ${deAntrenor ? '' : `<button type="button" class="btn btn-clear" style="margin-top:8px; width:100%;" onclick="salveazaTinteNutritie()">${tr('Salvează țintele', 'Save targets')}</button>`}
@@ -5009,7 +5010,7 @@ async function deschideAdaugaAliment(masa) {
   nutritie.cautare = '';
   randeazaAdaugaAliment();
   // Recente: ce a mai notat clientul (ultimele 60 de rânduri, fără dubluri)
-  const { data } = await supabaseClient.from('jurnal_alimente').select('nume, marca, cod, cantitate_g, kcal, proteine, carbo, grasimi')
+  const { data } = await supabaseClient.from('jurnal_alimente').select('*')
     .eq('client_id', dateClienta.fisa.id).order('created_at', { ascending: false }).limit(60);
   const vazute = new Set();
   nutritie.recente = (data || []).filter(x => { const k = (x.cod || '') + '|' + x.nume.toLowerCase(); if (vazute.has(k)) return false; vazute.add(k); return true; })
@@ -5021,13 +5022,27 @@ async function deschideAdaugaAliment(masa) {
 function produsDinJurnal(x) {
   const k = 100 / Number(x.cantitate_g || 100);
   return { nume: x.nume, marca: x.marca || '', cod: x.cod || null, kcal: rotunjeste1(x.kcal * k), proteine: rotunjeste1(x.proteine * k),
-    carbo: rotunjeste1(x.carbo * k), grasimi: rotunjeste1(x.grasimi * k), portie_g: Number(x.cantitate_g), sursa: 'recent' };
+    carbo: rotunjeste1(x.carbo * k), grasimi: rotunjeste1(x.grasimi * k), portie_g: Number(x.cantitate_g), imagine: x.imagine || '', sursa: 'recent' };
+}
+
+// Poza produsului (Open Food Facts) sau un semn neutru; doar adrese de pe images.openfoodfacts.org
+function htmlImagineProdus(url, marime) {
+  const ok = /^https:\/\/images\.openfoodfacts\.org\//.test(url || '');
+  return `<span class="nutritie-imagine ${marime || ''}">${ok ? `<img src="${escAttr(url)}" alt="" loading="lazy" onerror="this.remove()">` : ''}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M15 3c-1.5 2-2 4-2 6s1 3 2 3v9"/></svg></span>`;
+}
+
+// Nutri-Score de la Open Food Facts (A–E); necunoscut = nimic
+function htmlNutriScore(nota) {
+  const n = String(nota || '').toLowerCase();
+  if (!/^[a-e]$/.test(n)) return '';
+  return `<span class="nutriscore" title="Nutri-Score">${'abcde'.split('').map(x => `<i class="ns-${x}${x === n ? ' activ' : ''}">${x.toUpperCase()}</i>`).join('')}</span>`;
 }
 
 function htmlProdusRand(p, i, lista) {
   return `<button type="button" class="plan-zi-card nutritie-produs" onclick="alegeProdus('${lista}', ${i})">
+    ${htmlImagineProdus(p.imagine, 'mica')}
     <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(p.nume)}</span>
-    <span class="plan-zi-card-detalii">${p.marca ? escAttr(p.marca) + ' · ' : ''}${Math.round(p.kcal)} kcal / 100 g${p.sursa === 'recent' && p.portie_g ? ` · ${tr('ultima dată', 'last time')} ${formatKg(p.portie_g)} g` : ''}</span></span>
+    <span class="plan-zi-card-detalii">${p.marca ? escAttr(p.marca) + ' · ' : ''}<b>${Math.round(p.kcal)} kcal</b> ${tr('la 100 g', 'per 100 g')}${p.sursa === 'recent' && p.portie_g ? ` · ${tr('ultima dată', 'last time')} ${formatKg(p.portie_g)} g` : ''}</span></span>
     <span class="progres-ex-dif">+</span>
   </button>`;
 }
@@ -5057,9 +5072,12 @@ function produsDinOff(p, cod) {
   const kcal = Number(n['energy-kcal_100g'] ?? (n.energy_100g != null ? n.energy_100g / 4.184 : NaN));
   const nume = (p.product_name_ro || p.product_name || '').trim();
   if (!nume) return null;
+  const optional = v => v === undefined || v === null || v === '' || isNaN(Number(v)) ? null : rotunjeste1(v);
   return { nume: nume.slice(0, 120), marca: String(p.brands || '').split(',')[0].trim().slice(0, 80), cod: cod || p.code || null,
     kcal: isNaN(kcal) ? null : rotunjeste1(kcal), proteine: rotunjeste1(n.proteins_100g), carbo: rotunjeste1(n.carbohydrates_100g),
-    grasimi: rotunjeste1(n.fat_100g), portie_g: Number(p.serving_quantity) > 0 ? Number(p.serving_quantity) : null, sursa: 'off' };
+    grasimi: rotunjeste1(n.fat_100g), portie_g: Number(p.serving_quantity) > 0 ? Number(p.serving_quantity) : null, sursa: 'off',
+    imagine: p.image_front_small_url || '', imagineMare: p.image_front_url || p.image_front_small_url || '', nutriscore: p.nutriscore_grade || '',
+    saturate: optional(n['saturated-fat_100g']), zaharuri: optional(n.sugars_100g), fibre: optional(n.fiber_100g), sare: optional(n.salt_100g) };
 }
 
 // Căutare după nume: întâi produsele noastre, apoi Open Food Facts (prin Worker; doar la „Caută”, nu la fiecare literă)
@@ -5091,7 +5109,7 @@ async function gasesteDupaCod(cod) {
   showToast(tr('Caut produsul...', 'Looking up the product...'));
   const { data: propriu } = await supabaseClient.from('alimente').select('*').eq('cod', cod).maybeSingle();
   if (propriu) return deschideCantitate(Object.assign({}, propriu, { kcal: Number(propriu.kcal), proteine: Number(propriu.proteine), carbo: Number(propriu.carbo), grasimi: Number(propriu.grasimi), sursa: 'propriu' }));
-  const r = await fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity`)
+  const r = await fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,image_front_url,nutriscore_grade`)
     .then(x => x.ok ? x.json() : null).catch(() => null);
   const p = r && r.status === 1 && r.product ? produsDinOff(r.product, cod) : null;
   if (p && p.kcal !== null) return deschideCantitate(p);
@@ -5112,14 +5130,28 @@ function randeazaCantitate(grame) {
   const masa = MESE_NUTRITIE.find(m => m[0] === nutritie.masa) || MESE_NUTRITIE[1];
   document.getElementById('clientaTitlu').innerText = tr(masa[1], masa[2]);
   const rapide = [...new Set([p.portie_g, 100, 50, 200].filter(Boolean))].slice(0, 4);
+  const randEticheta = (et, v, sub) => v === null || v === undefined ? '' : `<div class="nutritie-eticheta-rand${sub ? ' sub' : ''}"><span>${et}</span><b>${formatKg(v)} g</b></div>`;
   document.getElementById('clientaContinut').innerHTML = `<div class="card nutritie-cantitate">
-      <b class="nutritie-produs-nume">${escAttr(p.nume)}</b>
-      ${p.marca ? `<div class="acasa-antrenament-detalii">${escAttr(p.marca)}</div>` : ''}
-      <div class="acasa-antrenament-detalii">${tr('La 100 g', 'Per 100 g')}: ${Math.round(p.kcal)} kcal · P ${formatKg(p.proteine)} g · C ${formatKg(p.carbo)} g · G ${formatKg(p.grasimi)} g</div>
+      <div class="nutritie-produs-cap">
+        ${htmlImagineProdus(p.imagineMare || p.imagine, 'mare')}
+        <div class="nutritie-produs-text">
+          <b class="nutritie-produs-nume">${escAttr(p.nume)}</b>
+          ${p.marca ? `<div class="acasa-antrenament-detalii">${escAttr(p.marca)}</div>` : ''}
+          ${htmlNutriScore(p.nutriscore)}
+        </div>
+      </div>
       <div class="antr-pers-campuri" style="margin-top:12px;"><label>${tr('Cantitate (g)', 'Amount (g)')}
         <input type="number" inputmode="decimal" id="nutritieGrame" class="plan-ex-input" value="${grame}" oninput="actualizeazaCalculCantitate()"></label></div>
       <div class="antr-pers-activitati" style="margin-top:8px;">${rapide.map(g => `<button type="button" class="antr-pers-activitate" onclick="document.getElementById('nutritieGrame').value=${g}; actualizeazaCalculCantitate()">${g === p.portie_g && g !== 100 ? tr('1 porție', '1 serving') + ` (${formatKg(g)} g)` : formatKg(g) + ' g'}</button>`).join('')}</div>
       <div class="nutritie-calcul" id="nutritieCalcul"></div>
+      <details class="nutritie-eticheta">
+        <summary>${tr('Valori nutriționale la 100 g', 'Nutrition facts per 100 g')}</summary>
+        <div class="nutritie-eticheta-rand"><span>${tr('Energie', 'Energy')}</span><b>${Math.round(p.kcal)} kcal</b></div>
+        ${randEticheta(tr('Grăsimi', 'Fat'), p.grasimi)}${randEticheta(tr('din care saturate', 'of which saturates'), p.saturate, true)}
+        ${randEticheta(tr('Carbohidrați', 'Carbohydrates'), p.carbo)}${randEticheta(tr('din care zaharuri', 'of which sugars'), p.zaharuri, true)}
+        ${randEticheta(tr('Fibre', 'Fibre'), p.fibre)}${randEticheta(tr('Proteine', 'Protein'), p.proteine)}${randEticheta(tr('Sare', 'Salt'), p.sare)}
+        ${p.sursa === 'off' ? `<div class="nutritie-sursa" style="margin-top:6px;">${tr('Sursa: Open Food Facts', 'Source: Open Food Facts')}</div>` : ''}
+      </details>
       <div class="antr-pers-actiuni" style="margin:12px 0 0;">
         <button type="button" class="btn" onclick="adaugaInJurnal()">${tr(`Adaugă la ${masa[1].toLowerCase()}`, `Add to ${masa[2].toLowerCase()}`)}</button>
         <button type="button" class="btn btn-clear" onclick="deschideAdaugaAliment(nutritie.masa)">${tr('Înapoi', 'Back')}</button>
@@ -5136,7 +5168,17 @@ function valoriPentruGrame(p, g) {
 function actualizeazaCalculCantitate() {
   const g = parseFloat(String(document.getElementById('nutritieGrame').value).replace(',', '.')) || 0;
   const v = valoriPentruGrame(nutritie.produs, g);
-  document.getElementById('nutritieCalcul').innerHTML = `<b>${Math.round(v.kcal)} kcal</b><span>P ${formatKg(v.proteine)} g · C ${formatKg(v.carbo)} g · G ${formatKg(v.grasimi)} g</span>`;
+  // Plăcile macronutrienților, cu partea lor din calorii (4 / 4 / 9 kcal pe gram), și ce rămâne din ținta de azi
+  const kcalMacro = { proteine: v.proteine * 4, carbo: v.carbo * 4, grasimi: v.grasimi * 9 };
+  const totalMacro = kcalMacro.proteine + kcalMacro.carbo + kcalMacro.grasimi;
+  const placa = (cheie, ro, en) => `<div class="nutritie-macro ${cheie}"><span>${tr(ro, en)}</span><b>${formatKg(v[cheie])} g</b>
+    <i style="width:${totalMacro ? Math.round(kcalMacro[cheie] / totalMacro * 100) : 0}%"></i></div>`;
+  const s = nutritie.setari || {};
+  const deja = nutritie.zi === aziIsoAntrPers() && nutritie.azi ? nutritie.azi.kcal : 0;
+  document.getElementById('nutritieCalcul').innerHTML = `<div class="nutritie-kcal-mare"><b>${Math.round(v.kcal)}</b> kcal
+      <span>${tr(`pentru ${formatKg(g)} g`, `for ${formatKg(g)} g`)}</span></div>
+    <div class="nutritie-macro-uri">${placa('proteine', 'Proteine', 'Protein')}${placa('carbo', 'Carbohidrați', 'Carbohydrates')}${placa('grasimi', 'Grăsimi', 'Fat')}</div>
+    ${s.kcal ? `<div class="acasa-antrenament-detalii nutritie-dupa">${tr(`Azi, după asta: ${Math.round(deja + v.kcal)} din ${s.kcal} kcal`, `Today, after this: ${Math.round(deja + v.kcal)} of ${s.kcal} kcal`)}</div>` : ''}`;
 }
 
 async function adaugaInJurnal() {
@@ -5144,7 +5186,8 @@ async function adaugaInJurnal() {
   const g = parseFloat(String(document.getElementById('nutritieGrame').value).replace(',', '.'));
   if (!(g > 0 && g <= 5000)) return showToast(tr('Scrie cantitatea în grame.', 'Enter the amount in grams.'), 'error');
   const rand = Object.assign({ user_id: c.user_id, client_id: c.id, data: nutritie.zi || aziIsoAntrPers(), masa: nutritie.masa,
-    nume: p.nume, marca: p.marca || '', cod: p.cod && /^\d{6,14}$/.test(p.cod) ? p.cod : null, cantitate_g: rotunjeste1(g) }, valoriPentruGrame(p, g));
+    nume: p.nume, marca: p.marca || '', cod: p.cod && /^\d{6,14}$/.test(p.cod) ? p.cod : null, cantitate_g: rotunjeste1(g),
+    imagine: /^https:\/\/images\.openfoodfacts\.org\//.test(p.imagine || '') ? p.imagine.slice(0, 300) : null }, valoriPentruGrame(p, g));
   const { data, error } = await supabaseClient.from('jurnal_alimente').insert(rand).select().single();
   if (error || !data) return showToast(tr('Nu s-a putut adăuga. Verifică internetul.', 'Could not add. Check your internet.'), 'error');
   nutritie.lista.push(data);
@@ -5165,8 +5208,8 @@ function deschideProdusNou(p) {
       <div class="acasa-antrenament-detalii" style="margin-bottom:8px;">${tr('Valorile de pe etichetă, la 100 g. Produsul rămâne salvat și pentru ceilalți clienți.', 'Values from the label, per 100 g. The product stays saved for other clients too.')}</div>
       <div class="antr-pers-campuri">${camp('nume', tr('Nume *', 'Name *'), escAttr(x.nume || ''), 'text')}</div>
       <div class="antr-pers-campuri">${camp('marca', tr('Marcă', 'Brand'), escAttr(x.marca || ''), 'text')}${camp('cod', tr('Cod de bare', 'Barcode'), escAttr(x.cod || ''), 'text')}</div>
-      <div class="antr-pers-campuri">${camp('kcal', 'Kcal *', x.kcal ?? '')}${camp('proteine', tr('Proteine (g)', 'Protein (g)'), x.proteine ?? '')}</div>
-      <div class="antr-pers-campuri">${camp('carbo', tr('Carbo (g)', 'Carbs (g)'), x.carbo ?? '')}${camp('grasimi', tr('Grăsimi (g)', 'Fat (g)'), x.grasimi ?? '')}</div>
+      <div class="antr-pers-campuri">${camp('kcal', tr('Calorii (kcal) *', 'Calories (kcal) *'), x.kcal ?? '')}${camp('proteine', tr('Proteine (g)', 'Protein (g)'), x.proteine ?? '')}</div>
+      <div class="antr-pers-campuri">${camp('carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)'), x.carbo ?? '')}${camp('grasimi', tr('Grăsimi (g)', 'Fat (g)'), x.grasimi ?? '')}</div>
       <div class="antr-pers-campuri">${camp('portie', tr('Porție (g, opțional)', 'Serving (g, optional)'), x.portie_g ?? '')}</div>
       <div class="antr-pers-actiuni" style="margin:12px 0 0;">
         <button type="button" class="btn" onclick="salveazaProdusNou()">${tr('Salvează produsul', 'Save product')}</button>
@@ -5299,12 +5342,12 @@ function htmlNutritieAntrenor() {
   const s = n.setari || {};
   const ascuns = s.vizibil_antrenor === false;
   const zile = n.zile.map(z => `<details class="card antr-pers-antrenor"><summary><span class="acasa-eticheta">${escAttr(etichetaDataAntrPers(z.data))}</span>
-      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${s.kcal}` : ''} kcal</b> <span class="acasa-antrenament-detalii">P ${Math.round(z.totaluri.proteine)} g · C ${Math.round(z.totaluri.carbo)} g · G ${Math.round(z.totaluri.grasimi)} g</span></summary>
+      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${s.kcal}` : ''} kcal</b> <span class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${Math.round(z.totaluri.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(z.totaluri.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(z.totaluri.grasimi)} g</span></summary>
       <ul>${z.randuri.map(x => `<li>${escAttr((MESE_NUTRITIE.find(m => m[0] === x.masa) || [, ''])[1])}: ${escAttr(x.nume)} · ${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal</li>`).join('')}</ul>
     </details>`).join('');
   return `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Nutriție', 'Nutrition')}</div>
     <div class="antr-pers-campuri nutritie-tinte">
-      ${[['kcal', 'Kcal'], ['proteine', tr('Proteine', 'Protein')], ['carbo', tr('Carbo', 'Carbs')], ['grasimi', tr('Grăsimi', 'Fat')]].map(([k, et]) =>
+      ${[['kcal', tr('Calorii (kcal)', 'Calories (kcal)')], ['proteine', tr('Proteine (g)', 'Protein (g)')], ['carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)')], ['grasimi', tr('Grăsimi (g)', 'Fat (g)')]].map(([k, et]) =>
         `<label>${et}<input type="number" inputmode="numeric" id="tintaNutA_${k}" class="plan-ex-input" value="${s[k] ?? ''}"></label>`).join('')}
     </div>
     <button type="button" class="btn btn-clear" style="margin:8px 0; width:100%;" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele zilnice', 'Save daily targets')}</button>
@@ -7728,6 +7771,12 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 172, data: '2026-11-05',
+    client: [
+      ['Nutriție: produsele au poză și Nutri-Score, la scanare, în căutare și în jurnal.', 'Nutrition: products show a photo and Nutri-Score, when scanning, in search and in your log.'],
+      ['După scanare vezi mare caloriile pentru cantitatea aleasă, proteinele, carbohidrații și grăsimile, plus eticheta completă la 100 g (zaharuri, fibre, sare).', 'After scanning you see the calories for your amount, protein, carbohydrates and fat, plus the full label per 100 g (sugars, fibre, salt).']
+    ],
+    antrenor: [] },
   { v: 171, data: '2026-11-05',
     client: [
       ['Comunitatea (opțional): intră de pe Acasă, alege-ți numele afișat și vezi cine s-a antrenat. Dă „Bravo” celorlalți.', 'Community (optional): join from Home, choose your display name and see who trained. Give others a “Well done”.'],
