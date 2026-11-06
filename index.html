@@ -34,7 +34,7 @@
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
-  <link rel="stylesheet" href="style.css?v=fitFinal175">
+  <link rel="stylesheet" href="style.css?v=fitFinal176">
 </head>
 <body>
 
@@ -539,6 +539,19 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Community">Comunitate</div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+
+        <!-- Card Navigare Rețete (antrenor: rețete pentru toți clienții lui) -->
+        <div class="drawer-nav-card doar-antrenor" onclick="deschideReteteAntrenor()">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" data-en="Recipes">Rețete</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -1185,6 +1198,27 @@
       </div>
       <div class="drawer-body">
         <div class="comunitate-antrenor" id="verificaProdusContinut"></div>
+      </div>
+    </div>
+
+    <!-- STRATUL 8: REȚETE (antrenor) -->
+    <div id="drawerReteteView" class="drawer-view-layer">
+      <div class="drawer-header">
+        <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('main')" title="Înapoi" data-en-title="Back">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div style="font-weight:800; font-size:1.05rem;" data-en="Recipes">Rețete</div>
+        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <div class="comunitate-antrenor" id="reteteAntrenor"></div>
       </div>
     </div>
 
@@ -1980,7 +2014,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal175"></script>
-  <script src="app.js?v=fitFinal175"></script>
+  <script src="sabloane.js?v=fitFinal176"></script>
+  <script src="app.js?v=fitFinal176"></script>
 </body>
 </html>

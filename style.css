@@ -8652,3 +8652,22 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .calculator-tinte .antr-pers-campuri { flex-wrap: wrap; }
 .calculator-tinte .antr-pers-campuri label { flex: 1 1 28%; min-width: 0; }
 .calculator-rezultat { text-align: center; }
+
+/* ==========================================
+   REȚETE (client: Nutriție › Rețete; antrenor: meniu › Rețete) și lista de cumpărături
+   ========================================== */
+.nutritie-scurtaturi { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.nutritie-scurtaturi .btn { font-size: 0.8rem; padding-left: 4px; padding-right: 4px; }
+.reteta-icon { background: rgba(var(--primary-rgb), 0.1); border-color: transparent; }
+.reteta-icon svg { stroke: var(--primary); }
+.reteta-card .nutritie-calcul { margin-top: 10px; }
+.reteta-portii-rand { display: flex; align-items: flex-end; gap: 8px; margin-top: 8px; }
+.reteta-portii-rand .ciclu-camp { flex: 1; }
+.reteta-portii-rand .btn { white-space: nowrap; }
+.reteta-instructiuni { white-space: pre-wrap; font-size: 0.9rem; line-height: 1.5; }
+.reteta-total { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-muted); }
+.reteta-total b { color: var(--primary); }
+.cumparaturi-rand { padding: 6px 0; margin-top: 0; border-top: 1px solid var(--border); }
+.cumparaturi-rand:first-child { border-top: none; }
+.cumparaturi-rand small { color: var(--text-muted); }
+.cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }

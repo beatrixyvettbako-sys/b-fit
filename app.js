@@ -873,7 +873,8 @@ function navigheazaSubMeniu(strat) {
     feedback: document.getElementById('drawerFeedbackView'),
     noutati: document.getElementById('drawerNoutatiView'),
     comunitate: document.getElementById('drawerComunitateView'),
-    verificaProdus: document.getElementById('drawerVerificaProdusView')
+    verificaProdus: document.getElementById('drawerVerificaProdusView'),
+    retete: document.getElementById('drawerReteteView')
   };
 
   Object.values(layers).forEach(el => {
@@ -4981,6 +4982,7 @@ function randeazaNutritieZi() {
     <div class="nutritie-scurtaturi">
       <button type="button" class="btn btn-clear" onclick="copiazaZiuaDeIeri()">${tr('⧉ Copiază ieri', '⧉ Copy yesterday')}</button>
       <button type="button" class="btn btn-clear" onclick="deschideAdaugaRapid(masaImplicita())">${tr('⚡ Adaugă rapid', '⚡ Quick add')}</button>
+      <button type="button" class="btn btn-clear" onclick="deschideRetete()">${tr('📖 Rețete', '📖 Recipes')}</button>
     </div>
     <div class="card nutritie-totaluri">
       <div class="nutritie-ramase">${s.kcal
@@ -5173,7 +5175,8 @@ async function deschideAdaugaAliment(masa) {
   // Recente: ce a mai notat clientul (ultimele 60 de rânduri, fără dubluri)
   const [{ data }] = await Promise.all([
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', dateClienta.fisa.id).order('created_at', { ascending: false }).limit(60),
-    nutritie.salvate === undefined || nutritie.salvate === null ? incarcaSalvateNutritie() : null
+    nutritie.salvate === undefined || nutritie.salvate === null ? incarcaSalvateNutritie() : null,
+    retete.lista === null ? incarcaRetete() : null
   ]);
   const vazute = new Set();
   nutritie.recente = (data || []).filter(x => Number(x.cantitate_g) !== 1).filter(x => { const k = (x.cod || '') + '|' + x.nume.toLowerCase(); if (vazute.has(k)) return false; vazute.add(k); return true; })
@@ -5248,6 +5251,7 @@ function htmlSalvateAdauga() {
       <button type="button" class="notificare-x nutritie-sterge" onclick="stergeSalvat('${m.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>
     </div>`;
   }).join('');
+  if ((retete.lista || []).length) html += `<div class="antr-pers-sectiune">${tr('Rețete', 'Recipes')}</div>` + retete.lista.slice(0, 6).map(htmlRandReteta).join('');
   if (fav.length) html += `<div class="antr-pers-sectiune">${tr('Favorite', 'Favourites')}</div>` + fav.map((f, i) => htmlProdusRand(Object.assign({}, f.continut[0], { sursa: 'favorit' }), i, 'favorite')).join('');
   return html;
 }
@@ -5314,6 +5318,7 @@ function produsPropriu(a) {
 
 function alegeProdus(lista, i) {
   if (lista === 'verificare') { verificare.produs = verificare.rezultate[i] || null; return randeazaVerificaProdus(); }
+  if (lista === 'reteta') return alegeIngredient(i);
   if (lista === 'favorite') {
     const f = (nutritie.salvate || []).filter(x => x.tip === 'favorit')[i];
     if (f) deschideCantitate(Object.assign({}, f.continut[0], { portie_g: Number(f.continut[0].cantitate_g) || null, sursa: 'favorit' }));
@@ -5786,6 +5791,11 @@ async function verificaProdusCod(cod) {
 // Înapoi din ecranele de nutriție: din adăugare/cantitate/produs nou la ziua deschisă, din zi la Acasă
 function inapoiNutritie() {
   opresteScanare();
+  if (['nutritie-reteta', 'nutritie-reteta-editor', 'nutritie-cumparaturi'].includes(antrPers.ecran)) {
+    if (antrPers.ecran === 'nutritie-reteta-editor' && retete.editor && retete.editor.id) { retete.vedere = 'reteta'; antrPers.ecran = 'nutritie-reteta'; }
+    else { retete.vedere = 'lista'; antrPers.ecran = 'nutritie-retete'; }
+    return randeazaRetete();
+  }
   if (antrPers.ecran !== 'nutritie') { antrPers.ecran = 'nutritie'; document.getElementById('clientaBtnInapoi').style.visibility = 'hidden'; randeazaNutritieZi(); return; }
   antrPers.ecran = null;
   randeazaHomeClienta();
@@ -6594,6 +6604,311 @@ function stergeActivitateComunitate(id) {
     comunitate.activitati = comunitate.activitati.filter(a => a.id !== id);
     randeazaComunitateAntrenor();
   });
+}
+
+// ---- Rețete (sql/2026-11-06_retete.sql): ale clientului (private) și ale antrenorului (pentru toți clienții lui) ----
+// Clientul le vede în Nutriție (ecranele antrPers.ecran = 'nutritie-retete', '-reteta', '-reteta-editor', '-cumparaturi'),
+// antrenorul în meniu › Rețete. vedere: 'lista' | 'reteta' | 'editor' | 'cumparaturi'
+let retete = { lista: null, vedere: 'lista', curenta: null, editor: null, cautare: '', rezultate: [] };
+const ECRANE_RETETE = { lista: 'nutritie-retete', reteta: 'nutritie-reteta', editor: 'nutritie-reteta-editor', cumparaturi: 'nutritie-cumparaturi' };
+
+function laAntrenorRetete() {
+  return rolUtilizator === 'antrenor';
+}
+
+function elRetete() {
+  return document.getElementById(laAntrenorRetete() ? 'reteteAntrenor' : 'clientaContinut');
+}
+
+async function incarcaRetete() {
+  const { data, error } = await supabaseClient.from('retete').select('*').order('nume');
+  retete.lista = error ? null : (data || []);
+}
+
+// Totalurile rețetei, pe porție și la 100 g (ca rețeta să intre în jurnal ca un aliment, cu grame reale)
+function valoriReteta(r) {
+  const ing = r.ingrediente || [];
+  const grame = ing.reduce((t, i) => t + (Number(i.cantitate_g) || 0), 0);
+  const total = ing.reduce((t, i) => { const v = valoriPentruGrame(i, Number(i.cantitate_g) || 0); return { kcal: t.kcal + v.kcal, proteine: t.proteine + v.proteine, carbo: t.carbo + v.carbo, grasimi: t.grasimi + v.grasimi }; }, { kcal: 0, proteine: 0, carbo: 0, grasimi: 0 });
+  const p = Number(r.portii) || 1;
+  const per = k => rotunjeste1(total[k] / p);
+  const la100 = k => grame ? rotunjeste1(total[k] * 100 / grame) : 0;
+  return { grame, gramePortie: grame / p, portie: { kcal: per('kcal'), proteine: per('proteine'), carbo: per('carbo'), grasimi: per('grasimi') },
+    la100: { kcal: la100('kcal'), proteine: la100('proteine'), carbo: la100('carbo'), grasimi: la100('grasimi') } };
+}
+
+async function deschideRetete() {
+  retete.vedere = 'lista';
+  if (!laAntrenorRetete()) { antrPers.ecran = 'nutritie-retete'; arataInapoiAntrPers(); }
+  if (retete.lista === null) elRetete().innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  else randeazaRetete();
+  await incarcaRetete();
+  randeazaRetete();
+}
+
+function deschideReteteAntrenor() {
+  navigheazaSubMeniu('retete');
+  deschideRetete();
+}
+
+function randeazaRetete() {
+  const el = elRetete();
+  if (!el) return;
+  if (!laAntrenorRetete()) {
+    // Clientul a plecat între timp din ecranele de rețete: nu desenăm peste alt ecran
+    if (!String(antrPers.ecran).startsWith('nutritie-ret') && antrPers.ecran !== 'nutritie-cumparaturi') return;
+    antrPers.ecran = ECRANE_RETETE[retete.vedere];
+    document.getElementById('clientaTitlu').innerText = retete.vedere === 'cumparaturi' ? tr('Cumpărături', 'Shopping list')
+      : retete.vedere === 'editor' ? (retete.editor && retete.editor.id ? tr('Editează rețeta', 'Edit recipe') : tr('Rețetă nouă', 'New recipe')) : tr('Rețete', 'Recipes');
+  }
+  if (retete.lista === null) { el.innerHTML = `<div class="progres-gol">${tr('Rețetele nu sunt disponibile acum. Verifică internetul.', 'Recipes are not available right now. Check your internet.')}</div>`; return; }
+  const inapoi = laAntrenorRetete() && retete.vedere !== 'lista' ? `<button type="button" class="btn btn-clear" onclick="retete.vedere = 'lista'; randeazaRetete()">‹ ${tr('Rețete', 'Recipes')}</button>` : '';
+  el.innerHTML = inapoi + (retete.vedere === 'reteta' ? htmlReteta() : retete.vedere === 'editor' ? htmlEditorReteta() : retete.vedere === 'cumparaturi' ? htmlCumparaturi() : htmlListaRetete());
+}
+
+function htmlRandReteta(r) {
+  const v = valoriReteta(r);
+  return `<button type="button" class="plan-zi-card nutritie-produs" onclick="deschideReteta('${r.id}')">
+    <span class="nutritie-imagine mica reteta-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+    <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(r.nume)}</span>
+    <span class="plan-zi-card-detalii"><b>${Math.round(v.portie.kcal)} kcal</b> ${tr('pe porție', 'per serving')} · ${r.portii} ${Number(r.portii) === 1 ? tr('porție', 'serving') : tr('porții', 'servings')}${r.timp_min ? ` · ${r.timp_min} min` : ''}</span></span>
+    <span class="progres-ex-dif">›</span>
+  </button>`;
+}
+
+function htmlListaRetete() {
+  const antrenor = laAntrenorRetete();
+  const aleAntrenorului = retete.lista.filter(r => !r.client_id);
+  const aleMele = retete.lista.filter(r => r.client_id);
+  let html = antrenor
+    ? `<div class="acasa-antrenament-detalii">${tr('Rețetele tale le văd toți clienții tăi, în Nutriție › Rețete. Le pot adăuga în jurnal pe porții.', 'All your clients see your recipes in Nutrition › Recipes and can log them by serving.')}</div>`
+    : `<div class="nutritie-scurtaturi"><button type="button" class="btn" onclick="deschideEditorReteta(null)">${tr('+ Rețetă nouă', '+ New recipe')}</button>
+        <button type="button" class="btn btn-clear" onclick="retete.vedere = 'cumparaturi'; randeazaRetete()">🛒 ${tr('Cumpărături', 'Shopping')}${listaCumparaturi().length ? ` (${listaCumparaturi().filter(x => !x.bifat).length})` : ''}</button></div>`;
+  if (antrenor) html += `<button type="button" class="btn profile-save-btn" onclick="deschideEditorReteta(null)">${tr('+ Rețetă nouă', '+ New recipe')}</button>`;
+  if (antrenor) {
+    html += aleAntrenorului.length ? aleAntrenorului.map(htmlRandReteta).join('') : `<div class="progres-gol">${tr('Încă nicio rețetă. Adaugă una: clienții o văd imediat.', 'No recipes yet. Add one: your clients see it right away.')}</div>`;
+    return html;
+  }
+  if (aleAntrenorului.length) html += `<div class="antr-pers-sectiune">${tr('De la antrenorul tău', 'From your trainer')}</div>` + aleAntrenorului.map(htmlRandReteta).join('');
+  html += `<div class="antr-pers-sectiune">${tr('Rețetele mele', 'My recipes')}</div>`
+    + (aleMele.length ? aleMele.map(htmlRandReteta).join('') : `<div class="progres-gol">${tr('Pune ingredientele o dată și aplicația îți calculează caloriile pe porție.', 'Add the ingredients once and the app works out the calories per serving.')}</div>`);
+  return html;
+}
+
+function deschideReteta(id) {
+  retete.curenta = (retete.lista || []).find(r => r.id === id) || null;
+  if (!retete.curenta) return;
+  retete.vedere = 'reteta';
+  if (!laAntrenorRetete()) { antrPers.ecran = 'nutritie-reteta'; arataInapoiAntrPers(); }
+  randeazaRetete();
+}
+
+function htmlReteta() {
+  const r = retete.curenta, v = valoriReteta(r);
+  const editabila = laAntrenorRetete() ? !r.client_id : !!r.client_id;
+  const placa = (k, ro, en) => `<div class="nutritie-macro ${k}"><span>${tr(ro, en)}</span><b>${formatKg(v.portie[k])} g</b></div>`;
+  const masa = nutritie.masa || masaImplicita();
+  return `<div class="card reteta-card">
+      <b class="nutritie-produs-nume">${escAttr(r.nume)}</b>
+      <div class="acasa-antrenament-detalii">${r.client_id ? tr('Rețeta ta', 'Your recipe') : laAntrenorRetete() ? tr('Rețeta ta · o văd clienții tăi', 'Your recipe · your clients see it') : tr('De la antrenor', 'From your trainer')} · ${r.portii} ${Number(r.portii) === 1 ? tr('porție', 'serving') : tr('porții', 'servings')} · ~${formatKg(Math.round(v.gramePortie))} g ${tr('porția', 'per serving')}${r.timp_min ? ` · ${r.timp_min} min` : ''}</div>
+      <div class="nutritie-calcul">
+        <div class="nutritie-kcal-mare"><b>${Math.round(v.portie.kcal)}</b> kcal <span>${tr('pe porție', 'per serving')}</span></div>
+        <div class="nutritie-macro-uri">${placa('proteine', 'Proteine', 'Protein')}${placa('carbo', 'Carbohidrați', 'Carbohydrates')}${placa('grasimi', 'Grăsimi', 'Fat')}</div>
+      </div>
+      ${laAntrenorRetete() ? '' : `<div class="checkin-eticheta" style="margin-top:12px;">${tr('Adaugă în jurnal', 'Add to the log')}</div>
+      <div class="antr-pers-activitati" id="retetaMese">${MESE_NUTRITIE.map(([cod, ro, en]) => `<button type="button" class="antr-pers-activitate${cod === masa ? ' activ' : ''}" data-masa="${cod}" onclick="this.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('activ', b === this))">${tr(ro, en)}</button>`).join('')}</div>
+      <div class="reteta-portii-rand">
+        <label class="ciclu-camp">${tr('Porții', 'Servings')}<input type="number" inputmode="decimal" id="retetaPortii" class="plan-ex-input" value="1" min="0.25" max="20" step="0.25"></label>
+        <button type="button" class="btn" onclick="adaugaRetetaInJurnal(this)">${tr('Adaugă', 'Add')}</button>
+      </div>`}
+    </div>
+    <div class="antr-pers-sectiune">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
+    <div class="card">${(r.ingrediente || []).map(i => `<div class="nutritie-rand">${htmlImagineProdus(i.imagine, 'mica')}
+        <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(i.nume)}${i.marca ? ` <small>${escAttr(i.marca)}</small>` : ''}</div>
+        <div class="acasa-antrenament-detalii">${formatKg(Number(i.cantitate_g))} g · ${Math.round(valoriPentruGrame(i, Number(i.cantitate_g)).kcal)} kcal</div></div></div>`).join('')}</div>
+    ${r.instructiuni ? `<div class="antr-pers-sectiune">${tr('Mod de preparare', 'Method')}</div><div class="card reteta-instructiuni">${escAttr(r.instructiuni)}</div>` : ''}
+    <div class="nutritie-adauga-jos">
+      ${laAntrenorRetete() ? '' : `<button type="button" class="btn btn-clear" onclick="adaugaLaCumparaturi()">🛒 ${tr('Pune ingredientele pe lista de cumpărături', 'Add the ingredients to the shopping list')}</button>`}
+      ${editabila ? `<button type="button" class="btn btn-clear" onclick="deschideEditorReteta('${r.id}')">${tr('Editează', 'Edit')}</button>
+        <button type="button" class="btn btn-clear ciclu-opreste" onclick="stergeReteta('${r.id}')">${tr('Șterge rețeta', 'Delete recipe')}</button>` : ''}
+    </div>`;
+}
+
+// Rețeta în jurnal: un rând cu numele ei, cu gramele porțiilor și valorile la 100 g ale rețetei
+async function adaugaRetetaInJurnal(btn) {
+  const r = retete.curenta, v = valoriReteta(r);
+  const portii = parseFloat(String(document.getElementById('retetaPortii').value).replace(',', '.'));
+  if (!(portii > 0 && portii <= 20)) return showToast(tr('Câte porții? (între 0,25 și 20)', 'How many servings? (0.25 to 20)'), 'error');
+  const masa = (document.querySelector('#retetaMese .activ') || {}).dataset?.masa || masaImplicita();
+  const produs = Object.assign({ nume: r.nume, marca: tr('Rețetă', 'Recipe'), cod: null, imagine: '' }, v.la100);
+  btn.disabled = true;
+  if (!nutritie.zi) nutritie.zi = aziIsoAntrPers();
+  const ok = await insereazaInJurnal([{ produs, grame: Math.max(1.1, v.gramePortie * portii) }], masa);
+  btn.disabled = false;
+  if (!ok) return;
+  showToast(tr(`✓ ${r.nume}: ${Math.round(v.portie.kcal * portii)} kcal`, `✓ ${r.nume}: ${Math.round(v.portie.kcal * portii)} kcal`));
+  antrPers.ecran = 'nutritie';
+  document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
+  randeazaNutritieZi();
+}
+
+function stergeReteta(id) {
+  customConfirm(tr('Ștergi rețeta?', 'Delete the recipe?'), tr('Ce ai notat deja în jurnal rămâne.', 'What you already logged stays.'), async () => {
+    const { error } = await supabaseClient.from('retete').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    retete.lista = retete.lista.filter(r => r.id !== id);
+    retete.vedere = 'lista';
+    if (!laAntrenorRetete()) antrPers.ecran = 'nutritie-retete';
+    randeazaRetete();
+  });
+}
+
+// ---- Editorul: nume, porții, timp, ingrediente (căutate ca la jurnal), mod de preparare ----
+function deschideEditorReteta(id) {
+  const r = id ? (retete.lista || []).find(x => x.id === id) : null;
+  retete.editor = r ? JSON.parse(JSON.stringify({ id: r.id, nume: r.nume, portii: r.portii, timp_min: r.timp_min, instructiuni: r.instructiuni, ingrediente: r.ingrediente }))
+    : { id: null, nume: '', portii: 4, timp_min: null, instructiuni: '', ingrediente: [] };
+  retete.cautare = '';
+  retete.rezultate = [];
+  retete.vedere = 'editor';
+  if (!laAntrenorRetete()) { antrPers.ecran = 'nutritie-reteta-editor'; arataInapoiAntrPers(); }
+  randeazaRetete();
+}
+
+function htmlEditorReteta() {
+  const e = retete.editor;
+  const v = valoriReteta(e);
+  const rez = retete.rezultate;
+  return `<div class="card obiectiv-form">
+      <div class="antr-pers-campuri"><label>${tr('Numele rețetei *', 'Recipe name *')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(e.nume)}" placeholder="${tr('ex. Ciorbă de legume', 'e.g. Vegetable soup')}" oninput="retete.editor.nume = this.value"></label></div>
+      <div class="antr-pers-campuri">
+        <label>${tr('Câte porții iese', 'Servings')}<input type="number" inputmode="numeric" class="plan-ex-input" min="1" max="50" value="${e.portii}" onchange="retete.editor.portii = Math.max(1, Math.min(50, parseInt(this.value, 10) || 1)); randeazaRetete()"></label>
+        <label>${tr('Timp (min, opțional)', 'Time (min, optional)')}<input type="number" inputmode="numeric" class="plan-ex-input" min="1" max="1440" value="${e.timp_min ?? ''}" oninput="retete.editor.timp_min = parseInt(this.value, 10) || null"></label>
+      </div>
+    </div>
+    <div class="antr-pers-sectiune">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
+    <div class="card">
+      ${e.ingrediente.length ? e.ingrediente.map((i, k) => `<div class="nutritie-rand">${htmlImagineProdus(i.imagine, 'mica')}
+        <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(i.nume)}</div>
+        <div class="acasa-antrenament-detalii">${formatKg(Number(i.cantitate_g))} g · ${Math.round(valoriPentruGrame(i, Number(i.cantitate_g)).kcal)} kcal</div></div>
+        <button type="button" class="notificare-x nutritie-sterge" onclick="retete.editor.ingrediente.splice(${k}, 1); randeazaRetete()" aria-label="${tr('Scoate', 'Remove')}">×</button></div>`).join('')
+        : `<div class="acasa-antrenament-detalii">${tr('Caută ingredientele mai jos și scrie cantitatea pentru toată rețeta.', 'Search the ingredients below and enter the amount for the whole recipe.')}</div>`}
+      ${e.ingrediente.length ? `<div class="reteta-total">${tr('Pe porție', 'Per serving')}: <b>${Math.round(v.portie.kcal)} kcal</b> · ${tr('Proteine', 'Protein')} ${formatKg(v.portie.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ${formatKg(v.portie.carbo)} g · ${tr('Grăsimi', 'Fat')} ${formatKg(v.portie.grasimi)} g</div>` : ''}
+      <div class="antr-pers-adauga" style="margin-top:10px;">
+        <input type="search" id="retetaCauta" class="plan-ex-input" maxlength="60" value="${escAttr(retete.cautare)}" placeholder="${tr('Caută ingredientul (ex: morcovi)', 'Search the ingredient (e.g. carrots)')}" onkeydown="if (event.key === 'Enter') cautaIngredient()">
+        <button type="button" class="btn" onclick="cautaIngredient()">${tr('Caută', 'Search')}</button>
+      </div>
+      ${rez === 'cautare' ? `<div class="progres-gol">${tr('Se caută...', 'Searching...')}</div>`
+        : rez.length ? rez.map((p, i) => htmlProdusRand(p, i, 'reteta')).join('')
+        : retete.cautare ? `<div class="progres-gol">${tr('Nu am găsit ingredientul.', 'Ingredient not found.')}</div>` : ''}
+    </div>
+    <div class="antr-pers-sectiune">${tr('Mod de preparare (opțional)', 'Method (optional)')}</div>
+    <div class="card"><textarea class="plan-ex-textarea" rows="5" maxlength="4000" oninput="retete.editor.instructiuni = this.value">${escAttr(e.instructiuni || '')}</textarea></div>
+    <div class="antr-pers-actiuni" style="margin:12px 0 0;">
+      <button type="button" class="btn" onclick="salveazaReteta(this)">${tr('Salvează rețeta', 'Save recipe')}</button>
+      <button type="button" class="btn btn-clear" onclick="retete.vedere = '${e.id ? 'reteta' : 'lista'}'; randeazaRetete()">${tr('Renunță', 'Cancel')}</button>
+    </div>`;
+}
+
+async function cautaIngredient() {
+  const q = (document.getElementById('retetaCauta').value || '').trim();
+  if (q.length < 2) return;
+  retete.cautare = q;
+  retete.rezultate = 'cautare';
+  randeazaRetete();
+  retete.rezultate = await cautaProduse(q);
+  if (retete.vedere === 'editor') randeazaRetete();
+}
+
+// Ingredientul ales: cantitatea pentru toată rețeta (implicit porția lui sau 100 g)
+function alegeIngredient(i) {
+  const p = retete.rezultate[i];
+  if (!p) return;
+  const implicit = p.portie_g || ((p.portii || [])[0] || {}).g || 100;
+  customConfirm(p.nume, tr('Câte grame pentru toată rețeta?', 'How many grams for the whole recipe?'), valoare => {
+    const g = parseFloat(String(valoare).replace(',', '.'));
+    if (!(g > 0 && g <= 10000)) return showToast(tr('Scrie cantitatea în grame.', 'Enter the amount in grams.'), 'error');
+    retete.editor.ingrediente.push(alimentDeSalvat(p, rotunjeste1(g)));
+    retete.cautare = '';
+    retete.rezultate = [];
+    randeazaRetete();
+  }, { valoare: String(implicit), placeholder: tr('grame', 'grams') });
+}
+
+async function salveazaReteta(btn) {
+  const e = retete.editor;
+  if (!(e.nume || '').trim()) return showToast(tr('Dă un nume rețetei.', 'Give the recipe a name.'), 'error');
+  if (!e.ingrediente.length) return showToast(tr('Adaugă cel puțin un ingredient.', 'Add at least one ingredient.'), 'error');
+  const proprietar = laAntrenorRetete() ? { user_id: utilizatorCurent.id, client_id: null } : { user_id: dateClienta.fisa.user_id, client_id: dateClienta.fisa.id };
+  const rand = Object.assign({ nume: e.nume.trim().slice(0, 120), portii: e.portii, timp_min: e.timp_min || null, ingrediente: e.ingrediente,
+    instructiuni: (e.instructiuni || '').slice(0, 4000), updated_at: new Date().toISOString() }, e.id ? {} : proprietar);
+  btn.disabled = true;
+  const q = e.id ? supabaseClient.from('retete').update(rand).eq('id', e.id) : supabaseClient.from('retete').insert(rand);
+  const { data, error } = await q.select().single();
+  btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  retete.lista = (retete.lista || []).filter(r => r.id !== data.id).concat(data).sort((a, b) => a.nume.localeCompare(b.nume));
+  showToast(tr('✓ Rețetă salvată', '✓ Recipe saved'));
+  deschideReteta(data.id);
+}
+
+// ---- Lista de cumpărături: pe acest dispozitiv, din ingredientele rețetelor, cu bife ----
+function cheieCumparaturi() {
+  return 'BFIT_CUMPARATURI_' + (utilizatorCurent ? utilizatorCurent.id : '');
+}
+
+function listaCumparaturi() {
+  try { return JSON.parse(localStorage.getItem(cheieCumparaturi()) || '[]') || []; } catch (e) { return []; }
+}
+
+function salveazaCumparaturi(lista) {
+  try { localStorage.setItem(cheieCumparaturi(), JSON.stringify(lista)); } catch (e) {}
+}
+
+// Ingredientele rețetei deschise, pentru porțiile alese (sau toată rețeta); același ingredient se adună
+function adaugaLaCumparaturi() {
+  const r = retete.curenta;
+  const portii = parseFloat(String((document.getElementById('retetaPortii') || {}).value || '').replace(',', '.')) || Number(r.portii);
+  const k = portii / (Number(r.portii) || 1);
+  const lista = listaCumparaturi();
+  (r.ingrediente || []).forEach(i => {
+    const g = (Number(i.cantitate_g) || 0) * k;
+    const existent = lista.find(x => !x.bifat && faraDiacritice(x.nume) === faraDiacritice(i.nume));
+    if (existent) existent.g = rotunjeste1(existent.g + g); else lista.push({ nume: i.nume, g: rotunjeste1(g), bifat: false });
+  });
+  salveazaCumparaturi(lista);
+  showToast(tr(`🛒 ${r.ingrediente.length} ingrediente pe listă`, `🛒 ${r.ingrediente.length} ingredients on the list`));
+}
+
+function htmlCumparaturi() {
+  const lista = listaCumparaturi();
+  if (!lista.length) return `<div class="progres-gol">${tr('Lista e goală. Deschide o rețetă și apasă „Pune ingredientele pe lista de cumpărături”.', 'The list is empty. Open a recipe and tap “Add the ingredients to the shopping list”.')}</div>`;
+  return `<div class="card">${lista.map((x, i) => `<label class="checkin-bifa cumparaturi-rand${x.bifat ? ' bifat' : ''}"><input type="checkbox" ${x.bifat ? 'checked' : ''} onchange="bifeazaCumparatura(${i}, this.checked)"><span>${escAttr(x.nume)} <small>${formatKg(Math.round(x.g))} g</small></span></label>`).join('')}</div>
+    <div class="nutritie-adauga-jos">
+      <button type="button" class="btn" onclick="trimiteCumparaturi()">${tr('Trimite lista', 'Share the list')}</button>
+      <button type="button" class="btn btn-clear" onclick="golesteCumparaturi(true)">${tr('Scoate ce am bifat', 'Remove ticked items')}</button>
+      <button type="button" class="btn btn-clear ciclu-opreste" onclick="golesteCumparaturi(false)">${tr('Golește lista', 'Clear the list')}</button>
+    </div>`;
+}
+
+function bifeazaCumparatura(i, bifat) {
+  const lista = listaCumparaturi();
+  if (!lista[i]) return;
+  lista[i].bifat = bifat;
+  salveazaCumparaturi(lista);
+  randeazaRetete();
+}
+
+function golesteCumparaturi(doarBifate) {
+  salveazaCumparaturi(doarBifate ? listaCumparaturi().filter(x => !x.bifat) : []);
+  randeazaRetete();
+}
+
+// Meniul de partajare al telefonului (WhatsApp, notițe...), cu ce nu e bifat
+async function trimiteCumparaturi() {
+  const text = tr('Cumpărături', 'Shopping list') + ':\n' + listaCumparaturi().filter(x => !x.bifat).map(x => `• ${x.nume} (${formatKg(Math.round(x.g))} g)`).join('\n');
+  if (navigator.share) { try { await navigator.share({ text }); } catch (e) {} return; }
+  try { await navigator.clipboard.writeText(text); showToast(tr('✓ Lista copiată', '✓ List copied')); } catch (e) {}
 }
 
 // Cardul unei zile din lista zilelor (antrenor, client, link partajat). cuProgres: „făcute / total” în loc de numărul de exerciții
@@ -8246,6 +8561,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 176, data: '2026-11-06',
+    client: [
+      ['Rețete: în Nutriție › 📖 Rețete pui ingredientele o dată și aplicația calculează caloriile pe porție. Le adaugi în jurnal pe porții.', 'Recipes: in Nutrition › 📖 Recipes add the ingredients once and the app works out the calories per serving. Log them by serving.'],
+      ['Vezi și rețetele de la antrenor, iar cu 🛒 pui ingredientele pe lista de cumpărături și o trimiți din telefon.', 'You also see your trainer’s recipes, and with 🛒 you put the ingredients on a shopping list you can share from your phone.']
+    ],
+    antrenor: [
+      ['Rețete: din meniu › Rețete creezi rețete pentru toți clienții tăi; ei le văd în Nutriție și le adaugă în jurnal pe porții.', 'Recipes: in the menu › Recipes create recipes for all your clients; they see them in Nutrition and log them by serving.']
+    ] },
   { v: 175, data: '2026-11-06',
     client: [
       ['Nutriție: 250 de alimente de bază în română (ouă, carne, legume, fructe...) cu porții ca acasă: „1 ou”, „1 lingură”, „1 felie”.', 'Nutrition: 250 basic foods (eggs, meat, vegetables, fruit...) with everyday portions: “1 egg”, “1 tbsp”, “1 slice”.'],
