@@ -8671,3 +8671,27 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .cumparaturi-rand:first-child { border-top: none; }
 .cumparaturi-rand small { color: var(--text-muted); }
 .cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }
+
+/* ==========================================
+   ȚINTE ADAPTIVE: greutatea de azi, tendința, consumul real și ținta propusă
+   ========================================== */
+.nutritie-adaptiv { display: flex; flex-direction: column; gap: 6px; }
+.nutritie-adaptiv .nutritie-masa-sus { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.nutritie-adaptiv .nutritie-masa-sus span { font-size: 0.8rem; color: var(--text-muted); text-align: right; }
+.adaptiv-cantar { display: flex; gap: 8px; }
+.adaptiv-cantar input { flex: 1; min-width: 0; }
+.adaptiv-cantar .btn { white-space: nowrap; }
+.grafic-greutate { width: 100%; height: 80px; margin-top: 4px; }
+.grafic-greutate .gg-trend { fill: none; stroke: var(--primary); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.grafic-greutate .gg-punct { fill: #8b5cf6; opacity: 0.45; }
+.adaptiv-legenda { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); }
+.gg-l-punct { width: 7px; height: 7px; border-radius: 50%; background: #8b5cf6; opacity: 0.45; }
+.gg-l-trend { width: 14px; height: 3px; border-radius: 2px; background: var(--primary); margin-left: 8px; }
+.adaptiv-consum { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.adaptiv-consum b { font-size: 1.15rem; color: var(--primary); }
+.adaptiv-propunere { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-radius: 12px; background: rgba(var(--primary-rgb), 0.07); }
+.adaptiv-propunere b { font-size: 1.05rem; color: var(--primary); }
+.adaptiv-propunere .btn { white-space: nowrap; }
+.adaptiv-motiv { padding: 8px 10px; border-radius: 10px; background: var(--input-glass-bg); }
+.adaptiv-tendinta { font-size: 0.82rem; color: var(--text-muted); }
+.adaptiv-tendinta b { font-size: 1rem; color: var(--primary); }

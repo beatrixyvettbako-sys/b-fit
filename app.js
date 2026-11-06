@@ -4949,7 +4949,8 @@ async function deschideNutritie(zi) {
   const z = zi || nutritie.zi || aziIsoAntrPers();
   if (nutritie.zi !== z) document.getElementById('clientaContinut').innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
   else randeazaNutritieZi();
-  await Promise.all([incarcaNutritieZi(z), nutritie.salvate === undefined ? incarcaSalvateNutritie() : null]);
+  const [, , adaptiv] = await Promise.all([incarcaNutritieZi(z), nutritie.salvate === undefined ? incarcaSalvateNutritie() : null, incarcaDateAdaptive(dateClienta.fisa.id)]);
+  nutritie.adaptiv = adaptiv;
   if (antrPers.ecran === 'nutritie') randeazaNutritieZi();
 }
 
@@ -5009,7 +5010,7 @@ function randeazaNutritieZi() {
       ${randuri.length && nutritie.salvate ? `<button type="button" class="nutritie-salveaza-masa" onclick="salveazaMasa('${cod}')">☆ ${tr('Salvează masa', 'Save meal')}</button>` : ''}
     </div>`;
   });
-  html += '</div>' + htmlApaZi();
+  html += '</div>' + htmlApaZi() + htmlAdaptiv(nutritie.adaptiv, s, ((dateClienta.fisa || {}).fisa_inscriere || {}).inaltime, false);
   const deAntrenor = s.tinte_setate_de === 'antrenor';
   html += `<div class="antr-pers-sectiune">${tr('Ținte zilnice', 'Daily targets')}</div>
     <div class="card">
@@ -5136,6 +5137,214 @@ async function aplicaCalculatorTinte(btn) {
   antrPers.ecran = 'nutritie';
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   randeazaNutritieZi();
+}
+
+// ---- Ținte adaptive (sql/2026-11-06_tinte_adaptive.sql), ca la aplicațiile de nutriție de top ----
+// Tendința greutății: medie exponențială pe zile (10% pe zi), ca apa și sarea de azi să nu conteze.
+// Consumul real: media caloriilor din zilele notate, corectată cu ritmul greutății (panta, 7.700 kcal ≈ 1 kg),
+// pe ultimele ~3 săptămâni. Ținta propusă: consumul × obiectiv (slăbire −20%, menținere, masă +10%).
+const KCAL_PE_KG = 7700;
+
+async function incarcaDateAdaptive(clientId) {
+  const de = new Date(); de.setDate(de.getDate() - 42);
+  const deIso = isoDinData(de);
+  const [resJ, resZ, resC, resG] = await Promise.all([
+    supabaseClient.from('jurnal_alimente').select('data, kcal').eq('client_id', clientId).gte('data', deIso),
+    supabaseClient.from('greutate_zilnica').select('data, kg').eq('client_id', clientId).gte('data', deIso),
+    supabaseClient.from('checkin_saptamanal').select('saptamana, greutate').eq('client_id', clientId).gte('saptamana', deIso).not('greutate', 'is', null),
+    supabaseClient.from('greutati').select('greutate, created_at').eq('client_id', clientId).gte('created_at', deIso)
+  ]);
+  if (resZ.error) return null; // fără tabel (SQL nerulat): secțiunea nu apare
+  const zile = new Map();
+  (resJ.data || []).forEach(x => zile.set(x.data, (zile.get(x.data) || 0) + Number(x.kcal || 0)));
+  // O greutate pe zi; cântărirea zilnică a clientului are prioritate față de check-in și de cea notată de antrenor
+  const kg = new Map();
+  (resG.error ? [] : resG.data || []).forEach(x => kg.set(String(x.created_at).slice(0, 10), Number(x.greutate)));
+  (resC.error ? [] : resC.data || []).forEach(x => { if (!kg.has(x.saptamana)) kg.set(x.saptamana, Number(x.greutate)); });
+  (resZ.data || []).forEach(x => kg.set(x.data, Number(x.kg)));
+  return {
+    zile, jurnal: !resJ.error,
+    greutati: [...kg.entries()].map(([data, v]) => ({ data, kg: v })).filter(x => x.kg > 0).sort((a, b) => a.data.localeCompare(b.data)),
+    azi: (resZ.data || []).find(x => x.data === aziIsoAntrPers()) || null
+  };
+}
+
+// { puncte (cu tendința), tendinta, ritmSapt, consum, zileNotate, motiv }; motiv = de ce nu se poate încă estima consumul
+function calculeazaAdaptiv(d) {
+  if (!d) return null;
+  let trend = null, anterior = null;
+  const puncte = d.greutati.map(p => {
+    if (trend === null) trend = p.kg;
+    else trend += (1 - Math.pow(0.9, Math.max(1, zileIntre(anterior, p.data)))) * (p.kg - trend);
+    anterior = p.data;
+    return { data: p.data, kg: p.kg, trend };
+  });
+  const rez = { puncte, tendinta: trend, ritmSapt: null, consum: null, zileNotate: 0, motiv: '' };
+  if (!puncte.length) { rez.motiv = tr('Cântărește-te de câteva ori pe săptămână (dimineața, înainte de micul dejun).', 'Weigh yourself a few times a week (in the morning, before breakfast).'); return rez; }
+  const azi = aziIsoAntrPers();
+  const start = isoDinData(new Date(Date.now() - 20 * 86400000));
+  const inFereastra = puncte.filter(p => p.data >= start);
+  // Tendința de la începutul ferestrei: ultimul punct de dinainte (dacă există), altfel primul din fereastră
+  const inainte = puncte.filter(p => p.data < start).pop();
+  const primul = inainte || inFereastra[0];
+  const ultimul = puncte[puncte.length - 1];
+  const zileGreutate = primul ? zileIntre(primul.data, ultimul.data) : 0;
+  // Schimbarea greutății: panta dreptei prin cântăririle din perioadă (mai exactă decât capetele tendinței, care întârzie)
+  const serie = puncte.filter(p => p.data >= primul.data);
+  const xs = serie.map(p => zileIntre(primul.data, p.data)), ys = serie.map(p => p.kg);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  const sxx = xs.reduce((t, x) => t + (x - mx) * (x - mx), 0);
+  const panta = sxx ? xs.reduce((t, x, i) => t + (x - mx) * (ys[i] - my), 0) / sxx : 0; // kg pe zi
+  if (zileGreutate >= 7 && serie.length >= 3) rez.ritmSapt = panta * 7;
+  // Caloriile: zilele complete (de ieri înapoi) cu cel puțin 500 kcal notate, din aceeași perioadă
+  const deLa = primul && primul.data > start ? primul.data : start;
+  const ieri = isoDinData(new Date(Date.now() - 86400000));
+  const zileFereastra = Math.max(1, zileIntre(deLa, ieri) + 1);
+  const notate = [...d.zile.entries()].filter(([data, kcal]) => data >= deLa && data <= ieri && kcal >= 500);
+  rez.zileNotate = notate.length;
+  if (!d.jurnal) { rez.motiv = tr('Jurnalul alimentar e ascuns.', 'The food log is hidden.'); return rez; }
+  if (zileGreutate < 10 || ultimul.data < isoDinData(new Date(Date.now() - 7 * 86400000))) {
+    rez.motiv = tr('Pentru consumul real îmi trebuie greutăți pe cel puțin 10 zile, ultima din săptămâna asta.', 'For your real expenditure I need weights over at least 10 days, the last one this week.');
+    return rez;
+  }
+  if (notate.length < 7 || notate.length / zileFereastra < 0.7) {
+    rez.motiv = tr(`Notează mesele în cel puțin 7 zile din ultimele 3 săptămâni (acum: ${notate.length}).`, `Log your meals on at least 7 of the last 3 weeks’ days (now: ${notate.length}).`);
+    return rez;
+  }
+  const medie = notate.reduce((t, [, k]) => t + k, 0) / notate.length;
+  if (serie.length < 4) { rez.motiv = tr('Cântărește-te de cel puțin 4 ori în 3 săptămâni.', 'Weigh yourself at least 4 times in 3 weeks.'); return rez; }
+  const consum = medie - panta * KCAL_PE_KG;
+  if (consum < 1000 || consum > 6000) { rez.motiv = tr('Datele nu sunt încă destul de constante pentru o estimare sigură.', 'The data is not consistent enough yet for a reliable estimate.'); return rez; }
+  rez.consum = Math.round(consum / 10) * 10;
+  return rez;
+}
+
+// Ținta propusă din consum și obiectiv; proteinele rămân cele setate (sau 1,8 g/kg din greutatea de referință)
+function tintaPropusa(rez, setari, inaltime) {
+  if (!rez || !rez.consum) return null;
+  const s = setari || {};
+  const ob = OBIECTIVE_CALCULATOR.find(o => o[0] === (s.obiectiv || 'mentinere'));
+  const kcal = Math.max(1200, Math.round(rez.consum * ob[1] / 10) * 10);
+  const h = parseFloat(inaltime) || 0;
+  const ref = h ? Math.min(rez.tendinta, 25 * (h / 100) * (h / 100)) : rez.tendinta;
+  const proteine = Math.min(Number(s.proteine) || Math.round(ref * ob[2]), Math.round(kcal * 0.4 / 4));
+  const grasimi = Math.round(kcal * 0.25 / 9);
+  return { kcal, proteine, grasimi, carbo: Math.max(0, Math.round((kcal - proteine * 4 - grasimi * 9) / 4)) };
+}
+
+// Grafic mic: cântăririle (puncte) și tendința (linie), ultimele 5 săptămâni
+function htmlGraficTendinta(puncte) {
+  if (puncte.length < 2) return '';
+  const p = puncte.slice(-40);
+  const W = 300, H = 80, d0 = p[0].data, zile = Math.max(1, zileIntre(d0, p[p.length - 1].data));
+  const valori = p.flatMap(x => [x.kg, x.trend]);
+  const min = Math.min(...valori) - 0.3, max = Math.max(...valori) + 0.3;
+  const x = q => (zileIntre(d0, q.data) / zile * (W - 16) + 8).toFixed(1);
+  const y = v => ((max - v) / (max - min) * (H - 12) + 6).toFixed(1);
+  return `<svg class="grafic-greutate" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <polyline class="gg-trend" points="${p.map(q => `${x(q)},${y(q.trend)}`).join(' ')}"/>
+      ${p.map(q => `<circle class="gg-punct" cx="${x(q)}" cy="${y(q.kg)}" r="2.6"/>`).join('')}
+    </svg>`;
+}
+
+function textRitm(ritm) {
+  if (ritm === null) return '';
+  const r = Math.round(ritm * 10) / 10;
+  if (Math.abs(r) < 0.1) return tr('stabilă', 'stable');
+  return `${r > 0 ? '+' : '−'}${formatKg(Math.abs(r))} kg ${tr('pe săptămână', 'per week')}`;
+}
+
+// Secțiunea din Nutriție (client) și din fișă (antrenor). laAntrenor: butoanele scriu țintele antrenorului
+function htmlAdaptiv(d, setari, inaltime, laAntrenor) {
+  if (!d) return '';
+  const rez = calculeazaAdaptiv(d), s = setari || {};
+  const propusa = tintaPropusa(rez, s, inaltime);
+  const deAntrenor = s.tinte_setate_de === 'antrenor';
+  const poateAplica = laAntrenor || !deAntrenor;
+  const fct = laAntrenor ? 'seteazaObiectivAntrenor' : 'seteazaObiectivNutritie';
+  const ob = s.obiectiv || 'mentinere';
+  const diferenta = propusa && s.kcal ? propusa.kcal - Number(s.kcal) : null;
+  return `<div class="card nutritie-adaptiv" id="${laAntrenor ? 'adaptivAntrenor' : 'nutritieAdaptiv'}">
+    <b>${tr('Greutate și consum', 'Weight and expenditure')}</b>
+    ${rez.tendinta ? `<div class="adaptiv-tendinta"><b>${formatKg(Math.round(rez.tendinta * 10) / 10)} kg</b> ${tr('tendința', 'trend')}${rez.ritmSapt !== null ? ` · ${textRitm(rez.ritmSapt)}` : ''}</div>` : ''}
+    ${laAntrenor ? '' : `<div class="adaptiv-cantar">
+      <input type="number" inputmode="decimal" id="greutateAzi" class="plan-ex-input" min="30" max="300" step="0.1" placeholder="${tr('kg azi', 'kg today')}" value="${d.azi ? d.azi.kg : ''}">
+      <button type="button" class="btn btn-clear" onclick="salveazaGreutateAzi(this)">${d.azi ? tr('Actualizează', 'Update') : tr('Notează greutatea', 'Log weight')}</button>
+    </div>`}
+    ${htmlGraficTendinta(rez.puncte)}
+    ${rez.puncte.length >= 2 ? `<div class="adaptiv-legenda"><span class="gg-l-punct"></span>${tr('cântăriri', 'weigh-ins')} <span class="gg-l-trend"></span>${tr('tendința', 'trend')}</div>` : ''}
+    <div class="checkin-eticheta" style="margin-top:10px;">${tr('Obiectivul', 'Goal')}</div>
+    <div class="antr-pers-activitati">${OBIECTIVE_CALCULATOR.map(o => `<button type="button" class="antr-pers-activitate${o[0] === ob ? ' activ' : ''}" onclick="${fct}('${o[0]}')">${tr(o[3], o[4])}</button>`).join('')}</div>
+    ${rez.consum ? `<div class="adaptiv-consum">
+        <div class="acasa-antrenament-detalii">${tr(`Consum real estimat (din ${rez.zileNotate} zile notate și greutate)`, `Estimated real expenditure (from ${rez.zileNotate} logged days and weight)`)}</div>
+        <b>~${rez.consum} kcal ${tr('pe zi', 'a day')}</b>
+      </div>
+      <div class="adaptiv-propunere">
+        <div><div class="acasa-eticheta">${tr('Ținta propusă', 'Suggested target')}</div>
+        <b>${propusa.kcal} kcal</b> <span class="acasa-antrenament-detalii">${s.kcal ? (Math.abs(diferenta) < 50 ? tr('· ținta de acum e potrivită', '· your current target fits') : `· ${tr('acum', 'now')} ${s.kcal} (${diferenta > 0 ? '+' : ''}${diferenta})`) : ''}</span>
+        <div class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${propusa.proteine} g · ${tr('Carbohidrați', 'Carbohydrates')} ${propusa.carbo} g · ${tr('Grăsimi', 'Fat')} ${propusa.grasimi} g</div></div>
+        ${poateAplica && (diferenta === null || Math.abs(diferenta) >= 50) ? `<button type="button" class="btn" onclick="${laAntrenor ? 'aplicaPropunereAntrenor' : 'aplicaPropunereNutritie'}(this)">${tr('Aplică', 'Apply')}</button>` : ''}
+      </div>
+      ${!poateAplica ? `<div class="acasa-antrenament-detalii">${tr('Țintele tale le setează antrenorul; vede și el propunerea.', 'Your trainer sets your targets and sees this suggestion too.')}</div>` : ''}`
+    : `<div class="acasa-antrenament-detalii adaptiv-motiv">${escAttr(rez.motiv)}</div>`}
+    <div class="nutritie-sursa">${tr('Estimare din datele tale, nu sfat medical. Se reface la fiecare deschidere.', 'An estimate from your data, not medical advice. It updates every time you open it.')}</div>
+  </div>`;
+}
+
+function redeseneazaAdaptiv() {
+  const el = document.getElementById('nutritieAdaptiv');
+  if (el) el.outerHTML = htmlAdaptiv(nutritie.adaptiv, nutritie.setari, ((dateClienta.fisa || {}).fisa_inscriere || {}).inaltime, false);
+}
+
+async function salveazaGreutateAzi(btn) {
+  const kg = parseFloat(String(document.getElementById('greutateAzi').value).replace(',', '.'));
+  if (!(kg >= 30 && kg <= 300)) return showToast(tr('Scrie greutatea în kg (30–300).', 'Enter your weight in kg (30–300).'), 'error');
+  const c = dateClienta.fisa;
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('greutate_zilnica').upsert({ client_id: c.id, user_id: c.user_id, data: aziIsoAntrPers(), kg: rotunjeste1(kg), updated_at: new Date().toISOString() }, { onConflict: 'client_id,data' }).select().single();
+  btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  nutritie.adaptiv = await incarcaDateAdaptive(c.id);
+  showToast(tr(`✓ ${formatKg(Number(data.kg))} kg notat`, `✓ ${formatKg(Number(data.kg))} kg logged`));
+  redeseneazaAdaptiv();
+}
+
+async function seteazaObiectivNutritie(ob) {
+  if (await scrieSetariNutritie({ obiectiv: ob })) redeseneazaAdaptiv();
+}
+
+async function aplicaPropunereNutritie(btn) {
+  const p = tintaPropusa(calculeazaAdaptiv(nutritie.adaptiv), nutritie.setari, ((dateClienta.fisa || {}).fisa_inscriere || {}).inaltime);
+  if (!p) return;
+  btn.disabled = true;
+  const ok = await scrieSetariNutritie({ kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi });
+  btn.disabled = false;
+  if (ok) { showToast(tr('✓ Ținte actualizate', '✓ Targets updated')); randeazaNutritieZi(); }
+}
+
+// La antrenor: aceleași date în fișă; obiectivul și ținta le scrie el (setari_nutritie, ca la „Salvează țintele zilnice”)
+async function scrieSetariAntrenor(camp) {
+  const n = nutritieFisa;
+  const q = n.setari ? supabaseClient.from('setari_nutritie').update(camp).eq('client_id', n.client.id)
+    : supabaseClient.from('setari_nutritie').insert(Object.assign({ client_id: n.client.id, user_id: utilizatorCurent.id }, camp));
+  const { data, error } = await q.select().single();
+  if (error || !data) { showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); return false; }
+  n.setari = data;
+  return true;
+}
+
+async function seteazaObiectivAntrenor(ob) {
+  if (await scrieSetariAntrenor({ obiectiv: ob })) incarcaProgresFisa();
+}
+
+async function aplicaPropunereAntrenor(btn) {
+  const n = nutritieFisa;
+  const p = tintaPropusa(calculeazaAdaptiv(n.adaptiv), n.setari, (n.client.fisaInscriere || {}).inaltime);
+  if (!p) return;
+  btn.disabled = true;
+  const ok = await scrieSetariAntrenor({ kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi });
+  btn.disabled = false;
+  if (ok) { showToast(tr('✓ Ținte salvate', '✓ Targets saved')); incarcaProgresFisa(); }
 }
 
 async function salveazaTintaApa(input) {
@@ -5819,6 +6028,7 @@ function htmlNutritieAntrenor() {
         `<label>${et}<input type="number" inputmode="numeric" id="tintaNutA_${k}" class="plan-ex-input" value="${s[k] ?? ''}"></label>`).join('')}
     </div>
     <button type="button" class="btn btn-clear" style="margin:8px 0; width:100%;" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele zilnice', 'Save daily targets')}</button>
+    ${htmlAdaptiv(n.adaptiv, s, (n.client.fisaInscriere || {}).inaltime, true)}
     ${ascuns ? `<div class="progres-gol">${tr('Clientul a ascuns jurnalul alimentar.', 'The client has hidden their food log.')}</div>`
       : zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`;
 }
@@ -5833,7 +6043,8 @@ async function incarcaNutritieAntrenor(client) {
   if (resJ.error && resS.error) { nutritieFisa = null; return; }
   const peZi = new Map();
   (resJ.data || []).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
-  nutritieFisa = { client, setari: resS.data || null, zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri) })) };
+  nutritieFisa = { client, setari: resS.data || null, zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri) })),
+    adaptiv: await incarcaDateAdaptive(client.id) };
 }
 
 async function salveazaTinteNutritieAntrenor() {
@@ -8561,6 +8772,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 177, data: '2026-11-06',
+    client: [
+      ['Ținte adaptive: notează-ți greutatea în Nutriție și vezi tendința (fără fluctuațiile zilnice) și cât slăbești sau iei pe săptămână.', 'Adaptive targets: log your weight in Nutrition and see the trend (without daily swings) and your weekly rate.'],
+      ['Din calorii și greutate, aplicația îți estimează consumul real și propune ținta potrivită obiectivului tău.', 'From calories and weight, the app estimates your real expenditure and suggests the right target for your goal.']
+    ],
+    antrenor: [
+      ['Ținte adaptive: în fișa clientului, la Nutriție, vezi tendința greutății, consumul real estimat și ținta propusă, pe care o aplici cu un buton.', 'Adaptive targets: in the client’s file, under Nutrition, see the weight trend, estimated real expenditure and the suggested target, applied with one tap.']
+    ] },
   { v: 176, data: '2026-11-06',
     client: [
       ['Rețete: în Nutriție › 📖 Rețete pui ingredientele o dată și aplicația calculează caloriile pe porție. Le adaugi în jurnal pe porții.', 'Recipes: in Nutrition › 📖 Recipes add the ingredients once and the app works out the calories per serving. Log them by serving.'],
