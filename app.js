@@ -5137,7 +5137,8 @@ function randeazaNutritieZi() {
 }
 
 // ---- Rapoarte (Nutriție › 📊 Rapoarte): ultimele 7 sau 30 de zile, cu export CSV ----
-let raport = { zile: 7, jurnal: null, apa: null };
+// Rapoartele pe 7 / 30 de zile: clientul (Nutriție › Rapoarte) sau antrenorul (Fișă › Progres › Nutriție); unde = 'client' | 'antrenor'
+let raport = { zile: 7, jurnal: null, apa: null, setari: null, adaptiv: null, nume: '', unde: 'client' };
 
 async function deschideRapoarte() {
   antrPers.ecran = 'nutritie-rapoarte';
@@ -5149,9 +5150,9 @@ async function deschideRapoarte() {
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', dateClienta.fisa.id).gte('data', de).order('data').order('created_at'),
     supabaseClient.from('apa_zilnica').select('data, pahare').eq('client_id', dateClienta.fisa.id).gte('data', de)
   ]);
-  raport.jurnal = resJ.error ? null : (resJ.data || []);
-  raport.apa = resA.error ? null : (resA.data || []);
   if (!nutritie.adaptiv) nutritie.adaptiv = await incarcaDateAdaptive(dateClienta.fisa.id);
+  Object.assign(raport, { jurnal: resJ.error ? null : (resJ.data || []), apa: resA.error ? null : (resA.data || []),
+    setari: nutritie.setari, adaptiv: nutritie.adaptiv, nume: dateClienta.fisa.nume || '', unde: 'client' });
   if (antrPers.ecran === 'nutritie-rapoarte') randeazaRapoarte();
 }
 
@@ -5167,9 +5168,13 @@ function zileRaport(n) {
 }
 
 function randeazaRapoarte() {
-  const el = document.getElementById('clientaContinut');
-  if (raport.jurnal === null) { el.innerHTML = `<div class="progres-gol">${tr('Rapoartele nu sunt disponibile acum. Verifică internetul.', 'Reports are not available right now. Check your internet.')}</div>`; return; }
-  const s = nutritie.setari || {};
+  const el = document.getElementById(raport.unde === 'antrenor' ? 'raportNutritieFisa' : 'clientaContinut');
+  if (el) el.innerHTML = htmlRapoarte();
+}
+
+function htmlRapoarte() {
+  if (raport.jurnal === null) return `<div class="progres-gol">${tr('Rapoartele nu sunt disponibile acum. Verifică internetul.', 'Reports are not available right now. Check your internet.')}</div>`;
+  const s = raport.setari || {};
   const zile = zileRaport(raport.zile);
   // Media: doar zilele încheiate și notate (azi e încă în curs)
   const complete = zile.filter(z => z.notat && !z.azi);
@@ -5189,9 +5194,9 @@ function randeazaRapoarte() {
   const etichete = raport.zile === 7 ? zile.map((z, i) => `<text class="rt" x="${(i * lat + lat / 2).toFixed(1)}" y="${H - 2}" text-anchor="middle">${escAttr(etichetaDataAntrPers(z.data).slice(0, 2))}</text>`).join('') : '';
   // Din ce vin caloriile, în medie
   const kp = medie('proteine') * 4, kc = medie('carbo') * 4, kg = medie('grasimi') * 9, kt = kp + kc + kg || 1;
-  const rez = calculeazaAdaptiv(nutritie.adaptiv);
+  const rez = calculeazaAdaptiv(raport.adaptiv);
   const placa = (val, et) => `<div class="acasa-tila"><b>${val}</b><span>${et}</span></div>`;
-  el.innerHTML = `<div class="comunitate-taburi comunitate-perioade">${[7, 30].map(n => `<button type="button" class="theme-option-btn${raport.zile === n ? ' active' : ''}" onclick="raport.zile = ${n}; randeazaRapoarte()">${n === 7 ? tr('Ultimele 7 zile', 'Last 7 days') : tr('Ultimele 30 de zile', 'Last 30 days')}</button>`).join('')}</div>
+  return `<div class="comunitate-taburi comunitate-perioade">${[7, 30].map(n => `<button type="button" class="theme-option-btn${raport.zile === n ? ' active' : ''}" onclick="raport.zile = ${n}; randeazaRapoarte()">${n === 7 ? tr('Ultimele 7 zile', 'Last 7 days') : tr('Ultimele 30 de zile', 'Last 30 days')}</button>`).join('')}</div>
     <div class="acasa-tile">
       ${placa(complete.length ? Math.round(medie('kcal')) : '–', tinta ? tr(`kcal/zi (țintă ${tinta})`, `kcal/day (target ${tinta})`) : tr('kcal pe zi, în medie', 'kcal a day, average'))}
       ${placa(tinta ? (complete.length ? `${inTinta}<small> ${tr('din', 'of')} ${complete.length}</small>` : '–') : `${zile.filter(z => z.notat).length}<small> ${tr('din', 'of')} ${zile.length}</small>`, tinta ? tr('zile în țintă (±10%)', 'days on target (±10%)') : tr('zile notate', 'days logged'))}
@@ -5217,10 +5222,10 @@ function randeazaRapoarte() {
     <div class="nutritie-adauga-jos">
       <button type="button" class="btn btn-clear" id="btnJurnalPdf" onclick="exportaJurnalPdf()">⬇ ${tr('Descarcă jurnalul', 'Download the log')}</button>
     </div>
-    <div class="nutritie-sursa">${tr('Mediile folosesc doar zilele încheiate în care ai notat ceva.', 'Averages only use finished days with something logged.')}</div>`;
+    <div class="nutritie-sursa">${raport.unde === 'antrenor' ? tr('Mediile folosesc doar zilele încheiate în care clientul a notat ceva.', 'Averages only use finished days the client logged something.')
+      : tr('Mediile folosesc doar zilele încheiate în care ai notat ceva.', 'Averages only use finished days with something logged.')}</div>`;
 }
 
-// CSV pentru Excel / Google Sheets: o linie pe aliment (separator „;” și BOM, ca Excel în română să-l deschidă corect)
 // Jurnalul alimentar pe perioada raportului (7 / 30 de zile), ca PDF: fiecare zi cu totalurile ei și alimentele pe mese
 async function exportaJurnalPdf() {
   const btn = document.getElementById('btnJurnalPdf');
@@ -5234,11 +5239,11 @@ async function exportaJurnalPdf() {
     const gri = '#64748b';
     const de = isoDinData(new Date(Date.now() - (raport.zile - 1) * 86400000)), pana = aziIsoAntrPers();
     const randuri = (raport.jurnal || []).filter(x => x.data >= de);
-    const s = nutritie.setari || {};
+    const s = raport.setari || {};
     const masa = cod => { const m = MESE_NUTRITIE.find(x => x[0] === cod); return m ? tr(m[1], m[2]) : cod; };
     const ordineMasa = cod => MESE_NUTRITIE.findIndex(x => x[0] === cod);
     const g = v => formatKg(rotunjeste1(Number(v || 0)));
-    const nume = ((dateClienta.fisa && dateClienta.fisa.nume) || '').trim();
+    const nume = (raport.nume || '').trim();
     const continut = [{
       columns: [
         logo ? { image: logo, width: 34 } : { text: '', width: 0 },
@@ -6294,21 +6299,27 @@ function htmlNutritieAntrenor() {
     <button type="button" class="btn btn-clear" style="margin:8px 0; width:100%;" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele zilnice', 'Save daily targets')}</button>
     ${htmlAdaptiv(n.adaptiv, s, (n.client.fisaInscriere || {}).inaltime, true)}
     ${ascuns ? `<div class="progres-gol">${tr('Clientul a ascuns jurnalul alimentar.', 'The client has hidden their food log.')}</div>`
-      : zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`;
+      : `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Rapoarte', 'Reports')}</div>
+        <div id="raportNutritieFisa">${htmlRapoarte()}</div>
+        <div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Ultimele 7 zile', 'Last 7 days')}</div>
+        ${zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`}`;
 }
 
+// Ultimele 30 de zile: rapoartele (7 / 30) și, dedesubt, alimentele din ultimele 7 zile
 async function incarcaNutritieAntrenor(client) {
-  const de = new Date(); de.setDate(de.getDate() - 6);
-  const iso = `${de.getFullYear()}-${String(de.getMonth() + 1).padStart(2, '0')}-${String(de.getDate()).padStart(2, '0')}`;
-  const [resJ, resS] = await Promise.all([
+  const iso = isoDinData(new Date(Date.now() - 30 * 86400000)), iso7 = isoDinData(new Date(Date.now() - 6 * 86400000));
+  const [resJ, resS, resA] = await Promise.all([
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', client.id).gte('data', iso).order('data', { ascending: false }).order('created_at'),
-    supabaseClient.from('setari_nutritie').select('*').eq('client_id', client.id).maybeSingle()
+    supabaseClient.from('setari_nutritie').select('*').eq('client_id', client.id).maybeSingle(),
+    supabaseClient.from('apa_zilnica').select('data, pahare').eq('client_id', client.id).gte('data', iso)
   ]);
   if (resJ.error && resS.error) { nutritieFisa = null; return; }
   const peZi = new Map();
-  (resJ.data || []).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
+  (resJ.data || []).filter(x => x.data >= iso7).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
   nutritieFisa = { client, setari: resS.data || null, zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri) })),
     adaptiv: await incarcaDateAdaptive(client.id) };
+  Object.assign(raport, { jurnal: resJ.error ? null : (resJ.data || []), apa: resA.error ? [] : (resA.data || []),
+    setari: nutritieFisa.setari, adaptiv: nutritieFisa.adaptiv, nume: client.nume || '', unde: 'antrenor' });
 }
 
 async function salveazaTinteNutritieAntrenor() {
@@ -6322,6 +6333,7 @@ async function salveazaTinteNutritieAntrenor() {
   const { data, error } = await q.select().single();
   if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
   n.setari = data;
+  raport.setari = data;
   showToast(tr('✓ Ținte salvate', '✓ Targets saved'));
   incarcaProgresFisa(); // zilele din jurnal se arată față de țintele noi
 }
@@ -9036,6 +9048,11 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 180, data: '2026-11-06',
+    client: [],
+    antrenor: [
+      ['Fișa clientului › Progres › Nutriție: rapoarte pe 7 și 30 de zile (calorii, zile în țintă, proteine, apă, greutate) și jurnalul descărcabil în PDF.', 'Client file › Progress › Nutrition: 7- and 30-day reports (calories, days on target, protein, water, weight) and the log as a PDF download.']
+    ] },
   { v: 179, data: '2026-11-06',
     client: [
       ['Nutriție: Copiază ieri, Adaugă rapid, Rețete și Rapoarte au acum scurtături sus, iar jurnalul se descarcă în PDF, pe zile și pe mese.', 'Nutrition: Copy yesterday, Quick add, Recipes and Reports now have shortcuts at the top, and the log downloads as a PDF, by day and meal.'],
