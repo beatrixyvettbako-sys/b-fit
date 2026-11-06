@@ -1215,13 +1215,43 @@ async function schimbaParolaProfil() {
 }
 
 // ---- Datele tale (GDPR): copie a datelor (portabilitate) și ștergerea contului ----
+// Tot ce ține de client, din fiecare tabel (GDPR art. 15 și 20). Un tabel lipsă sau o eroare = listă goală, nu oprește exportul.
+async function dateleClientuluiPentruExport() {
+  const c = dateClienta.fisa;
+  if (!c) return {};
+  const lista = q => q.then(r => r.error ? [] : (r.data || [])).catch(() => []);
+  const ale = (tabel, ordine) => lista(supabaseClient.from(tabel).select('*').eq('client_id', c.id).order(ordine || 'created_at'));
+  const [checkin, greutati, antrenamente, obiective, jurnal, setariNutritie, apa, cantariri, salvate, retete,
+    cicluSetari, menstruatii, cicluZilnic, comunitateMembru, comunitateActivitati, mesaje, bravo] = await Promise.all([
+    ale('checkin_saptamanal', 'saptamana'), ale('greutati'), ale('antrenamente_personale', 'data'), ale('obiective'), ale('jurnal_alimente', 'data'),
+    ale('setari_nutritie', 'client_id'), ale('apa_zilnica', 'data'), ale('greutate_zilnica', 'data'), ale('nutritie_salvate'), ale('retete'),
+    ale('ciclu_setari', 'client_id'), ale('ciclu_menstruatii', 'data_start'), ale('ciclu_zilnic', 'data'), ale('comunitate_membri', 'client_id'),
+    ale('comunitate_activitati', 'data'), ale('mesaje'),
+    lista(supabaseClient.from('comunitate_bravo').select('*').eq('auth_user_id', utilizatorCurent.id))
+  ]);
+  return { checkin, greutati, antrenamente, obiective, jurnal, setariNutritie, apa, cantariri, salvate, retete,
+    ciclu: { setari: cicluSetari, menstruatii, zilnic: cicluZilnic }, comunitate: { membru: comunitateMembru, activitati: comunitateActivitati, bravoDate: bravo }, mesaje };
+}
+
+// Ce ține de antrenor, în afară de DB: rețetele pentru clienți și provocările din comunitate
+async function dateleAntrenoruluiPentruExport() {
+  const lista = q => q.then(r => r.error ? [] : (r.data || [])).catch(() => []);
+  const [retete, provocari] = await Promise.all([
+    lista(supabaseClient.from('retete').select('*').is('client_id', null).eq('user_id', utilizatorCurent.id).order('nume')),
+    lista(supabaseClient.from('provocari').select('*').eq('user_id', utilizatorCurent.id).order('de'))
+  ]);
+  return { retete, provocari };
+}
+
 // Aceleași date în format tehnic (portabilitate, GDPR art. 20), pentru import în alt program
-function exportaDateleMeleJson() {
+async function exportaDateleMeleJson() {
   if (!utilizatorCurent) return;
   const date = {
     exportatLa: new Date().toISOString(),
     cont: { email: utilizatorCurent.email, nume: (utilizatorCurent.user_metadata || {}).full_name || '', creatLa: utilizatorCurent.created_at, rol: rolUtilizator },
-    date: rolUtilizator === 'clienta' ? { fisa: dateClienta.fisa, planuri: dateClienta.planuri } : DB
+    date: rolUtilizator === 'clienta'
+      ? Object.assign({ fisa: dateClienta.fisa, planuri: dateClienta.planuri }, await dateleClientuluiPentruExport())
+      : Object.assign({}, DB, await dateleAntrenoruluiPentruExport())
   };
   const url = URL.createObjectURL(new Blob([JSON.stringify(date, null, 2)], { type: 'application/json' }));
   const a = document.createElement('a');
@@ -1233,7 +1263,8 @@ function exportaDateleMeleJson() {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Un PDF lizibil cu toate datele contului: antrenorul (clienți, orar, confirmări, încasări, prezențe, planuri), clientul (fișa, obiectivele, greutățile, planurile)
+// Un PDF lizibil cu toate datele contului: antrenorul (clienți, orar, confirmări, încasări, prezențe, planuri, rețete, provocări),
+// clientul (fișa, check-in-urile, greutatea, antrenamentele, obiectivele, nutriția, ciclul, comunitatea, mesajele, planurile)
 async function exportaDateleMele() {
   if (!utilizatorCurent) return;
   const btn = document.getElementById('btnExportaDate');
@@ -1303,7 +1334,8 @@ async function exportaDateleMele() {
 
     if (rolUtilizator === 'clienta') {
       const c = dateClienta.fisa || {};
-      const { data: greutati } = c.id ? await supabaseClient.from('greutati').select('*').eq('client_id', c.id) : { data: [] };
+      const x = await dateleClientuluiPentruExport();
+      const greutati = x.greutati || [];
       sectiune(tr('Abonamentul', 'Subscription'));
       perechi([
         [tr('Nume', 'Name'), c.nume], [tr('Telefon', 'Phone'), c.telefon],
@@ -1316,8 +1348,60 @@ async function exportaDateleMele() {
       c.fisa_inscriere ? perechi(raspunsuriInscriere(c.fisa_inscriere)) : gol();
       sectiune(tr('Greutate', 'Weight'), (greutati || []).length);
       tabel([tr('Data', 'Date'), 'Kg'], (greutati || []).sort((a, b) => (a.data || '').localeCompare(b.data || '')).map(g => [data(g.data), g.greutate]), [120, '*']);
+      sectiune(tr('Cântăriri zilnice', 'Daily weigh-ins'), (x.cantariri || []).length);
+      tabel([tr('Data', 'Date'), 'Kg'], (x.cantariri || []).map(g => [data(g.data), g.kg]), [120, '*']);
+      sectiune(tr('Check-in săptămânal', 'Weekly check-in'), (x.checkin || []).length);
+      tabel([tr('Săptămâna', 'Week'), 'Kg', tr('Răspunsuri', 'Answers')], (x.checkin || []).map(k => [data(k.saptamana), k.greutate,
+        Object.entries(k.raspunsuri || {}).filter(([, v]) => v !== '' && v !== null && !(Array.isArray(v) && !v.length)).map(([q, v]) => `${q}: ${Array.isArray(v) ? v.join(', ') : (typeof v === 'object' ? JSON.stringify(v) : v)}`).join('; ')]), [70, 40, '*']);
+      sectiune(tr('Antrenamente proprii', 'Own workouts'), (x.antrenamente || []).length);
+      tabel([tr('Data', 'Date'), tr('Tip', 'Type'), tr('Titlu', 'Title'), tr('Durată', 'Duration'), 'Km', tr('Exerciții', 'Exercises'), tr('Vizibil antrenorului', 'Visible to trainer')],
+        (x.antrenamente || []).map(a => [data(a.data), a.fel, a.titlu || a.activitate, a.durata_min ? a.durata_min + ' min' : '', a.distanta_km, (a.exercitii || []).map(e => e.exercitiu).join(', '), a.vizibil_antrenor ? tr('da', 'yes') : tr('nu', 'no')]),
+        [50, 50, 70, 45, 30, '*', 55]);
+      sectiune(tr('Obiective', 'Goals'), (x.obiective || []).length);
+      tabel([tr('Tip', 'Type'), tr('Exercițiu', 'Exercise'), tr('Țintă', 'Target'), tr('Termen', 'Deadline'), tr('Atins', 'Reached')],
+        (x.obiective || []).map(o => [o.tip, o.exercitiu, o.tinta, data(o.termen), data(o.atins_la)]), ['*', '*', 50, 70, 70]);
+      const sn = (x.setariNutritie || [])[0] || {};
+      sectiune(tr('Nutriție: ținte și setări', 'Nutrition: targets and settings'));
+      perechi([[tr('Calorii', 'Calories'), sn.kcal], [tr('Proteine (g)', 'Protein (g)'), sn.proteine], [tr('Carbohidrați (g)', 'Carbohydrates (g)'), sn.carbo],
+        [tr('Grăsimi (g)', 'Fat (g)'), sn.grasimi], [tr('Apă (pahare)', 'Water (glasses)'), sn.apa_tinta], [tr('Obiectiv', 'Goal'), sn.obiectiv],
+        [tr('Țintele setate de', 'Targets set by'), sn.tinte_setate_de], [tr('Jurnal vizibil antrenorului', 'Log visible to trainer'), sn.vizibil_antrenor === undefined ? '' : (sn.vizibil_antrenor ? tr('da', 'yes') : tr('nu', 'no'))]]);
+      sectiune(tr('Jurnal alimentar', 'Food log'), (x.jurnal || []).length);
+      tabel([tr('Data', 'Date'), tr('Masa', 'Meal'), tr('Aliment', 'Food'), 'g', 'kcal', 'P', 'C', 'G'],
+        (x.jurnal || []).map(j => [data(j.data), j.masa, j.nume + (j.marca ? ` (${j.marca})` : ''), Number(j.cantitate_g) === 1 ? '' : j.cantitate_g, Math.round(j.kcal), j.proteine, j.carbo, j.grasimi]),
+        [50, 45, '*', 30, 30, 28, 28, 28]);
+      sectiune(tr('Apă', 'Water'), (x.apa || []).length);
+      tabel([tr('Data', 'Date'), tr('Pahare', 'Glasses')], (x.apa || []).map(a => [data(a.data), a.pahare]), [120, '*']);
+      sectiune(tr('Favorite și mese salvate', 'Favourites and saved meals'), (x.salvate || []).length);
+      tabel([tr('Tip', 'Type'), tr('Nume', 'Name'), tr('Alimente', 'Foods')], (x.salvate || []).map(f => [f.tip, f.nume, (f.continut || []).map(a => `${a.nume} ${a.cantitate_g || ''} g`).join(', ')]), [50, 110, '*']);
+      sectiune(tr('Rețetele mele', 'My recipes'), (x.retete || []).length);
+      tabel([tr('Rețeta', 'Recipe'), tr('Porții', 'Servings'), tr('Ingrediente', 'Ingredients'), tr('Preparare', 'Method')],
+        (x.retete || []).map(r => [r.nume, r.portii, (r.ingrediente || []).map(i => `${i.nume} ${i.cantitate_g} g`).join(', '), r.instructiuni]), [80, 40, '*', '*']);
+      const cs = (x.ciclu.setari || [])[0];
+      sectiune(tr('Ciclu menstrual', 'Menstrual cycle'));
+      if (!cs) gol();
+      else {
+        perechi([[tr('Durata ciclului (zile)', 'Cycle length (days)'), cs.durata_ciclu], [tr('Durata menstruației (zile)', 'Period length (days)'), cs.durata_menstruatie],
+          [tr('Vizibil antrenorului', 'Visible to trainer'), cs.vizibil_antrenor ? tr('da', 'yes') : tr('nu', 'no')], [tr('Acord dat la', 'Consent given on'), data(cs.acord_la)]]);
+        tabel([tr('Prima zi a menstruației', 'First day of period')], (x.ciclu.menstruatii || []).map(m => [data(m.data_start)]), ['*']);
+        tabel([tr('Data', 'Date'), tr('Energie', 'Energy'), tr('Somn', 'Sleep'), tr('Simptome', 'Symptoms')],
+          (x.ciclu.zilnic || []).map(z => [data(z.data), z.energie, z.somn, (z.simptome || []).join(', ')]), [70, 50, 50, '*']);
+      }
+      const cm = (x.comunitate.membru || [])[0];
+      sectiune(tr('Comunitate', 'Community'));
+      if (!cm) gol();
+      else {
+        perechi([[tr('Numele afișat', 'Display name'), cm.nume_afisat], [tr('Intrat la', 'Joined on'), data(cm.created_at)],
+          [tr('Activități vizibile', 'Visible activities'), [cm.arata_sala !== false && tr('sală', 'gym'), cm.arata_plan !== false && tr('plan', 'plan'), cm.arata_proprii !== false && tr('proprii', 'own')].filter(Boolean).join(', ')],
+          [tr('„Bravo” date', '“Well done” given'), (x.comunitate.bravoDate || []).length]]);
+        tabel([tr('Data', 'Date'), tr('Tip', 'Type'), tr('Titlu', 'Title'), tr('Doar tu', 'Only you')],
+          (x.comunitate.activitati || []).map(a => [data(a.data), a.tip, a.titlu, a.ascuns ? tr('da', 'yes') : tr('nu', 'no')]), [70, 60, '*', 50]);
+      }
+      sectiune(tr('Mesaje cu antrenorul', 'Messages with your trainer'), (x.mesaje || []).length);
+      tabel([tr('Data', 'Date'), tr('De la', 'From'), tr('Mesaj', 'Message')],
+        (x.mesaje || []).map(m => [data(m.created_at), m.autor === 'client' ? tr('tu', 'you') : tr('antrenorul', 'trainer'), m.text]), [70, 55, '*']);
       planuri(dateClienta.planuri || []);
     } else {
+      const xa = await dateleAntrenoruluiPentruExport();
       sectiune(tr('Clienți', 'Clients'), DB.clienti.length);
       tabel([tr('Nume', 'Name'), tr('Telefon', 'Phone'), 'Email', tr('Abonament', 'Subscription'), tr('Ședințe', 'Sessions'), tr('Început', 'Start'), tr('Expiră', 'Expires'), 'Status'],
         DB.clienti.map(c => [c.nume, c.telefon, c.emailInvitatie, c.tipAbonament, `${c.efectuate}/${c.incluse}`, data(c.dataStart), data(c.dataExpirare), c.status]),
@@ -1341,6 +1425,10 @@ async function exportaDateleMele() {
       tabel([tr('Data', 'Date'), tr('Ziua', 'Day'), tr('Ora', 'Time'), tr('Client', 'Client'), tr('Antrenament', 'Workout')],
         DB.prezente.map(p => [data(p.data),p.zi, p.ora, p.clienta, traduceValoare(p.antrenament)]), [60, 60, 40, '*', '*']);
       planuri(DB.planuri || []);
+      sectiune(tr('Rețete pentru clienți', 'Recipes for clients'), xa.retete.length);
+      tabel([tr('Rețeta', 'Recipe'), tr('Porții', 'Servings'), tr('Ingrediente', 'Ingredients')], xa.retete.map(r => [r.nume, r.portii, (r.ingrediente || []).map(i => `${i.nume} ${i.cantitate_g} g`).join(', ')]), [100, 45, '*']);
+      sectiune(tr('Provocări în comunitate', 'Community challenges'), xa.provocari.length);
+      tabel([tr('Titlu', 'Title'), tr('Zile active', 'Active days'), tr('De la', 'From'), tr('Până la', 'Until')], xa.provocari.map(p => [p.titlu, p.tinta, data(p.de), data(p.pana)]), ['*', 60, 70, 70]);
     }
 
     const doc = {
@@ -4380,6 +4468,22 @@ const ICON_PROGRES_EX = '<svg class="progres-ex-icon" viewBox="0 0 24 24" aria-h
 let progresExDeschis = null;
 
 // Valorile unui exercițiu dintr-un antrenament (doar seriile bifate); null = nimic notat
+// Seriile unei zile, compact, cu unitatea o singură dată: „15 · 15 · 13 rep”, „20 kg × 10 · 10 · 8”
+function detaliuSerii(serii) {
+  const v = serii.map(r => ({ kg: String(r.kg || '').trim(), rep: String(r.rep || '').trim() })).filter(r => r.kg || r.rep);
+  if (!v.length) return `${serii.length} ${serii.length === 1 ? tr('serie', 'set') : tr('serii', 'sets')}`;
+  const lista = k => v.map(r => r[k]).join(' · ');
+  if (v.every(r => r.kg && r.rep)) {
+    // Seriile la rând cu aceeași greutate se grupează: „30 kg × 10 · 10, 32 kg × 8”
+    const grupe = [];
+    v.forEach(r => { const g = grupe[grupe.length - 1]; if (g && g.kg === r.kg) g.rep.push(r.rep); else grupe.push({ kg: r.kg, rep: [r.rep] }); });
+    return grupe.map(g => `${g.kg} kg × ${g.rep.join(' · ')}`).join(', ');
+  }
+  if (v.every(r => !r.kg)) return `${lista('rep')} rep`;
+  if (v.every(r => !r.rep)) return `${lista('kg')} kg`;
+  return v.map(r => r.kg && r.rep ? `${r.kg}×${r.rep}` : r.kg ? `${r.kg} kg` : `${r.rep} rep`).join(' · ');
+}
+
 function valoriSeriiEx(ex) {
   const facute = Array.isArray(ex.serii) ? ex.serii.filter(r => r.gata) : [];
   if (facute.length) {
@@ -4387,10 +4491,7 @@ function valoriSeriiEx(ex) {
       kg: Math.max(0, ...facute.map(r => numarKg(r.kg))),
       rep: Math.max(0, ...facute.map(r => numarKg(r.rep))),
       volum: facute.reduce((s, r) => s + numarKg(r.kg) * numarKg(r.rep), 0),
-      detaliu: facute.map(r => {
-        const kg = String(r.kg || '').trim(), rep = String(r.rep || '').trim();
-        return kg && rep ? `${kg} × ${rep}` : kg ? `${kg} kg` : `${rep || '-'} rep`;
-      }).join(', ')
+      detaliu: detaliuSerii(facute)
     };
   }
   // Exercițiile bifate „Făcut” înainte de notarea pe serii: doar greutatea
@@ -4449,7 +4550,7 @@ function textSchimbareEx(o) {
   return { text: `${dif > 0 ? '+' : '−'}${formatKg(Math.abs(dif))} ${cuKg ? 'kg' : 'rep'}`, sus: dif > 0 };
 }
 
-// Lista exercițiilor cu progres (Fișa mea / Fișă › Progres); primele 6, restul la „Toate exercițiile”
+// Lista exercițiilor cu progres (Fișa mea / Fișă › Progres); primele 6, restul la „Încă N exerciții”
 function htmlProgresExercitii(sursa) {
   sursaProgresEx = sursa;
   listaProgresEx = istoricExercitii(sursa);
@@ -4467,7 +4568,7 @@ function htmlProgresExercitii(sursa) {
   };
   const primele = listaProgresEx.slice(0, 6).map(rand).join('');
   const rest = listaProgresEx.slice(6);
-  return `<div class="plan-fisa-lista">${primele}</div>` + (rest.length ? `<details class="progres-ex-toate"><summary>${tr('Toate exercițiile', 'All exercises')} (${listaProgresEx.length})</summary>
+  return `<div class="plan-fisa-lista">${primele}</div>` + (rest.length ? `<details class="progres-ex-toate"><summary>${tr(`Încă ${rest.length} ${rest.length === 1 ? 'exercițiu' : 'exerciții'}`, `${rest.length} more ${rest.length === 1 ? 'exercise' : 'exercises'}`)}</summary>
     <div class="plan-fisa-lista">${rest.map((o, i) => rand(o, i + 6)).join('')}</div></details>` : '');
 }
 
@@ -4517,7 +4618,7 @@ function randeazaProgresExercitiu() {
     html += `<div class="metric-grid" style="grid-template-columns:repeat(3, 1fr);">
       ${cifra(tr('Record', 'Best'), `${formatKg(Math.max(...valori))} <small>${unitate}</small>`)}
       ${cifra(tr('Ultima dată', 'Last time'), `${formatKg(valori[valori.length - 1])} <small>${unitate}</small>`)}
-      ${cifra(tr('Progres', 'Change'), valori.length < 2 ? '–' : `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${formatKg(Math.abs(dif))}`)}
+      ${cifra(tr('Progres', 'Change'), valori.length < 2 ? '–' : `${dif > 0 ? '+' : dif < 0 ? '−' : ''}${formatKg(Math.abs(dif))} <small>${unitate}</small>`)}
     </div>`;
   }
   html += htmlGraficGreutate(puncte, {
@@ -4980,10 +5081,11 @@ function randeazaNutritieZi() {
       <b>${esteAzi ? tr('Azi', 'Today') : escAttr(etichetaDataAntrPers(nutritie.zi))}</b>
       <button type="button" class="cal-nav" onclick="schimbaZiNutritie(1)" ${esteAzi ? 'disabled' : ''} aria-label="${tr('Ziua următoare', 'Next day')}"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
     </div>
-    <div class="nutritie-scurtaturi">
-      <button type="button" class="btn btn-clear" onclick="copiazaZiuaDeIeri()">${tr('⧉ Copiază ieri', '⧉ Copy yesterday')}</button>
-      <button type="button" class="btn btn-clear" onclick="deschideAdaugaRapid(masaImplicita())">${tr('⚡ Adaugă rapid', '⚡ Quick add')}</button>
-      <button type="button" class="btn btn-clear" onclick="deschideRetete()">${tr('📖 Rețete', '📖 Recipes')}</button>
+    <div class="acasa-scurtaturi nutritie-scurtaturi">
+      <button type="button" class="acasa-scurtatura" onclick="copiazaZiuaDeIeri()"><span><svg viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2.5"/><path d="M16 8V5.5A2.5 2.5 0 0 0 13.5 3h-8A2.5 2.5 0 0 0 3 5.5v8A2.5 2.5 0 0 0 5.5 16H8"/></svg></span>${tr('Copiază ieri', 'Copy yesterday')}</button>
+      <button type="button" class="acasa-scurtatura" onclick="deschideAdaugaRapid(masaImplicita())"><span><svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></span>${tr('Adaugă rapid', 'Quick add')}</button>
+      <button type="button" class="acasa-scurtatura" onclick="deschideRetete()"><span><svg viewBox="0 0 24 24"><path d="M2 5.5C4.5 4 8 4 12 6c4-2 7.5-2 10-.5V19c-2.5-1.5-6-1.5-10 .5-4-2-7.5-2-10-.5z"/><path d="M12 6v13.5"/></svg></span>${tr('Rețete', 'Recipes')}</button>
+      <button type="button" class="acasa-scurtatura" onclick="deschideRapoarte()"><span><svg viewBox="0 0 24 24"><path d="M3 21h18"/><path d="M6 17v-5M11 17V7M16 17v-8M21 17V4"/></svg></span>${tr('Rapoarte', 'Reports')}</button>
     </div>
     <div class="card nutritie-totaluri">
       <div class="nutritie-ramase">${s.kcal
@@ -4992,7 +5094,6 @@ function randeazaNutritieZi() {
       ${htmlBaraNutritie(tr('Proteine', 'Protein'), t.proteine, s.proteine, 'g')}
       ${htmlBaraNutritie(tr('Carbohidrați', 'Carbohydrates'), t.carbo, s.carbo, 'g')}
       ${htmlBaraNutritie(tr('Grăsimi', 'Fat'), t.grasimi, s.grasimi, 'g')}
-      <button type="button" class="nutritie-rapoarte-btn" onclick="deschideRapoarte()">📊 ${tr('Rapoarte pe 7 și 30 de zile', '7- and 30-day reports')} ›</button>
     </div>`;
   // Mesele într-un singur card: fiecare cu „+” pe rândul ei, alimentele dedesubt
   html += '<div class="card nutritie-mese">';
@@ -5093,7 +5194,7 @@ function randeazaRapoarte() {
   el.innerHTML = `<div class="comunitate-taburi comunitate-perioade">${[7, 30].map(n => `<button type="button" class="theme-option-btn${raport.zile === n ? ' active' : ''}" onclick="raport.zile = ${n}; randeazaRapoarte()">${n === 7 ? tr('Ultimele 7 zile', 'Last 7 days') : tr('Ultimele 30 de zile', 'Last 30 days')}</button>`).join('')}</div>
     <div class="acasa-tile">
       ${placa(complete.length ? Math.round(medie('kcal')) : '–', tinta ? tr(`kcal/zi (țintă ${tinta})`, `kcal/day (target ${tinta})`) : tr('kcal pe zi, în medie', 'kcal a day, average'))}
-      ${placa(tinta ? `${inTinta}<small>/${complete.length}</small>` : `${complete.length}<small>/${zile.length - 1}</small>`, tinta ? tr('zile în țintă (±10%)', 'days on target (±10%)') : tr('zile notate', 'days logged'))}
+      ${placa(tinta ? (complete.length ? `${inTinta}<small> ${tr('din', 'of')} ${complete.length}</small>` : '–') : `${zile.filter(z => z.notat).length}<small> ${tr('din', 'of')} ${zile.length}</small>`, tinta ? tr('zile în țintă (±10%)', 'days on target (±10%)') : tr('zile notate', 'days logged'))}
       ${placa(complete.length ? `${Math.round(medie('proteine'))}<small> g</small>` : '–', s.proteine ? tr(`proteine/zi (țintă ${s.proteine})`, `protein/day (target ${s.proteine})`) : tr('proteine pe zi', 'protein a day'))}
     </div>
     <div class="card">
@@ -5114,28 +5215,82 @@ function randeazaRapoarte() {
       <div><b>${tr('Greutatea', 'Weight')}</b><div class="acasa-antrenament-detalii">${tr('tendința', 'trend')} ${formatKg(Math.round(rez.tendinta * 10) / 10)} kg</div></div><b>${escAttr(textRitm(rez.ritmSapt))}</b>
     </div>` : ''}
     <div class="nutritie-adauga-jos">
-      <button type="button" class="btn btn-clear" onclick="exportaJurnalCsv()">⬇ ${tr(`Descarcă jurnalul (${raport.zile} zile, CSV)`, `Download the log (${raport.zile} days, CSV)`)}</button>
+      <button type="button" class="btn btn-clear" id="btnJurnalPdf" onclick="exportaJurnalPdf()">⬇ ${tr('Descarcă jurnalul', 'Download the log')}</button>
     </div>
     <div class="nutritie-sursa">${tr('Mediile folosesc doar zilele încheiate în care ai notat ceva.', 'Averages only use finished days with something logged.')}</div>`;
 }
 
 // CSV pentru Excel / Google Sheets: o linie pe aliment (separator „;” și BOM, ca Excel în română să-l deschidă corect)
-function exportaJurnalCsv() {
-  const de = isoDinData(new Date(Date.now() - (raport.zile - 1) * 86400000));
-  const randuri = (raport.jurnal || []).filter(x => x.data >= de);
-  const masa = cod => { const m = MESE_NUTRITIE.find(x => x[0] === cod); return m ? tr(m[1], m[2]) : cod; };
-  const camp = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const cap = [tr('Data', 'Date'), tr('Masa', 'Meal'), tr('Aliment', 'Food'), tr('Marca', 'Brand'), tr('Cantitate (g)', 'Amount (g)'), 'kcal', tr('Proteine (g)', 'Protein (g)'), tr('Carbohidrați (g)', 'Carbohydrates (g)'), tr('Grăsimi (g)', 'Fat (g)')];
-  const linii = [cap.map(camp).join(';')].concat(randuri.map(x => [x.data, masa(x.masa), x.nume, x.marca || '', Number(x.cantitate_g) === 1 ? '' : formatKg(Number(x.cantitate_g)),
-    Math.round(x.kcal), formatKg(rotunjeste1(x.proteine)), formatKg(rotunjeste1(x.carbo)), formatKg(rotunjeste1(x.grasimi))].map(camp).join(';')));
-  const url = URL.createObjectURL(new Blob(['﻿' + linii.join('\r\n')], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `b-fit-jurnal-${de}-${aziIsoAntrPers()}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+// Jurnalul alimentar pe perioada raportului (7 / 30 de zile), ca PDF: fiecare zi cu totalurile ei și alimentele pe mese
+async function exportaJurnalPdf() {
+  const btn = document.getElementById('btnJurnalPdf');
+  if (btn) btn.disabled = true;
+  showToast(t('toastPdfGenerating'));
+  try {
+    await incarcaPdfMake();
+    const paleta = PALETE_ACCENT.includes(localStorage.getItem('beatrix_accent')) ? localStorage.getItem('beatrix_accent') : 'blue';
+    const culoare = CULORI_PDF[paleta];
+    const logo = await imagineDataUrl(`icon-${paleta}.png`).catch(() => null);
+    const gri = '#64748b';
+    const de = isoDinData(new Date(Date.now() - (raport.zile - 1) * 86400000)), pana = aziIsoAntrPers();
+    const randuri = (raport.jurnal || []).filter(x => x.data >= de);
+    const s = nutritie.setari || {};
+    const masa = cod => { const m = MESE_NUTRITIE.find(x => x[0] === cod); return m ? tr(m[1], m[2]) : cod; };
+    const ordineMasa = cod => MESE_NUTRITIE.findIndex(x => x[0] === cod);
+    const g = v => formatKg(rotunjeste1(Number(v || 0)));
+    const nume = ((dateClienta.fisa && dateClienta.fisa.nume) || '').trim();
+    const continut = [{
+      columns: [
+        logo ? { image: logo, width: 34 } : { text: '', width: 0 },
+        { stack: [{ text: tr('Jurnal alimentar', 'Food log'), bold: true, color: culoare, fontSize: 18 },
+          { text: [nume, `${etichetaDataAntrPers(de)} – ${etichetaDataAntrPers(pana)}`].filter(Boolean).join(' · '), color: gri, fontSize: 8.5 }], margin: [8, 0, 0, 0] },
+        { text: s.kcal ? tr(`Ținta: ${s.kcal} kcal`, `Target: ${s.kcal} kcal`) : '', color: gri, fontSize: 8.5, alignment: 'right', margin: [0, 6, 0, 0] }
+      ],
+      margin: [0, 0, 0, 6]
+    }, { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 515, y2: 0, lineWidth: 1.2, lineColor: culoare }], margin: [0, 0, 0, 4] }];
+    const zile = [...new Set(randuri.map(x => x.data))].sort().reverse();
+    if (!zile.length) continut.push({ text: tr('Nimic notat în această perioadă.', 'Nothing logged in this period.'), color: gri, italics: true, margin: [0, 10, 0, 0] });
+    zile.forEach(zi => {
+      const ale = randuri.filter(x => x.data === zi).sort((a, b) => ordineMasa(a.masa) - ordineMasa(b.masa));
+      const t = totaluriNutritie(ale);
+      continut.push({ columns: [{ text: etichetaDataAntrPers(zi), style: 'h2' },
+        { text: `${Math.round(t.kcal)} kcal · P ${g(t.proteine)} · C ${g(t.carbo)} · G ${g(t.grasimi)}`, alignment: 'right', color: gri, fontSize: 8.5, margin: [0, 16, 0, 0] }] });
+      continut.push({
+        table: { headerRows: 1, dontBreakRows: true, widths: [62, '*', 40, 40, 34, 34, 34],
+          body: [[tr('Masa', 'Meal'), tr('Aliment', 'Food'), 'g', 'kcal', 'P', 'C', 'G'].map(c => ({ text: c, bold: true, color: '#ffffff' })),
+            ...ale.map(x => [masa(x.masa), x.marca ? `${x.nume} · ${x.marca}` : x.nume, Number(x.cantitate_g) === 1 ? '-' : formatKg(Number(x.cantitate_g)),
+              String(Math.round(x.kcal)), g(x.proteine), g(x.carbo), g(x.grasimi)])] },
+        layout: {
+          fillColor: i => i === 0 ? culoare : (i % 2 === 0 ? '#f1f5f9' : null),
+          hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1', hLineWidth: () => 0.5, vLineWidth: () => 0.5,
+          paddingLeft: () => 4, paddingRight: () => 4, paddingTop: () => 3, paddingBottom: () => 3
+        }
+      });
+    });
+    const doc = {
+      pageSize: 'A4',
+      pageMargins: [40, 36, 40, 44],
+      info: { title: tr('Jurnal alimentar', 'Food log'), author: 'B-Fit' },
+      content: continut,
+      footer: (pagina, total) => ({ text: tr(`Pagina ${pagina} / ${total}`, `Page ${pagina} / ${total}`), color: gri, fontSize: 7.5, alignment: 'right', margin: [40, 14, 40, 0] }),
+      styles: { h2: { fontSize: 12, bold: true, color: culoare, margin: [0, 12, 0, 5] } },
+      defaultStyle: { font: 'Roboto', fontSize: 9, color: '#1e293b', lineHeight: 1.2 }
+    };
+    const blob = await new Promise(resolve => pdfMake.createPdf(doc).getBlob(resolve));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tr('B-Fit - jurnal alimentar', 'B-Fit - food log')} ${de} ${pana}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (err) {
+    console.error('Eroare jurnal PDF:', err);
+    showToast(tr('Nu s-a putut genera PDF-ul. Verifică conexiunea la internet.', 'Could not create the PDF. Check your internet connection.'), 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // Rândul din setari_nutritie: creat la prima schimbare (fără el, antrenorul vede jurnalul și nu există ținte)
@@ -5345,7 +5500,7 @@ function htmlGraficTendinta(puncte) {
   const min = Math.min(...valori) - 0.3, max = Math.max(...valori) + 0.3;
   const x = q => (zileIntre(d0, q.data) / zile * (W - 16) + 8).toFixed(1);
   const y = v => ((max - v) / (max - min) * (H - 12) + 6).toFixed(1);
-  return `<svg class="grafic-greutate" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+  return `<svg class="grafic-tendinta" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
       <polyline class="gg-trend" points="${p.map(q => `${x(q)},${y(q.trend)}`).join(' ')}"/>
       ${p.map(q => `<circle class="gg-punct" cx="${x(q)}" cy="${y(q.kg)}" r="2.6"/>`).join('')}
     </svg>`;
@@ -8881,6 +9036,18 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 179, data: '2026-11-06',
+    client: [
+      ['Nutriție: Copiază ieri, Adaugă rapid, Rețete și Rapoarte au acum scurtături sus, iar jurnalul se descarcă în PDF, pe zile și pe mese.', 'Nutrition: Copy yesterday, Quick add, Recipes and Reports now have shortcuts at the top, and the log downloads as a PDF, by day and meal.'],
+      ['Progres la exerciții: seriile apar mai clar, iar graficul din Progresul meu are din nou mărimea normală.', 'Exercise progress: sets are shown more clearly, and the chart in My progress is back to its normal size.'],
+      ['Profil › Datele tale: descărcarea include acum tot ce ai notat (nutriție, apă, ciclu, comunitate, mesaje).', 'Profile › Your data: the download now includes everything you logged (nutrition, water, cycle, community, messages).'],
+      ['Listele de alegere se închid la atingere în afara lor, iar meniul nu mai e acoperit de bara telefonului.', 'Choice lists close when you tap outside them, and the menu is no longer covered by the phone’s bar.']
+    ],
+    antrenor: [
+      ['Fișa clientului › Șterge definitiv: se șterg fișa și tot ce ține de client, inclusiv pozele. Rămân doar încasările, pentru contabilitate.', 'Client file › Delete permanently: the file and everything related to the client are deleted, photos included. Only payments are kept, for accounting.'],
+      ['Profil › Datele tale: descărcarea include acum și rețetele și provocările tale.', 'Profile › Your data: the download now also includes your recipes and challenges.'],
+      ['Listele de alegere se închid la atingere în afara lor, iar meniul nu mai e acoperit de bara telefonului.', 'Choice lists close when you tap outside them, and the menu is no longer covered by the phone’s bar.']
+    ] },
   { v: 178, data: '2026-11-06',
     client: [
       ['Nutriție: rapoarte pe 7 și 30 de zile (media caloriilor, zile în țintă, proteine, apă, greutate) și jurnalul descărcabil pentru Excel.', 'Nutrition: 7- and 30-day reports (average calories, days on target, protein, water, weight) and a log you can download for Excel.'],
@@ -10995,6 +11162,7 @@ function afiseazaFisaClientaInstant() {
     badge.innerHTML = `<span class="badge badge-arhivat">${stare.text}</span>`;
   }
 
+  document.getElementById('btnStergeClientDefinitivText').innerText = tr('Șterge definitiv', 'Delete permanently');
   let btnArch = document.getElementById('btnArhivareToggle');
   if (btnArch) {
     if (stLower === 'arhivat' || stLower === 'archived') {
@@ -12993,6 +13161,39 @@ function comutaArhivareClienta() {
   });
 }
 
+// Fișă › Șterge definitiv (GDPR): întâi pozele (Worker, R2), apoi toate datele clientului; încasările rămân (contabilitate).
+// Contul clientului, dacă are, rămâne fără fișă (vezi sql/2026-11-06_stergere_client.sql)
+function stergeClientDefinitiv() {
+  const sel = document.getElementById('selectClientaFisa');
+  const client = gasesteClientaValida((sel && sel.value || '').trim());
+  if (!client || !client.id) return;
+  const nume = client.nume.trim();
+  const text = tr(`Se șterg definitiv fișa lui ${nume} și tot ce ține de ea: programări, prezențe, planuri, progres, poze, nutriție, mesaje. Rămân doar încasările (contabilitate). Nu se poate anula.`,
+    `${nume}'s record and everything related will be permanently deleted: bookings, attendance, plans, progress, photos, nutrition, messages. Only payments are kept (accounting). This cannot be undone.`);
+  customConfirm(tr('Ștergi definitiv clientul?', 'Permanently delete the client?'), `${text}\n\n${tr('Scrie numele clientului ca să confirmi.', 'Type the client’s name to confirm.')}`, async (valoare) => {
+    const normalizat = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (normalizat(valoare) !== normalizat(nume)) {
+      showToast(tr('Clientul nu a fost șters: numele nu se potrivește.', 'Client not deleted: the name does not match.'), 'error');
+      return;
+    }
+    const r = await cerePozeAntr('DELETE', '/client', { client: client.id });
+    if (!r || !r.ok) {
+      showToast(tr('Pozele nu s-au putut șterge. Verifică internetul și reîncearcă.', 'Photos could not be deleted. Check your internet and try again.'), 'error');
+      return;
+    }
+    const { data, error } = await supabaseClient.rpc('sterge_client_definitiv', { p_client_id: client.id });
+    if (error || !data || !data.ok) {
+      showToast(tr('Clientul nu s-a putut șterge. Reîncearcă.', 'Could not delete the client. Try again.'), 'error');
+      return;
+    }
+    DB.clienti = (DB.clienti || []).filter(c => c !== client);
+    sel.value = '';
+    afiseazaFisaClientaInstant();
+    showToast(tr(`${nume} a fost șters definitiv.`, `${nume} was permanently deleted.`));
+    incarcaBazaDateSilencios();
+  }, { placeholder: nume });
+}
+
 // Prelungirea unui abonament înghețat ar strica pauza: întâi Reia (zilele de pauză se adaugă singure)
 function refuzaDacaInghetat(nume) {
   if (!esteInghetat(gasesteClientaValida(nume))) return false;
@@ -13732,14 +13933,16 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
     }
   });
 
-  document.addEventListener('click', (e) => {
+  // pointerdown, nu click: pe telefon atingerea unei zone fără buton (fundal, text) nu trimite click, iar lista rămânea deschisă
+  document.addEventListener('pointerdown', (e) => {
     if (!selDeschis) return;
     if (panel && panel.contains(e.target)) return;
     if (e.target.closest && e.target.closest('select') === selDeschis) return;
     inchide();
   }, true);
 
-  window.addEventListener('scroll', () => { if (selDeschis) inchide(); }, { passive: true });
+  // Și la derularea oricărui container (ecranele se derulează în interior, nu în fereastră), mai puțin a listei însăși
+  document.addEventListener('scroll', (e) => { if (selDeschis && !(panel && panel.contains(e.target))) inchide(); }, { capture: true, passive: true });
   window.addEventListener('resize', () => { if (selDeschis) inchide(); });
 })();
 
@@ -13759,7 +13962,7 @@ function comutaListaPlanuri(deschide) {
 }
 
 // Închide lista de planuri la atingere în afara ei sau la Escape
-document.addEventListener('click', (e) => {
+document.addEventListener('pointerdown', (e) => {
   const picker = document.getElementById('planPicker');
   if (picker && picker.classList.contains('is-open') && !picker.contains(e.target)) comutaListaPlanuri(false);
 });

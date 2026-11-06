@@ -883,7 +883,7 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  bottom: var(--drawer-footer-h);
+  bottom: calc(var(--drawer-footer-h) + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   background: inherit;
@@ -920,7 +920,10 @@ header {
 
 .drawer-body {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto; /* Profil etc. pot depăși ecranul mic: derulează în loc să ascundă sub subsol */
+  overscroll-behavior: contain;
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -3164,8 +3167,8 @@ select.poza-comp-data {
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--drawer-footer-h);
-  padding: 6px 12px;
+  height: calc(var(--drawer-footer-h) + env(safe-area-inset-bottom, 0px));
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)); /* deasupra barei de navigare a telefonului */
   border-top: 1px solid var(--border);
   text-align: center;
   font-size: 0.78rem;
@@ -7868,23 +7871,51 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   margin-bottom: 10px;
 }
 
+/* Alegeri de tip „pastilă” (obiectiv, masă, activitate, măsură): același stil glass ca selectorul de zile din Orar */
 .antr-pers-activitate {
-  border: 1.5px solid var(--border);
+  flex: 1 1 auto;
+  border: 1px solid var(--glass-border);
   background: var(--card-bg);
+  box-shadow: 0 2px 6px rgba(var(--primary-dark-rgb), 0.05),
+              inset 0 1px 0.5px rgba(255, 255, 255, 0.8);
   color: var(--text);
-  border-radius: 999px;
-  padding: 6px 11px;
-  font-size: 0.78rem;
-  font-weight: 700;
+  border-radius: 16px;
+  padding: 8px 11px;
+  font-size: 0.8rem;
+  font-weight: 600;
   font-family: inherit;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+}
+
+.antr-pers-activitate:active {
+  transform: scale(0.96);
 }
 
 .antr-pers-activitate.activ {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: #fff;
+  background: rgba(var(--accent-rgb), 0.26);
+  color: var(--primary);
+  font-weight: 800;
+  border-color: rgba(var(--accent-light-rgb), 0.38);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.2),
+              inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+[data-theme="dark"] .antr-pers-activitate {
+  color: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3),
+              inset 0 1px 1px rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .antr-pers-activitate.activ {
+  background: rgba(var(--accent-rgb), 0.24);
+  color: var(--accent-purple-light);
+  border-color: rgba(var(--accent-pale-rgb), 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+              inset 0 1px 1px rgba(255, 255, 255, 0.12);
 }
 
 .antr-pers-campuri {
@@ -8028,15 +8059,43 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 }
 
 .progres-ex-toate {
-  margin-top: 8px;
+  margin-top: 2px;
+  overflow: hidden;
 }
 
 .progres-ex-toate summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
+  list-style: none;
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--primary);
-  padding: 4px 2px 8px;
+  padding: 11px 12px;
+}
+
+.progres-ex-toate summary::-webkit-details-marker {
+  display: none;
+}
+
+.progres-ex-toate summary::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s ease;
+}
+
+.progres-ex-toate[open] summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.progres-ex-toate > .plan-fisa-lista {
+  padding: 0 10px 2px;
 }
 
 .progres-ex-card {
@@ -8643,8 +8702,7 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .nutritie-masa-salvata { display: flex; align-items: center; gap: 6px; padding-right: 6px; }
 .nutritie-masa-salvata-corp { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
 .nutritie-salveaza-masa { border: none; background: none; padding: 6px 0 0; color: var(--primary); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
-.nutritie-scurtaturi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
-.nutritie-scurtaturi .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 .nutritie-tinte-butoane { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 .nutritie-tinte-butoane .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.82rem; padding-left: 6px; padding-right: 6px; }
 .calculator-optiuni { display: flex; flex-direction: column; gap: 6px; }
@@ -8681,9 +8739,9 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .adaptiv-cantar { display: flex; gap: 8px; }
 .adaptiv-cantar input { flex: 1; min-width: 0; }
 .adaptiv-cantar .btn { white-space: nowrap; }
-.grafic-greutate { width: 100%; height: 80px; margin-top: 4px; }
-.grafic-greutate .gg-trend { fill: none; stroke: var(--primary); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
-.grafic-greutate .gg-punct { fill: #8b5cf6; opacity: 0.45; }
+.grafic-tendinta { width: 100%; height: 80px; margin-top: 4px; }
+.grafic-tendinta .gg-trend { fill: none; stroke: var(--primary); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.grafic-tendinta .gg-punct { fill: #8b5cf6; opacity: 0.45; }
 .adaptiv-legenda { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-muted); }
 .gg-l-punct { width: 7px; height: 7px; border-radius: 50%; background: #8b5cf6; opacity: 0.45; }
 .gg-l-trend { width: 14px; height: 3px; border-radius: 2px; background: var(--primary); margin-left: 8px; }
@@ -8699,7 +8757,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 /* ==========================================
    RAPOARTE NUTRIȚIE (7 / 30 de zile)
    ========================================== */
-.nutritie-rapoarte-btn { display: block; width: 100%; margin-top: 10px; padding: 8px 0 0; border: none; border-top: 1px solid var(--border); background: none; color: var(--primary); font: inherit; font-size: 0.85rem; font-weight: 700; text-align: left; cursor: pointer; }
 .grafic-raport { width: 100%; height: 110px; margin-top: 6px; }
 .grafic-raport .rb { fill: var(--primary); opacity: 0.85; }
 .grafic-raport .rb.in { fill: #15803d; }
