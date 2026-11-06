@@ -8630,3 +8630,25 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .nutritie-mese .nutritie-masa-sus span { font-size: 0.8rem; color: var(--text-muted); }
 .nutritie-masa-plus { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 1.15rem; line-height: 1; cursor: pointer; }
 .nutritie-mese .nutritie-rand:first-of-type { margin-top: 4px; }
+
+/* ==========================================
+   NUTRIȚIE, etapa A: porții, favorite, mese salvate, copiere, adăugare rapidă, calculator
+   ========================================== */
+.nutritie-cantitate { position: relative; }
+.nutritie-stea { position: absolute; top: 10px; right: 10px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--input-glass-bg); color: #f5b041; font-size: 1.2rem; line-height: 1; cursor: pointer; z-index: 1; }
+.nutritie-stea.activ { background: #f5b041; border-color: #f5b041; color: #fff; }
+.nutritie-cantitate .nutritie-produs-cap { padding-right: 40px; }
+.nutritie-portii { flex-wrap: wrap; }
+.nutritie-adauga-jos { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.nutritie-masa-salvata { display: flex; align-items: center; gap: 6px; padding-right: 6px; }
+.nutritie-masa-salvata-corp { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 0; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.nutritie-salveaza-masa { border: none; background: none; padding: 6px 0 0; color: var(--primary); font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.nutritie-scurtaturi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.nutritie-scurtaturi .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nutritie-tinte-butoane { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.nutritie-tinte-butoane .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.82rem; padding-left: 6px; padding-right: 6px; }
+.calculator-optiuni { display: flex; flex-direction: column; gap: 6px; }
+.calculator-optiuni .antr-pers-activitate { text-align: left; width: 100%; }
+.calculator-tinte .antr-pers-campuri { flex-wrap: wrap; }
+.calculator-tinte .antr-pers-campuri label { flex: 1 1 28%; min-width: 0; }
+.calculator-rezultat { text-align: center; }
