@@ -8695,3 +8695,23 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .adaptiv-motiv { padding: 8px 10px; border-radius: 10px; background: var(--input-glass-bg); }
 .adaptiv-tendinta { font-size: 0.82rem; color: var(--text-muted); }
 .adaptiv-tendinta b { font-size: 1rem; color: var(--primary); }
+
+/* ==========================================
+   RAPOARTE NUTRIȚIE (7 / 30 de zile)
+   ========================================== */
+.nutritie-rapoarte-btn { display: block; width: 100%; margin-top: 10px; padding: 8px 0 0; border: none; border-top: 1px solid var(--border); background: none; color: var(--primary); font: inherit; font-size: 0.85rem; font-weight: 700; text-align: left; cursor: pointer; }
+.grafic-raport { width: 100%; height: 110px; margin-top: 6px; }
+.grafic-raport .rb { fill: var(--primary); opacity: 0.85; }
+.grafic-raport .rb.in { fill: #15803d; }
+.grafic-raport .rb.sub { fill: #f5b041; }
+.grafic-raport .rb.peste { fill: #b91c1c; }
+.grafic-raport .rl { stroke: var(--text-muted); stroke-width: 1.2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.grafic-raport .rt { font-size: 8px; fill: var(--text-muted); }
+.rl-l { width: 10px; height: 10px; border-radius: 3px; margin-left: 6px; }
+.rl-l:first-child { margin-left: 0; }
+.rl-l.in { background: #15803d; } .rl-l.sub { background: #f5b041; } .rl-l.peste { background: #b91c1c; }
+.raport-macro { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin: 8px 0 6px; background: var(--border); }
+.raport-macro i { display: block; height: 100%; }
+.raport-macro .proteine { background: #8b5cf6; } .raport-macro .carbo { background: #f5b041; } .raport-macro .grasimi { background: #15803d; }
+.raport-rand { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.raport-rand > b { font-size: 1.1rem; color: var(--primary); white-space: nowrap; }
