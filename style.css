@@ -8573,3 +8573,60 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .nutritie-eticheta-rand.sub span { padding-left: 12px; color: var(--text-muted); }
 .nutritie-eticheta-rand.sub b { font-weight: 500; }
 .nutritie-produs .plan-zi-card-detalii { white-space: normal; overflow: visible; text-overflow: clip; }
+
+/* ==========================================
+   ACASĂ (client): „Azi”, plăcuțele, „De făcut”, scurtăturile; apa
+   ========================================== */
+.acasa-azi { display: flex; flex-direction: column; gap: 10px; border: 1.5px solid rgba(var(--primary-rgb), 0.3) !important; }
+.acasa-azi-data { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+.acasa-azi .acasa-antrenament { border: none !important; background: none !important; padding: 0; }
+.acasa-rand { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); cursor: pointer; }
+.acasa-azi .acasa-antrenament + .acasa-rand, .acasa-azi-data + .acasa-rand { border-top: none; }
+.acasa-azi .acasa-antrenament ~ .acasa-rand { border-top: 1px solid var(--border); }
+.acasa-rand.schelet { min-height: 40px; }
+.acasa-rand-text { flex: 1; min-width: 0; }
+.acasa-rand-text b { font-size: 0.9rem; }
+.acasa-rand-icon { flex-shrink: 0; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(var(--primary-rgb), 0.1); color: var(--primary); }
+.acasa-rand-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ciclu-acasa.faza-menstruala .acasa-rand-icon { background: rgba(185, 28, 28, 0.1); color: #b91c1c; }
+.ciclu-acasa.faza-foliculara .acasa-rand-icon { background: rgba(21, 128, 61, 0.1); color: #15803d; }
+.ciclu-acasa.faza-ovulatie .acasa-rand-icon { background: rgba(245, 176, 65, 0.15); color: #b7791f; }
+.acasa-tile { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.acasa-tila { position: relative; min-width: 0; min-height: 92px; padding: 10px 6px 8px; border-radius: 14px; background: var(--card-bg); border: 1px solid var(--glass-border); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px; cursor: pointer; }
+.acasa-tila b { font-size: 1.3rem; line-height: 1.1; color: var(--primary); }
+.acasa-tila b small { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.acasa-tila > span { font-size: 0.68rem; line-height: 1.2; color: var(--text-muted); }
+.acasa-tila.atins { border-color: rgba(21, 128, 61, 0.45); }
+.acasa-tila .nutritie-bara-mica { width: 80%; margin-top: 4px; }
+.acasa-tila-inel .inel-progres { width: 46px; height: 46px; }
+.acasa-tila-serie { font-size: 0.68rem; color: var(--text-muted); }
+.acasa-tila-plus { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 1rem; line-height: 1; cursor: pointer; }
+#acasaCifre .inca-putin { margin: -2px 2px 10px; }
+.acasa-de-facut { display: flex; flex-direction: column; }
+.acasa-de-facut .acasa-eticheta + .acasa-rand { border-top: none; }
+.acasa-de-facut:not(:has(.acasa-rand)) { display: none; }
+.acasa-scurtaturi { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+.acasa-scurtatura { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0; border: none; background: none; color: var(--text); font-family: inherit; font-size: 0.72rem; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acasa-scurtatura > span { width: 48px; height: 48px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: var(--card-bg); border: 1px solid var(--glass-border); color: var(--primary); }
+.acasa-scurtatura.activ > span { background: var(--primary); color: #fff; }
+.acasa-scurtatura svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.acasa-mic { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.acasa-mic .nutritie-sterge { margin-left: auto; }
+.fisa-istoric-btn { margin-bottom: 10px; }
+.nutritie-ramase { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 8px; }
+.nutritie-ramase b { font-size: 2rem; line-height: 1.1; color: var(--primary); }
+.nutritie-ramase span { font-size: 0.8rem; color: var(--text-muted); }
+.nutritie-apa .apa-rand { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.apa-pahare { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.apa-pahar { width: 18px; height: 24px; border-radius: 3px 3px 6px 6px; border: 1.5px solid #60a5fa; background: transparent; }
+.apa-pahar.plin { background: #60a5fa; }
+.apa-btn { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--input-glass-bg); color: var(--text); font-size: 1.2rem; cursor: pointer; }
+.apa-btn.plus { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.nutritie-mese { display: flex; flex-direction: column; padding-top: 4px; padding-bottom: 4px; }
+.nutritie-mese .nutritie-masa { padding: 8px 0; border-top: 1px solid var(--border); }
+.nutritie-mese .nutritie-masa:first-child { border-top: none; }
+.nutritie-mese .nutritie-masa-sus { display: flex; align-items: center; gap: 8px; }
+.nutritie-mese .nutritie-masa-sus b { flex: 1; }
+.nutritie-mese .nutritie-masa-sus span { font-size: 0.8rem; color: var(--text-muted); }
+.nutritie-masa-plus { flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 1.15rem; line-height: 1; cursor: pointer; }
+.nutritie-mese .nutritie-rand:first-of-type { margin-top: 4px; }

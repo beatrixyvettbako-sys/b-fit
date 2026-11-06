@@ -3270,9 +3270,6 @@ function htmlReinnoireClienta(c) {
   } else if (s.tip === 'inghetat') {
     titlu = tr('Abonamentul tău e în pauză', 'Your subscription is paused');
     text = tr('Zilele sunt oprite. Când revii, antrenorul îl reia și zilele de pauză se adaugă la final.', 'The days are on hold. When you come back, your trainer resumes it and the paused days are added at the end.');
-  } else if (s.tip === 'nou') {
-    titlu = tr('Încă nu ai un abonament activ', 'You don’t have an active subscription yet');
-    text = tr('După prima plată, aici îți vezi ședințele și valabilitatea.', 'After your first payment, your sessions and validity show up here.');
   } else {
     return '';
   }
@@ -3310,12 +3307,50 @@ function randeazaHomeClienta() {
   document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
   // Fiecare lucru o singură dată, în ordinea importanței: reînnoire, mesajul antrenorului, antrenamentul (cu planul),
   // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
+  // Sus: ce e urgent (reînnoire, mesaje); apoi „Azi” (antrenamentul, ședința, ciclul), cele trei cifre, „De făcut”,
+  // scurtăturile și comunitatea. Un singur buton principal pe ecran: cel din „Azi”.
   const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
     + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + htmlAntrenamentAcasa() + htmlCicluAcasa() + htmlSaptamanaAcasa() + htmlNutritieAcasa() + htmlAntrPersAcasa() + htmlComunitateAcasa() + htmlSedintaAcasa() + htmlCheckinAcasa() + htmlCifreAcasa();
+    + `<div class="card acasa-azi"><div class="acasa-azi-data">${escAttr(dataAziAcasa())}</div>${htmlAntrenamentAcasa()}${htmlSedintaAcasa()}${htmlCicluAcasa()}</div>`
+    + htmlCifreAcasa()
+    + `<div class="card acasa-de-facut"><div class="acasa-eticheta">${tr('De făcut', 'To do')}</div>${htmlCheckinAcasa()}${htmlMasaAcasa()}</div>`
+    + `<div class="acasa-scurtaturi">
+        <button type="button" class="acasa-scurtatura" onclick="deschideAdaugaAliment(masaImplicita())"><span><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M15 3c-1.5 2-2 4-2 6s1 3 2 3v9"/></svg></span>${tr('Masă', 'Meal')}</button>
+        ${htmlAntrPersAcasa()}
+        <button type="button" class="acasa-scurtatura" onclick="scaneazaDinAcasa()"><span><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg></span>${tr('Scanează', 'Scan')}</button>
+        <button type="button" class="acasa-scurtatura" onclick="clientaTab('orar')"><span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg></span>${tr('Programare', 'Book')}</button>
+      </div>`
+    + htmlComunitateAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
   actualizeazaCardPushAcasa();
   actualizeazaCardMesajeAcasa();
+}
+
+// „Joi, 6 noiembrie”
+function dataAziAcasa() {
+  const t = new Date().toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { weekday: 'long', day: 'numeric', month: 'long' });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+// „De făcut”: masa probabilă după oră, dacă încă n-a notat nimic la ea azi (după ce se știe ce e notat)
+function htmlMasaAcasa() {
+  if (!nutritie.azi && nutritie.zi !== aziIsoAntrPers()) return '<div id="acasaMasa"></div>';
+  const cod = masaImplicita();
+  const notat = nutritie.zi === aziIsoAntrPers() && (nutritie.lista || []).some(x => x.masa === cod);
+  if (notat) return '<div id="acasaMasa"></div>';
+  const masa = MESE_NUTRITIE.find(m => m[0] === cod);
+  return `<div class="acasa-rand" id="acasaMasa" onclick="deschideAdaugaAliment('${cod}')">
+    <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><path d="M7 3v8a2 2 0 0 0 2 2v8M11 3v8M15 3c-1.5 2-2 4-2 6s1 3 2 3v9"/></svg></span>
+    <div class="acasa-rand-text"><b>${tr(`Notează ${masa[1].toLowerCase()}`, `Log ${masa[2].toLowerCase()}`)}</b>
+    <div class="acasa-antrenament-detalii">${tr('Scanezi codul de bare sau cauți produsul.', 'Scan the barcode or search the product.')}</div></div>
+    <div class="drawer-nav-arrow">›</div>
+  </div>`;
+}
+
+// Scurtătura „Scanează” de pe Acasă: deschide adăugarea la masa probabilă și pornește camera
+function scaneazaDinAcasa() {
+  deschideAdaugaAliment(masaImplicita());
+  pornesteScanare();
 }
 
 // Notificările oprite pe telefon: invitația de pornire apare și pe Acasă (până le pornește sau o închide cu ×)
@@ -3342,7 +3377,7 @@ function htmlAntrenamentAcasa() {
   const p = dateClienta.planuri[0];
   const sesiuni = (p && p.continut_json?.sesiuni) || [];
   if (!p) {
-    return `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Antrenorul tău nu ți-a trimis încă un plan de antrenament.', 'Your trainer has not sent you a workout plan yet.')}</div>`;
+    return '';
   }
   if (!sesiuni.length) return '';
   const exZi = s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim());
@@ -3354,7 +3389,7 @@ function htmlAntrenamentAcasa() {
       <b>${tr('Toate zilele', 'All days')} ›</b>
     </div>`;
   if (idx === -1) {
-    return `<div class="card acasa-antrenament gata">${antetPlan}
+    return `<div class="acasa-antrenament gata">${antetPlan}
       <div class="acasa-antrenament-titlu">${tr('Ai terminat săptămâna!', 'You finished the week!')}</div>
       <div class="acasa-antrenament-detalii">${tr('Toate zilele sunt bifate. Începe săptămâna nouă: ce ai notat rămâne ca „data trecută”.', 'Every day is checked. Start a new week: what you logged stays as “last time”.')}</div>
       <button type="button" class="btn acasa-incepe" onclick="incepeSaptamanaNouaClienta(0)">${tr('Începe săptămâna nouă', 'Start a new week')}</button>
@@ -3363,7 +3398,7 @@ function htmlAntrenamentAcasa() {
   const s = sesiuni[idx];
   const lista = exZi(s);
   const facute = lista.filter(x => x.status === 'Finalizat').length;
-  return `<div class="card acasa-antrenament">${antetPlan}
+  return `<div class="acasa-antrenament">${antetPlan}
     <div class="acasa-eticheta">${tr('Următorul antrenament', 'Next workout')}</div>
     <div class="acasa-antrenament-titlu">${escAttr(s.titlu || tr(`Ziua ${idx + 1}`, `Day ${idx + 1}`))}</div>
     <div class="acasa-antrenament-detalii">${lista.length} ${tr('exerciții', 'exercises')} · ~${durataZiMin(s)} min${facute ? ` · ${facute}/${lista.length} ${tr('făcute', 'done')}` : ''}</div>
@@ -3377,34 +3412,32 @@ function htmlCheckinAcasa() {
   // Datele salvate pot fi din săptămâna trecută: de luni, check-in-ul e din nou de făcut
   const facut = a && (a.checkinSaptamana === lunaSaptamaniiCurente() ? a.checkinFacut : false);
   if (!a || facut !== false) return '<div id="acasaCheckin"></div>';
-  return `<div class="card acasa-sedinta" id="acasaCheckin" onclick="deschideCheckinDinAcasa()">
-    <div><div class="acasa-eticheta">${tr('Check-in-ul săptămânii', 'This week’s check-in')}</div>
-    <b>${tr('Cum a fost săptămâna ta?', 'How was your week?')}</b>
-    <div class="acasa-antrenament-detalii">${tr('Durează 2 minute. Antrenorul tău îl vede în fișa ta.', 'Takes 2 minutes. Your trainer sees it in your profile.')}</div></div>
-    <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideCheckinDinAcasa()">${tr('Fă-l acum', 'Do it now')}</button>
+  return `<div class="acasa-rand" id="acasaCheckin" onclick="deschideCheckinDinAcasa()">
+    <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg></span>
+    <div class="acasa-rand-text"><b>${tr('Check-in-ul săptămânii', 'This week’s check-in')}</b>
+    <div class="acasa-antrenament-detalii">${tr('2 minute. Antrenorul tău îl vede în fișa ta.', '2 minutes. Your trainer sees it in your profile.')}</div></div>
+    <div class="drawer-nav-arrow">›</div>
   </div>`;
 }
 
 // Trei cifre: ședințe săptămâna asta, ședințe rămase, săptămâni la rând (până vin datele: „–”)
 function htmlCifreAcasa() {
-  const a = dateClienta.acasa;
-  const c = dateClienta.fisa || {};
-  const cifra = (valoare, eticheta, laClick) => `<div class="acasa-cifra"${laClick ? ` onclick="${laClick}" role="button"` : ''}><b>${valoare}</b><span>${eticheta}</span></div>`;
-  return `<div class="acasa-cifre" id="acasaCifre">
-    ${cifra(a ? a.saptamana : '–', tr('ședințe săptămâna asta', 'sessions this week'))}
-    ${cifra(c.ramase ?? '–', tr('ședințe rămase ›', 'sessions left ›'), 'deschideAbonamentDinAcasa()')}
-    ${cifra(a ? a.serie : '–', a && a.serie === 1 ? tr('săptămână la rând', 'week in a row') : tr('săptămâni la rând', 'weeks in a row'))}
-  </div>`;
+  const incaPutin = dateClienta.fisa ? incaPutinClient().map(t => `<div class="inca-putin"><span>›</span>${escAttr(t)}</div>`).join('') : '';
+  return `<div id="acasaCifre"><div class="acasa-tile">${htmlSaptamanaAcasa()}${htmlNutritieAcasa()}${htmlApaAcasa()}</div>${incaPutin}</div>`;
 }
 
 // Următoarea ședință la sală: anularea direct de aici când e permisă; fără ședință, câte ore libere sunt de rezervat
 function htmlSedintaAcasa() {
   const a = dateClienta.acasa;
-  if (!a) return `<div class="card acasa-sedinta schelet" id="acasaSedinta"></div>`;
+  if (!a) return `<div class="acasa-rand schelet" id="acasaSedinta"></div>`;
+  // Ședințele rămase doar cu un abonament pe ședințe (fără abonament, „0 rămase” n-ar spune nimic)
+  const ramase = dateClienta.fisa && Number(dateClienta.fisa.incluse) > 0 ? Number(dateClienta.fisa.ramase) || 0 : null;
+  const textRamase = ramase === null ? '' : ramase === 1 ? tr('1 ședință rămasă', '1 session left') : tr(`${ramase} ședințe rămase`, `${ramase} sessions left`);
   if (a.urmatoarea) {
     const { poateAnula } = stareAnulareClienta({ bifat: false, rezervat_online: !!a.urmatoareaOnline, data: a.urmatoarea });
-    return `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
-        <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div>
+    return `<div class="acasa-rand" id="acasaSedinta" onclick="clientaTab('orar')">
+        <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+        <div class="acasa-rand-text"><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}${textRamase ? ` · ${textRamase}` : ''}</div>
         <b>${escAttr(etichetaZiSlot(a.urmatoarea))}, ${oraSlot(a.urmatoarea)}</b>${a.urmatoareaAntrenament ? `<div class="acasa-antrenament-detalii">${escAttr(traduceValoare(a.urmatoareaAntrenament))}</div>` : ''}</div>
         ${poateAnula && a.urmatoareaRow
           ? `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="event.stopPropagation(); anuleazaRezervareClienta(${Number(a.urmatoareaRow)})">${tr('Anulează', 'Cancel')}</button>`
@@ -3412,10 +3445,11 @@ function htmlSedintaAcasa() {
       </div>`;
   }
   const libere = dateClienta.locuriLibere || 0;
-  return `<div class="card acasa-sedinta" id="acasaSedinta" onclick="clientaTab('orar')">
-      <div><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}</div><b>${tr('Nicio ședință programată', 'No session booked')}</b>
+  return `<div class="acasa-rand" id="acasaSedinta" onclick="clientaTab('orar')">
+      <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      <div class="acasa-rand-text"><div class="acasa-eticheta">${tr('Următoarea ședință', 'Next session')}${textRamase ? ` · ${textRamase}` : ''}</div><b>${tr('Nicio ședință programată', 'No session booked')}</b>
       ${libere ? `<div class="acasa-antrenament-detalii">${libere === 1 ? tr('O oră liberă de rezervat', '1 open hour to book') : tr(`${libere} ore libere de rezervat`, `${libere} open hours to book`)}</div>` : ''}</div>
-      <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); clientaTab('orar')">${tr('Programează-te', 'Book')}</button>
+      <button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="event.stopPropagation(); clientaTab('orar')">${tr('Programează-te', 'Book')}</button>
     </div>`;
 }
 
@@ -3848,11 +3882,10 @@ function htmlAntrPersAcasa() {
   const detalii = ciorna && ciorna.curent ? tr('Ai un antrenament început. Continuă-l de aici.', 'You have a workout in progress. Continue it here.')
     : ultim ? `${tr('Ultimul', 'Last')}: ${escAttr(titluAntrPers(ultim))}, ${escAttr(etichetaDataAntrPers(ultim.data))}`
     : tr('Notează și ce faci în afara planului: sală, alergare, bicicletă.', 'Log what you do outside your plan too: gym, running, cycling.');
-  return `<div class="card acasa-sedinta" id="cardAntrPersAcasa" onclick="deschideAntrPers()">
-    <div><div class="acasa-eticheta">${tr('Antrenamente proprii', 'My workouts')}</div>
-    <div class="acasa-antrenament-detalii">${detalii}</div></div>
-    <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); ${ciorna && ciorna.curent ? 'continuaCiornaAntrPers()' : 'antrPersNou()'}">${ciorna && ciorna.curent ? tr('Continuă', 'Continue') : tr('+ Nou', '+ New')}</button>
-  </div>`;
+  const ciornaActiva = !!(ciorna && ciorna.curent);
+  return `<button type="button" class="acasa-scurtatura${ciornaActiva ? ' activ' : ''}" id="cardAntrPersAcasa" onclick="deschideAntrPers()" title="${escAttr(detalii.replace(/<[^>]+>/g, ''))}">
+    <span><svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M3 9v6M21 9v6M6 12h12"/></svg></span>${ciornaActiva ? tr('Continuă', 'Continue') : tr('Antrenament', 'Workout')}
+  </button>`;
 }
 
 function arataInapoiAntrPers() {
@@ -4306,6 +4339,7 @@ function inapoiAntrPers() {
   opresteTimerPauza();
   if (String(antrPers.ecran).startsWith('nutritie')) return inapoiNutritie();
   if (antrPers.ecran === 'ciclu' || antrPers.ecran === 'comunitate') { antrPers.ecran = null; return randeazaHomeClienta(); }
+  if (antrPers.ecran === 'istoric') return clientaTab('fisa');
   if (antrPers.ecran === 'editor') {
     if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
     else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
@@ -4579,48 +4613,13 @@ function htmlSaptamanaAcasa() {
   if (!dateClienta.fisa) return '<div id="cardSaptamanaAcasa"></div>';
   const ob = obiectivSaptamana(dateClienta.obiective);
   const facute = zileActiveSaptamanaClient();
-  const incaPutin = incaPutinClient().map(t => `<div class="inca-putin"><span>›</span>${escAttr(t)}</div>`).join('');
-  if (!ob) {
-    // Fără obiectiv: alegerea rapidă, cu propunerea din fișa de înscriere (de câte ori pe săptămână poate veni)
-    const sugestie = Math.min(5, parseInt((dateClienta.fisa.fisa_inscriere || {}).frecventa, 10) || 3);
-    return `<div class="card saptamana-acasa" id="cardSaptamanaAcasa">
-      <div class="saptamana-sus">${htmlInelProgres(0, String(facute), false)}
-        <div><div class="acasa-eticheta">${tr('Săptămâna ta', 'Your week')}</div>
-        <b>${facute === 1 ? tr('1 zi activă săptămâna asta', '1 active day this week') : tr(`${facute} zile active săptămâna asta`, `${facute} active days this week`)}</b>
-        <div class="acasa-antrenament-detalii">${tr('Câte antrenamente vrei să faci pe săptămână?', 'How many workouts do you want per week?')}</div></div></div>
-      <div class="antr-pers-activitati saptamana-alege">${[1, 2, 3, 4, 5].map(n => `<button type="button" class="antr-pers-activitate${n === sugestie ? ' activ' : ''}" onclick="seteazaObiectivSaptamana(${n})">${n}</button>`).join('')}</div>
-      ${incaPutin}
-    </div>`;
-  }
-  const tinta = Number(ob.tinta);
-  const atins = facute >= tinta;
-  const ziSapt = (new Date().getDay() + 6) % 7; // 0 = luni
-  const zileRamase = 6 - ziSapt;
-  const detalii = atins ? tr('Ține-o tot așa! Tot ce faci în plus contează pentru serie.', 'Keep it up! Anything extra counts toward your streak.')
-    : zileRamase === 0 ? tr('Azi e ultima zi a săptămânii.', 'Today is the last day of the week.')
-    : zileRamase === 1 ? tr('Mai e o zi din săptămână.', 'One day left this week.') : tr(`Mai sunt ${zileRamase} zile din săptămână.`, `${zileRamase} days left this week.`);
-  return `<div class="card saptamana-acasa${atins ? ' atins' : ''}" id="cardSaptamanaAcasa">
-    <div class="acasa-plan" onclick="deschideObiectiveDinAcasa()">
-      <span>${tr('Obiectivul săptămânii', 'This week’s goal')}</span><b>${tr('Obiectivele mele ›', 'My goals ›')}</b>
-    </div>
-    <div class="saptamana-sus">${htmlInelProgres(facute / tinta * 100, `${Math.min(facute, 99)}/${tinta}`, atins)}
-      <div><b>${atins ? tr('✓ Obiectiv atins!', '✓ Goal reached!') : (tinta - facute === 1 ? tr('Încă 1 antrenament', '1 more workout') : tr(`Încă ${tinta - facute} antrenamente`, `${tinta - facute} more workouts`))}</b>
-      <div class="acasa-antrenament-detalii">${detalii}</div></div></div>
-    ${incaPutin}
+  const tinta = ob ? Number(ob.tinta) : 0;
+  const serie = (dateClienta.acasa || {}).serie || 0;
+  return `<div class="acasa-tila acasa-tila-inel${tinta && facute >= tinta ? ' atins' : ''}" id="cardSaptamanaAcasa" onclick="deschideObiectiveDinAcasa()" role="button">
+    ${htmlInelProgres(tinta ? facute / tinta * 100 : 0, tinta ? `${Math.min(facute, 99)}/${tinta}` : String(facute), tinta && facute >= tinta)}
+    <span>${tinta ? tr('zile active', 'active days') : tr('zile active · alege ținta', 'active days · set a goal')}</span>
+    ${serie ? `<small class="acasa-tila-serie">🔥 ${serie} ${serie === 1 ? tr('săpt.', 'wk') : tr('săpt.', 'wks')}</small>` : ''}
   </div>`;
-}
-
-async function seteazaObiectivSaptamana(n) {
-  const c = dateClienta.fisa;
-  if (!c) return;
-  const { data, error } = await supabaseClient.from('obiective').insert({ user_id: c.user_id, client_id: c.id, tip: 'antrenamente_saptamana', tinta: n, creat_de: 'client' }).select().single();
-  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
-  dateClienta.obiective = (dateClienta.obiective || []).concat(data);
-  salveazaCacheClienta();
-  showToast(tr(`✓ Obiectiv: ${n} pe săptămână`, `✓ Goal: ${n} per week`));
-  const card = document.getElementById('cardSaptamanaAcasa');
-  if (card) card.outerHTML = htmlSaptamanaAcasa();
-  verificaObiectivSaptamanaAtins();
 }
 
 let deschideObiectiveLaIncarcare = false;
@@ -4852,10 +4851,13 @@ function totaluriAzi(lista) {
 
 async function incarcaNutritieZi(zi) {
   if (!supabaseClient || !dateClienta.fisa) return;
-  const [resJ, resS] = await Promise.all([
+  const [resJ, resS, resA] = await Promise.all([
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', dateClienta.fisa.id).eq('data', zi).order('created_at'),
-    supabaseClient.from('setari_nutritie').select('*').eq('client_id', dateClienta.fisa.id).maybeSingle()
+    supabaseClient.from('setari_nutritie').select('*').eq('client_id', dateClienta.fisa.id).maybeSingle(),
+    supabaseClient.from('apa_zilnica').select('pahare').eq('client_id', dateClienta.fisa.id).eq('data', zi).maybeSingle()
   ]);
+  // Apa: null = fără tabel (SQL nerulat) sau fără rețea; atunci cardul nu apare
+  if (!resA.error) { nutritie.apa = nutritie.apa || {}; nutritie.apa[zi] = resA.data ? resA.data.pahare : 0; }
   if (!resJ.error) {
     if (zi === aziIsoAntrPers()) nutritie.azi = totaluriAzi(resJ.data);
     // Reîncărcarea de pe Acasă (azi) nu înlocuiește altă zi deschisă în ecranul de nutriție
@@ -4870,14 +4872,61 @@ function htmlNutritieAcasa() {
   const tinta = s && s.kcal ? Number(s.kcal) : 0;
   const kcal = t ? Math.round(t.kcal) : 0;
   const procent = tinta ? Math.min(100, Math.round(kcal / tinta * 100)) : 0;
-  const detalii = !t ? tr('Notează ce mănânci: scanezi codul de bare sau cauți produsul.', 'Log what you eat: scan the barcode or search the product.')
-    : `${tr('Proteine', 'Protein')} ${Math.round(t.proteine)} g${s && s.proteine ? ` / ${s.proteine} g` : ''} · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(t.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(t.grasimi)} g`;
-  return `<div class="card acasa-sedinta nutritie-acasa" id="cardNutritieAcasa" onclick="deschideNutritie()">
-    <div><div class="acasa-eticheta">${tr('Nutriție azi', 'Nutrition today')}</div>
-    <b>${t ? `${kcal}${tinta ? ` / ${tinta}` : ''} kcal` : tr('Nimic notat azi', 'Nothing logged today')}</b>
-    ${tinta && t ? `<div class="progress-wrapper nutritie-bara-mica"><div class="progress-fill" style="width:${procent}%"></div></div>` : ''}
-    <div class="acasa-antrenament-detalii">${detalii}</div></div>
-    <button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideAdaugaAliment('${masaImplicita()}')">${tr('+ Adaugă', '+ Add')}</button>
+  return `<div class="acasa-tila" id="cardNutritieAcasa" onclick="deschideNutritie()" role="button">
+    <b>${kcal}${tinta ? `<small>/${tinta}</small>` : ''}</b><span>${tr('kcal azi', 'kcal today')}</span>
+    ${tinta ? `<div class="progress-wrapper nutritie-bara-mica"><div class="progress-fill" style="width:${procent}%"></div></div>` : ''}
+  </div>`;
+}
+
+// ---- Apă: pahare de 250 ml pe zi, ținta din setari_nutritie.apa_tinta (implicit 8) ----
+function tintaApa() {
+  return (nutritie.setari && nutritie.setari.apa_tinta) || 8;
+}
+
+async function adaugaPahar(delta, zi) {
+  const c = dateClienta.fisa;
+  zi = zi || aziIsoAntrPers();
+  if (!c || !nutritie.apa || nutritie.apa[zi] === undefined) return;
+  const nou = Math.max(0, Math.min(40, nutritie.apa[zi] + delta));
+  const vechi = nutritie.apa[zi];
+  nutritie.apa[zi] = nou;
+  redeseneazaApa();
+  const { error } = await supabaseClient.from('apa_zilnica').upsert({ client_id: c.id, user_id: c.user_id, data: zi, pahare: nou, updated_at: new Date().toISOString() }, { onConflict: 'client_id,data' });
+  if (error) { nutritie.apa[zi] = vechi; redeseneazaApa(); showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); }
+  else if (navigator.vibrate) navigator.vibrate(15);
+}
+
+function redeseneazaApa() {
+  const tila = document.getElementById('cardApaAcasa');
+  if (tila) tila.outerHTML = htmlApaAcasa();
+  const zi = document.getElementById('nutritieApa');
+  if (zi) zi.outerHTML = htmlApaZi();
+}
+
+// Pe Acasă: o plăcuță cu „+”; fără tabel (SQL nerulat) nu apare
+function htmlApaAcasa() {
+  const azi = aziIsoAntrPers();
+  if (!nutritie.apa || nutritie.apa[azi] === undefined) return '<div id="cardApaAcasa"></div>';
+  const p = nutritie.apa[azi], t = tintaApa();
+  return `<div class="acasa-tila${p >= t ? ' atins' : ''}" id="cardApaAcasa" onclick="deschideNutritie()" role="button">
+    <b>${p}<small>/${t}</small></b><span>${tr('pahare de apă', 'glasses of water')}</span>
+    <button type="button" class="acasa-tila-plus" onclick="event.stopPropagation(); adaugaPahar(1)" aria-label="${tr('Un pahar de apă', 'One glass of water')}">+</button>
+  </div>`;
+}
+
+// În ziua din Nutriție: paharele ca bife, cu − și +
+function htmlApaZi() {
+  const zi = nutritie.zi || aziIsoAntrPers();
+  if (!nutritie.apa || nutritie.apa[zi] === undefined) return '<div id="nutritieApa"></div>';
+  const p = nutritie.apa[zi], t = tintaApa();
+  const pahare = Array.from({ length: Math.max(t, p) }, (_, i) => `<span class="apa-pahar${i < p ? ' plin' : ''}"></span>`).join('');
+  return `<div class="card nutritie-apa" id="nutritieApa">
+    <div class="nutritie-masa-sus"><b>${tr('Apă', 'Water')}</b><span>${p} ${tr('din', 'of')} ${t} ${tr('pahare', 'glasses')} · ${formatKg(p * 0.25)} l</span></div>
+    <div class="apa-rand">
+      <button type="button" class="apa-btn" onclick="adaugaPahar(-1, '${zi}')" aria-label="${tr('Un pahar mai puțin', 'One glass less')}">−</button>
+      <div class="apa-pahare">${pahare}</div>
+      <button type="button" class="apa-btn plus" onclick="adaugaPahar(1, '${zi}')" aria-label="${tr('Un pahar de apă', 'One glass of water')}">+</button>
+    </div>
   </div>`;
 }
 
@@ -4888,9 +4937,13 @@ function masaImplicita() {
 }
 
 async function deschideNutritie(zi) {
+  // Din Acasă (sau altundeva): întâi tab-ul Nutriție, care cheamă din nou funcția
+  if (clientaTabCurent !== 'nutritie') { nutritie.ziCeruta = zi || null; return clientaTab('nutritie'); }
+  zi = zi || nutritie.ziCeruta;
+  nutritie.ziCeruta = null;
   antrPers.ecran = 'nutritie';
   dateClienta.planCurent = null;
-  arataInapoiAntrPers();
+  document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   document.getElementById('clientaTitlu').innerText = tr('Nutriție', 'Nutrition');
   const z = zi || nutritie.zi || aziIsoAntrPers();
   if (nutritie.zi !== z) document.getElementById('clientaContinut').innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
@@ -4926,25 +4979,30 @@ function randeazaNutritieZi() {
       <button type="button" class="cal-nav" onclick="schimbaZiNutritie(1)" ${esteAzi ? 'disabled' : ''} aria-label="${tr('Ziua următoare', 'Next day')}"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
     </div>
     <div class="card nutritie-totaluri">
-      ${htmlBaraNutritie(tr('Calorii', 'Calories'), t.kcal, s.kcal, 'kcal')}
+      <div class="nutritie-ramase">${s.kcal
+        ? `<b>${Math.round(Math.abs(s.kcal - t.kcal))}</b><span>${t.kcal > s.kcal ? tr('kcal peste țintă', 'kcal over target') : tr('kcal rămase', 'kcal left')} · ${Math.round(t.kcal)} ${tr('din', 'of')} ${s.kcal}</span>`
+        : `<b>${Math.round(t.kcal)}</b><span>${tr('kcal azi · fără țintă (o setezi mai jos)', 'kcal today · no target (set it below)')}</span>`}</div>
       ${htmlBaraNutritie(tr('Proteine', 'Protein'), t.proteine, s.proteine, 'g')}
       ${htmlBaraNutritie(tr('Carbohidrați', 'Carbohydrates'), t.carbo, s.carbo, 'g')}
       ${htmlBaraNutritie(tr('Grăsimi', 'Fat'), t.grasimi, s.grasimi, 'g')}
     </div>`;
+  // Mesele într-un singur card: fiecare cu „+” pe rândul ei, alimentele dedesubt
+  html += '<div class="card nutritie-mese">';
   MESE_NUTRITIE.forEach(([cod, ro, en]) => {
     const randuri = nutritie.lista.filter(x => x.masa === cod);
     const tm = totaluriNutritie(randuri);
-    html += `<div class="card nutritie-masa">
-      <div class="nutritie-masa-sus"><b>${tr(ro, en)}</b><span>${randuri.length ? `${Math.round(tm.kcal)} kcal` : ''}</span></div>
+    html += `<div class="nutritie-masa">
+      <div class="nutritie-masa-sus"><b>${tr(ro, en)}</b><span>${randuri.length ? `${Math.round(tm.kcal)} kcal` : tr('Nimic notat', 'Nothing logged')}</span>
+        <button type="button" class="nutritie-masa-plus" onclick="deschideAdaugaAliment('${cod}')" aria-label="${tr(`Adaugă la ${ro.toLowerCase()}`, `Add to ${en.toLowerCase()}`)}">+</button></div>
       ${randuri.map(x => `<div class="nutritie-rand">
         ${htmlImagineProdus(x.imagine, 'mica')}
         <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(x.nume)}${x.marca ? ` <small>${escAttr(x.marca)}</small>` : ''}</div>
         <div class="acasa-antrenament-detalii">${formatKg(Number(x.cantitate_g))} g · <b>${Math.round(x.kcal)} kcal</b> · ${tr('Proteine', 'Protein')} ${formatKg(rotunjeste1(x.proteine))} g</div></div>
         <button type="button" class="notificare-x nutritie-sterge" onclick="stergeAliment('${x.id}')" aria-label="${tr('Șterge', 'Delete')}">×</button>
       </div>`).join('')}
-      <button type="button" class="btn btn-clear nutritie-adauga-btn" onclick="deschideAdaugaAliment('${cod}')">${tr('+ Adaugă', '+ Add')}</button>
     </div>`;
   });
+  html += '</div>' + htmlApaZi();
   const deAntrenor = s.tinte_setate_de === 'antrenor';
   html += `<div class="antr-pers-sectiune">${tr('Ținte zilnice', 'Daily targets')}</div>
     <div class="card">
@@ -4954,6 +5012,7 @@ function randeazaNutritieZi() {
           `<label>${et}<input type="number" inputmode="numeric" id="tintaNut_${k}" class="plan-ex-input" value="${s[k] ?? ''}" ${deAntrenor ? 'disabled' : ''}></label>`).join('')}
       </div>
       ${deAntrenor ? '' : `<button type="button" class="btn btn-clear" style="margin-top:8px; width:100%;" onclick="salveazaTinteNutritie()">${tr('Salvează țintele', 'Save targets')}</button>`}
+      ${nutritie.apa ? `<div class="antr-pers-campuri nutritie-tinte" style="margin-top:8px;"><label>${tr('Apă (pahare de 250 ml)', 'Water (250 ml glasses)')}<input type="number" inputmode="numeric" id="tintaNut_apa" class="plan-ex-input" min="1" max="30" value="${s.apa_tinta ?? ''}" placeholder="8" onchange="salveazaTintaApa(this)"></label></div>` : ''}
       <label class="setare-notificare" style="margin-top:6px;">
         <span><b>${tr('Vizibil antrenorului', 'Visible to my trainer')}</b><small>${tr('Antrenorul vede ce mănânci și totalurile pe zi.', 'Your trainer sees what you eat and the daily totals.')}</small></span>
         <input type="checkbox" class="comutator" ${s.vizibil_antrenor === false ? '' : 'checked'} onchange="seteazaVizibilNutritie(this.checked, this)">
@@ -4983,6 +5042,12 @@ async function salveazaTinteNutritie() {
   if (await scrieSetariNutritie(camp)) { showToast(tr('✓ Ținte salvate', '✓ Targets saved')); randeazaNutritieZi(); }
 }
 
+async function salveazaTintaApa(input) {
+  const n = parseInt(input.value, 10);
+  const valoare = isNaN(n) ? null : Math.max(1, Math.min(30, n));
+  if (await scrieSetariNutritie({ apa_tinta: valoare })) { showToast(tr('✓ Ținta de apă salvată', '✓ Water target saved')); redeseneazaApa(); }
+}
+
 async function seteazaVizibilNutritie(vizibil, input) {
   input.disabled = true;
   const ok = await scrieSetariNutritie({ vizibil_antrenor: vizibil });
@@ -5002,6 +5067,7 @@ function stergeAliment(id) {
 
 // ---- Adăugare: scanare, căutare, recente, produs nou ----
 async function deschideAdaugaAliment(masa) {
+  if (clientaTabCurent !== 'nutritie') clientaTab('nutritie');
   nutritie.masa = masa;
   if (!nutritie.zi) nutritie.zi = aziIsoAntrPers();
   antrPers.ecran = 'nutritie-adauga';
@@ -5227,6 +5293,7 @@ async function adaugaInJurnal() {
   if (rand.data === aziIsoAntrPers()) nutritie.azi = totaluriAzi(nutritie.lista.filter(x => x.data === rand.data));
   showToast(tr(`✓ ${p.nume}: ${Math.round(rand.kcal)} kcal`, `✓ ${p.nume}: ${Math.round(rand.kcal)} kcal`));
   antrPers.ecran = 'nutritie';
+  document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   randeazaNutritieZi();
 }
 
@@ -5420,7 +5487,7 @@ async function verificaProdusCod(cod) {
 // Înapoi din ecranele de nutriție: din adăugare/cantitate/produs nou la ziua deschisă, din zi la Acasă
 function inapoiNutritie() {
   opresteScanare();
-  if (antrPers.ecran !== 'nutritie') { antrPers.ecran = 'nutritie'; randeazaNutritieZi(); return; }
+  if (antrPers.ecran !== 'nutritie') { antrPers.ecran = 'nutritie'; document.getElementById('clientaBtnInapoi').style.visibility = 'hidden'; randeazaNutritieZi(); return; }
   antrPers.ecran = null;
   randeazaHomeClienta();
 }
@@ -5543,11 +5610,12 @@ function htmlCicluAcasa() {
   const c = calculeazaCiclu(ciclu.setari, ciclu.menstruatii, aziIsoAntrPers());
   const facut = ciclu.zilnic.some(z => z.data === aziIsoAntrPers());
   const f = c && FAZE_CICLU[c.faza];
-  return `<div class="card acasa-sedinta ciclu-acasa" id="cardCicluAcasa" onclick="deschideCiclu()">
-    <div><div class="acasa-eticheta">${tr('Ciclu', 'Cycle')}</div>
+  return `<div class="acasa-rand ciclu-acasa${c ? ' faza-' + c.faza : ''}" id="cardCicluAcasa" onclick="deschideCiclu()">
+    <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16"/></svg></span>
+    <div class="acasa-rand-text"><div class="acasa-eticheta">${tr('Ciclu', 'Cycle')}</div>
     <b>${f ? tr(f[0], f[1]) : tr('Notează prima zi a menstruației', 'Log the first day of your period')}</b>
     <div class="acasa-antrenament-detalii">${f ? `${textEstimareCiclu(c)}<br>${tr(f[2], f[3])}` : tr('Din ea se estimează faza și următorul ciclu.', 'It is used to estimate your phase and next cycle.')}</div></div>
-    ${facut ? '<div class="drawer-nav-arrow">›</div>' : `<button type="button" class="btn" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideCiclu()">${tr('Check-in', 'Check-in')}</button>`}
+    ${facut ? '<div class="drawer-nav-arrow">›</div>' : `<button type="button" class="btn btn-clear" style="white-space:nowrap;" onclick="event.stopPropagation(); deschideCiclu()">${tr('Check-in', 'Check-in')}</button>`}
   </div>`;
 }
 
@@ -5863,8 +5931,9 @@ function htmlComunitateAcasa() {
     let ascuns = false;
     try { ascuns = localStorage.getItem('BFIT_COMUNITATE_ASCUNS') === '1'; } catch (e) {}
     if (ascuns) return '<div id="cardComunitateAcasa"></div>';
-    return `<div class="card acasa-sedinta" id="cardComunitateAcasa" onclick="deschideComunitate()">
-      <div><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
+    return `<div class="card acasa-mic" id="cardComunitateAcasa" onclick="deschideComunitate()">
+      <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.7 3 4.9"/></svg></span>
+      <div class="acasa-rand-text"><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
       <b>${tr('Antrenează-te alături de ceilalți', 'Train alongside the others')}</b>
       <div class="acasa-antrenament-detalii">${tr('Vezi cine s-a antrenat, dă „Bravo” și intră în provocări. Opțional.', 'See who trained, give “Well done” and join challenges. Optional.')}</div></div>
       <button type="button" class="notificare-x nutritie-sterge" onclick="event.stopPropagation(); ascundeInvitatieComunitate()" aria-label="${tr('Închide', 'Close')}">×</button>
@@ -5875,8 +5944,9 @@ function htmlComunitateAcasa() {
   const eu = lista[i];
   const prov = provocariActive()[0];
   const progres = prov ? zileActiveMembru(m.client_id, prov.de, prov.pana).size : 0;
-  return `<div class="card acasa-sedinta" id="cardComunitateAcasa" onclick="deschideComunitate()">
-    <div><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
+  return `<div class="card acasa-mic" id="cardComunitateAcasa" onclick="deschideComunitate()">
+    <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.7 3 4.9"/></svg></span>
+    <div class="acasa-rand-text"><div class="acasa-eticheta">${tr('Comunitatea', 'Community')}</div>
     <b>${m.in_clasament === false ? tr('Nu apari în clasament', 'You are hidden from the leaderboard')
       : eu && eu.zile ? tr(`Locul ${locClasament(lista, i)} din ${lista.length} săptămâna asta`, `${ordinalEn(locClasament(lista, i))} of ${lista.length} this week`) : tr('Prima zi activă te urcă în clasament', 'Your first active day puts you on the board')}</b>
     <div class="acasa-antrenament-detalii">${prov ? `${escAttr(prov.titlu)}: ${Math.min(progres, prov.tinta)}/${prov.tinta} ${tr('zile', 'days')}${progres >= prov.tinta ? ' 🏆' : ''}` : tr('Vezi fluxul și clasamentul.', 'See the feed and the leaderboard.')}</div></div>
@@ -6694,7 +6764,7 @@ function oraSlot(d) {
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
-const TABURI_CLIENTA = ['acasa', 'orar', 'istoric', 'fisa'];
+const TABURI_CLIENTA = ['acasa', 'orar', 'nutritie', 'fisa'];
 
 function clientaTab(tab) {
   salveazaProgresClienta();
@@ -6716,7 +6786,7 @@ function clientaTab(tab) {
   TABURI_CLIENTA.forEach(t => document.getElementById('clientaTab_' + t)?.classList.toggle('active', t === tab));
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   if (tab === 'orar') randeazaOrarClienta();
-  else if (tab === 'istoric') randeazaIstoricClienta();
+  else if (tab === 'nutritie') deschideNutritie();
   else if (tab === 'fisa') randeazaFisaMeaClienta();
   else randeazaHomeClienta();
 }
@@ -6818,7 +6888,12 @@ function afiseazaFisaMeaClienta() {
   if (checkinLink) return afiseazaCheckinLink();
   const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
   const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
-  let html = `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
+  let html = `<button type="button" class="plan-zi-card fisa-istoric-btn" onclick="deschideIstoricClienta()">
+      <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${tr('Istoric', 'History')}</span>
+      <span class="plan-zi-card-detalii">${tr('Calendarul, seria de săptămâni și insignele', 'Calendar, weekly streak and badges')}</span></span>
+      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+    </button>`;
+  html += `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
   html += titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
   // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
   if ((dateClienta.planuri || []).length > 1) {
@@ -7619,6 +7694,13 @@ function schimbaLunaCalendar(directie) {
   document.getElementById('calendarPrezente').innerHTML = htmlCalendarPrezente();
 }
 
+// Istoricul (calendar, serie, insigne): din Fișa mea, cu Înapoi
+function deschideIstoricClienta() {
+  antrPers.ecran = 'istoric';
+  arataInapoiAntrPers();
+  randeazaIstoricClienta();
+}
+
 async function randeazaIstoricClienta() {
   document.getElementById('clientaTitlu').innerText = tr('Istoric', 'History');
   const corp = document.getElementById('clientaContinut');
@@ -7629,7 +7711,7 @@ async function randeazaIstoricClienta() {
     antrPers.lista === null ? incarcaAntrPersUsor() : null,
     incarcaObiectiveClient()
   ]);
-  if (clientaTabCurent !== 'istoric') return;
+  if (antrPers.ecran !== 'istoric') return;
   if (error) {
     corp.innerText = tr('Nu am putut încărca istoricul.', 'Could not load the history.');
     return;
@@ -7837,6 +7919,8 @@ async function incarcaRezumatAcasa() {
   if (checkin) checkin.outerHTML = htmlCheckinAcasa();
   const cardProprii = document.getElementById('cardAntrPersAcasa');
   if (cardProprii && !antrPers.ecran) cardProprii.outerHTML = htmlAntrPersAcasa();
+  const cardMasa = document.getElementById('acasaMasa');
+  if (cardMasa && !antrPers.ecran) cardMasa.outerHTML = htmlMasaAcasa();
 }
 
 // Link de acces expirat sau deja folosit: Supabase întoarce eroarea în adresă (#error_code=otp_expired). O citim și curățăm adresa.
@@ -7863,6 +7947,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 174, data: '2026-11-06',
+    client: [
+      ['Acasă e mai simplu: sus vezi „Azi” (antrenamentul și ședința), apoi zilele active, caloriile și apa, ce ai de făcut și scurtăturile.', 'Home is simpler: “Today” at the top (workout and session), then active days, calories and water, your to-dos and shortcuts.'],
+      ['Nutriția are tab-ul ei în bara de jos, cu caloriile rămase pe zi și mesele într-un singur loc. Istoricul e acum în Fișa mea.', 'Nutrition has its own tab in the bottom bar, with calories left for the day and all meals in one place. History is now in My profile.'],
+      ['Apă: notezi paharele cu un „+”, de pe Acasă sau din Nutriție.', 'Water: log glasses with a “+”, from Home or Nutrition.']
+    ],
+    antrenor: [] },
   { v: 173, data: '2026-11-05',
     client: [],
     antrenor: [['Verifică un produs: din meniu scanezi codul de bare sau cauți după nume și vezi poza, Nutri-Score și eticheta completă. Nu se salvează nimic, e doar pentru sfaturi.', 'Check a product: from the menu scan the barcode or search by name and see the photo, Nutri-Score and the full label. Nothing is saved; it is just for advice.']] },
@@ -8361,7 +8452,7 @@ function initSwipeNavigation() {
       // Ecranul clientei: swipe între Acasă, Orar, Istoric (nu și în interiorul unui plan deschis)
       const i = TABURI_CLIENTA.indexOf(clientaTabCurent);
       const j = i + (deltaX < 0 ? 1 : -1);
-      if (esteOrizontal && absX >= pragMinim && !dateClienta.planCurent && !antrPers.ecran && i !== -1 && j >= 0 && j < TABURI_CLIENTA.length) {
+      if (esteOrizontal && absX >= pragMinim && !dateClienta.planCurent && (!antrPers.ecran || antrPers.ecran === 'nutritie') && i !== -1 && j >= 0 && j < TABURI_CLIENTA.length) {
         clientaTab(TABURI_CLIENTA[j]);
       }
     } else if (esteOrizontal && absX >= pragMinim) {
