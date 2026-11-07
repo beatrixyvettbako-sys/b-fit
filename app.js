@@ -2127,7 +2127,8 @@ async function executaActiuneSupabase(actionName, payload) {
         row: p.row,
         nume: prNume,
         prezenta: (p.prezenta || "").trim(),
-        mentiuni: (p.mentiuni || "").trim()
+        mentiuni: (p.mentiuni || "").trim(),
+        client_id: p.client_id || null
       };
       if ((p.sectiune || "").trim() === "Hold") progHold.push(item);
       else progActive.push(item);
@@ -11081,8 +11082,7 @@ function randeazaProgramariInstant() {
       `;
     });
     // Abonamentele înghețate din fișă apar și ele aici (doar de citit; se reiau din fișă)
-    const inHold = new Set((DB.progHold || []).map(p => cheieNume(p.nume)));
-    (DB.clienti || []).filter(c => esteInghetat(c) && !inHold.has(cheieNume(c.nume))).forEach((c, i) => {
+    (DB.clienti || []).filter(c => esteInghetat(c) && !(DB.progHold || []).some(p => randulClientei(p, c, p.nume))).forEach((c, i) => {
       holdHtml += `
         <div class="prog-grid-layout-hold prog-row hold-row">
           <div class="prog-idx">${(DB.progHold || []).length + i + 1}</div>
@@ -11117,11 +11117,16 @@ const tintaSaptamanaClient = (c, bifate) => c.sedinteSaptamana ? Math.min(c.sedi
 
 function randuriConfirmariSaptamana() {
   const prefix = `W_${isoDinData(dataReferintaLuniBaza).replace(/-/g, '_')}_`;
-  const inHold = new Set((DB.progHold || []).map(p => cheieNume(p.nume)));
+  // Rândurile din confirmari se leagă de client după client_id, iar fără legătură, după nume (randulClientei)
+  const inHold = c => (DB.progHold || []).some(p => randulClientei(p, c, p.nume));
+  const folosite = new Set();
   const randuri = (DB.clienti || []).filter(c => {
     const t = stareAbonamentClienta(c).tip;
-    return t !== 'arhivat' && t !== 'inghetat' && !inHold.has(cheieNume(c.nume));
+    return t !== 'arhivat' && t !== 'inghetat' && !inHold(c);
   }).map(c => {
+    // Toate rândurile clientului (pot fi mai multe, rămase din lista de dinainte) devin unul: primul cu mențiune
+    const aleLui = (DB.progActive || []).filter(p => randulClientei(p, c, p.nume));
+    aleLui.forEach(p => folosite.add(p));
     const s = stareAbonamentClienta(c);
     // Ținta doar la abonamentele active (aceleași reguli ca reminderele din bază); ceilalți apar cu starea abonamentului
     const areTinta = (s.tip === 'activ' || s.tip === 'curand') && c.incluse >= 4 && c.ramase > 0;
@@ -11130,12 +11135,14 @@ function randuriConfirmariSaptamana() {
     return {
       c, nume: c.nume, bifate, tinta: areTinta ? tintaSaptamanaClient(c, bifate) : 0, stare: areTinta ? '' : s.text,
       facute: aleSaptamanii.length,
-      conf: (DB.progActive || []).find(p => cheieNume(p.nume) === cheieNume(c.nume)) || null
+      conf: aleLui.find(p => p.mentiuni) || aleLui[0] || null
     };
   });
   // Rândurile vechi, adăugate de mână pentru nume care nu mai sunt în lista de clienți, rămân cu mențiunile lor
   (DB.progActive || []).forEach(p => {
-    if (!randuri.some(r => r.conf === p)) randuri.push({ c: gasesteClientaValida(p.nume), nume: p.nume, tinta: 0, stare: '', facute: 0, conf: p });
+    // Doar rândurile care nu sunt ale niciunui client din listă (și nici ale unuia arhivat, înghețat sau în Hold)
+    if (folosite.has(p) || (DB.clienti || []).some(c => randulClientei(p, c, p.nume))) return;
+    randuri.push({ c: null, nume: p.nume, tinta: 0, stare: '', facute: 0, conf: p });
   });
   // Întâi cine n-a programat nimic, apoi cine e la jumătate, apoi cei compleți
   const ordine = r => !r.tinta ? 3 : r.facute >= r.tinta ? 2 : r.facute ? 1 : 0;
