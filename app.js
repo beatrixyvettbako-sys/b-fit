@@ -2098,7 +2098,8 @@ async function executaActiuneSupabase(actionName, payload) {
       notaClient: c.nota_client || '',
       notaClientLa: c.nota_client_la || null,
       obiectiv: c.obiectiv || null,
-      inghetare: c.inghetare || null
+      inghetare: c.inghetare || null,
+      sedinteSaptamana: Number(c.sedinte_saptamana) || null
     })).filter(c => c.nume !== "");
 
     clienti.sort((a, b) => a.nume.localeCompare(b.nume));
@@ -3173,13 +3174,6 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('labelFiltruCliOrar').innerText = t('filterClient');
   document.getElementById('labelFiltruLunaOrar').innerText = t('filterMonth');
 
-  document.getElementById('progAddBtnText').innerText = t('addBtn');
-  document.getElementById('progNouNume').placeholder = t('addClientPlaceholder');
-  let selSec = document.getElementById('progNouSectiune');
-  if (selSec) {
-    selSec.options[0].text = t('activeSection');
-    selSec.options[1].text = t('holdSection');
-  }
   document.getElementById('holdHeaderTitle').innerText = t('holdSection').toUpperCase();
 
   document.getElementById('addClientSummaryText').innerText = t('addNewClientTitle');
@@ -9048,6 +9042,16 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 181, data: '2026-11-07',
+    client: [
+      ['Reminder pentru programări: luni și miercuri seara primești o notificare dacă nu ți-ai programat toate ședințele săptămânii (de exemplu 2 pe săptămână la un abonament de 8). O oprești din Setări › Notificări.', 'Booking reminder: on Monday and Wednesday evening you get a notification if you haven’t booked all of this week’s sessions (for example 2 a week on an 8-session plan). Turn it off in Settings › Notifications.']
+    ],
+    antrenor: [
+      ['Confirmări se completează singur: apar toți clienții (fără cei arhivați), iar bara de adăugare de sus a dispărut. Coloana „Săptămâna” arată câte ședințe are fiecare programate săptămâna asta din câte trebuie: verde ✓ complet, portocaliu ◐ parțial, roșu ○ niciuna. Sus vezi câți sunt compleți. Cei neprogramați sunt primii; cei fără abonament activ apar la final, cu „Expirat” sau „Fără abonament”.', 'Confirmations now fill in by themselves: every client appears (except archived ones), and the add bar at the top is gone. The “This week” column shows how many sessions each one has booked this week out of how many they should: green ✓ complete, orange ◐ partial, red ○ none. At the top you see how many are complete. Those not booked come first; those without an active subscription are at the end, marked “Expired” or “No subscription”.'],
+      ['Câte ședințe pe săptămână se calculează singur: ședințele rămase împărțite la săptămânile rămase până la expirare (la un abonament nou de 8: 2 pe săptămână). Dacă clientul vine mai des, ținta scade în săptămânile următoare; dacă rămâne în urmă, crește, ca să-și folosească abonamentul înainte să expire. O fixezi manual pentru un client atingând „2 pe săpt.” de sub nume (apare cu ✎).', 'Sessions per week are worked out automatically: sessions left divided by the weeks left until expiry (2 a week on a new 8-session plan). If the client comes more often, the target drops in the following weeks; if they fall behind, it rises, so they use the plan before it expires. Fix it by hand for a client by tapping “2 a week” under their name (shown with ✎).'],
+      ['Atingi pastila unui client rămas în urmă și îi trimiți un reminder gata scris (în aplicație, WhatsApp sau SMS). Statusul pus de mână (Confirmată / În așteptare / Absentă) a fost înlocuit de acest calcul.', 'Tap the pill of a client who is behind to send a ready-made reminder (in the app, WhatsApp or SMS). The manual status (Confirmed / Pending / Absent) is replaced by this count.'],
+      ['Clienții tăi cu cont primesc reminder automat luni și miercuri seara. Tu primești marți și joi dimineața lista celor încă neprogramați. Mențiunile rămân. Butonul ⏸ de pe rând mută clientul în Hold (nu mai primește remindere), iar ↩ din Hold îl readuce în listă; abonamentele înghețate apar automat la Hold.', 'Your clients with an account get an automatic reminder on Monday and Wednesday evening. On Tuesday and Thursday morning you get the list of those still not booked. Notes stay. The ⏸ button on a row moves the client to Hold (no more reminders), and ↩ in Hold brings them back; frozen subscriptions show up under Hold automatically.']
+    ] },
   { v: 180, data: '2026-11-06',
     client: [],
     antrenor: [
@@ -11013,36 +11017,40 @@ function randeazaProgramariInstant() {
   if (holdContainer) holdContainer.classList.remove('loader');
 
   if (actContainer) {
-    let actHtml = '';
-    (DB.progActive || []).forEach((item, index) => {
-      let pCls = getPillClass(item.prezenta);
-      let confText = currentLang === 'en' ? 'Confirmed' : 'Confirmata';
-      let pendText = currentLang === 'en' ? 'Pending' : 'In asteptare';
-      let absText = currentLang === 'en' ? 'Absent' : 'Absenta';
-      let mentionPlaceholder = currentLang === 'en' ? 'Mention...' : 'Mențiune...';
-
-      actHtml += `
+    randuriSaptamana = randuriConfirmariSaptamana();
+    const mentionPlaceholder = tr('Mențiune...', 'Mention...');
+    const cuTinta = randuriSaptamana.filter(r => r.tinta);
+    const complete = cuTinta.filter(r => r.facute >= r.tinta).length;
+    const partiale = cuTinta.filter(r => r.facute && r.facute < r.tinta).length, zero = cuTinta.length - complete - partiale;
+    const luni = new Date(dataReferintaLuniBaza), duminica = new Date(luni.getTime() + 6 * 86400000);
+    const perioada = luni.getMonth() === duminica.getMonth() ? `${luni.getDate()} – ${formatZiLuna(duminica)}` : `${formatZiLuna(luni)} – ${formatZiLuna(duminica)}`;
+    const rezumat = cuTinta.length ? `<div class="prog-rezumat">
+        <div class="prog-rezumat-sus"><span>${tr('Săptămâna', 'Week')} ${perioada}</span><b>${complete}<small> / ${cuTinta.length} ${tr('compleți', 'complete')}</small></b></div>
+        <div class="prog-rezumat-bara"><i style="width:${Math.round(complete / cuTinta.length * 100)}%"></i></div>
+        <div class="prog-rezumat-legenda">
+          ${zero ? `<span class="zero">○ ${zero} ${zero === 1 ? tr('neprogramat', 'not booked') : tr('neprogramați', 'not booked')}</span>` : ''}
+          ${partiale ? `<span class="partial">◐ ${partiale} ${tr('parțial', 'partly')}</span>` : ''}
+          ${complete ? `<span class="complet">✓ ${complete} ${tr('complet', 'complete')}</span>` : ''}
+        </div>
+      </div>` : '';
+    const actHtml = randuriSaptamana.map((r, i) => {
+      const cls = !r.tinta ? 'fara' : r.facute >= r.tinta ? 'complet' : r.facute ? 'partial' : 'zero';
+      const stare = r.tinta ? `<button type="button" class="prog-saptamana ${cls}" onclick="apasaStareSaptamana(${i})" title="${r.facute >= r.tinta ? tr('Are toate ședințele programate', 'All sessions booked') : tr('Trimite un reminder', 'Send a reminder')}">${r.facute >= r.tinta ? '✓' : r.facute ? '◐' : '○'} ${r.facute}/${r.tinta}</button>`
+        : `<span class="prog-saptamana fara">${escAttr(r.stare || '–')}</span>`;
+      return `
         <div class="prog-grid-layout prog-row">
-          <div class="prog-idx">${index + 1}</div>
-          <div class="prog-name">${escAttr(item.nume)}</div>
+          <div class="prog-idx">${i + 1}</div>
+          <div class="prog-name"><span class="prog-nume-bloc"><span>${escAttr(r.nume)}</span>${r.tinta ? `<button type="button" class="prog-tinta" onclick="seteazaTintaSaptamana(${i})">${r.tinta} ${tr('pe săpt.', 'a week')}${r.c && r.c.sedinteSaptamana ? ' ✎' : ''}</button>` : ''}</span></div>
+          <div>${stare}</div>
           <div>
-            <select class="pill-select ${pCls}" onchange="schimbaPrezenta(${item.row}, this)">
-              <option value="" ${item.prezenta === '' ? 'selected' : ''}>-</option>
-              <option value="${confText}" ${item.prezenta === confText || item.prezenta === 'Confirmata' ? 'selected' : ''}>${confText}</option>
-              <option value="${pendText}" ${item.prezenta === pendText || item.prezenta === 'In asteptare' ? 'selected' : ''}>${pendText}</option>
-              <option value="${absText}" ${item.prezenta === absText || item.prezenta === 'Absenta' ? 'selected' : ''}>${absText}</option>
-            </select>
-          </div>
-          <div>
-            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
+            <textarea rows="${r.conf && r.conf.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiuneSaptamana(${i}, this.value)">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>
           </div>
           <div style="text-align:center;">
-            <button class="btn-trash-action" onclick="mutaInHold(${item.row})" title="${currentLang === 'en' ? 'Move to Hold' : 'Mută în Hold'}">${SVG_COS_PLAN}</button>
+            <button class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
           </div>
-        </div>
-      `;
-    });
-    actContainer.innerHTML = actHtml || `<div style="padding:10px; color:#888; text-align:center;">${t('noRecords')}</div>`;
+        </div>`;
+    }).join('');
+    actContainer.innerHTML = actHtml ? rezumat + actHtml : `<div style="padding:10px; color:#888; text-align:center;">${t('noRecords')}</div>`;
   }
 
   if (holdContainer) {
@@ -11057,13 +11065,124 @@ function randeazaProgramariInstant() {
             <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
           </div>
           <div style="text-align:center;">
-            <button class="btn-trash-action" onclick="stergeProgramareDefinitiv(${item.row})" title="${currentLang === 'en' ? 'Delete permanently' : 'Șterge definitiv'}">${SVG_COS_PLAN}</button>
+            <button class="btn-trash-action prog-din-hold-btn" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din Hold', 'Take out of Hold')}" aria-label="${tr('Scoate din Hold', 'Take out of Hold')}">${SVG_DIN_HOLD}</button>
           </div>
         </div>
       `;
     });
+    // Abonamentele înghețate din fișă apar și ele aici (doar de citit; se reiau din fișă)
+    const inHold = new Set((DB.progHold || []).map(p => cheieNume(p.nume)));
+    (DB.clienti || []).filter(c => esteInghetat(c) && !inHold.has(cheieNume(c.nume))).forEach((c, i) => {
+      holdHtml += `
+        <div class="prog-grid-layout-hold prog-row hold-row">
+          <div class="prog-idx">${(DB.progHold || []).length + i + 1}</div>
+          <div class="prog-name">${escAttr(c.nume)}</div>
+          <div style="grid-column: 3 / 4;" class="prog-inghetat">⏸ ${escAttr(stareAbonamentClienta(c).text)}</div>
+          <div></div>
+        </div>`;
+    });
     holdContainer.innerHTML = holdHtml || `<div style="padding:10px; color:#888; text-align:center;">${t('noClientsHold')}</div>`;
   }
+}
+
+// ---- Confirmări pe săptămână (sql/2026-11-07_confirmari_saptamana.sql): lista se face singură din abonamente și orar ----
+// Ținta = ședințele pe săptămână setate de antrenor sau, automat, ședințele rămase de la începutul săptămânii împărțite la
+// săptămânile rămase până la expirare: cine vine mai des primește apoi o țintă mai mică, cine rămâne în urmă una mai mare.
+// Programat = programările clientului din orar în săptămâna curentă (făcute sau încă nu). Aceleași reguli ca reminderele din bază.
+let randuriSaptamana = [];
+const SVG_PAUZA_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>';
+const SVG_DIN_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+
+// bifate = ședințele făcute deja săptămâna asta (scăzute din `ramase`): se adaugă înapoi, ca ținta să nu scadă în timpul săptămânii
+function tintaAutomataSaptamana(c, bifate) {
+  const disponibile = c.ramase + bifate;
+  const luni = new Date(dataReferintaLuniBaza); luni.setHours(0, 0, 0, 0);
+  const exp = parseazaDataOraRo(c.dataExpirare);
+  // Abonament fără dată de expirare (pornește la prima ședință): toată valabilitatea lui
+  const zile = exp ? Math.round((new Date(exp).setHours(0, 0, 0, 0) - luni) / 86400000) + 1 : (zileValabilitateAbonament(c.tipAbonament) || 30);
+  return Math.min(Math.max(1, Math.round(disponibile / Math.max(1, zile / 7))), disponibile, 7);
+}
+
+const tintaSaptamanaClient = (c, bifate) => c.sedinteSaptamana ? Math.min(c.sedinteSaptamana, c.ramase + bifate) : tintaAutomataSaptamana(c, bifate);
+
+function randuriConfirmariSaptamana() {
+  const prefix = `W_${isoDinData(dataReferintaLuniBaza).replace(/-/g, '_')}_`;
+  const inHold = new Set((DB.progHold || []).map(p => cheieNume(p.nume)));
+  const randuri = (DB.clienti || []).filter(c => {
+    const t = stareAbonamentClienta(c).tip;
+    return t !== 'arhivat' && t !== 'inghetat' && !inHold.has(cheieNume(c.nume));
+  }).map(c => {
+    const s = stareAbonamentClienta(c);
+    // Ținta doar la abonamentele active (aceleași reguli ca reminderele din bază); ceilalți apar cu starea abonamentului
+    const areTinta = (s.tip === 'activ' || s.tip === 'curand') && c.incluse >= 4 && c.ramase > 0;
+    const aleSaptamanii = (DB.orarSloturi || []).filter(x => x.clienta && x.ziRaw.startsWith(prefix) && cheieNume(x.clienta) === cheieNume(c.nume));
+    const bifate = aleSaptamanii.filter(x => x.bifat).length;
+    return {
+      c, nume: c.nume, bifate, tinta: areTinta ? tintaSaptamanaClient(c, bifate) : 0, stare: areTinta ? '' : s.text,
+      facute: aleSaptamanii.length,
+      conf: (DB.progActive || []).find(p => cheieNume(p.nume) === cheieNume(c.nume)) || null
+    };
+  });
+  // Rândurile vechi, adăugate de mână pentru nume care nu mai sunt în lista de clienți, rămân cu mențiunile lor
+  (DB.progActive || []).forEach(p => {
+    if (!randuri.some(r => r.conf === p)) randuri.push({ c: gasesteClientaValida(p.nume), nume: p.nume, tinta: 0, stare: '', facute: 0, conf: p });
+  });
+  // Întâi cine n-a programat nimic, apoi cine e la jumătate, apoi cei compleți
+  const ordine = r => !r.tinta ? 3 : r.facute >= r.tinta ? 2 : r.facute ? 1 : 0;
+  return randuri.sort((a, b) => ordine(a) - ordine(b) || a.nume.localeCompare(b.nume));
+}
+
+function apasaStareSaptamana(i) {
+  const r = randuriSaptamana[i];
+  if (!r || !r.c) return;
+  if (r.facute >= r.tinta) return showToast(tr(`${r.nume} are toate ședințele săptămânii programate.`, `${r.nume} has all of this week’s sessions booked.`));
+  const prenume = r.c.nume.trim().split(/\s+/)[0], lipsa = r.tinta - r.facute;
+  trimiteMesajClient(r.c, r.facute
+    ? tr(`Bună, ${prenume}! Săptămâna asta ai programată ${r.facute === 1 ? 'o ședință' : `${r.facute} ședințe`} din ${r.tinta}. Îți rezervi ${lipsa === 1 ? 'și ora care lipsește' : 'și orele care lipsesc'}?`,
+      `Hi ${prenume}! This week you have ${r.facute} of ${r.tinta} sessions booked. Shall we book the ${lipsa === 1 ? 'missing one' : 'missing ones'}?`)
+    : tr(`Bună, ${prenume}! Încă nu ți-ai programat ședințele săptămâna asta (${r.tinta}). Ce ore îți convin?`,
+      `Hi ${prenume}! You haven’t booked this week’s sessions yet (${r.tinta}). Which times suit you?`),
+    r.c.contConectat ? URL_APLICATIE : undefined);
+}
+
+// Ședințele pe săptămână ale clientului; gol = calculul din abonament
+function seteazaTintaSaptamana(i) {
+  const r = randuriSaptamana[i];
+  if (!r || !r.c) return;
+  const auto = tintaAutomataSaptamana(r.c, r.bifate);
+  customConfirm(tr('Ședințe pe săptămână', 'Sessions per week'),
+    tr(`Câte ședințe trebuie să programeze ${r.nume} pe săptămână (1–7). Lasă gol pentru calculul automat (ședințele rămase pe săptămânile până la expirare): acum ${auto}.`,
+      `How many sessions ${r.nume} should book each week (1–7). Leave empty for the automatic count (sessions left over the weeks until expiry): now ${auto}.`), async valoare => {
+      const v = valoare === '' ? null : parseInt(valoare, 10);
+      if (v !== null && !(v >= 1 && v <= 7)) return showToast(tr('Alege între 1 și 7.', 'Pick between 1 and 7.'), 'error');
+      const { error } = await supabaseClient.from('cliente').update({ sedinte_saptamana: v }).eq('id', r.c.id).eq('user_id', utilizatorCurent.id);
+      if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+      r.c.sedinteSaptamana = v;
+      try { localStorage.setItem('BFIT_DB_LOCAL', JSON.stringify(DB)); } catch (e) {}
+      showToast(tr('✓ Salvat', '✓ Saved'));
+      randeazaProgramariInstant();
+    }, { valoare: r.c.sedinteSaptamana ? String(r.c.sedinteSaptamana) : '', placeholder: String(auto) });
+}
+
+// Mențiunile și Hold-ul stau în confirmari; rândul se creează la prima mențiune sau la mutarea în Hold
+function schimbaMentiuneSaptamana(i, val) {
+  const r = randuriSaptamana[i];
+  if (!r) return;
+  if (r.conf) { if (val !== r.conf.mentiuni) schimbaMentiune(r.conf.row, val); return; }
+  if (!val.trim()) return;
+  callBackend("adaugaRandProgramare", { nume: r.nume, prezenta: "", mentiuni: val, esteHold: false }, () => incarcaBazaDateSilencios());
+}
+
+function mutaInHoldSaptamana(i) {
+  const r = randuriSaptamana[i];
+  if (!r) return;
+  if (r.conf) return mutaInHold(r.conf.row);
+  customConfirm(tr('Mutare în Hold', 'Move to Hold'), tr(`Muți ${r.nume} în Hold? Nu mai apare în lista săptămânii și nu mai primește remindere.`, `Move ${r.nume} to Hold? They leave this week’s list and get no reminders.`), function() {
+    callBackend("adaugaRandProgramare", { nume: r.nume, prezenta: "", mentiuni: "", esteHold: true }, function() {
+      showToast(t('toastMovedHold'));
+      incarcaBazaDateSilencios();
+    });
+  });
 }
 
 function schimbaPrezenta(row, selectEl) {
@@ -11088,20 +11207,6 @@ function schimbaMentiune(row, val) {
   callBackend("actualizeazaCampProgramare", { row: row, col: 4, val: val }, function() {});
 }
 
-function adaugaClientaInProgramari() {
-  let inp = document.getElementById('progNouNume');
-  let sec = document.getElementById('progNouSectiune');
-  let nume = inp ? inp.value.trim() : "";
-  let sectiune = sec ? sec.value : "Activ";
-  if (!nume) return;
-
-  callBackend("adaugaRandProgramare", { nume: nume, prezenta: "", mentiuni: "", esteHold: sectiune === "Hold" }, function() {
-    showToast(t('toastAddedProg'));
-    if (inp) inp.value = '';
-    incarcaBazaDateSilencios();
-  });
-}
-
 function mutaInHold(row) {
   customConfirm(currentLang === 'en' ? "Move to Hold" : "Mutare în Hold", currentLang === 'en' ? "Move client to Hold section?" : "Mut clientul în secțiunea Hold?", function() {
     callBackend("mutaInHold", { row: row }, function() {
@@ -11112,7 +11217,8 @@ function mutaInHold(row) {
 }
 
 function stergeProgramareDefinitiv(row) {
-  customConfirm(currentLang === 'en' ? "Permanent deletion" : "Ștergere definitivă", currentLang === 'en' ? "Remove this record from Hold?" : "Elimini această înregistrare din Hold?", function() {
+  const r = (DB.progHold || []).find(p => p.row === row);
+  customConfirm(tr('Scoate din Hold', 'Take out of Hold'), tr(`Scoți ${r ? r.nume : 'clientul'} din Hold? Revine în lista săptămânii (mențiunea de pauză se șterge).`, `Take ${r ? r.nume : 'the client'} out of Hold? They return to this week’s list (the pause note is removed).`), function() {
     callBackend("stergeRandProgramare", { row: row }, function() {
       showToast(t('toastDeletedRecord'));
       incarcaBazaDateSilencios();
@@ -12634,6 +12740,7 @@ const TIPURI_NOTIFICARI = {
     [['nota_noua'], ['Notă de la antrenor', 'Note from your trainer'], ['Când antrenorul îți schimbă nota', 'When your trainer updates your note']],
     [['checkin_memento'], ['Check-in săptămânal', 'Weekly check-in'], ['Memento dacă nu l-ai trimis', 'Reminder if you haven’t sent it']],
     [['obiectiv_saptamana', 'serie_pericol'], ['Obiective și serie', 'Goals and streak'], ['Joi, dacă ești în urmă; duminică, dacă seria e în pericol', 'Thursday if you’re behind; Sunday if your streak is at risk']],
+    [['programari_saptamana'], ['Programările săptămânii', 'This week’s bookings'], ['Luni și miercuri seara, dacă nu ți-ai programat toate ședințele', 'Monday and Wednesday evening if you haven’t booked all your sessions']],
     [['masa_nenotata'], ['Nutriție', 'Nutrition'], ['La 13 și la 20, dacă n-ai notat mesele (doar când folosești jurnalul)', 'At 1 pm and 8 pm if you haven’t logged your meals (only when you use the log)']],
     [['abonament_expira', 'sedinte_putine'], ['Abonament', 'Subscription'], ['Când expiră sau mai ai puține ședințe', 'When it ends or few sessions are left']]
   ],
@@ -12641,6 +12748,7 @@ const TIPURI_NOTIFICARI = {
     [['mesaj_nou'], ['Mesaje', 'Messages'], ['Când un client îți scrie', 'When a client writes to you']],
     [['rezervare', 'anulare'], ['Rezervări și anulări', 'Bookings and cancellations'], ['Când un client rezervă sau anulează', 'When a client books or cancels']],
     [['checkin_nou'], ['Check-in nou', 'New check-in'], ['Când un client trimite check-in-ul', 'When a client sends a check-in']],
+    [['programari_lipsa'], ['Clienți neprogramați', 'Clients not booked'], ['Marți și joi dimineața: cine nu și-a programat ședințele săptămânii', 'Tuesday and Thursday morning: who hasn’t booked this week’s sessions']],
     [['lipsa_checkin'], ['Check-in-uri lipsă', 'Missing check-ins'], ['Clienții care n-au trimis check-in-ul', 'Clients who didn’t send the check-in']],
     [['cerere_noua'], ['Cereri de înscriere', 'Sign-up requests'], ['Când cineva completează fișa', 'When someone fills in the form']],
     [['abonamente_expira'], ['Abonamente care expiră', 'Subscriptions ending'], ['Abonamentele care se termină în curând', 'Subscriptions ending soon']]
@@ -12745,7 +12853,9 @@ function textNotificare(n) {
       : tr(`Mai ai ${d.ramase} antrenamente până la obiectivul săptămânii (${d.facute} din ${d.tinta}).`, `${d.ramase} more workouts to reach this week’s goal (${d.facute} of ${d.tinta}).`)],
     serie_pericol: [tr('Seria ta e în pericol', 'Your streak is at risk'), tr(`Seria ta de ${d.serie} săptămâni se încheie azi. Un antrenament scurt o păstrează.`, `Your ${d.serie}-week streak ends today. A short workout keeps it going.`)],
     masa_nenotata: d.masa === 'cina' ? [tr('Notează cina', 'Log your dinner'), tr('Câteva secunde și ziua e completă: scanezi sau alegi din favorite.', 'A few seconds and your day is complete: scan or pick from favourites.')]
-      : [tr('Ce ai mâncat azi?', 'What did you eat today?'), tr('Notează micul dejun și prânzul, cât le ții minte.', 'Log breakfast and lunch while you remember them.')]
+      : [tr('Ce ai mâncat azi?', 'What did you eat today?'), tr('Notează micul dejun și prânzul, cât le ții minte.', 'Log breakfast and lunch while you remember them.')],
+    programari_saptamana: [tr('Programează-ți ședințele', 'Book your sessions'), tr(`Săptămâna asta ai programate ${d.facute} din ${d.tinta} ședințe. Alege-ți ${d.tinta - d.facute === 1 ? 'ora' : 'orele'} din aplicație.`, `This week you have ${d.facute} of ${d.tinta} sessions booked. Pick your ${d.tinta - d.facute === 1 ? 'time' : 'times'} in the app.`)],
+    programari_lipsa: [tr('Clienți neprogramați', 'Clients not booked'), tr(`${d.nr} ${plural(d.nr, 'client nu și-a', 'clienți nu și-au')} programat toate ședințele săptămânii: ${listaNume}${d.nr > 3 ? '…' : ''}`, `${d.nr} ${plural(d.nr, 'client hasn’t', 'clients haven’t')} booked all of this week’s sessions: ${listaNume}${d.nr > 3 ? '…' : ''}`)]
   }[n.tip];
   return t || [tr('Notificare', 'Notification'), ''];
 }
@@ -12835,9 +12945,9 @@ function stergeToateNotificarile() {
 // Tipurile care duc undeva în aplicație; restul (tip necunoscut, client șters) rămân doar de citit
 function areDestinatieNotificare(n) {
   const d = n.date || {};
-  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber', 'mesaj_nou', 'obiectiv_saptamana', 'serie_pericol', 'masa_nenotata'].includes(n.tip);
+  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber', 'mesaj_nou', 'obiectiv_saptamana', 'serie_pericol', 'masa_nenotata', 'programari_saptamana'].includes(n.tip);
   if (n.tip === 'checkin_nou' || n.tip === 'mesaj_nou') return (DB.clienti || []).some(c => c.id === d.client_id);
-  return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira'].includes(n.tip);
+  return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira', 'programari_lipsa'].includes(n.tip);
 }
 
 // Check-in de la un client care nu mai e în listă (șters)
@@ -12858,13 +12968,14 @@ function deschideNotificare(id) {
     if (n.tip === 'masa_nenotata') { deschideAdaugaAliment((n.date || {}).masa === 'cina' ? 'cina' : masaImplicita()); return; }
     // Locul liber: Orarul se deschide direct pe ziua locului
     if (n.tip === 'loc_liber' && (n.date || {}).zi) dateClienta.ziSelectata = cheieZiClienta(new Date(n.date.zi + 'T12:00:00'));
-    clientaTab(['programare_maine', 'loc_liber'].includes(n.tip) ? 'orar' : 'acasa');
+    clientaTab(['programare_maine', 'loc_liber', 'programari_saptamana'].includes(n.tip) ? 'orar' : 'acasa');
     // Planul nou se deschide direct, dacă îl găsim după titlu
     const iPlan = n.tip === 'plan_nou' ? dateClienta.planuri.findIndex(p => p.titlu === (n.date || {}).titlu) : -1;
     if (iPlan !== -1) deschidePlanClienta(iPlan);
     return;
   }
   if (n.tip === 'rezervare' || n.tip === 'anulare') return mergiLaOraDinOrar((n.date || {}).zi, (n.date || {}).ora);
+  if (n.tip === 'programari_lipsa') { document.getElementById('navBtnProg').click(); return; }
   document.getElementById('navBtnFisa').click();
   if (n.tip === 'cerere_noua') {
     // Cererile noi stau sus, deasupra listei de clienți

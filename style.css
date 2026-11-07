@@ -4844,16 +4844,12 @@ select.form-control {
   padding: 0 2px;
 }
 
-#progNouSectiune {
-  width: 84px;
-  flex-shrink: 0;
-  padding: 6px 18px 6px 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--primary);
-  text-align: left;
-}
+/* Confirmări: Mută în Hold (pauză, portocaliu ca Hold) și Scoate din Hold (înapoi în listă) */
+.btn-trash-action.prog-hold-btn { color: #d97706; }
+.prog-hold-btn svg rect { fill: currentColor; stroke: none; }
+.btn-trash-action.prog-din-hold-btn { color: var(--primary); }
+[data-theme="dark"] .btn-trash-action.prog-hold-btn { color: #f5b041; }
+[data-theme="dark"] .btn-trash-action.prog-din-hold-btn { color: var(--accent-purple-light); }
 
 .pill-select {
   appearance: none;
@@ -4891,6 +4887,115 @@ select.form-control {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Confirmări pe săptămână: rezumatul, ținta pe săptămână sub nume și pastila „programat X din Y” */
+.prog-rezumat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 10px 9px;
+  border-bottom: 1px solid var(--border);
+}
+
+.prog-rezumat-sus {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.prog-rezumat-sus b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.prog-rezumat-sus small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.prog-rezumat-bara {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.14);
+  overflow: hidden;
+}
+
+.prog-rezumat-bara i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #15803d;
+}
+
+.prog-rezumat-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.prog-rezumat-legenda .zero { color: #b91c1c; }
+.prog-rezumat-legenda .partial { color: #b45309; }
+.prog-rezumat-legenda .complet { color: #15803d; }
+[data-theme="dark"] .prog-rezumat-legenda .zero { color: #f87171; }
+[data-theme="dark"] .prog-rezumat-legenda .partial { color: #fbbf24; }
+[data-theme="dark"] .prog-rezumat-legenda .complet { color: #4ade80; }
+
+.prog-nume-bloc {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+}
+
+.prog-tinta {
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.prog-saptamana {
+  width: 100%;
+  padding: 5px 4px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  display: block;
+}
+
+.prog-saptamana.complet { background: rgba(21, 128, 61, 0.14); color: #15803d; border-color: rgba(21, 128, 61, 0.3); }
+.prog-saptamana.partial { background: rgba(245, 158, 11, 0.16); color: #b45309; border-color: rgba(245, 158, 11, 0.35); }
+.prog-saptamana.zero { background: rgba(185, 28, 28, 0.12); color: #b91c1c; border-color: rgba(185, 28, 28, 0.3); }
+.prog-saptamana.fara { color: var(--text-muted); cursor: default; white-space: normal; font-size: 0.7rem; font-weight: 700; line-height: 1.2; padding: 2px; }
+
+[data-theme="dark"] .prog-saptamana.complet { color: #4ade80; }
+[data-theme="dark"] .prog-saptamana.partial { color: #fbbf24; }
+[data-theme="dark"] .prog-saptamana.zero { color: #f87171; }
+
+.prog-inghetat {
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .prog-mentiuni-textarea {
