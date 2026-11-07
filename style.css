@@ -8877,3 +8877,19 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .raport-macro .proteine { background: #8b5cf6; } .raport-macro .carbo { background: #f5b041; } .raport-macro .grasimi { background: #15803d; }
 .raport-rand { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .raport-rand > b { font-size: 1.1rem; color: var(--primary); white-space: nowrap; }
+
+/* ==========================================
+   FIȘA DE OBIECTIVE EDITABILĂ (antrenor din fișă, client din Fișa mea)
+   ========================================== */
+.fisa-obiective-card {
+  max-width: 480px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  display: flex;
+  flex-direction: column;
+}
+.fisa-obiective-editor { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.fisa-obiective-butoane { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 10px; margin-top: 6px; border-top: 1px solid var(--border); }
+.fisa-obiective-butoane .btn { width: 100%; }
+.fisa-obiective-editeaza { width: 100%; margin-top: 10px; }
+.fisa-modificata { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); text-align: right; }

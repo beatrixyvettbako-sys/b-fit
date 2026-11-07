@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal181">
+  <link rel="stylesheet" href="style.css?v=fitFinal182">
 </head>
 <body>
 
@@ -368,6 +368,23 @@
         </button>
       </div>
       <div id="progresExContinut"></div>
+    </div>
+  </div>
+
+  <!-- MODAL FIȘA DE OBIECTIVE: editarea răspunsurilor (antrenor din fișă, client din Fișa mea) -->
+  <div id="modalFisaObiectiveBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideEditorFisa()">
+    <div class="modal-edit-card fisa-obiective-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom: 8px;">
+        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary);" data-en="Goal-setting form">Fișa de obiective</div>
+        <button type="button" onclick="inchideEditorFisa()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px; flex-shrink:0;" title="Închide" data-en-title="Close">
+          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="fisaObiectiveEditor" class="fisa-obiective-editor"></div>
+      <div class="fisa-obiective-butoane">
+        <button type="button" class="btn btn-clear" onclick="inchideEditorFisa()" data-en="Cancel">Renunță</button>
+        <button type="button" class="btn" id="btnSalveazaFisaObiective" onclick="salveazaEditorFisa()" data-en="Save">Salvează</button>
+      </div>
     </div>
   </div>
 
@@ -2009,7 +2026,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal181"></script>
-  <script src="app.js?v=fitFinal181"></script>
+  <script src="sabloane.js?v=fitFinal182"></script>
+  <script src="app.js?v=fitFinal182"></script>
 </body>
 </html>
