@@ -9112,6 +9112,11 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 186, data: '2026-11-11',
+    client: [],
+    antrenor: [
+      ['Programele tale au „Zile pe săptămână”, sub rezumat: dacă faci un ciclu de 2 săptămâni cu 4 zile, alegi 2 și apeși Salvează, iar în bibliotecă programul apare la „2 zile”.', 'Your programs have “Days per week”, under the summary: if you build a 2-week cycle with 4 days, pick 2 and press Save, and the program shows under “2 days” in the library.']
+    ] },
   { v: 185, data: '2026-11-11',
     client: [],
     antrenor: [
@@ -15063,6 +15068,24 @@ function actualizeazaListaBiblioteca() {
     : `<div class="plan-picker-empty">${peProgram ? tr('Niciun program nu se potrivește.', 'No program matches.') : tr('Niciun antrenament nu se potrivește.', 'No workout matches.')}</div>`;
 }
 
+// Câte zile pe săptămână are programul (filtrul „N zile” din bibliotecă). Implicit = zilele din plan; un ciclu de 2 săptămâni
+// cu 4 zile e de fapt „2 zile pe săptămână”. Se salvează în continut_json.zile_pe_saptamana doar când diferă de implicit.
+function htmlZilePeSaptamana(cjson, zileInPlan) {
+  const ales = Number(cjson.zile_pe_saptamana) || zileInPlan;
+  const optiuni = Array.from({ length: Math.max(7, zileInPlan) }, (_, i) => i + 1)
+    .map(n => `<option value="${n}"${n === ales ? ' selected' : ''}>${n}</option>`).join('');
+  return `<label class="plan-zile-sapt no-print">${tr('Zile pe săptămână', 'Days per week')}
+    <select class="plan-ex-input" onchange="seteazaZilePeSaptamana(this.value)">${optiuni}</select></label>`;
+}
+
+function seteazaZilePeSaptamana(valoare) {
+  const n = Number(valoare);
+  const cj = planActiv.continut_json;
+  if (!n || n === (cj.sesiuni || []).length) delete cj.zile_pe_saptamana;
+  else cj.zile_pe_saptamana = n;
+  actualizeazaButonStergePlan();
+}
+
 // Etichetele proprii ale planului (filtre în bibliotecă): cele folosite deja se aleg din listă; se salvează cu Salvează
 function htmlEtichetePlan() {
   const ale = etichetePlan(planActiv);
@@ -15216,6 +15239,7 @@ function randeazaPlanAntrenamentUI() {
           <span class="plan-tag">${rez.exercitii} ${tr('exerciții', 'exercises')}</span>
           ${rez.minute ? `<span class="plan-tag">~${rez.minute} min/${tr('zi', 'day')}</span>` : ''}
         </div>
+        ${(planActiv.clienta || '').trim() || rez.zile < 2 ? '' : htmlZilePeSaptamana(cjson, rez.zile)}
         ${rez.volum.length ? `<details class="plan-volum no-print">
           <summary>${tr('Volum pe grupe musculare', 'Volume by muscle group')}</summary>
           <div class="plan-volum-nota">${tr('Serii pe toate zilele planului', 'Sets across all plan days')}</div>

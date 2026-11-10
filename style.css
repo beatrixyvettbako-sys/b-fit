@@ -6208,6 +6208,22 @@ select.form-control {
   background: rgba(var(--accent-rgb), 0.14);
 }
 
+/* Zile pe săptămână în antetul programului (filtrul din bibliotecă) */
+.plan-zile-sapt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.plan-zile-sapt select {
+  width: auto;
+  min-width: 56px;
+}
+
 /* Etichetele proprii în antetul planului: pastile cu ×, plus câmpul de adăugare */
 .plan-etichete {
   display: flex;
