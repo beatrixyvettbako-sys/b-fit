@@ -13362,7 +13362,7 @@ function invitaClienta(confirmatDublura = false) {
     && [c.emailInvitatie, (c.fisaInscriere || {}).email].some(e => (e || '').trim().toLowerCase() === email));
   if (altul) {
     customConfirm(tr('Email folosit deja', 'Email already in use'),
-      tr(`${altul.nume} are deja emailul ${email}. Dacă e aceeași persoană, folosește fișa ei; altfel trimite totuși invitația.`, `${altul.nume} already has the email ${email}. If it’s the same person, use that file; otherwise send the invitation anyway.`),
+      tr(`${altul.nume} are deja emailul ${email}. Dacă e aceeași persoană, folosește fișa existentă; altfel trimite totuși invitația.`, `${altul.nume} already has the email ${email}. If it’s the same person, use that file; otherwise send the invitation anyway.`),
       () => invitaClienta(true));
     document.getElementById('modalBtnConfirm').innerText = tr('Trimite totuși', 'Send anyway');
     return;
