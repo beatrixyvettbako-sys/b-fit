@@ -6066,6 +6066,20 @@ select.form-control {
   margin-bottom: 10px;
 }
 
+/* Filtrele bibliotecii (zile / grupe musculare) trec pe rândul următor în loc să fie tăiate pe telefoanele mici */
+#chipsBiblioteca {
+  flex-wrap: wrap;
+}
+
+/* Titlul secțiunilor din bibliotecă (… mele / Șabloane) */
+.biblioteca-sectiune {
+  margin: 12px 0 6px;
+}
+
+.biblioteca-sectiune:first-child {
+  margin-top: 2px;
+}
+
 .plan-chips {
   display: flex;
   gap: 6px;
@@ -6189,8 +6203,35 @@ select.form-control {
   white-space: nowrap;
 }
 
-.plan-tag.is-bfit {
+.plan-tag.is-bfit,
+.plan-tag.plan-eticheta-card {
   background: rgba(var(--accent-rgb), 0.14);
+}
+
+/* Etichetele proprii în antetul planului: pastile cu ×, plus câmpul de adăugare */
+.plan-etichete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.plan-eticheta-x {
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0 0 5px;
+  cursor: pointer;
+}
+
+.plan-etichete .plan-eticheta-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 220px;
 }
 
 /* Antetul planului deschis: înapoi la bibliotecă, pentru cine e planul, rezumat și volum */
@@ -6577,6 +6618,40 @@ select.form-control {
   display: flex;
   flex-direction: column;
   gap: 5px;
+}
+
+/* Greutatea propusă din ce s-a făcut data trecută (progresie); verde când e de crescut */
+.serii-sugestie {
+  margin-top: 8px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: rgba(var(--primary-rgb), 0.06);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.serii-sugestie.is-urca {
+  background: rgba(21, 128, 61, 0.1);
+  color: #15803d;
+}
+
+[data-theme="dark"] .serii-sugestie.is-urca {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+}
+
+/* Săptămâna mai ușoară (deload) în planul clientului */
+.saptamana-usoara {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(245, 176, 65, 0.16);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .serie-rand {

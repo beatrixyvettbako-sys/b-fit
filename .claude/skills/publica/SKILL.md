@@ -36,6 +36,9 @@ Dacă versiunea aduce ceva vizibil pentru utilizatori, adaugă o intrare la înc
 - Texte scurte, pe înțelesul oricui, neutre ca gen („client”, „antrenor”), ce poate face acum utilizatorul, nu detalii tehnice.
 - Separat pe rol: fiecare vede doar ce îl privește; un rol fără noutăți primește `[]` (nu i se arată pop-up).
 - Reparațiile mărunte și cele invizibile nu intră. Dacă nu e nimic de anunțat, nu adăuga intrare.
+- Textele se construiesc din tot ce se publică acum: `git diff` față de ultimul commit publicat și commit-urile nepublicate, nu doar din conversația curentă (munca poate veni din mai multe sesiuni).
+- Ce trebuie validat de un antrenor (texte de antrenament, reguli de greutate, conținut nou în șabloane) primește un punct la antrenor care începe cu „De verificat:” / „To review:” și conține textele sau regulile exacte.
+- Dacă există deja o intrare cu `v: N` (pregătită în timpul lucrului), o completezi și o corectezi pe aceea; nu adăuga a doua intrare pentru aceeași versiune.
 - Arată utilizatoarei textele înainte de commit.
 
 ## 3. Commit și push
