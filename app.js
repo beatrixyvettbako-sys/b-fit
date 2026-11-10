@@ -2851,7 +2851,10 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
   // Înălțimea normală a barei de jos (56px), nu cea de moment: bara se poate afla compactă sau în animație
   let hNav = 56;
   // Bara de jos plutește la 10px de margine; +12px spațiu ca istoricul să rămână deasupra ei
-  let spatiuVizibilUtil = vh - topOffset - hNav - 10 - 12;
+  // Cu bara compactă (la scroll în jos) pagina se scurtează cu 12px (padding-bottom 72 → 60 în style.css):
+  // cardul de final primește acești 12px în plus, altfel la capăt ora curentă coboară și se vede o fâșie din ora anterioară
+  const DIFERENTA_NAV_COMPACT = 12;
+  let spatiuVizibilUtil = vh - topOffset - hNav - 10 - 12 + DIFERENTA_NAV_COMPACT;
 
   let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
   let blockRect = closestBlock.getBoundingClientRect();
@@ -9109,6 +9112,11 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 185, data: '2026-11-11',
+    client: [],
+    antrenor: [
+      ['Antrenamentele de o zi (din Șabloane sau „Doar ziua” dintr-un program) au acum și secțiunile „Încălzire” și „Intensitate și progresie”, iar titlul e doar numele antrenamentului, fără „Săpt. 2 · Ziua 2:”, ca să nu se încurce cu săptămâna clientului.', 'One-day workouts (from Templates or “Only the day” from a program) now also have the “Warm-up” and “Intensity and progression” sections, and the title is just the workout name, without “Week 2 · Day 2:”, so it isn’t confused with the client’s week.']
+    ] },
   { v: 184, data: '2026-11-10',
     client: [
       ['Greutatea sugerată: dacă data trecută ai făcut toate repetările la toate seriile (de exemplu 3 × 12 la „10-12”), la exercițiu apare „↑ Încearcă azi 42,5 kg”, iar bifa completează singură greutatea nouă. Altfel îți propune să rămâi la aceeași greutate și să faci o repetare în plus.', 'Suggested weight: if last time you hit every rep on every set (for example 3 × 12 at “10-12”), the exercise shows “↑ Try 42.5 kg today”, and the checkmark fills in the new weight for you. Otherwise it suggests staying at the same weight and doing one more rep.'],
@@ -14589,9 +14597,18 @@ function titluZiPlan(idx) {
   return faraPrefixZi(brut) || brut || (planActiv.titlu || '').trim() || tr('Antrenament', 'Workout');
 }
 
+// O zi scoasă din program devine antrenament de sine stătător: fără „Ziua N:” / „Săpt. N ·” în titlu (s-ar încurca
+// cu săptămâna reală a clientului) și fără organizarea săptămânii; încălzirea, intensitatea și secțiunile proprii rămân
+const ESTE_ORGANIZAREA_SAPTAMANII = s => /^(organizarea s[ăa]pt[ăa]m[âa]n|weekly schedule)/i.test(String(s && s.titlu || '').trim());
+function caAntrenamentSeparat(continut) {
+  (continut.sesiuni || []).forEach(ses => { ses.titlu = faraPrefixZi(ses.titlu) || ses.titlu; });
+  continut.sectiuni_inceput = (continut.sectiuni_inceput || []).filter(s => !ESTE_ORGANIZAREA_SAPTAMANII(s));
+  return continut;
+}
+
 function continutDoarZi(idx) {
   const c = continutFaraProgres(planActiv.continut_json);
-  const zi = { sectiuni_inceput: [], sesiuni: [c.sesiuni[idx]], sectiuni_final: [], nota_subsol: '' };
+  const zi = caAntrenamentSeparat({ sectiuni_inceput: c.sectiuni_inceput || [], sesiuni: [c.sesiuni[idx]], sectiuni_final: c.sectiuni_final || [], nota_subsol: '' });
   if (etichetePlan(planActiv).length) zi.etichete = etichetePlan(planActiv);
   return zi;
 }
@@ -14619,7 +14636,7 @@ async function salveazaZiInAleMele(idx) {
     user_id: utilizatorCurent.id,
     clienta: '',
     titlu: titluZiPlan(idx),
-    subtitlu: (planActiv.titlu || '').trim(),
+    subtitlu: '',
     continut_json: continutDoarZi(idx),
     updated_at: new Date().toISOString()
   };
@@ -14742,7 +14759,7 @@ async function trimitePlanLaClienti() {
       user_id: utilizatorCurent.id,
       clienta: nume,
       titlu: doarZi ? titluZiPlan(trimiteDoarZi) : planActiv.titlu.trim(),
-      subtitlu: doarZi ? (planActiv.titlu || '').trim() : (planActiv.subtitlu || '').trim(),
+      subtitlu: doarZi ? '' : (planActiv.subtitlu || '').trim(),
       continut_json: continut,
       updated_at: acum
     }));
@@ -14907,8 +14924,8 @@ function incarcaZiSablon(i, z) {
   const s = sabloanePlan()[i];
   const ses = s && s.continut_json?.sesiuni?.[z];
   if (!ses) { pornestePlanNou(); return; }
-  const continut = continutFaraProgres({ sectiuni_inceput: [], sesiuni: [ses], sectiuni_final: [], nota_subsol: '' });
-  pornestePlanNou({ id: null, clienta: '', titlu: faraPrefixZi(ses.titlu) || ses.titlu, subtitlu: s.titlu, continut_json: continut },
+  const continut = caAntrenamentSeparat(continutFaraProgres({ sectiuni_inceput: s.continut_json.sectiuni_inceput || [], sesiuni: [ses], sectiuni_final: s.continut_json.sectiuni_final || [], nota_subsol: '' }));
+  pornestePlanNou({ id: null, clienta: '', titlu: faraPrefixZi(ses.titlu) || ses.titlu, subtitlu: '', continut_json: continut },
     tr('✓ Antrenament încărcat. Modifică-l și apasă Salvează.', '✓ Workout loaded. Edit it and press Save.'));
 }
 
