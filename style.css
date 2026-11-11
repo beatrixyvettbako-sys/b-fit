@@ -8925,6 +8925,9 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .cumparaturi-rand:first-child { border-top: none; }
 .cumparaturi-rand small { color: var(--text-muted); }
 .cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }
+.cumparaturi-raion { margin: 12px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.cumparaturi-raion:first-child { margin-top: 0; }
+.cumparaturi-raion + .cumparaturi-rand { border-top: none; }
 
 /* ==========================================
    ȚINTE ADAPTIVE: greutatea de azi, tendința, consumul real și ținta propusă
@@ -9006,6 +9009,7 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-grame { flex-shrink: 0; display: flex; align-items: center; gap: 3px; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
 .plan-alim-grame .plan-ex-input { width: 62px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
 .plan-alim-negasit { color: #b91c1c; font-weight: 700; }
+.plan-alim-restrictii { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(185, 28, 28, 0.08); color: #b91c1c; font-size: 0.85rem; line-height: 1.35; }
 .plan-alim-verifica { color: #b45309; font-weight: 700; }
 .plan-alim-var-butoane { display: flex; flex-wrap: wrap; gap: 6px; }
 .plan-alim-var-butoane .btn { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
