@@ -5065,7 +5065,10 @@ async function deschideNutritie(zi) {
   else randeazaNutritieZi();
   const [, , adaptiv] = await Promise.all([incarcaNutritieZi(z), nutritie.salvate === undefined ? incarcaSalvateNutritie() : null, incarcaDateAdaptive(dateClienta.fisa.id), incarcaPlanuriAlimClient()]);
   nutritie.adaptiv = adaptiv;
-  if (antrPers.ecran === 'nutritie') randeazaNutritieZi();
+  if (antrPers.ecran !== 'nutritie') return;
+  // Din notificarea „Plan alimentar nou”: direct planul
+  if (nutritie.deschidePlanAlim) { nutritie.deschidePlanAlim = false; if ((nutritie.planuriAlim || []).length) return deschidePlanAlimClient(); }
+  randeazaNutritieZi();
 }
 
 function schimbaZiNutritie(directie) {
@@ -9980,6 +9983,11 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 189, data: '2026-11-11',
+    client: [
+      ['Primești notificare când antrenorul îți trimite un plan alimentar. O atingi și planul se deschide direct.', 'You get a notification when your trainer sends you a meal plan. Tap it and the plan opens straight away.']
+    ],
+    antrenor: [] },
   { v: 188, data: '2026-11-11',
     client: [
       ['Dacă antrenorul îți face un plan alimentar, îl găsești în Nutriție, la „Planul tău alimentar”: mesele, variantele cu gramaje și caloriile. Cu „Notează azi” pui o variantă direct în jurnal, iar planul se poate descărca și ca PDF.', 'If your trainer makes you a meal plan, you’ll find it in Nutrition, under “Your meal plan”: the meals, the options with amounts and the calories. “Log today” adds an option straight to your log, and the plan can also be downloaded as a PDF.']
@@ -13860,7 +13868,7 @@ const TIPURI_NOTIFICARI = {
   clienta: [
     [['programare_maine'], ['Antrenament mâine', 'Workout tomorrow'], ['Seara dinainte de ședință', 'The evening before a session']],
     [['loc_liber'], ['Loc liber', 'Spot available'], ['Când se eliberează o oră', 'When an hour opens up']],
-    [['plan_nou'], ['Plan nou', 'New plan'], ['Când primești un plan de antrenament', 'When you get a workout plan']],
+    [['plan_nou', 'plan_alimentar_nou'], ['Plan nou', 'New plan'], ['Când primești un plan de antrenament sau alimentar', 'When you get a workout or meal plan']],
     [['mesaj_nou'], ['Mesaje', 'Messages'], ['Când antrenorul îți scrie', 'When your trainer writes to you']],
     [['nota_noua'], ['Notă de la antrenor', 'Note from your trainer'], ['Când antrenorul îți schimbă nota', 'When your trainer updates your note']],
     [['checkin_memento'], ['Check-in săptămânal', 'Weekly check-in'], ['Memento dacă nu l-ai trimis', 'Reminder if you haven’t sent it']],
@@ -13966,6 +13974,7 @@ function textNotificare(n) {
     lipsa_checkin: [tr('Check-in-uri lipsă', 'Missing check-ins'), tr(`${d.nr} ${plural(d.nr, 'client n-a', 'clienți n-au')} trimis check-in-ul săptămânii trecute. Trimite-le un memento.`, `${d.nr} ${plural(d.nr, 'client', 'clients')} didn’t send last week’s check-in. Send them a reminder.`)],
     abonamente_expira: [tr('Abonamente care expiră', 'Subscriptions ending'), tr(`${d.nr} ${plural(d.nr, 'abonament expiră', 'abonamente expiră')} săptămâna asta: ${listaNume}${d.nr > 3 ? '…' : ''}`, `${d.nr} ${plural(d.nr, 'subscription ends', 'subscriptions end')} this week: ${listaNume}${d.nr > 3 ? '…' : ''}`)],
     plan_nou: [tr('Plan nou de antrenament', 'New workout plan'), tr(`Antrenorul ți-a trimis „${d.titlu || ''}”.`, `Your trainer sent you “${d.titlu || ''}”.`)],
+    plan_alimentar_nou: [tr('Plan alimentar nou', 'New meal plan'), tr(`Antrenorul ți-a trimis „${d.titlu || ''}”. Îl găsești în Nutriție.`, `Your trainer sent you “${d.titlu || ''}”. You’ll find it in Nutrition.`)],
     checkin_memento: [tr('Check-in săptămânal', 'Weekly check-in'), tr('E timpul pentru check-in-ul săptămânal. Durează un minut.', 'Time for your weekly check-in. It takes a minute.')],
     abonament_expira: d.zile === 1
       ? [tr('Abonamentul expiră mâine', 'Subscription ends tomorrow'), tr('Vorbește cu antrenorul despre reînnoire.', 'Talk to your trainer about renewing.')]
@@ -14074,7 +14083,7 @@ function stergeToateNotificarile() {
 // Tipurile care duc undeva în aplicație; restul (tip necunoscut, client șters) rămân doar de citit
 function areDestinatieNotificare(n) {
   const d = n.date || {};
-  if (rolUtilizator === 'clienta') return ['plan_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber', 'mesaj_nou', 'obiectiv_saptamana', 'serie_pericol', 'masa_nenotata', 'programari_saptamana', 'fisa_modificata'].includes(n.tip);
+  if (rolUtilizator === 'clienta') return ['plan_nou', 'plan_alimentar_nou', 'checkin_memento', 'abonament_expira', 'sedinte_putine', 'programare_maine', 'nota_noua', 'loc_liber', 'mesaj_nou', 'obiectiv_saptamana', 'serie_pericol', 'masa_nenotata', 'programari_saptamana', 'fisa_modificata'].includes(n.tip);
   if (n.tip === 'checkin_nou' || n.tip === 'mesaj_nou' || n.tip === 'fisa_modificata') return (DB.clienti || []).some(c => c.id === d.client_id);
   return ['cerere_noua', 'rezervare', 'anulare', 'lipsa_checkin', 'abonamente_expira', 'programari_lipsa'].includes(n.tip);
 }
@@ -14099,6 +14108,7 @@ function deschideNotificare(id) {
       return;
     }
     if (n.tip === 'mesaj_nou') { clientaTab('acasa'); deschideMesajeClienta(); return; }
+    if (n.tip === 'plan_alimentar_nou') { nutritie.deschidePlanAlim = true; deschideNutritie(); return; }
     if (n.tip === 'masa_nenotata') { deschideAdaugaAliment((n.date || {}).masa === 'cina' ? 'cina' : masaImplicita()); return; }
     // Locul liber: Orarul se deschide direct pe ziua locului
     if (n.tip === 'loc_liber' && (n.date || {}).zi) dateClienta.ziSelectata = cheieZiClienta(new Date(n.date.zi + 'T12:00:00'));
