@@ -8984,3 +8984,37 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .fisa-obiective-butoane .btn { width: 100%; }
 .fisa-obiective-editeaza { width: 100%; margin-top: 10px; }
 .fisa-modificata { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); text-align: right; }
+
+/* Planuri alimentare: editorul antrenorului (meniu), vederea clientului (Nutriție) și linkul fără cont */
+.plan-alim-actiuni { margin: 0; }
+.plan-alim-obiective .antr-pers-activitate { flex: 1 1 40%; }
+.plan-alim-tinte { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.plan-alim-tinte label { font-size: 0.68rem; }
+.plan-alim-masa-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 0; }
+.plan-alim-procent { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); font-weight: 700; }
+.plan-alim-procent .plan-ex-input { width: 58px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
+.plan-alim-varianta { display: flex; flex-direction: column; gap: 6px; }
+.plan-alim-var-cap { display: flex; align-items: center; gap: 8px; }
+.plan-alim-var-nr { font-weight: 800; color: var(--primary); font-size: 0.82rem; }
+.plan-alim-kcal { margin-left: auto; font-size: 0.88rem; color: #15803d; white-space: nowrap; }
+.plan-alim-kcal.departe { color: #b45309; }
+.plan-alim-kcal small { font-weight: 700; }
+.plan-alim-ai { font-style: italic; }
+.plan-alim-ingr { gap: 6px; }
+.plan-alim-ingr-nume { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 0; border: none; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.plan-alim-ingr-nume .acasa-antrenament-detalii { overflow-wrap: anywhere; }
+.plan-alim-grame { flex-shrink: 0; display: flex; align-items: center; gap: 3px; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
+.plan-alim-grame .plan-ex-input { width: 62px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
+.plan-alim-negasit { color: #b91c1c; font-weight: 700; }
+.plan-alim-verifica { color: #b45309; font-weight: 700; }
+.plan-alim-var-butoane { display: flex; flex-wrap: wrap; gap: 6px; }
+.plan-alim-var-butoane .btn { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
+.plan-alim-cautare { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
+.plan-alim-adauga-var { width: 100%; }
+.plan-alim-jos { margin-top: 4px; }
+.plan-alim-instr { margin-top: 8px; font-size: 0.85rem; }
+.plan-alim-citire summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+.plan-alim-citire summary b { white-space: nowrap; color: var(--primary); }
+.plan-alim-citire .plan-text-lista { margin-top: 8px; }
+.plan-alim-prep { margin-top: 6px; font-style: italic; }
+.plan-alim-public { max-width: 760px; margin: 0 auto; padding: 0 0 24px; display: flex; flex-direction: column; gap: 10px; }
