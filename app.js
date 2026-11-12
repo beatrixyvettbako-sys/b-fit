@@ -1577,12 +1577,23 @@ function gasesteClientaValida(numeIntrodus) {
 
   urmareste(window, 'bottomNav', () => window.scrollY);
   // Pe Orar, titlul mare se strânge în antet după primii pixeli de scroll
-  // Bara de zile lipită sus se unește cu antetul într-un singur panou de sticlă
-  window.addEventListener('scroll', () => {
-    document.body.classList.toggle('orar-titlu-strans', window.scrollY > 60);
+  // Bara de zile lipită sus se unește cu antetul într-un singur panou de sticlă.
+  // O singură verificare pe cadru; clasele se schimbă doar când chiar se schimbă starea.
+  let derulareProgramata = false;
+  let stareStrans = null;
+  let stareLipite = null;
+  const verificaDerularea = () => {
+    derulareProgramata = false;
+    const strans = window.scrollY > 60;
+    if (strans !== stareStrans) { stareStrans = strans; document.body.classList.toggle('orar-titlu-strans', strans); }
     const bara = document.getElementById('dayButtonsContainer');
     const antet = document.getElementById('mainAppHeader');
-    if (bara && antet) document.body.classList.toggle('zile-lipite', bara.getBoundingClientRect().top <= antet.getBoundingClientRect().bottom + 6);
+    if (!bara || !antet || !bara.offsetParent) return;
+    const lipite = bara.getBoundingClientRect().top <= antet.offsetHeight + 6;
+    if (lipite !== stareLipite) { stareLipite = lipite; document.body.classList.toggle('zile-lipite', lipite); }
+  };
+  window.addEventListener('scroll', () => {
+    if (!derulareProgramata) { derulareProgramata = true; requestAnimationFrame(verificaDerularea); }
   }, { passive: true });
   const ecranClienta = document.getElementById('clientaScreen');
   if (ecranClienta) urmareste(ecranClienta, 'clientaNav', () => ecranClienta.scrollTop);
@@ -12503,7 +12514,7 @@ function bifeazaToataOra(zi, ora) {
       try { g.row.setPointerCapture(e.pointerId); } catch (x) {}
       g.fundal = document.createElement('div');
       g.fundal.className = 'glisare-fundal';
-      g.fundal.innerHTML = `<span>✓ ${tr('Prezent', 'Present')}</span><span>${tr('Eliberează', 'Free')} ✕</span>`;
+      g.fundal.innerHTML = `<span class="glisare-actiune glisare-bifa"><i>✓</i>${tr('Prezent', 'Present')}</span><span class="glisare-actiune glisare-elibereaza">${tr('Eliberează', 'Free')}<i>✕</i></span>`;
       g.fundal.style.top = g.row.offsetTop + 'px';
       g.fundal.style.height = g.row.offsetHeight + 'px';
       g.row.parentElement.insertBefore(g.fundal, g.row);
@@ -12514,6 +12525,14 @@ function bifeazaToataOra(zi, ora) {
     g.dx = Math.max(-150, Math.min(150, dx));
     g.row.style.transform = `translateX(${g.dx}px)`;
     g.fundal.classList.toggle('spre-dreapta', g.dx > 0);
+    // Cât s-a tras (0–1) pentru iconiță; peste prag, iconița „se aprinde” și telefonul vibrează scurt o dată
+    g.fundal.style.setProperty('--p', Math.min(1, Math.abs(g.dx) / 80).toFixed(2));
+    const pestePrag = (g.dx > 80 && g.poateBifa) || (g.dx < -80 && g.poateElibera);
+    if (pestePrag !== !!g.prag) {
+      g.prag = pestePrag;
+      g.fundal.classList.toggle('prag', pestePrag);
+      if (pestePrag) { try { if (navigator.vibrate) navigator.vibrate(8); } catch (x) {} }
+    }
   });
 
   const gata = e => {
@@ -12664,6 +12683,49 @@ function anuleazaSlot(zi, ora, slotIdx) {
     });
   });
 }
+
+// X de golire: apare în dreapta câmpului de text cât timp scrii în el (nume client, căutări, liste)
+// și îl golește dintr-o atingere; anunță schimbarea ca la ștergerea cu tastatura (evenimentul „input”)
+(function initGolireCamp() {
+  const SELECTOR = 'input.slot-input:not([readonly]), input[list]:not([readonly]), input[type="search"], input.cautare-client-camp';
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'camp-goleste';
+  btn.hidden = true;
+  btn.setAttribute('aria-label', 'Golește');
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg>';
+  document.body.appendChild(btn);
+  let camp = null;
+
+  const pozitioneaza = () => {
+    if (!camp || !camp.isConnected || !camp.value) { btn.hidden = true; return; }
+    const r = camp.getBoundingClientRect();
+    btn.style.top = `${Math.round(r.top + r.height / 2 - 9)}px`;
+    btn.style.left = `${Math.round(r.right - 24)}px`;
+    btn.hidden = false;
+  };
+
+  document.addEventListener('focusin', e => {
+    camp = e.target.matches && e.target.matches(SELECTOR) ? e.target : null;
+    pozitioneaza();
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => { if (!document.activeElement || !document.activeElement.matches(SELECTOR)) { camp = null; btn.hidden = true; } }, 0);
+  });
+  document.addEventListener('input', e => { if (e.target === camp) pozitioneaza(); });
+  window.addEventListener('scroll', () => { if (camp) pozitioneaza(); }, { passive: true });
+  window.addEventListener('resize', () => { if (camp) pozitioneaza(); });
+
+  // pointerdown + preventDefault: câmpul rămâne selectat, tastatura nu se închide
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    if (!camp) return;
+    camp.value = '';
+    camp.dispatchEvent(new Event('input', { bubbles: true }));
+    camp.focus();
+    btn.hidden = true;
+  });
+})();
 
 // Ora aleasă după „+”: se adaugă singură, fără încă o apăsare
 document.getElementById('inputOraCustom')?.addEventListener('change', e => {

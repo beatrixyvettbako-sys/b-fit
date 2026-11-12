@@ -11552,3 +11552,276 @@ body:has(#tabOrar.active) {
 .fisa-scurta-actiuni {
   justify-content: center;
 }
+
+/* Listele de clienți (datalist): fără săgeată, lista apare oricum când scrii; fără X-ul nativ la căutări */
+input[list]::-webkit-calendar-picker-indicator {
+  display: none !important;
+  opacity: 0;
+}
+
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  display: none;
+}
+
+/* X de golire, cât timp scrii în câmp (poziția vine din app.js) */
+.camp-goleste {
+  position: fixed;
+  z-index: 30000;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 0;
+}
+
+.camp-goleste[hidden] {
+  display: none;
+}
+
+.camp-goleste svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+}
+
+[data-theme="dark"] .camp-goleste {
+  background: rgba(255, 255, 255, 0.12);
+  color: #c3d0d2;
+}
+
+/* Textul din câmpuri nu intră sub X */
+input.slot-input:focus,
+input[list]:focus,
+input[type="search"]:focus,
+input.cautare-client-camp:focus {
+  padding-right: 34px !important;
+}
+
+/* ===================== Derulare fluidă pe Android (același aspect, mai puțin de lucru pentru telefon) ===================== */
+/* Pulsările: inel care se mărește (transform), nu umbră animată la infinit */
+.hour-acum i {
+  position: relative;
+  animation: none;
+}
+
+.btn-notificari:not(.btn-mesaje) .notificari-bulina {
+  animation: none;
+}
+
+.hour-acum i::after,
+.btn-notificari:not(.btn-mesaje) .notificari-bulina::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: inherit;
+  pointer-events: none;
+  animation: inelPuls 1.7s ease-out infinite;
+}
+
+@keyframes inelPuls {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* Lumina de sticlă pe tema întunecată: aceeași intensitate, fără amestec de culori */
+[data-theme="dark"] :is(#tabOrar .hour-block, #tabOrar .orar-cifra, #tabOrar .extra-hour-card, #tabOrar #detailsIstoricOrar,
+  #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn,
+  #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, #tabOrar .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora,
+  #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, .custom-modal-card, .final-orb)::before {
+  mix-blend-mode: normal;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 42%);
+}
+
+[data-theme="dark"] .final-orb::before,
+[data-theme="dark"] #tabOrar #btnAddOraCustomAction::before,
+[data-theme="dark"] #tabOrar .drawer-btn-today::before {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 32%);
+}
+
+#customToast::after {
+  mix-blend-mode: normal;
+}
+
+/* Estomparea care plutește peste conținut: mai ușoară (fără saturare) */
+body:has(#tabOrar.active) #mainAppHeader,
+body.zile-lipite:has(#tabOrar.active) #mainAppHeader,
+#tabOrar .day-selector,
+body:has(#tabOrar.active) #bottomNav {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+body:has(#tabOrar.active):not(.orar-titlu-strans) #mainAppHeader {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Unirea barei de zile cu antetul: instant, fără animație de margini (care recalcula pagina în timpul derulării) */
+#tabOrar .day-selector,
+#mainAppHeader {
+  transition: none;
+}
+
+/* Mai puține straturi separate și umbre mai ieftine: altfel telefonul desenează cu întârziere și elementele apar / dispar la derulare */
+#tabOrar .hour-block {
+  transform: none;
+}
+
+.hour-acum i, .final-orb, .final-inel, .final-stea, .btn-notificari:not(.btn-mesaje) .notificari-bulina {
+  will-change: auto;
+}
+
+body:has(#tabOrar.active) {
+  --m-float: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 4px 10px -4px rgba(8, 58, 61, 0.3);
+  --m-float-sm: inset 0 1px 0 rgba(255, 255, 255, 0.95), 0 3px 8px -4px rgba(8, 58, 61, 0.3);
+  --m-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 16px -10px rgba(8, 58, 61, 0.22);
+}
+
+[data-theme="dark"] body:has(#tabOrar.active) {
+  --m-float: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 4px 10px -4px rgba(0, 0, 0, 0.6);
+  --m-float-sm: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 3px 8px -4px rgba(0, 0, 0, 0.55);
+  --m-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 16px -10px rgba(0, 0, 0, 0.5);
+}
+
+#tabOrar .btn-save-check,
+#tabOrar .btn-clear,
+#tabOrar .slot-num-btn {
+  box-shadow: var(--m-float-sm);
+}
+
+#tabOrar .slot-occupied .btn-save-check-disabled {
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.65), 0 3px 8px -4px rgba(22, 163, 74, 0.6) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hour-acum i::after,
+  .btn-notificari:not(.btn-mesaje) .notificari-bulina::after { animation: none; }
+}
+
+/* X de golire: mai mic */
+.camp-goleste {
+  width: 18px;
+  height: 18px;
+}
+
+.camp-goleste svg {
+  width: 9px;
+  height: 9px;
+  stroke-width: 3;
+}
+
+input.slot-input:focus,
+input[list]:focus,
+input[type="search"]:focus,
+input.cautare-client-camp:focus {
+  padding-right: 28px !important;
+}
+
+/* ===================== Glisarea pe slot: fundal de sticlă colorată, iconiță care crește, rândul ridicat ===================== */
+.glisare-fundal,
+.glisare-fundal.spre-dreapta {
+  left: 6px;
+  right: 6px;
+  padding: 0 16px;
+  border-radius: 16px;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-sizing: border-box;
+  font-size: 0.8rem;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.glisare-fundal.spre-dreapta {
+  color: #15803d;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.glisare-fundal.prag {
+  background: rgba(239, 68, 68, 0.24);
+}
+
+.glisare-fundal.spre-dreapta.prag {
+  background: rgba(34, 197, 94, 0.24);
+}
+
+.glisare-actiune {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  opacity: calc(0.35 + var(--p, 0) * 0.65);
+}
+
+.glisare-actiune i {
+  font-style: normal;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fff;
+  transform: scale(calc(0.6 + var(--p, 0) * 0.4));
+  transition: transform 0.15s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.glisare-bifa i {
+  background: linear-gradient(180deg, rgba(74, 222, 128, 0.9) 0%, rgba(22, 163, 74, 0.95) 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 4px 10px -4px rgba(22, 163, 74, 0.6);
+}
+
+.glisare-elibereaza i {
+  background: linear-gradient(180deg, rgba(248, 113, 113, 0.9) 0%, rgba(220, 38, 38, 0.95) 100%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5), 0 4px 10px -4px rgba(220, 38, 38, 0.6);
+}
+
+.glisare-fundal.prag .glisare-actiune i {
+  transform: scale(1.12);
+}
+
+/* Doar acțiunea din partea trasă se vede */
+.glisare-fundal span:first-child,
+.glisare-fundal.spre-dreapta span:last-child { opacity: 0; }
+.glisare-fundal span:last-child { opacity: calc(0.35 + var(--p, 0) * 0.65); }
+.glisare-fundal.spre-dreapta span:first-child { opacity: calc(0.35 + var(--p, 0) * 0.65); }
+
+/* Rândul tras: o bucată de sticlă ridicată, cu colțuri rotunjite, nu un dreptunghi plin */
+#tabOrar .slot-row.glisare-activ {
+  background: var(--card-bg-solid);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px -10px rgba(8, 30, 50, 0.45);
+  border-top-color: transparent;
+}
+
+[data-theme="dark"] #tabOrar .slot-row.glisare-activ {
+  background: #1b232b;
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.7);
+}
+
+[data-theme="dark"] .glisare-fundal { color: #f87171; background: rgba(239, 68, 68, 0.16); border-color: rgba(239, 68, 68, 0.3); }
+[data-theme="dark"] .glisare-fundal.spre-dreapta { color: #4ade80; background: rgba(34, 197, 94, 0.16); border-color: rgba(34, 197, 94, 0.3); }
+[data-theme="dark"] .glisare-fundal.prag { background: rgba(239, 68, 68, 0.26); }
+[data-theme="dark"] .glisare-fundal.spre-dreapta.prag { background: rgba(34, 197, 94, 0.26); }
+
+/* Rândul tras rămâne opac (regula pentru sloturile ocupate îl făcea transparent) */
+#tabOrar .slot-row.glisare-activ {
+  background: var(--card-bg-solid) !important;
+}
+
+[data-theme="dark"] #tabOrar .slot-row.glisare-activ {
+  background: #1b232b !important;
+}
