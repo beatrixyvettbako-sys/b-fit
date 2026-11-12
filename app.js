@@ -6342,7 +6342,7 @@ function htmlNutritieAntrenor() {
   const s = n.setari || {};
   const ascuns = s.vizibil_antrenor === false;
   const zile = n.zile.map(z => `<details class="card antr-pers-antrenor"><summary><span class="acasa-eticheta">${escAttr(etichetaDataAntrPers(z.data))}</span>
-      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${tinteZi(s, z.data, raport.zileAntr).kcal}` : ''} kcal</b> <span class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${Math.round(z.totaluri.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(z.totaluri.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(z.totaluri.grasimi)} g</span></summary>
+      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${tinteZi(s, z.data, raport.zileAntr).kcal}` : ''} kcal</b>${z.respectare && z.respectare.total ? ` <span class="plan-alim-zi${z.respectare.tinute === z.respectare.total ? ' is-tot' : ''}">${tr('plan', 'plan')} ${z.respectare.tinute}/${z.respectare.total}</span>` : ''} <span class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${Math.round(z.totaluri.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(z.totaluri.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(z.totaluri.grasimi)} g</span></summary>
       <ul>${z.randuri.map(x => `<li>${escAttr((MESE_NUTRITIE.find(m => m[0] === x.masa) || [, ''])[1])}: ${escAttr(x.nume)} · ${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal</li>`).join('')}</ul>
     </details>`).join('');
   return `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Nutriție', 'Nutrition')}</div>
@@ -6357,21 +6357,45 @@ function htmlNutritieAntrenor() {
       : `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Rapoarte', 'Reports')}</div>
         <div id="raportNutritieFisa">${htmlRapoarte()}</div>
         <div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Ultimele 7 zile', 'Last 7 days')}</div>
-        ${zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`}`;
+        ${htmlRespectarePlan(n)}${zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`}`;
+}
+
+// Respectarea planului alimentar într-o zi: o masă din plan e „ținută” dacă la ea s-a notat cel puțin un aliment
+//   dintr-o variantă a ei (după numele din plan sau alimentul din bază, ca la „Notează azi” și la căutarea manuală)
+function respectarePlanZi(plan, randuri) {
+  const mese = ((plan && plan.continut && plan.continut.mese) || []).filter(m => (m.variante || []).length);
+  const tinute = mese.filter(m => {
+    const nume = new Set(m.variante.flatMap(v => (v.ingrediente || []).filter(i => !i.text).flatMap(i => [i.nume, i.aliment].filter(Boolean).map(faraDiacritice))));
+    return randuri.some(r => r.masa === m.cod && nume.has(faraDiacritice(r.nume)));
+  });
+  return { tinute: tinute.length, total: mese.length };
+}
+
+function htmlRespectarePlan(n) {
+  if (!n.planAlim) return '';
+  const zile = n.zile.filter(z => z.respectare), t = zile.reduce((a, z) => a + z.respectare.tinute, 0), tot = zile.reduce((a, z) => a + z.respectare.total, 0);
+  return `<div class="card plan-alim-respectare"><b>${tr('Planul alimentar', 'Meal plan')}: ${tot ? `${t} ${tr('din', 'of')} ${tot} ${tr('mese', 'meals')} (${Math.round(t / tot * 100)}%)` : '–'}</b>
+    <span class="acasa-antrenament-detalii">${tr(`„${escAttr(n.planAlim.titlu)}”, în zilele notate din ultima săptămână. O masă contează când clientul notează la ea alimente dintr-o variantă din plan.`, `“${escAttr(n.planAlim.titlu)}”, on the logged days of the last week. A meal counts when the client logs foods from one of its options.`)}</span></div>`;
 }
 
 // Ultimele 30 de zile: rapoartele (7 / 30) și, dedesubt, alimentele din ultimele 7 zile
 async function incarcaNutritieAntrenor(client) {
   const iso = isoDinData(new Date(Date.now() - 30 * 86400000)), iso7 = isoDinData(new Date(Date.now() - 6 * 86400000));
-  const [resJ, resS, resA] = await Promise.all([
+  const [resJ, resS, resA, resP] = await Promise.all([
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', client.id).gte('data', iso).order('data', { ascending: false }).order('created_at'),
     supabaseClient.from('setari_nutritie').select('*').eq('client_id', client.id).maybeSingle(),
-    supabaseClient.from('apa_zilnica').select('data, pahare').eq('client_id', client.id).gte('data', iso)
+    supabaseClient.from('apa_zilnica').select('data, pahare').eq('client_id', client.id).gte('data', iso),
+    supabaseClient.from('planuri_alimentare').select('*').eq('client_id', client.id).order('updated_at', { ascending: false }).limit(1)
   ]);
   if (resJ.error && resS.error) { nutritieFisa = null; return; }
   const peZi = new Map();
   (resJ.data || []).filter(x => x.data >= iso7).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
-  nutritieFisa = { client, setari: resS.data || null, zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri) })),
+  // Planul cel mai nou, de la data lui încolo (zilele de dinainte nu aveau plan)
+  const planAlim = (resP && !resP.error && (resP.data || [])[0]) || null;
+  const deLa = planAlim ? String(planAlim.created_at || planAlim.updated_at || '').slice(0, 10) : '';
+  nutritieFisa = { client, setari: resS.data || null, planAlim,
+    zile: [...peZi.entries()].map(([data, randuri]) => ({ data, randuri, totaluri: totaluriNutritie(randuri),
+      respectare: planAlim && data >= deLa ? respectarePlanZi(planAlim, randuri) : null })),
     adaptiv: await incarcaDateAdaptive(client.id) };
   Object.assign(raport, { jurnal: resJ.error ? null : (resJ.data || []), apa: resA.error ? [] : (resA.data || []),
     setari: nutritieFisa.setari, adaptiv: nutritieFisa.adaptiv, nume: client.nume || '', unde: 'antrenor', zileAntr: null });
@@ -7984,10 +8008,97 @@ function htmlImportPlanAlim() {
     <div class="card obiectiv-form">
       <div class="acasa-antrenament-detalii">${tr('1. Copiază promptul și lipește-l în Gemini sau ChatGPT, împreună cu datele clientului (sau cu un plan vechi de convertit).', '1. Copy the prompt and paste it into Gemini or ChatGPT, with the client’s details (or an old plan to convert).')}</div>
       <button type="button" class="btn btn-clear" style="width:100%; margin:6px 0 10px;" onclick="navigator.clipboard.writeText(promptAiPlanAlim()).then(() => showToast(tr('✓ Prompt copiat', '✓ Prompt copied')))">${tr('Copiază promptul pentru AI', 'Copy the AI prompt')}</button>
-      <div class="acasa-antrenament-detalii">${tr('2. Lipește aici răspunsul. Caloriile și macro-urile le calculez eu, din baza de alimente.', '2. Paste the answer here. I calculate calories and macros from the food database.')}</div>
+      <div class="acasa-antrenament-detalii">${tr('2. Lipește aici răspunsul sau încarcă direct un plan vechi (PDF sau Word). Caloriile și macro-urile le calculez eu, din baza de alimente.', '2. Paste the answer here, or upload an old plan (PDF or Word). I calculate calories and macros from the food database.')}</div>
+      <label class="btn btn-clear plan-alim-fisier">📄 ${tr('Încarcă PDF sau Word', 'Upload PDF or Word')}<input type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden onchange="incarcaFisierPlanAlim(this)"></label>
       <textarea id="planAlimImport" class="plan-ex-textarea" rows="12" maxlength="60000" placeholder="# MIC DEJUN&#10;## Iaurt grecesc cu fructe&#10;- Iaurt grecesc 2% — 200 g&#10;- Ouă — 2 buc" oninput="planAlim.importText = this.value">${escAttr(planAlim.importText)}</textarea>
       <button type="button" class="btn profile-save-btn" style="margin-top:10px;" onclick="importaPlanAlim(this)">${tr('Importă', 'Import')}</button>
     </div>`;
+}
+
+// ---- Plan vechi din fișier: textul ajunge în câmpul de import (îl vezi și îl corectezi), apoi „Importă” ca la text ----
+async function incarcaFisierPlanAlim(input) {
+  const f = input.files && input.files[0];
+  input.value = '';
+  if (!f) return;
+  if (f.size > 15 * 1024 * 1024) return showToast(tr('Fișierul e prea mare (maxim 15 MB).', 'The file is too large (15 MB max).'), 'error');
+  showToast(tr('Citesc fișierul...', 'Reading the file...'));
+  try {
+    const buf = await f.arrayBuffer(), nume = f.name.toLowerCase();
+    const text = nume.endsWith('.pdf') || f.type === 'application/pdf' ? await textDinPdf(buf)
+      : nume.endsWith('.docx') ? await textDinDocx(buf) : new TextDecoder().decode(buf);
+    if (!text.trim()) return showToast(tr('Nu am găsit text în fișier. Dacă e o poză scanată, folosește promptul pentru AI.', 'No text found in the file. If it’s a scanned image, use the AI prompt.'), 'error');
+    planAlim.importText = text.slice(0, 60000);
+    const ta = document.getElementById('planAlimImport');
+    if (ta) ta.value = planAlim.importText;
+    showToast(tr('✓ Textul planului e în câmp. Verifică-l și apasă „Importă”.', '✓ The plan text is in the box. Check it and tap “Import”.'));
+  } catch (e) {
+    console.error('Plan din fișier:', e);
+    showToast(tr('Nu am putut citi fișierul. Merge cu PDF și Word (.docx).', 'Could not read the file. PDF and Word (.docx) work.'), 'error');
+  }
+}
+
+// pdf.js se încarcă doar la primul PDF; worker-ul se verifică și el (aceeași amprentă ca la script), apoi rulează din blob
+const PDFJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+async function incarcaPdfJs() {
+  if (window.pdfjsLib && pdfjsLib.GlobalWorkerOptions.workerSrc) return;
+  await incarcaScriptVerificat(PDFJS_URL + 'pdf.min.js', 'sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e');
+  const buf = await (await fetch(PDFJS_URL + 'pdf.worker.min.js')).arrayBuffer();
+  const h = new Uint8Array(await crypto.subtle.digest('SHA-384', buf));
+  if (btoa(String.fromCharCode(...h)) !== 'SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2') throw new Error('pdf.worker');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([buf], { type: 'text/javascript' }));
+}
+
+// Rândurile paginii, de sus în jos; rândurile indentate devin buline (în PDF bulina e desenată, nu e text)
+async function textDinPdf(buf) {
+  await incarcaPdfJs();
+  const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
+  const linii = [];
+  for (let n = 1; n <= pdf.numPages; n++) {
+    const randuri = [];
+    (await (await pdf.getPage(n)).getTextContent()).items.filter(i => (i.str || '').trim()).forEach(i => {
+      const x = i.transform[4], y = i.transform[5];
+      let r = randuri.find(q => Math.abs(q.y - y) < 3);
+      if (!r) randuri.push(r = { y, parti: [] });
+      r.parti.push({ x, s: i.str, w: i.width });
+    });
+    if (!randuri.length) continue;
+    randuri.sort((a, b) => b.y - a.y);
+    const xMin = Math.min(...randuri.flatMap(r => r.parti.map(p => p.x)));
+    randuri.forEach(r => {
+      r.parti.sort((a, b) => a.x - b.x);
+      let t = '', capat = null;
+      r.parti.forEach(p => { if (capat !== null && p.x - capat > 1 && !/\s$/.test(t)) t += ' '; t += p.s; capat = p.x + p.w; });
+      t = t.trim();
+      linii.push(r.parti[0].x - xMin > 10 && !/^[-•*]/.test(t) ? '- ' + t : t);
+    });
+  }
+  return linii.join('\n');
+}
+
+// .docx = arhivă zip; textul e în word/document.xml (paragrafele din liste devin buline)
+async function textDinDocx(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
+  let e = buf.byteLength - 22;
+  while (e >= 0 && v.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('docx');
+  let p = v.getUint32(e + 16, true);
+  for (let k = v.getUint16(e + 10, true); k > 0; k--) {
+    const lnNume = v.getUint16(p + 28, true);
+    if (dec.decode(u8.subarray(p + 46, p + 46 + lnNume)) === 'word/document.xml') {
+      const local = v.getUint32(p + 42, true), start = local + 30 + v.getUint16(local + 26, true) + v.getUint16(local + 28, true);
+      const date = u8.subarray(start, start + v.getUint32(p + 20, true));
+      const xml = v.getUint16(p + 10, true) === 0 ? dec.decode(date)
+        : await new Response(new Blob([date]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).text();
+      const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+      const doc = new DOMParser().parseFromString(xml, 'application/xml');
+      return [...doc.getElementsByTagNameNS(W, 'p')].map(par => {
+        const t = [...par.getElementsByTagNameNS(W, '*')].map(x => x.localName === 't' ? x.textContent : x.localName === 'tab' ? ' ' : x.localName === 'br' ? '\n' : '').join('').trim();
+        return t && par.getElementsByTagNameNS(W, 'numPr').length && !/^[-•*]/.test(t) ? '- ' + t : t;
+      }).join('\n');
+    }
+    p += 46 + lnNume + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+  }
+  throw new Error('docx');
 }
 
 function numarText(s) {
@@ -8018,7 +8129,7 @@ function cantitateDinText(s) {
 function parseazaPlanAlimText(text) {
   const plan = planAlimGol();
   plan.continut.instructiuni = '';
-  let masa = null, varianta = null, instr = [];
+  let masa = null, varianta = null, instr = [], inInstr = false;
   const tipMasa = s => {
     const n = faraDiacritice(s).replace(/^[#*\s]+/, '');
     return /^(mic dejun|breakfast)/.test(n) ? 'mic_dejun' : /^(pranz|lunch)/.test(n) ? 'pranz' : /^(cina|dinner)/.test(n) ? 'cina' : /^(gustar|snack)/.test(n) ? 'gustare' : null;
@@ -8041,12 +8152,19 @@ function parseazaPlanAlimText(text) {
       masa.variante.push(varianta);
       return;
     }
-    if (!masa) { if (/^[*•-]/.test(curat)) instr.push(curat); return; }
+    if (!masa) {
+      // Planurile din PDF au „Instrucțiuni generale”: atunci contează doar textul de sub titlu, nu antetul (data, profilul)
+      if (/^(instruc[țt]iuni generale|general instructions)$/i.test(curat)) { inInstr = true; instr = []; return; }
+      if (inInstr || /^[*•-]/.test(curat)) instr.push(curat);
+      return;
+    }
     if (!varianta) return;
     if (/^(proteine|protein)\s*:/i.test(curat) || /^cu .+:\s*proteine/i.test(curat)) return;
     const prep = curat.match(/^(?:preparare|mod de preparare|method)\s*:\s*(.+)$/i);
     if (prep) { varianta.preparare = (varianta.preparare ? varianta.preparare + ' ' : '') + prep[1]; return; }
-    if (/^[-•*]\s*/.test(curat)) {
+    // Și rândurile fără bulină de forma „aliment — 100 g” (planuri vechi din PDF sau Word)
+    const faraBulina = curat.length <= 100 && /\s[—–]\s/.test(curat) && cantitateDinText(curat.split(/\s[—–]\s/).pop());
+    if (/^[-•*]\s*/.test(curat) || faraBulina) {
       // Alternativele „(SAU ...)” nu intră în calcul: rămâne primul aliment
       const linie = curat.replace(/^[-•*]\s*/, '').replace(/\s*\((?:sau|or)\b[^)]*\)/gi, '').trim();
       const parti = linie.split(/\s+[—–]\s+|\s+-\s+|:\s+/);
@@ -8095,19 +8213,29 @@ function cheieAliasAlim(nume) {
   return faraDiacritice(nume).replace(/\s+/g, ' ').trim();
 }
 
-function aliasuriAlim() {
-  try { return JSON.parse(localStorage.getItem('BFIT_ALIAS_ALIM_' + (utilizatorCurent ? utilizatorCurent.id : '')) || '{}') || {}; } catch (e) { return {}; }
+// În cont (sql/2026-11-12_aliasuri_alimente.sql), ca să meargă pe orice dispozitiv. v190 le ținea doar pe telefon:
+//   ce a rămas acolo se mută o dată în cont
+async function aliasuriAlim() {
+  const cheieLocala = 'BFIT_ALIAS_ALIM_' + (utilizatorCurent ? utilizatorCurent.id : '');
+  let local = {};
+  try { local = JSON.parse(localStorage.getItem(cheieLocala) || '{}') || {}; } catch (e) {}
+  const { data, error } = await supabaseClient.from('aliasuri_alimente').select('cheie, produs');
+  if (error) return local;
+  const a = {};
+  (data || []).forEach(r => { a[r.cheie] = r.produs; });
+  const deMutat = Object.keys(local).filter(k => !a[k]).map(k => ({ cheie: k, produs: local[k] }));
+  if (!deMutat.length || !(await supabaseClient.from('aliasuri_alimente').upsert(deMutat)).error) {
+    deMutat.forEach(r => { a[r.cheie] = r.produs; });
+    try { localStorage.removeItem(cheieLocala); } catch (e) {}
+  }
+  return a;
 }
 
 function salveazaAliasAlim(nume, p) {
-  const a = aliasuriAlim(), k = cheieAliasAlim(nume);
+  const k = cheieAliasAlim(nume);
   if (!k) return;
-  delete a[k];
-  a[k] = { nume: p.nume, kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi, portii: p.portii || [], portie_g: p.portie_g || null, sursa: p.sursa || '' };
-  // Cele mai vechi ies primele, ca lista să rămână mică
-  const chei = Object.keys(a);
-  chei.slice(0, Math.max(0, chei.length - 400)).forEach(x => delete a[x]);
-  try { localStorage.setItem('BFIT_ALIAS_ALIM_' + (utilizatorCurent ? utilizatorCurent.id : ''), JSON.stringify(a)); } catch (e) {}
+  const produs = { nume: p.nume, kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi, portii: p.portii || [], portie_g: p.portie_g || null, sursa: p.sursa || '' };
+  supabaseClient.from('aliasuri_alimente').upsert({ cheie: k.slice(0, 200), produs, updated_at: new Date().toISOString() }).then(() => {}, () => {});
 }
 
 // Ultima variantă la import, când baza nu are alimentul: primul produs Open Food Facts cu calorii (marcat „verifică”)
@@ -8137,7 +8265,7 @@ async function importaPlanAlim(btn) {
   btn.disabled = true;
   btn.innerText = tr('Caut alimentele în bază...', 'Looking up the foods...');
   const unice = [...new Set(ingrediente.map(i => faraDiacritice(i.nume)))];
-  const gasite = {}, aliasuri = aliasuriAlim();
+  const gasite = {}, aliasuri = await aliasuriAlim();
   await Promise.all(unice.map(async n => {
     const a = aliasuri[cheieAliasAlim(n)];
     gasite[n] = a ? { produs: a, sigur: true } : (await gasesteAlimentBaza(n).catch(() => null)) || await gasesteAlimentOff(n);
@@ -10147,6 +10275,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 191, data: '2026-11-12',
+    client: [],
+    antrenor: [
+      ['Ai planuri alimentare vechi în PDF sau Word? La „Importă din text” le încarci direct cu „Încarcă PDF sau Word”: textul apare în câmp, îl verifici și apeși „Importă”.', 'Have old meal plans in PDF or Word? Under “Import from text”, upload them with “Upload PDF or Word”: the text appears in the box, you check it and tap “Import”.'],
+      ['În fișa clientului, la Progres › Nutriție, vezi cât respectă planul alimentar: câte mese din plan a notat în fiecare zi și procentul pe ultima săptămână.', 'In the client card, under Progress › Nutrition, you can see how well they follow the meal plan: how many plan meals they logged each day and the percentage for the last week.'],
+      ['Alimentele pe care le alegi la import sunt ținute minte în cont, deci se potrivesc singure data viitoare, pe orice telefon sau calculator.', 'The foods you pick when importing are remembered in your account, so they match automatically next time, on any phone or computer.']
+    ] },
   { v: 190, data: '2026-11-11',
     client: [
       ['Lista de cumpărături din planul alimentar: pui pe listă o variantă sau direct toată săptămâna. Lista e împărțită pe raioane (carne, lactate, legume...) și o poți trimite pe telefon.', 'Shopping list from your meal plan: add one option or the whole week at once. The list is grouped by aisle (meat, dairy, vegetables...) and you can share it from your phone.'],

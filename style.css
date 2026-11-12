@@ -8925,7 +8925,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .cumparaturi-rand:first-child { border-top: none; }
 .cumparaturi-rand small { color: var(--text-muted); }
 .cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }
-.cumparaturi-raion { margin: 12px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.plan-alim-fisier { display: flex; justify-content: center; width: 100%; margin: 6px 0 10px; cursor: pointer; }
+.plan-alim-respectare { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+.plan-alim-zi { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(245, 176, 65, 0.18); color: #9a6408; white-space: nowrap; }
+.plan-alim-zi.is-tot { background: rgba(21, 128, 61, 0.12); color: #15803d; }
+.cumparaturi-raion {margin: 12px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
 .cumparaturi-raion:first-child { margin-top: 0; }
 .cumparaturi-raion + .cumparaturi-rand { border-top: none; }
 
