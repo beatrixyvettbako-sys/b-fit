@@ -11486,3 +11486,87 @@ body:has(#tabOrar.active) {
   background: rgba(var(--accent-rgb), 0.24);
   color: var(--accent-purple-light);
 }
+
+/* Fișa pe scurt: acțiuni mici, unul lângă altul, în stilul Orarului */
+.fisa-scurta-actiuni {
+  display: flex;
+  gap: 8px;
+}
+
+.fisa-scurta-actiune {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 14px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+  background: var(--input-glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.28);
+  transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.fisa-scurta-actiune:active { transform: scale(0.96); }
+
+.fisa-scurta-actiune svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fisa-scurta-actiune-principala {
+  color: var(--primary-dark);
+  background: rgba(var(--accent-rgb), 0.26);
+  border-color: rgba(var(--accent-light-rgb), 0.38);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 4px 12px rgba(var(--accent-rgb), 0.2);
+}
+
+[data-theme="dark"] .fisa-scurta-actiune {
+  color: #e8f1f1;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .fisa-scurta-actiune-principala {
+  color: var(--accent-purple-light);
+  background: rgba(var(--accent-rgb), 0.24);
+  border-color: rgba(var(--accent-pale-rgb), 0.35);
+}
+
+/* Fișa pe scurt: acțiunile mai mici, cât textul, la dreapta */
+.fisa-scurta-actiuni {
+  justify-content: flex-end;
+}
+
+.fisa-scurta-actiune {
+  flex: 0 1 auto;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.fisa-scurta-actiune svg {
+  width: 15px;
+  height: 15px;
+}
+
+.fisa-scurta-actiuni {
+  justify-content: center;
+}

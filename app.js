@@ -11630,8 +11630,10 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
       <div><span>${tr('Ultima prezență', 'Last attendance')}</span><b>${ultima ? escAttr(ultima.data) : '–'}</b></div>
       <div><span>${tr('Valabil până la', 'Valid until')}</span><b>${escAttr(c.dataExpirare)}</b></div>
     </div>
-    ${dinSlot ? `<button type="button" class="fisa-scurta-buton fisa-scurta-buton-sticla" id="btnRepetaSaptamanal">${tr('Repetă săptămânal (4 săptămâni)', 'Repeat weekly (4 weeks)')}</button>` : ''}
-    <button type="button" class="fisa-scurta-buton" id="btnFisaCompleta">${tr('Deschide fișa completă', 'Open full profile')}</button>`;
+    <div class="fisa-scurta-actiuni">
+      ${dinSlot ? `<button type="button" class="fisa-scurta-actiune" id="btnRepetaSaptamanal" title="${tr('Același loc în următoarele 4 săptămâni', 'Same spot for the next 4 weeks')}"><svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${tr('Repetă săptămânal', 'Repeat weekly')}</button>` : ''}
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnFisaCompleta">${tr('Fișa completă', 'Full profile')}<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>`;
   if (dinSlot) foaie.querySelector('#btnRepetaSaptamanal').onclick = () => { inchideFisaScurta(); repetaSaptamanal(c, zi, ora, slotIdx); };
   foaie.querySelector('#btnFisaCompleta').onclick = () => {
     inchideFisaScurta();
