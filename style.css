@@ -11172,24 +11172,6 @@ html:not([data-theme="dark"]) body:has(#tabOrar.active) #tabOrar .hour-block-blo
   border-color: rgba(239, 68, 68, 0.4);
 }
 
-/* Lumina care cade pe carduri și se mișcă la scroll (poziția vine din app.js, --lumina-y) */
-#tabOrar .hour-block::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: radial-gradient(320px 220px at 16% var(--lumina-y, -400px), rgba(var(--accent-light-rgb), 0.22) 0%, rgba(var(--accent-light-rgb), 0) 70%);
-}
-
-[data-theme="dark"] #tabOrar .hour-block::after {
-  background: radial-gradient(320px 220px at 16% var(--lumina-y, -400px), rgba(147, 197, 253, 0.16) 0%, rgba(147, 197, 253, 0) 70%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  #tabOrar .hour-block::after { display: none; }
-}
 
 /* ===================== Fluiditate: mai puțină muncă la scroll ===================== */
 /* Cardurile stau peste un fundal care nu se mișcă: estomparea din spatele lor nu se vede, dar costă la fiecare cadru.

@@ -1577,27 +1577,6 @@ function gasesteClientaValida(numeIntrodus) {
 
   urmareste(window, 'bottomNav', () => window.scrollY);
   // Pe Orar, titlul mare se strânge în antet după primii pixeli de scroll
-  // Lumina care cade pe carduri: sursa stă fixă pe ecran, sus în stânga, iar cardurile trec prin ea la scroll
-  let luminaProgramata = false;
-  const actualizeazaLumina = () => {
-    luminaProgramata = false;
-    const tab = document.getElementById('tabOrar');
-    if (!tab || !tab.classList.contains('active')) return;
-    const yLumina = window.innerHeight * 0.28;
-    tab.querySelectorAll('.hour-block').forEach(bloc => {
-      const r = bloc.getBoundingClientRect();
-      if (r.bottom < -200 || r.top > window.innerHeight + 200) return;
-      bloc.style.setProperty('--lumina-y', `${Math.round(yLumina - r.top)}px`);
-    });
-  };
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    window.addEventListener('scroll', () => {
-      if (!luminaProgramata) { luminaProgramata = true; requestAnimationFrame(actualizeazaLumina); }
-    }, { passive: true });
-    window.addEventListener('resize', actualizeazaLumina);
-    window.actualizeazaLuminaOrar = actualizeazaLumina; // apelată și după redesenarea orarului
-  }
-
   // Bara de zile lipită sus se unește cu antetul într-un singur panou de sticlă
   window.addEventListener('scroll', () => {
     document.body.classList.toggle('orar-titlu-strans', window.scrollY > 60);
@@ -12085,7 +12064,6 @@ function randeazaOrarInstant() {
 
   container.innerHTML = html;
   actualizeazaTitluOrar(cifreZi);
-  if (window.actualizeazaLuminaOrar) requestAnimationFrame(window.actualizeazaLuminaOrar);
   container.querySelectorAll('.hour-motiv-input').forEach(potrivesteInaltimeNotita);
 }
 
