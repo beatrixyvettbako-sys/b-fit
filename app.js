@@ -2876,7 +2876,10 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
   // Cu bara compactă (la scroll în jos) pagina se scurtează cu 12px (padding-bottom 72 → 60 în style.css):
   // cardul de final primește acești 12px în plus, altfel la capăt ora curentă coboară și se vede o fâșie din ora anterioară
   const DIFERENTA_NAV_COMPACT = 12;
-  let spatiuVizibilUtil = vh - topOffset - hNav - 10 - 12 + DIFERENTA_NAV_COMPACT;
+  // Distanța reală de la bara de jos la marginea ecranului (pe Android include și zona barei de gesturi), nu 10px fixe
+  const navJos = document.getElementById('bottomNav');
+  const margineJos = navJos ? Math.max(10, Math.round(vh - navJos.getBoundingClientRect().bottom)) : 10;
+  let spatiuVizibilUtil = vh - topOffset - hNav - margineJos - 12 + DIFERENTA_NAV_COMPACT;
 
   let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
   let blockRect = closestBlock.getBoundingClientRect();
@@ -11488,6 +11491,8 @@ function populeazaSelectorLuni() {
 
 function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
+  // Etichetă simplă pe pagină pentru stilurile Orarului (în loc de body:has(#tabOrar.active), costisitor la derulare)
+  document.body.classList.toggle('pe-orar', tabId === 'tabOrar');
 
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) {
@@ -12075,6 +12080,7 @@ function randeazaOrarInstant() {
 
   container.innerHTML = html;
   actualizeazaTitluOrar(cifreZi);
+  reaplicaBifariTrimise();
   container.querySelectorAll('.hour-motiv-input').forEach(potrivesteInaltimeNotita);
 }
 
@@ -12428,9 +12434,30 @@ function bifeazaPrezentaSlot(zi, ora, slotIdx) {
     showToast(currentLang === 'en' ? "Choose a valid client from the list!" : "Alege un client valid din listă!", "error");
     return;
   }
+  // Un loc bifat nu se mai trimite a doua oară (altfel baza scade încă o ședință), până nu e eliberat
+  if (bifariTrimise.has(cheieBifare(d))) return;
+  bifariTrimise.add(cheieBifare(d));
   try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
   trimiteBifarePrezenta(d);
   showToast(t('toastPresenceMarked'));
+}
+
+// Locurile bifate în această sesiune: cheia e săptămâna + ziua + locul
+var bifariTrimise = new Set();
+function cheieBifare(d) { return `${d.saptamanaCheie}|${d.zi}|${d.slotDomKey}|${d.numeExact.trim().toLowerCase()}`; }
+
+// După o redesenare (de ex. datele reîncărcate înainte ca baza să confirme bifarea), ✓ rămâne bifat
+function reaplicaBifariTrimise() {
+  const sapt = getSaptamanaCheie();
+  bifariTrimise.forEach(k => {
+    const [s, zi, slotDomKey, nume] = k.split('|');
+    if (s !== sapt || zi !== ziCurentaCheie) return;
+    // Doar dacă în loc e tot același client (altul nou pus în locul lui se poate bifa)
+    const cli = document.getElementById('cli_' + slotDomKey);
+    if (!cli || cli.value.trim().toLowerCase() !== nume) return;
+    const btn = document.getElementById('btn_save_' + slotDomKey);
+    if (btn) { btn.disabled = true; btn.classList.add('btn-save-check-disabled'); }
+  });
 }
 
 // Citește locul din pagină în momentul apăsării (nume, antrenament, zi, săptămână)
@@ -12467,7 +12494,8 @@ function bifeazaToataOra(zi, ora) {
     tr(`Se marchează prezența pentru ${nume} și se scade câte o ședință din abonament.`, `Attendance is marked for ${nume} and one session is deducted from each membership.`),
     () => {
       try { if (navigator.vibrate) navigator.vibrate([12, 40, 12]); } catch (e) {}
-      lista.forEach(trimiteBifarePrezenta);
+      lista = lista.filter(d => !bifariTrimise.has(cheieBifare(d)));
+      lista.forEach(d => { bifariTrimise.add(cheieBifare(d)); trimiteBifarePrezenta(d); });
       showToast(tr(`Ora ${ora} bifată`, `${ora} marked`));
     }
   );
@@ -12646,6 +12674,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
     "Eliberezi acest slot? Ședința va fi restituită în fișa clientului dacă a fost bifată, iar intrarea va fi ștearsă din istoric.";
 
   customConfirm(confirmTitleText, confirmDescText, function() {
+    bifariTrimise.forEach(k => { if (k.startsWith(`${saptamanaCheie}|${zi}|${slotDomKey}|`)) bifariTrimise.delete(k); });
     let dataCalendar = getDataCalendaristicaCurenta();
     let elBtnSave = document.getElementById('btn_save_' + slotDomKey);
     let elBtnClear = document.getElementById('btn_clear_' + slotDomKey);
@@ -12726,6 +12755,9 @@ function anuleazaSlot(zi, ora, slotIdx) {
     btn.hidden = true;
   });
 })();
+
+// La pornire Orarul e tab-ul deschis
+document.body.classList.toggle('pe-orar', !!document.querySelector('#tabOrar.active'));
 
 // Ora aleasă după „+”: se adaugă singură, fără încă o apăsare
 document.getElementById('inputOraCustom')?.addEventListener('change', e => {
