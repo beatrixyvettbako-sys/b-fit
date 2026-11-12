@@ -12064,7 +12064,7 @@ function randeazaOrarInstant() {
           </div>
           <div style="display:flex; gap:4px;">
             <button id="btn_save_${slotDomKey}" class="${saveBtnClass}" ${saveBtnDisabledAttr} title="${tr('Bifează prezența și scade ședința', 'Mark attendance and deduct a session')}" aria-label="${tr('Bifează prezența și scade ședința', 'Mark attendance and deduct a session')}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✓</button>
-            <button id="btn_clear_${slotDomKey}" class="${clearBtnClass}" ${clearBtnDisabledAttr} title="${tr('Eliberează slotul și șterge din istoric', 'Free the slot and remove it from history')}" aria-label="${tr('Eliberează slotul și șterge din istoric', 'Free the slot and remove it from history')}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
+            <button id="btn_clear_${slotDomKey}" class="${clearBtnClass}" ${clearBtnDisabledAttr} title="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" aria-label="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
           </div>
         </div>
       `;
@@ -12524,6 +12524,9 @@ function bifeazaToataOra(zi, ora) {
       return;
     }
     if (e.target.closest('select') || row.closest('.hour-block-blocked')) return;
+    // Lângă marginile ecranului începe gestul „Înapoi” al telefonului (Android): acolo nu pornim glisarea pe rând,
+    // altfel telefonul face și „Înapoi” și aplicația sare pe alt ecran
+    if (e.pointerType === 'touch' && (e.clientX < 28 || e.clientX > window.innerWidth - 28)) return;
     const save = row.querySelector('.btn-save-check');
     const clear = row.querySelector('.btn-clear');
     const poateBifa = !!(save && !save.disabled);
@@ -12543,7 +12546,7 @@ function bifeazaToataOra(zi, ora) {
       try { g.row.setPointerCapture(e.pointerId); } catch (x) {}
       g.fundal = document.createElement('div');
       g.fundal.className = 'glisare-fundal';
-      g.fundal.innerHTML = `<span class="glisare-actiune glisare-bifa"><i>✓</i>${tr('Prezent', 'Present')}</span><span class="glisare-actiune glisare-elibereaza">${tr('Eliberează', 'Free')}<i>✕</i></span>`;
+      g.fundal.innerHTML = `<span class="glisare-actiune glisare-bifa"><i>✓</i>${tr('Prezent', 'Present')}</span><span class="glisare-actiune glisare-elibereaza">${tr('Golește', 'Clear')}<i>✕</i></span>`;
       g.fundal.style.top = g.row.offsetTop + 'px';
       g.fundal.style.height = g.row.offsetHeight + 'px';
       g.row.parentElement.insertBefore(g.fundal, g.row);
@@ -12669,10 +12672,10 @@ function anuleazaSlot(zi, ora, slotIdx) {
     return;
   }
 
-  let confirmTitleText = currentLang === 'en' ? "Free slot" : "Eliberare slot";
-  let confirmDescText = currentLang === 'en' ? 
-    "Free this slot? The session will be restored to the client's profile if it was checked, and the entry will be removed from history." : 
-    "Eliberezi acest slot? Ședința va fi restituită în fișa clientului dacă a fost bifată, iar intrarea va fi ștearsă din istoric.";
+  let confirmTitleText = currentLang === 'en' ? "Clear slot" : "Golire slot";
+  let confirmDescText = currentLang === 'en' ?
+    "Clear this slot? The session will be restored to the client's profile if it was checked, and the entry will be removed from history." : 
+    "Golești acest slot? Ședința va fi restituită în fișa clientului dacă a fost bifată, iar intrarea va fi ștearsă din istoric.";
 
   customConfirm(confirmTitleText, confirmDescText, function() {
     bifariTrimise.forEach(k => { if (k.startsWith(`${saptamanaCheie}|${zi}|${slotDomKey}|`)) bifariTrimise.delete(k); });
@@ -12826,6 +12829,10 @@ function stergeOraCustom(zi, ora) {
       }
       DB.orarSloturi = (DB.orarSloturi || []).filter(s => !(s && (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === getSaptamanaCheie() + "_Marți")) && normalizeazaOraUi(s.ora) === ora));
       randeazaOrarInstant();
+      // Saltul la ora de dinaintea celei șterse (de obicei noua ultimă oră), cu cardul de final recalculat
+      const inainte = Array.from(document.querySelectorAll('#sloturiContainer .hour-block'))
+        .map(b => b.getAttribute('data-ora')).filter(o => o && o < normalizeazaOraUi(ora)).pop();
+      if (ziCurentaCheie === zi && inainte) aratOraInOrar(inainte);
       showToast(tr(`Ora ${ora} a fost ștearsă`, `${ora} removed`));
       incarcaBazaDateSilencios();
     });

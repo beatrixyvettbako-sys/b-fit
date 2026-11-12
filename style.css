@@ -2075,12 +2075,9 @@ html[data-rol="clienta"] #bottomNav {
   height: 18px;
   padding: 0 4px;
   border-radius: 9px;
-  background: #b91c1c;
-  border: 2px solid var(--card-bg);
   color: #fff;
   font-size: 0.62rem;
   font-weight: 800;
-  line-height: 14px;
   text-align: center;
 }
 
@@ -3450,16 +3447,11 @@ nav button.active span {
 }
 
 .calendar-expandable-card.is-expanded {
-  max-height: 110px;
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
-  margin-bottom: 6px;
-  padding: 8px 10px 8px;
-  background: var(--card-bg);
   border-width: 1px;
   border-color: var(--primary);
-  box-shadow: var(--glass-shadow);
 }
 
 .calendar-header-info {
@@ -3475,15 +3467,12 @@ nav button.active span {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
   width: 100%;
   text-align: center;
 }
 
 .calendar-title-text {
-  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--primary);
   letter-spacing: -0.2px;
   text-align: center;
 }
@@ -3496,20 +3485,13 @@ nav button.active span {
 }
 
 .drawer-nav-btn {
-  flex: 1;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 8px;
-  padding: 5px 6px;
   font-size: 0.74rem;
   font-weight: 700;
-  color: var(--primary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.7);
   transition: all 0.15s ease;
 }
 
@@ -3519,16 +3501,8 @@ nav button.active span {
 }
 
 .drawer-btn-today {
-  background: var(--primary-light);
-  border: 1px solid var(--glass-border);
-  color: var(--primary);
-  padding: 5px 12px;
-  font-size: 0.74rem;
-  font-weight: 800;
-  border-radius: 8px;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.15s ease;
 }
 
 /* Light: butoanele erau albe pe card alb, cu bordură albă; primesc o nuanță din accent */
@@ -3544,7 +3518,6 @@ nav button.active span {
 }
 
 .drawer-btn-today:active {
-  transform: scale(0.97);
   background: var(--primary);
   color: #fff;
 }
@@ -3563,19 +3536,10 @@ nav button.active span {
 /* BARA DE ZILE STICKY */
 .day-selector {
   display: flex;
-  gap: 5px;
   overflow-x: auto;
-  padding: 4px 8px 8px;
-  margin: -4px -8px 6px -8px;
   position: sticky;
-  /* 1px sub header (care e deasupra), ca să nu rămână o linie între ele când zona camerei are înălțime fracționară */
-  top: calc(var(--header-height) - 1px);
   z-index: 950;
-  background: var(--day-bar-glass);
-  backdrop-filter: blur(22px) saturate(180%);
-  -webkit-backdrop-filter: blur(22px) saturate(180%);
   border-bottom: 1px solid rgba(var(--accent-rgb), 0.14);
-  box-shadow: 0 4px 12px -4px rgba(var(--primary-dark-rgb), 0.06);
 }
 
 .day-btn {
@@ -3690,14 +3654,7 @@ details {
 
 /* CARDURI ORE */
 .hour-block {
-  background: var(--card-bg);
-  border: 1.5px solid var(--accent-purple);
-  border-radius: 12px;
-  margin-bottom: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px -2px rgba(var(--primary-dark-rgb), 0.07),
-              0 0 0 2px rgba(var(--accent-rgb), 0.16);
-  transform: translateZ(0);
 }
 
 [data-theme="dark"] .hour-block {
@@ -3751,7 +3708,6 @@ details {
   align-items: center;
   gap: 4px;
   font-weight: 800;
-  font-size: 0.94rem;
   color: var(--primary);
 }
 
@@ -3762,17 +3718,12 @@ details {
 
 /* Ceasul din antetul orei: bulă mică în stilul butonului de calendar din header (inel = apăsabil) */
 .btn-lock-hour {
-  width: 22px;
-  height: 22px;
   padding: 0;
   margin-right: 3px;
   flex-shrink: 0;
   border-radius: 7px;
   border: 1px solid rgba(var(--accent-pale-rgb), 0.85);
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.25),
-              0 2px 6px rgba(var(--accent-rgb), 0.35),
-              inset 0 1px 1px rgba(255, 255, 255, 0.45);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3793,13 +3744,6 @@ details {
 }
 
 /* Ora blocată: lacăt pe roșu, ca marginea cardului */
-.hour-block-blocked .btn-lock-hour {
-  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
-  border-color: rgba(255, 255, 255, 0.55);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25),
-              0 2px 6px rgba(185, 28, 28, 0.35),
-              inset 0 1px 1px rgba(255, 255, 255, 0.45);
-}
 
 /* Săptămâna trecută: același ceas, dar fără inel (nu se poate apăsa) */
 .hour-icon-static {
@@ -3864,15 +3808,6 @@ details {
 }
 
 .btn-sterge-ora {
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: var(--card-bg);
-  color: #b91c1c;
-  font-size: 1rem;
-  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -3880,23 +3815,13 @@ details {
 }
 
 .hour-badge {
-  font-size: 0.7rem;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 9px;
 }
 
 .hour-badge-free {
-  background: rgba(148, 163, 184, 0.2);
-  color: var(--text-muted);
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
-.hour-badge-busy {
-  background: rgba(220, 252, 231, 0.92);
-  color: #166534;
-  border: 1px solid rgba(134, 239, 172, 0.65);
-}
 
 [data-theme="dark"] .hour-badge-busy {
   background: rgba(220, 252, 231, 0.9);
@@ -3924,19 +3849,12 @@ details {
 .slot-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 7px;
-  border-bottom: 1px solid var(--border);
 }
 
 .slot-row:last-child {
   border-bottom: none;
 }
 
-.slot-occupied {
-  background: rgba(34, 197, 94, 0.09) !important;
-  border-left: 4px solid #22c55e !important;
-}
 
 [data-theme="dark"] .slot-occupied {
   background: rgba(34, 197, 94, 0.13) !important;
@@ -3957,38 +3875,20 @@ details {
 /* Număr de loc: comutator „deschis pentru rezervări" (liber) sau marcaj „rezervat de clientă" */
 .slot-num-btn,
 .slot-num-online {
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  border-radius: 50%;
-  line-height: 18px;
   padding: 0;
   font-family: inherit;
 }
 
 .slot-num-btn {
-  background: transparent;
-  border: 1.5px dashed var(--text-muted);
   cursor: pointer;
 }
 
-.slot-num-btn.slot-deschis {
-  background: #15803d;
-  border: 1.5px solid #15803d;
-  color: #fff;
-}
 
-.slot-num-online {
-  background: var(--accent-purple);
-  border: 1.5px solid var(--accent-purple);
-  color: #fff;
-}
 
 .slot-info {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
 }
 
 .slot-input {
@@ -4058,16 +3958,8 @@ select.slot-select-type {
 }
 
 .slot-select-type {
-  width: 100%;
-  border: 1px solid var(--border);
-  padding: 3px 6px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  background-color: var(--input-glass-bg);
   color: var(--text);
   outline: none;
-  font-weight: 600;
-  transition: border-color 0.15s ease;
 }
 
 .slot-select-type:focus {
@@ -4352,16 +4244,7 @@ select.form-control {
 }
 
 .btn-save-check {
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-  color: white;
-  padding: 4px 7px;
-  font-size: 0.76rem;
   font-weight: 700;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25),
-              inset 0 1px 0.5px rgba(255, 255, 255, 0.4);
-  transition: opacity 0.15s ease;
 }
 
 .btn-save-check-disabled {
@@ -4411,12 +4294,6 @@ select.form-control {
 
 /* BLOC ADĂUGARE ORĂ SUPLIMENTARĂ */
 .extra-hour-card {
-  margin: 10px 0 14px;
-  padding: 8px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  box-shadow: var(--glass-shadow);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4427,15 +4304,11 @@ select.form-control {
 .end-schedule-card {
   margin: 6px 0 10px;
   padding: 12px 14px;
-  background: var(--card-bg);
-  border: 1px solid var(--glass-border);
   border-radius: 12px;
-  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   color: var(--primary);
   min-height: 58px;
   box-sizing: border-box;
@@ -4449,9 +4322,6 @@ select.form-control {
 }
 
 .end-schedule-dumbbell-svg {
-  width: 32px;
-  height: 32px;
-  color: var(--primary);
   display: block;
 }
 
@@ -4463,14 +4333,11 @@ select.form-control {
 }
 
 .end-schedule-title {
-  font-size: 0.86rem;
   font-weight: 800;
-  color: var(--primary);
   letter-spacing: -0.2px;
 }
 
 .end-schedule-subtitle {
-  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
 }
@@ -4483,19 +4350,9 @@ select.form-control {
 .end-schedule-card.state-ora-18 {
   padding: 24px 14px;
   min-height: 120px;
-  gap: 10px;
-  box-shadow: var(--glass-shadow);
 }
 
-.end-schedule-card.state-ora-18 .end-schedule-dumbbell-svg {
-  width: 50px;
-  height: 50px;
-  transform: scale(1.05);
-}
 
-.end-schedule-card.state-ora-18 .end-schedule-title {
-  font-size: 0.96rem;
-}
 
 /* EMPTY STATE FIȘĂ CLIENTĂ */
 /* Fișă fără clientă aleasă: filtre + lista clientelor (avatar cu inițiale, abonament, starea ca etichetă) */
@@ -5300,45 +5157,26 @@ select.form-control {
 /* Apare centrat pe verticală în header, peste titlu; la ieșire urcă fără arc (arcul doar la apariție) */
 #customToast {
   position: fixed;
-  top: calc(6px + env(safe-area-inset-top, 0px));
   left: 50%;
   width: max-content;
   max-width: calc(100vw - 24px);
-  text-align: center;
-  transform: translateX(-50%) translateY(-150%);
-  background: rgba(30, 41, 59, 0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #fff;
-  padding: 9px 16px;
-  border-radius: 30px;
-  font-size: 0.86rem;
   font-weight: 700;
   z-index: 99999;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25),
-              inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 0.22s ease-in, opacity 0.22s ease-in;
   opacity: 0;
   pointer-events: none;
 }
 
 #customToast.show {
-  transform: translateX(-50%) translateY(0);
   opacity: 1;
   transition: transform 0.28s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.28s;
 }
 
-#customToast.success { background: rgba(21, 128, 61, 0.94); }
-#customToast.error { background: rgba(185, 28, 28, 0.94); }
 
 /* MODAL CONFIRMARE GENERAL */
 #customModalBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 12, 24, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
   z-index: 20005;
   display: none;
   align-items: center;
@@ -5347,42 +5185,27 @@ select.form-control {
 }
 
 .custom-modal-card {
-  background: var(--card-bg);
-  border: 1px solid var(--glass-border);
   width: 100%;
-  max-width: 360px;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.25),
-              inset 0 1px 0 rgba(255, 255, 255, 0.6);
   text-align: center;
 }
 
 .custom-modal-title {
   font-weight: 800;
-  font-size: 1.05rem;
-  color: var(--primary);
-  margin-bottom: 6px;
 }
 
 .custom-modal-text {
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  margin-bottom: 16px;
   line-height: 1.4;
 }
 
 .custom-modal-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   justify-content: center;
 }
 
 /* A treia variantă (aratButonAlternativModal): rând întreg deasupra celorlalte */
 #modalBtnAlt {
   flex-basis: 100%;
-  padding: 8px 11px;
 }
 
 #modalEditareIncasareBackdrop {
@@ -7159,7 +6982,6 @@ input.serie-camp {
 }
 
 .hour-motiv-overlay {
-  padding: 6px 9px;
   pointer-events: auto;
 }
 
@@ -7170,12 +6992,7 @@ input.serie-camp {
   max-height: 120px;
   field-sizing: content;
   resize: none;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.45);
-  color: var(--primary);
   border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 0.88rem;
   font-weight: 600;
   font-family: inherit;
   line-height: 1.35;
@@ -7275,8 +7092,6 @@ input.serie-camp {
 
 .nota-antrenor-titlu {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
   gap: 8px;
   font-weight: 800;
   color: var(--primary);
@@ -9028,16 +8843,9 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-public { max-width: 760px; margin: 0 auto; padding: 0 0 24px; display: flex; flex-direction: column; gap: 10px; }
 
 /* ===================== REDESIGN ORAR (v192): stilurile redesignului, contopite (o regulă per selector, unde nu schimbă rezultatul) */
-#tabOrar .hour-block {
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75),
-              0 10px 26px -14px rgba(var(--primary-dark-rgb), 0.3);
-}
 
 [data-theme="dark"] #tabOrar .hour-block {
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
-              0 10px 26px -14px rgba(0, 0, 0, 0.6);
 }
 
 #tabOrar .hour-block-blocked {
@@ -9087,8 +8895,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 }
 
 #tabOrar .hour-badge {
-  font-size: 0.74rem;
-  padding: 3px 10px;
   border-radius: 999px;
   border: 0;
 }
@@ -9101,18 +8907,13 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 #tabOrar .hour-badge-busy,
 [data-theme="dark"] #tabOrar .hour-badge-busy {
   background: rgba(var(--accent-rgb), 0.13);
-  color: var(--primary);
   border: 0;
 }
 
 [data-theme="dark"] #tabOrar .hour-badge-free {
-  background: rgba(34, 197, 94, 0.16);
   color: #4ade80;
 }
 
-[data-theme="dark"] #tabOrar .hour-badge-busy {
-  background: rgba(var(--accent-rgb), 0.22);
-}
 
 /* Rândurile de loc: fără chenar verde, separate de o linie fină */
 #tabOrar .slot-row {
@@ -9165,7 +8966,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   background: var(--input-glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-muted);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.3);
   transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1), background-color 0.2s ease;
 }
 
@@ -9251,9 +9051,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   align-self: flex-start;
 }
 
-#tabOrar .slot-input[class*="ant-"] {
-  padding: 0 12px;
-}
 
 /* ✓ și ✕: cercuri de sticlă plutitoare; ✕ în stânga, ✓ mare în dreapta */
 #tabOrar .slot-row > div:last-child {
@@ -9268,10 +9065,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   border-radius: 50%;
   font-size: 1.15rem;
   line-height: 1;
-  background: var(--input-glass-bg);
-  color: #16a34a;
-  border: 1.5px solid rgba(22, 163, 74, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 10px 20px -8px rgba(var(--primary-dark-rgb), 0.35);
   transition: transform 0.18s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 
@@ -9308,23 +9101,15 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-size: 0.66rem;
   line-height: 1;
   color: #b91c1c;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.3);
 }
 
 [data-theme="dark"] #tabOrar .btn-save-check {
-  background: rgba(255, 255, 255, 0.08);
-  color: #4ade80;
   border-color: rgba(74, 222, 128, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 10px 20px -8px rgba(0, 0, 0, 0.65);
 }
 
 [data-theme="dark"] #tabOrar .btn-clear {
-  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.12);
   color: #f87171;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
 }
 
 /* Ora suplimentară: card de sticlă, „+” rotund plutitor */
@@ -9623,11 +9408,7 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
   padding: 6px;
   margin: 0 0 14px;
   border-radius: 22px;
-  background: var(--day-bar-glass);
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 10px 24px -14px rgba(var(--primary-dark-rgb), 0.3);
   overflow: hidden;
-  top: calc(var(--header-height) + 4px);
 }
 
 #tabOrar .day-btn,
@@ -9660,7 +9441,6 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 
 [data-theme="dark"] #tabOrar .day-selector {
   border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px -14px rgba(0, 0, 0, 0.6);
 }
 
 [data-theme="dark"] #tabOrar .day-btn.active {
@@ -9709,7 +9489,6 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 }
 
 [data-theme="dark"] #tabOrar .hour-badge-prezenti {
-  background: rgba(34, 197, 94, 0.16);
   color: #4ade80;
 }
 
@@ -9785,7 +9564,6 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hour-acum i { animation: none; }
 }
 
 /* Fișa pe scurt: fereastră de jos de sticlă, intră cu efect de arc */
@@ -10056,27 +9834,14 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 
 .glisare-fundal {
   position: absolute;
-  left: 0;
-  right: 0;
   z-index: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  box-sizing: border-box;
-  color: #fff;
-  font-size: 0.84rem;
   font-weight: 800;
-  background: linear-gradient(270deg, #dc2626, #f87171);
 }
 
-.glisare-fundal span:first-child {
-  opacity: 0;
-}
 
-.glisare-fundal.spre-dreapta span:last-child {
-  opacity: 0;
-}
 
 #tabOrar .slot-row.glisare-activ {
   position: relative;
@@ -10145,9 +9910,6 @@ body.pe-orar:not(.orar-titlu-strans) #mainAppHeader {
   background: transparent;
 }
 
-#mainAppHeader {
-  transition: background-color 0.25s ease;
-}
 
 body.pe-orar #mainAppHeader .header-icon-bubble-btn,
 body.pe-orar #mainAppHeader .header-icon-bubble-btn.header-icon-clickable {
@@ -10157,8 +9919,6 @@ body.pe-orar #mainAppHeader .header-icon-bubble-btn.header-icon-clickable {
   border: 1px solid var(--m-border);
   color: var(--m-text);
   box-shadow: var(--m-float);
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
 body.pe-orar #mainAppHeader .header-icon-bubble-btn svg {
@@ -10413,8 +10173,6 @@ body.pe-orar #bottomNav {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--m-border);
   box-shadow: var(--m-shadow), 0 12px 30px -8px rgba(8, 58, 61, 0.3);
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
 [data-theme="dark"] body.pe-orar #bottomNav {
@@ -10510,8 +10268,6 @@ body.pe-orar #pageTitle {
 /* Bara de zile lipită sus: se unește cu antetul într-un singur panou de sticlă */
 body.pe-orar.zile-lipite #mainAppHeader {
   background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
 [data-theme="dark"] body.pe-orar.zile-lipite #mainAppHeader {
@@ -10538,9 +10294,6 @@ body.zile-lipite #tabOrar .day-selector::before {
   display: none;
 }
 
-#tabOrar .day-selector {
-  transition: border-radius 0.25s ease, margin 0.25s ease, padding 0.25s ease, background-color 0.25s ease;
-}
 
 /* × de pe ora suplimentară goală: la fel ca ✕ de eliberare slot */
 #tabOrar .btn-sterge-ora {
@@ -10598,11 +10351,6 @@ body.zile-lipite #tabOrar .day-selector::before {
   border-radius: 18px;
   text-align: left;
   font-size: 0.88rem;
-  background: rgba(22, 32, 44, 0.86);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12);
   transform: translateX(-50%) translateY(16px);
 }
 
@@ -10610,10 +10358,6 @@ body.zile-lipite #tabOrar .day-selector::before {
   transform: translateX(-50%) translateY(0);
 }
 
-#customToast.success,
-#customToast.error {
-  background: rgba(22, 32, 44, 0.86);
-}
 
 #customToast::before {
   content: "";
@@ -11042,7 +10786,6 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-notificari:not(.btn-mesaje) .notificari-bulina { animation: none; }
 }
 
 /* Bulinele fără contur alb; cifra de la mesaje stă în interiorul butonului, în colț */
@@ -11542,14 +11285,12 @@ input[type="search"]::-webkit-search-cancel-button {
 /* ===================== Derulare fluidă pe Android (același aspect, mai puțin de lucru pentru telefon) ===================== */
 /* Pulsările: inel care se mărește (transform), nu umbră animată la infinit */
 .hour-acum i {
-  animation: none;
   position: relative;
 }
 
 .btn-notificari:not(.btn-mesaje) .notificari-bulina {
   top: 8px;
   right: 9px;
-  animation: none;
 }
 
 .hour-acum i::after,
