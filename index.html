@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal191">
+  <link rel="stylesheet" href="style.css?v=fitFinal192">
 </head>
 <body>
 
@@ -1311,16 +1311,9 @@
   <header id="mainAppHeader">
     <div class="header-title-wrapper" id="pageTitleWrapper">
       <button class="header-icon-bubble-btn header-icon-clickable" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="Comută selectorul de săptămână">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="9" x2="21" y2="9"></line>
-          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">21</text>
-          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="#fff" stroke="none">DEC</text>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="4.5"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line><text class="cal-zi" x="12" y="18.3" font-size="8.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text></svg>
       </button>
-      <span id="pageTitle">Orar Săptămânal</span>
+      <span id="pageTitle">Orar</span>
     </div>
 
     <!-- Mesajele cu clienții (lista conversațiilor) și clopoțelul de notificări: vizibile de la deschidere -->
@@ -1336,9 +1329,9 @@
     <!-- Buton Dreapta: Meniu Burger SAU Buton Închide '✕' pe Plan de Antrenament -->
     <button class="header-icon-bubble-btn" id="headerBurgerBtn" onclick="gestioneazaClickDreaptaHeader()" title="Meniu" style="margin-left: auto;">
       <svg id="headerRightIconSvg" viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="3" y1="6" x2="21" y2="6"></line>
-        <line x1="3" y1="12" x2="21" y2="12"></line>
-        <line x1="3" y1="18" x2="21" y2="18"></line>
+        <line x1="4" y1="7" x2="20" y2="7"></line>
+        <line x1="4" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17" x2="14" y2="17"></line>
       </svg>
     </button>
   </header>
@@ -1347,7 +1340,19 @@
     
     <!-- 1. ORAR -->
     <div id="tabOrar" class="tab-content active">
-      
+
+      <!-- Titlul mare (ziua aleasă) și cifrele zilei; titlul se strânge în antet la scroll -->
+      <div class="orar-titlu-mare">
+        <div class="orar-titlu-text">
+          <span id="orarDataLunga"></span>
+          <h1 id="orarTitluText">Orar</h1>
+        </div>
+        <button type="button" class="orar-cauta-btn" id="btnCautaClient" onclick="deschideCautareClient()" title="Caută client" aria-label="Caută client" data-en-title="Find client" data-en-aria="Find client">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        </button>
+      </div>
+      <div class="orar-cifre" id="orarCifre" hidden></div>
+
       <div class="calendar-expandable-card" id="calendarExpandableCard">
         <div class="calendar-header-info">
           <div class="calendar-title-container">
@@ -1382,25 +1387,30 @@
         </div>
         <div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0;">
           <span class="camp-ora">
-            <input type="time" id="inputOraCustom" onclick="deschideCalendarData(this)" style="width: 96px; padding: 5px 27px 5px 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; background: var(--card-bg); color: var(--text);">
+            <input type="time" id="inputOraCustom" required onclick="deschideCalendarData(this)" style="width: 96px; padding: 5px 27px 5px 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.82rem; background: var(--card-bg); color: var(--text);">
             <span class="hour-icon-static camp-ora-icona"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
           </span>
-          <button class="btn" style="padding: 5px 8px; font-size: 0.76rem; white-space: nowrap;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()">Adaugă</button>
+          <button class="btn" style="padding: 5px 8px; font-size: 0.76rem; white-space: nowrap;" id="btnAddOraCustomAction" onclick="adaugaOraCustom()" title="Adaugă" aria-label="Adaugă"><svg viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg></button>
         </div>
       </div>
 
       <!-- CARD FINALUL PROGRAMULUI CU GANTERĂ -->
       <div class="end-schedule-card" id="endScheduleCard">
-        <div class="end-schedule-icon-wrap">
-          <svg class="end-schedule-dumbbell-svg" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="2" y="10.5" width="2" height="3" rx="0.8" />
-            <rect x="4.5" y="6" width="3.5" height="12" rx="1.6" />
-            <rect x="8.5" y="8" width="2.5" height="8" rx="1.2" />
-            <rect x="10" y="10.25" width="4" height="3.5" rx="0.8" />
-            <rect x="13" y="8" width="2.5" height="8" rx="1.2" />
-            <rect x="16" y="6" width="3.5" height="12" rx="1.6" />
-            <rect x="20" y="10.5" width="2" height="3" rx="0.8" />
-          </svg>
+        <div class="end-schedule-icon-wrap" aria-hidden="true">
+          <span class="final-inel"></span>
+          <span class="final-inel al-doilea"></span>
+          <span class="final-stea s1"><svg viewBox="0 0 24 24"><path d="M12 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5z"/></svg></span>
+          <span class="final-stea s2"><svg viewBox="0 0 24 24"><path d="M12 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5z"/></svg></span>
+          <span class="final-stea s3"><svg viewBox="0 0 24 24"><path d="M12 1.5c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5 4.6-.6 7.9-3.9 8.5-8.5z"/></svg></span>
+          <span class="final-orb">
+            <svg class="end-schedule-dumbbell-svg" viewBox="0 0 24 24">
+              <path d="M7.2 6H4.6a2.4 2.4 0 0 0 2.9 3.6M16.8 6h2.6a2.4 2.4 0 0 1-2.9 3.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              <path d="M7 3.5h10v5a5 5 0 0 1-10 0z" fill="currentColor" />
+              <path d="M12 13.5v3.6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" />
+              <rect x="8" y="17.6" width="8" height="2.8" rx="1.4" fill="currentColor" />
+              <path d="M12 4.9l.85 1.75 1.9.25-1.4 1.3.35 1.9L12 9.2l-1.7.9.35-1.9-1.4-1.3 1.9-.25z" style="fill: rgba(var(--accent-rgb), 0.95);" />
+            </svg>
+          </span>
         </div>
         <div class="end-schedule-content">
           <div class="end-schedule-title" id="endScheduleTitleText">Ziua-i gata, caloriile-s topite!</div>
@@ -2017,16 +2027,9 @@
       <div class="nav-mercury-drop"></div>
     </div>
 
-    <button class="active" onclick="comutaTab('tabOrar', 'Orar Săptămânal', this, 'orar', 0)" id="navBtnOrar">
+    <button class="active" onclick="comutaTab('tabOrar', 'Orar', this, 'orar', 0)" id="navBtnOrar">
       <div class="nav-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-          <line x1="16" y1="2" x2="16" y2="6"></line>
-          <line x1="8" y1="2" x2="8" y2="6"></line>
-          <line x1="3" y1="9" x2="21" y2="9"></line>
-          <text x="12" y="15" font-size="5.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text>
-          <text x="12" y="19.5" font-size="4" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">DEC</text>
-        </svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect class="nav-umplere" x="3" y="4" width="18" height="18" rx="4.5"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line><text class="cal-zi" x="12" y="18.3" font-size="8.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle">21</text></svg>
       </div>
       <span id="navTextOrar">Orar</span>
     </button>
@@ -2034,8 +2037,9 @@
     <button onclick="comutaTab('tabProgramari', 'Confirmări', this, 'prog', 1)" id="navBtnProg">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
-          <path d="M9 11l3 3L22 4"></path>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+          <rect class="nav-umplere" x="4.5" y="4" width="15" height="17.5" rx="4"></rect>
+          <path d="M9 4V3.2c0-.4.3-.7.7-.7h4.6c.4 0 .7.3.7.7V4"></path>
+          <path d="M8.8 13l2.3 2.3 4.2-4.4"></path>
         </svg>
       </div>
       <span id="navTextProg">Confirmări</span>
@@ -2044,9 +2048,9 @@
     <button onclick="comutaTab('tabFisa', 'Fișă Client', this, 'fisa', 2)" id="navBtnFisa">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-          <circle cx="12" cy="10" r="3"></circle>
-          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
+          <circle class="nav-umplere" cx="12" cy="12" r="9.5"></circle>
+          <circle cx="12" cy="9.8" r="3"></circle>
+          <path d="M6.4 18.4c1.2-2.3 3.2-3.5 5.6-3.5s4.4 1.2 5.6 3.5"></path>
         </svg>
       </div>
       <span id="navTextFisa">Fișă</span>
@@ -2055,10 +2059,12 @@
     <button onclick="comutaTab('tabIncasari', 'Încasări', this, 'incasari', 3)" id="navBtnIncasari">
       <div class="nav-icon">
         <svg viewBox="0 0 24 24">
-          <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-          <line x1="2" y1="10" x2="22" y2="10"></line>
-          <circle cx="14" cy="15" r="1.8" fill="currentColor" stroke="none"></circle>
-          <circle cx="17" cy="15" r="1.8" fill="currentColor" stroke="none" opacity="0.6"></circle>
+          <ellipse class="nav-umplere" cx="10" cy="6.5" rx="6.5" ry="3"></ellipse>
+          <path d="M3.5 6.5v4.5c0 1.7 2.9 3 6.5 3"></path>
+          <path d="M3.5 11v4.5c0 1.7 2.9 3 6.5 3"></path>
+          <path d="M16.5 6.5v2.3"></path>
+          <ellipse class="nav-umplere" cx="15" cy="13" rx="5.5" ry="2.6"></ellipse>
+          <path d="M9.5 13v4.4c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6V13"></path>
         </svg>
       </div>
       <span id="navTextIncasari">Încasări</span>
@@ -2066,7 +2072,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal191"></script>
-  <script src="app.js?v=fitFinal191"></script>
+  <script src="sabloane.js?v=fitFinal192"></script>
+  <script src="app.js?v=fitFinal192"></script>
 </body>
 </html>
