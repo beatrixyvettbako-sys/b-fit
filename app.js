@@ -1589,7 +1589,7 @@ function gasesteClientaValida(numeIntrodus) {
     const bara = document.getElementById('dayButtonsContainer');
     const antet = document.getElementById('mainAppHeader');
     if (!bara || !antet || !bara.offsetParent) return;
-    const lipite = bara.getBoundingClientRect().top <= antet.offsetHeight + 6;
+    const lipite = bara.getBoundingClientRect().top <= antet.offsetHeight + 1;
     if (lipite !== stareLipite) { stareLipite = lipite; document.body.classList.toggle('zile-lipite', lipite); }
   };
   window.addEventListener('scroll', () => {
@@ -2879,7 +2879,8 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
   // Distanța reală de la bara de jos la marginea ecranului (pe Android include și zona barei de gesturi), nu 10px fixe
   const navJos = document.getElementById('bottomNav');
   const margineJos = navJos ? Math.max(10, Math.round(vh - navJos.getBoundingClientRect().bottom)) : 10;
-  let spatiuVizibilUtil = vh - topOffset - hNav - margineJos - 12 + DIFERENTA_NAV_COMPACT;
+  // -12: spațiu liber între Istoric și bara de jos (pe Orar, pagina are în jos 12px în plus, vezi body.pe-orar în style.css)
+  let spatiuVizibilUtil = vh - topOffset - hNav - margineJos - 12 - 12 + DIFERENTA_NAV_COMPACT;
 
   let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
   let blockRect = closestBlock.getBoundingClientRect();

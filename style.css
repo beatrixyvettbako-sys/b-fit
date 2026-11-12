@@ -11810,3 +11810,49 @@ html #tabOrar .day-selector {
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
+
+/* ===================== v198: placa video liberă, Istoric deasupra barei, lipire fără salt, fără derulare sub ferestre ===================== */
+/* Animațiile decorative rulează de câteva ori și se opresc: o animație continuă obliga browserul să redeseneze
+   (și să recalculeze estompările) la fiecare cadru, chiar fără atingere */
+.final-orb { animation-iteration-count: 6; }
+.final-inel, .final-stea { animation-iteration-count: 3; }
+.hour-acum i::after,
+.btn-notificari:not(.btn-mesaje) .notificari-bulina::after { animation-iteration-count: 4; }
+.hour-acum i,
+.btn-notificari:not(.btn-mesaje) .notificari-bulina { animation: none; }
+
+/* Pe Orar, pagina are în jos 12px în plus, ca Istoricul să rămână deasupra barei de jos și la ultima oră a zilei */
+body.pe-orar {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+}
+
+body.pe-orar:has(nav.nav-compact) {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Bara de zile: aceeași poziție lipită înainte și după unirea cu antetul, deci unirea e instantă, fără salt */
+#tabOrar .day-selector,
+html[data-theme] #tabOrar .day-selector {
+  top: calc(var(--header-height) - 1px);
+}
+
+/* Cât e deschisă o fereastră (fișa pe scurt, căutarea, notificările de jos, confirmarea), pagina din spate nu se derulează */
+html:has(.fisa-scurta-fundal),
+html:has(#customModalBackdrop[style*="flex"]),
+html:has(.fisa-scurta-fundal) body,
+html:has(#customModalBackdrop[style*="flex"]) body {
+  overflow: hidden;
+}
+
+.fisa-scurta,
+.fisa-scurta-fundal,
+#customModalBackdrop {
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.fisa-scurta .notif-rapid-lista,
+.fisa-scurta .cautare-client-rezultate {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
