@@ -3090,6 +3090,33 @@ function peComutareIstoricOrar(detailsEl) {
   // La închidere pagina rămâne unde e (fără salt la ora curentă, care te scotea din locul în care erai)
 }
 
+// Secțiunile cu săgeată (istoricele, secțiunile din Fișă): se desfășoară / se strâng mereu la fel
+document.addEventListener('click', (ev) => {
+  let summary = ev.target.closest('summary.summary-toggle-clean');
+  let det = summary && summary.parentElement;
+  if (!det || det.tagName !== 'DETAILS' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  ev.preventDefault();
+  if (det.dataset.animatie) return;
+  det.dataset.animatie = '1';
+  let cs = getComputedStyle(det);
+  let inchis = summary.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+  let anima = (de, la, laFinal) => {
+    det.style.overflow = 'hidden';
+    det.animate([{ height: de + 'px' }, { height: la + 'px' }], { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }).onfinish = () => {
+      if (laFinal) laFinal();
+      det.style.overflow = '';
+      delete det.dataset.animatie;
+    };
+  };
+  if (det.open) {
+    anima(det.offsetHeight, inchis, () => { det.open = false; });
+  } else {
+    // ontoggle-ul secțiunii (dacă are) randează întâi conținutul, apoi se măsoară înălțimea reală
+    det.addEventListener('toggle', () => anima(inchis, det.offsetHeight), { once: true });
+    det.open = true;
+  }
+});
+
 function peComutareIstoricFisa(detailsEl) {
   if (detailsEl && detailsEl.open) {
     setTimeout(() => {

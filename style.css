@@ -10626,8 +10626,8 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   gap: 10px;
   min-width: 0;
   font-size: 1rem;
-  font-weight: 800;
-  color: var(--m-text);
+  font-weight: 700;
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
