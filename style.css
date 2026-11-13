@@ -2202,16 +2202,50 @@ html[data-rol="clienta"] #bottomNav {
   text-align: center;
 }
 
+/* Notificările: grupate pe zile, fiecare grup un card de sticlă ca pe Orar, cu rânduri despărțite de linii fine */
+.notificari-grup {
+  margin: 16px 6px 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--m-muted);
+}
+
+.notificari-lista {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: var(--m-card);
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-shadow);
+}
+
+.notificari-lista::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 32%);
+}
+
+html:not([data-theme="dark"]) .notificari-lista::before {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
+}
+
+.notificari-lista .notificari-gol {
+  position: relative;
+  padding: 18px;
+}
+
 .notificare {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   width: 100%;
-  margin-bottom: 6px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--card-bg);
+  padding: 12px 40px 12px 14px;
+  border: none;
+  background: transparent;
   color: var(--text);
   text-align: left;
   font-family: inherit;
@@ -2227,10 +2261,11 @@ html[data-rol="clienta"] #bottomNav {
 /* × de ascundere, peste colțul din dreapta-jos al notificării */
 .notificare-rand {
   position: relative;
+  border-bottom: 1px solid var(--m-divider);
 }
 
-.notificare-rand .notificare {
-  padding-right: 34px;
+.notificare-rand:last-child {
+  border-bottom: none;
 }
 
 .notificare-x {
@@ -2252,9 +2287,21 @@ html[data-rol="clienta"] #bottomNav {
   background: var(--border);
 }
 
+/* Necitită: fundal de accent, titlu îngroșat, bulină plină; citită: titlu normal, bulina estompată */
 .notificare.necitita {
-  border-color: rgba(var(--accent-rgb), 0.5);
-  background: var(--primary-light);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.notificare.necitita .notificare-text b {
+  font-weight: 800;
+}
+
+.notificare:not(.necitita) .notificare-text b {
+  font-weight: 600;
+}
+
+.notificare:not(.necitita) .notificare-icon {
+  opacity: 0.3;
 }
 
 .notificare-icon {
@@ -2284,15 +2331,16 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 .notificare-text b {
-  font-size: 0.86rem;
-  color: var(--primary);
-}
-
-[data-theme="dark"] .notificare-text b {
+  font-size: 0.88rem;
   color: var(--text);
 }
 
+/* Mesajul pe cel mult două rânduri */
 .notificare-text span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 0.8rem;
   line-height: 1.35;
   color: var(--text-muted);
@@ -3627,8 +3675,8 @@ nav button.active svg {
 }
 
 /* CARDURI GENERALE & DETAILS */
-.card,
 /* Hold din Confirmări e și el un <details>, dar sticla o au antetul și cardul lui, nu cutia din jur */
+.card,
 details:where(:not(.prog-hold)) {
   background: var(--card-bg) !important;
   border-radius: var(--radius);
@@ -9303,7 +9351,34 @@ nav button .nav-icon .cal-zi {
   transition: opacity 0.2s ease;
 }
 
-body.orar-titlu-strans .orar-titlu-text {
+body.orar-titlu-strans .tab-content .orar-titlu-text,
+.stil-nou-ecran.titlu-strans .orar-titlu-text {
+  opacity: 0;
+}
+
+/* Ecranele de deasupra aplicației (Notificări): textele din machetă; antetul e transparent și fără titlu
+   până derulezi, apoi sticlă cu titlul mic */
+.stil-nou-ecran {
+  --text: var(--m-text);
+  --text-muted: var(--m-muted);
+}
+
+.stil-nou-ecran .stil-nou-antet {
+  color: var(--m-text);
+  transition: background-color 0.2s ease;
+}
+
+.stil-nou-ecran:not(.titlu-strans) .stil-nou-antet {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.stil-nou-antet .clienta-title {
+  transition: opacity 0.2s ease;
+}
+
+.stil-nou-ecran:not(.titlu-strans) .stil-nou-antet .clienta-title {
   opacity: 0;
 }
 
@@ -9392,8 +9467,15 @@ button.orar-cifra {
   cursor: pointer;
 }
 
+/* Cifra aleasă pare apăsată: o nuanță de accent și o umbră interioară, fără contur */
 .orar-cifra.activ {
-  border: 1.5px solid var(--accent-purple);
+  background: rgba(var(--accent-rgb), 0.14);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .orar-cifra.activ {
+  background: rgba(var(--accent-rgb), 0.22);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 button.orar-cifra:disabled {
@@ -10054,19 +10136,21 @@ body.stil-nou:not(.orar-titlu-strans) #mainAppHeader {
 }
 
 
-body.stil-nou #mainAppHeader .header-icon-bubble-btn,
-body.stil-nou #mainAppHeader .header-icon-bubble-btn.header-icon-clickable {
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn,
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn.header-icon-clickable {
   width: 40px;
   height: 40px;
+  border-radius: 50%;
   background: var(--m-card);
   border: 1px solid var(--m-border);
   color: var(--m-text);
   box-shadow: var(--m-float);
 }
 
-body.stil-nou #mainAppHeader .header-icon-bubble-btn svg {
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn svg {
   width: 19px;
   height: 19px;
+  stroke: currentColor;
 }
 
 body.stil-nou #mainAppHeader #headerIconOrarBtn {
@@ -10281,7 +10365,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 #tabOrar .btn-bifeaza-ora,
 #tabOrar #btnAddOraCustomAction,
 #tabOrar .drawer-nav-btn,
-body.stil-nou #mainAppHeader .header-icon-bubble-btn {
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn {
   position: relative;
 }
 
@@ -10299,7 +10383,7 @@ body.stil-nou #mainAppHeader .header-icon-bubble-btn {
 #tabOrar #btnAddOraCustomAction::before,
 #tabOrar .drawer-nav-btn::before,
 .final-orb::before,
-body.stil-nou #mainAppHeader .header-icon-bubble-btn::before,
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn::before,
 body.stil-nou #bottomNav::before {
   content: "";
   position: absolute;
@@ -10408,12 +10492,12 @@ body.stil-nou #pageTitle {
   font-size: 0.82rem;
 }
 
-/* Bara de zile lipită sus: se unește cu antetul într-un singur panou de sticlă */
-body.pe-orar.zile-lipite #mainAppHeader {
+/* Antetul derulat, pe toate ecranele în stilul nou: aceeași sticlă ca bara de zile lipită pe Orar (se unesc într-un panou) */
+body.stil-nou.orar-titlu-strans #mainAppHeader {
   background: rgba(255, 255, 255, 0.55);
 }
 
-[data-theme="dark"] body.pe-orar.zile-lipite #mainAppHeader {
+[data-theme="dark"] body.stil-nou.orar-titlu-strans #mainAppHeader {
   background: rgba(20, 28, 34, 0.6);
 }
 
@@ -10854,53 +10938,22 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
   font-weight: 800;
 }
 
+/* Rândurile sunt cele din pagina completă (.notificare, într-un card .notificari-lista); aici lista derulează în fereastră */
 .notif-rapid-lista {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   overflow-y: auto;
   min-height: 0;
+  flex-shrink: 1;
 }
 
-.notif-rapid-rand {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 100%;
-  padding: 12px;
-  text-align: left;
-  font-family: inherit;
-  color: inherit;
-  cursor: pointer;
-  border-radius: 18px;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.25);
+/* Aici toate sunt necitite: titlul îngroșat și bulina rămân, fundalul de accent ar fi doar zgomot */
+.notif-rapid-lista .notificare {
+  position: relative;
+  padding-right: 14px;
+  background: transparent;
 }
 
-.notif-rapid-rand i {
-  flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  margin-top: 5px;
-  border-radius: 50%;
-  background: var(--accent-purple);
-}
-
-.notif-rapid-rand span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.notif-rapid-rand b {
-  font-size: 0.95rem;
-}
-
-.notif-rapid-rand small {
-  font-size: 0.82rem;
-  color: var(--text-muted);
+.notif-rapid-lista .notificare + .notificare {
+  border-top: 1px solid var(--m-divider);
 }
 
 .notif-rapid-toate {
@@ -10914,12 +10967,6 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
   background: rgba(var(--accent-rgb), 0.26);
   border: 1px solid rgba(var(--accent-light-rgb), 0.38);
   box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 4px 12px rgba(var(--accent-rgb), 0.2);
-}
-
-[data-theme="dark"] .notif-rapid-rand {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 [data-theme="dark"] .notif-rapid-toate {
@@ -10955,20 +11002,22 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
 
 /* ===================== Lumina albăstruie și aceleași efecte de sticlă pe tema deschisă ===================== */
 /* Pata de jos a fundalului: albăstruie (indigo), nu verde */
-body.stil-nou {
+body.stil-nou,
+.stil-nou-ecran {
   background-image: radial-gradient(circle at 8% 4%, rgba(var(--accent-rgb), 0.28) 0%, transparent 40%),
                     radial-gradient(circle at 100% 38%, rgba(59, 130, 246, 0.14) 0%, transparent 38%),
                     radial-gradient(circle at 10% 85%, rgba(129, 140, 248, 0.16) 0%, transparent 40%);
 }
 
-[data-theme="dark"] body.stil-nou {
+[data-theme="dark"] body.stil-nou,
+[data-theme="dark"] .stil-nou-ecran {
   background-image: radial-gradient(circle at 8% 4%, rgba(var(--accent-rgb), 0.35) 0%, transparent 40%),
                     radial-gradient(circle at 100% 38%, rgba(59, 130, 246, 0.18) 0%, transparent 38%),
                     radial-gradient(circle at 10% 85%, rgba(129, 140, 248, 0.2) 0%, transparent 40%);
 }
 
 /* Tema deschisă: lumina din stânga-sus vizibilă (pe alb, „soft-light” nu se vede) */
-html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, #tabOrar #detailsIstoricOrar, #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, #tabOrar .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, body.stil-nou #mainAppHeader .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
+html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, #tabOrar #detailsIstoricOrar, #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, #tabOrar .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
@@ -11483,7 +11532,6 @@ input[type="search"]::-webkit-search-cancel-button {
 
 /* Estomparea care plutește peste conținut: mai ușoară (fără saturare) */
 body.stil-nou #mainAppHeader,
-body.pe-orar.zile-lipite #mainAppHeader,
 #tabOrar .day-selector,
 body.stil-nou #bottomNav {
   backdrop-filter: blur(16px);
@@ -11690,15 +11738,14 @@ input.cautare-client-camp:focus {
 
 /* Estompare: fără estompări suprapuse (butoanele din antet stau deja pe antetul estompat), iar barele plutitoare
    cu o estompare mai mică — efectul de sticlă rămâne, telefonul are mult mai puțin de recalculat la fiecare cadru */
-body.stil-nou #mainAppHeader .header-icon-bubble-btn,
-body.stil-nou #mainAppHeader .header-icon-bubble-btn.header-icon-clickable,
-html:not([data-theme="dark"]) body.stil-nou :is(#mainAppHeader .header-icon-bubble-btn) {
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn,
+:is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn.header-icon-clickable,
+html:not([data-theme="dark"]) :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
 
 body.stil-nou.orar-titlu-strans #mainAppHeader,
-body.pe-orar.zile-lipite #mainAppHeader,
 #tabOrar .day-selector,
 body.stil-nou #bottomNav {
   backdrop-filter: blur(10px);

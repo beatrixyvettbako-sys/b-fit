@@ -17,13 +17,14 @@ Regulile de cod (modifici în loc să adaugi, ștergi ce rămâne fără efect, 
 - **Cifre mari** (ca `.orar-cifra`): 1.6rem, 800, `letter-spacing: -0.5px`, cu eticheta dedesubt.
 - **Text pe ecran:** pe containerul tab-ului pui `--text: var(--m-text); --text-muted: var(--m-muted); padding: 10px 8px 0;`.
 - **Clasa `stil-nou` pe `body`** aduce fundalul cu pete de lumină, antetul transparent cu butoane-bulă și bara de jos de sticlă. Ca să treci un ecran pe stilul nou, adaugi id-ul tab-ului în cele două liste din `app.js`: cea din `comutaTab` și cea de la pornire, lângă `pe-orar`. `pe-orar` rămâne doar pentru ce ține strict de Orar (bara de zile, calibrarea).
+- **Ecranele de deasupra aplicației** (`.clienta-app`: Notificări, conversații, poze) primesc clasa `stil-nou-ecran` pe ecran și `stil-nou-antet` pe `<header>`. Asta aduce fundalul, bulele de sticlă rotunde și antetul transparent, care devine sticlă cu titlul mic la derulare (listenerul de `scroll` din `app.js` pune `titlu-strans`). Titlul mare se pune în pagină cu `.orar-titlu-mare`.
 - **Titlul mare și cifrele de sus:** refolosești `.orar-titlu-mare` / `.orar-titlu-text` și `.orar-cifre` / `.orar-cifra` (variante de culoare `-verde`, `-rosu`, `-portocaliu`, `-accent`). Ca filtru, `.orar-cifra` e `<button>`, iar cea aleasă primește clasa `activ`.
 - **Avatar:** `.slot-num` cu `avatarSlotHtml(c)`, iar apăsarea deschide `arataFisaScurta(id)`.
 - Culorile de sens rămân cele din `CLAUDE.md` (verde, roșu, portocaliu Hold).
 
 ## Ordinea redesign-ului (o versiune per ecran)
 
-Gata: Orar, Confirmări (titlu mare, cifre-filtru, rânduri cu avatar, mențiune la cerere, Hold strâns). Urmează: Încasări → Fișă client → Plan antrenament / alimentar → Chat → Notificări → Setări și submeniuri → ferestre (`customModal`, fișa pe scurt, căutare) → ecranul clientului (`#clientaScreen`).
+Gata: Orar, Confirmări (titlu mare, cifre-filtru, rânduri cu avatar, fișa pe scurt cu ținta / mențiunea / Hold), Notificări (grupate pe zile, un card pe grup). Urmează: Încasări → Fișă client → Plan antrenament / alimentar → Chat → Notificări → Setări și submeniuri → ferestre (`customModal`, fișa pe scurt, căutare) → ecranul clientului (`#clientaScreen`).
 
 ## Verificare înainte de „gata”
 

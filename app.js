@@ -1636,6 +1636,13 @@ function gasesteClientaValida(numeIntrodus) {
   });
 })();
 
+// Ecranele de deasupra aplicației în stilul nou (.stil-nou-ecran, ex. Notificări) derulează în ele, nu în pagină:
+// după primii pixeli, titlul mare lasă locul celui mic din antet, ca pe Orar
+document.addEventListener('scroll', e => {
+  const el = e.target;
+  if (el.classList && el.classList.contains('stil-nou-ecran')) el.classList.toggle('titlu-strans', el.scrollTop > 60);
+}, { capture: true, passive: true });
+
 // Service worker: pagina se ia mereu de pe internet (versiunea nouă apare la deschidere), fișierele merg și offline
 // Local (127.0.0.1 / localhost) fără service worker, ca modificările să se vadă imediat la testare
 if ('serviceWorker' in navigator) {
@@ -15006,9 +15013,13 @@ function arataNotificariRapid() {
   foaie.innerHTML = `
     <div class="fisa-scurta-maner"><span></span></div>
     <div class="notif-rapid-titlu">${tr('Notificări noi', 'New notifications')}</div>
-    <div class="notif-rapid-lista">${necitite.map(n => {
+    <div class="notificari-lista notif-rapid-lista">${necitite.map(n => {
       const [titlu, mesaj] = textNotificare(n);
-      return `<button type="button" class="notif-rapid-rand" data-id="${escAttr(n.id)}"><i></i><span><b>${titlu}</b><small>${mesaj}</small></span></button>`;
+      // Același rând ca în pagina completă de notificări (bulina colorată după tip, ora), fără ×
+      return `<button type="button" class="notificare necitita notif-rapid-rand" data-id="${escAttr(n.id)}">
+        <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
+        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
+        <small>${escAttr(cand(n.created_at))}</small></button>`;
     }).join('')}</div>
     <button type="button" class="notif-rapid-toate">${tr('Vezi toate', 'See all')}</button>`;
   foaie.querySelectorAll('.notif-rapid-rand').forEach(b => {
@@ -15069,24 +15080,36 @@ function inchidePanouNotificari() {
 function randeazaNotificari() {
   const corp = document.getElementById('notificariContinut');
   document.getElementById('btnStergeNotificari').style.visibility = notificari.length ? '' : 'hidden';
+  // Ca pe Orar: titlul mare în pagină (cel mic apare în antet la derulare), dedesubt câte sunt noi
+  const noi = notificari.filter(n => !n.citit).length;
+  const titluMare = `<div class="orar-titlu-mare"><div class="orar-titlu-text">
+    <span>${noi ? tr(`${noi} ${noi === 1 ? 'nouă' : 'noi'}`, `${noi} new`) : tr('Toate citite', 'All read')}</span>
+    <h1>${tr('Notificări', 'Notifications')}</h1></div></div>`;
   if (!notificari.length) {
-    corp.innerHTML = htmlCardPush() + `<div class="card notificari-gol">${tr('Nu ai notificări încă.', 'No notifications yet.')}</div>`;
+    corp.innerHTML = titluMare + htmlCardPush() + `<div class="notificari-lista"><div class="notificari-gol">${tr('Nu ai notificări încă.', 'No notifications yet.')}</div></div>`;
     return;
   }
+  // Grupate pe zile (Azi / Ieri / Mai devreme), fiecare grup într-un card de sticlă
+  const azi = new Date(); azi.setHours(0, 0, 0, 0);
+  const grupa = n => { const zile = Math.round((azi - new Date(n.created_at).setHours(0, 0, 0, 0)) / 86400000); return zile <= 0 ? 0 : zile === 1 ? 1 : 2; };
+  const etichete = [tr('Azi', 'Today'), tr('Ieri', 'Yesterday'), tr('Mai devreme', 'Earlier')];
+  const grupuri = [[], [], []];
   // Necititele rămân evidențiate cât timp panoul e deschis (au fost desenate înainte de marcarea ca citite)
-  corp.innerHTML = htmlCardPush() + notificari.map(n => {
+  notificari.forEach(n => {
     const [titlu, mesaj] = textNotificare(n);
     // Fără loc în aplicație unde să ducă: rămâne doar de citit; clientul șters răspunde totuși cu un mesaj
     const actiune = areDestinatieNotificare(n) || esteClientSters(n) ? `onclick="deschideNotificare('${n.id}')"` : 'disabled';
-    return `<div class="notificare-rand">
+    grupuri[grupa(n)].push(`<div class="notificare-rand">
       <button type="button" class="notificare${n.citit ? '' : ' necitita'}" ${actiune}>
         <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
         <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
         <small>${escAttr(cand(n.created_at))}</small>
       </button>
       <button type="button" class="notificare-x" onclick="ascundeNotificare('${n.id}')" aria-label="${tr('Șterge notificarea', 'Remove notification')}">×</button>
-    </div>`;
-  }).join('');
+    </div>`);
+  });
+  corp.innerHTML = titluMare + htmlCardPush() + grupuri.map((g, i) => g.length
+    ? `<div class="notificari-grup">${etichete[i]}</div><div class="notificari-lista">${g.join('')}</div>` : '').join('');
 }
 
 // Notificările se ascund, nu se șterg: rândul (cu cheia lui) rămâne, ca aceeași notificare să nu fie trimisă din nou
