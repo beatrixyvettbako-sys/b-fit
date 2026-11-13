@@ -1576,6 +1576,26 @@ function gasesteClientaValida(numeIntrodus) {
   }
 
   urmareste(window, 'bottomNav', () => window.scrollY);
+
+  // Pe Android, o atingere cât pagina încă alunecă după derulare doar o oprește și nu dă click.
+  // Pe bara de jos o atingere scurtă, fără mișcare, apasă direct butonul.
+  ['bottomNav', 'clientaNav'].forEach(id => {
+    const navEl = document.getElementById(id);
+    if (!navEl) return;
+    let atingere = null;
+    navEl.addEventListener('touchstart', e => {
+      const t = e.touches[0];
+      atingere = { x: t.clientX, y: t.clientY, ms: Date.now(), btn: e.target.closest('button') };
+    }, { passive: true });
+    navEl.addEventListener('touchend', e => {
+      const t = e.changedTouches[0];
+      const a = atingere;
+      atingere = null;
+      if (!a || !a.btn || e.touches.length || Math.hypot(t.clientX - a.x, t.clientY - a.y) > 12 || Date.now() - a.ms > 600) return;
+      e.preventDefault(); // fără click-ul obișnuit, altfel butonul s-ar apăsa de două ori
+      a.btn.click();
+    });
+  });
   // Pe Orar, titlul mare se strânge în antet după primii pixeli de scroll
   // Bara de zile lipită sus se unește cu antetul într-un singur panou de sticlă.
   // O singură verificare pe cadru; clasele se schimbă doar când chiar se schimbă starea.
@@ -2973,6 +2993,13 @@ function autoScrollLaOraCurenta(faraHighlight = false) {
 
   let tabOrar = document.getElementById('tabOrar');
   if (!tabOrar || !tabOrar.classList.contains('active')) return;
+
+  // Eticheta „Acum” se pune la randare: dacă între timp s-a schimbat ora (aplicația a stat deschisă), redesenăm orarul
+  const hh = String(currentHour).padStart(2, '0');
+  const blocCuAcum = document.querySelector('#sloturiContainer .hour-acum')?.closest('.hour-block');
+  if (blocCuAcum ? blocCuAcum.dataset.ora.slice(0, 2) !== hh : document.querySelector(`#sloturiContainer .hour-block[data-ora^="${hh}:"]`)) {
+    randeazaOrarInstant();
+  }
 
   let hourBlocks = document.querySelectorAll('.hour-block');
   if (!hourBlocks || hourBlocks.length === 0) return;
@@ -11562,10 +11589,10 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
       <b>${escAttr(c.nume)}</b>
     </div>
     <div class="fisa-scurta-grila">
-      <div><span>${tr('Ședințe rămase', 'Sessions left')}</span><b class="${ramaseCls.trim()}">${ramaseText}</b></div>
-      <div><span>${tr('Abonament', 'Membership')}</span><b>${escAttr(traduceValoare(c.tipAbonament))}</b></div>
-      <div><span>${tr('Ultima prezență', 'Last attendance')}</span><b>${ultima ? escAttr(ultima.data) : '–'}</b></div>
-      <div><span>${tr('Valabil până la', 'Valid until')}</span><b>${escAttr(c.dataExpirare)}</b></div>
+      <div><b class="${ramaseCls.trim()}">${ramaseText}</b><span>${tr('Ședințe rămase', 'Sessions left')}</span></div>
+      <div><b>${escAttr(traduceValoare(c.tipAbonament))}</b><span>${tr('Abonament', 'Membership')}</span></div>
+      <div><b>${ultima ? escAttr(ultima.data) : '–'}</b><span>${tr('Ultima prezență', 'Last attendance')}</span></div>
+      <div><b>${escAttr(c.dataExpirare)}</b><span>${tr('Valabil până la', 'Valid until')}</span></div>
     </div>
     <div class="fisa-scurta-actiuni">
       ${dinSlot ? `<button type="button" class="fisa-scurta-actiune" id="btnRepetaSaptamanal" title="${tr('Același loc în următoarele 4 săptămâni', 'Same spot for the next 4 weeks')}"><svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${tr('Repetă săptămânal', 'Repeat weekly')}</button>` : ''}
@@ -12459,6 +12486,7 @@ function bifeazaToataOra(zi, ora) {
   let g = null;
   let ziStart = null;
   let opresteClick = false;
+  const PRAG = 64; // px trași pentru Prezent / Golește; o glisare scurtă dar rapidă ajunge și ea
 
   cont.addEventListener('click', e => {
     if (opresteClick) { e.stopPropagation(); e.preventDefault(); opresteClick = false; }
@@ -12489,7 +12517,7 @@ function bifeazaToataOra(zi, ora) {
     const dy = e.clientY - g.y;
     if (!g.activ) {
       if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { g = null; return; }
-      if (Math.abs(dx) < 12) return;
+      if (Math.abs(dx) < 8) return;
       g.activ = true;
       try { g.row.setPointerCapture(e.pointerId); } catch (x) {}
       g.fundal = document.createElement('div');
@@ -12502,12 +12530,15 @@ function bifeazaToataOra(zi, ora) {
     }
     if (dx > 0 && !g.poateBifa) dx /= 4;
     if (dx < 0 && !g.poateElibera) dx /= 4;
+    const acum = performance.now();
+    if (g.t) g.v = (Math.max(-150, Math.min(150, dx)) - g.dx) / Math.max(1, acum - g.t); // px/ms, pentru „aruncare”
+    g.t = acum;
     g.dx = Math.max(-150, Math.min(150, dx));
     g.row.style.transform = `translateX(${g.dx}px)`;
     g.fundal.classList.toggle('spre-dreapta', g.dx > 0);
     // Cât s-a tras (0–1) pentru iconiță; peste prag, iconița „se aprinde” și telefonul vibrează scurt o dată
-    g.fundal.style.setProperty('--p', Math.min(1, Math.abs(g.dx) / 80).toFixed(2));
-    const pestePrag = (g.dx > 80 && g.poateBifa) || (g.dx < -80 && g.poateElibera);
+    g.fundal.style.setProperty('--p', Math.min(1, Math.abs(g.dx) / PRAG).toFixed(2));
+    const pestePrag = (g.dx > PRAG && g.poateBifa) || (g.dx < -PRAG && g.poateElibera);
     if (pestePrag !== !!g.prag) {
       g.prag = pestePrag;
       g.fundal.classList.toggle('prag', pestePrag);
@@ -12529,8 +12560,10 @@ function bifeazaToataOra(zi, ora) {
     g = null;
     if (!s.activ) return;
     if (e.type === 'pointerup') {
-      if (s.dx > 80 && s.poateBifa) s.save.click();
-      else if (s.dx < -80 && s.poateElibera) s.clear.click();
+      // Peste prag sau „aruncat” (minim 36px, peste 0,5 px/ms în aceeași direcție)
+      const aruncat = Math.abs(s.dx) > 36 && Math.abs(s.v || 0) > 0.5 && Math.sign(s.v) === Math.sign(s.dx);
+      if ((s.dx > PRAG || (aruncat && s.dx > 0)) && s.poateBifa) s.save.click();
+      else if ((s.dx < -PRAG || (aruncat && s.dx < 0)) && s.poateElibera) s.clear.click();
     }
     // Click-ul care urmează după ridicarea degetului nu mai apasă ce era sub deget
     opresteClick = true;

@@ -9666,23 +9666,44 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 .fisa-scurta-grila > div {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 12px;
-  border-radius: 18px;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.25);
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--m-card, var(--input-glass-bg));
+  border: 1px solid var(--m-border, var(--glass-border));
+  box-shadow: var(--m-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 14px -6px rgba(var(--primary-dark-rgb), 0.25));
   min-width: 0;
+  position: relative;
+}
+
+/* Aceeași lumină din stânga-sus ca pastilele de sus (programați / prezenți) */
+.fisa-scurta-grila > div::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0) 42%);
+  mix-blend-mode: soft-light;
+}
+
+.fisa-scurta-grila > div > * {
+  position: relative;
 }
 
 .fisa-scurta-grila span {
   font-size: 0.74rem;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fisa-scurta-grila b {
-  font-size: 1.05rem;
+  font-size: 1.3rem;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
   font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9715,9 +9736,9 @@ body.pe-orar:not(.orar-titlu-strans) #pageTitle {
 }
 
 [data-theme="dark"] .fisa-scurta-grila > div {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  background: var(--m-card, rgba(255, 255, 255, 0.06));
+  border-color: var(--m-border, rgba(255, 255, 255, 0.1));
+  box-shadow: var(--m-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.08));
 }
 
 [data-theme="dark"] .fisa-scurta-antet .slot-num {
@@ -11590,10 +11611,14 @@ html[data-theme] #tabOrar .day-selector {
 
 /* Cât e deschisă o fereastră (fișa pe scurt, căutarea, notificările de jos, confirmarea), pagina din spate nu se derulează */
 html:has(.fisa-scurta-fundal),
-html:has(#customModalBackdrop[style*="flex"]),
+html:has(#customModalBackdrop[style*="flex"]) {
+  overflow: hidden;
+}
+
+/* body nu devine container de derulare, altfel antetul lipit (sticky) pleacă odată cu pagina */
 html:has(.fisa-scurta-fundal) body,
 html:has(#customModalBackdrop[style*="flex"]) body {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .fisa-scurta,
