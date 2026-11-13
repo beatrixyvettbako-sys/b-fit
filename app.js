@@ -165,8 +165,8 @@ const i18n = {
     toastAlreadyCurrent: "Ești deja în săptămâna curentă!",
     toastBackCurrent: "✓ Ai revenit la săptămâna curentă!",
     toastWorkoutSaved: "✓ Antrenament salvat!",
-    toastPresenceMarked: "✓ Prezență marcată & ședință scăzută!",
-    toastSlotFreed: "✓ Slot eliberat!",
+    toastPresenceMarked: "✓ Prezență marcată și ședință scăzută!",
+    toastSlotFreed: "✓ Slot golit!",
     toastHourAdded: "✓ Oră adăugată: ",
     toastAddedProg: "✓ Adăugată în programări!",
     toastMovedHold: "✓ Mutată în Hold!",
@@ -177,7 +177,7 @@ const i18n = {
     toastArchived: "✓ Client arhivat!",
     toastExtended: "✓ Prelungit până la ",
     toastValiditySet: "✓ Valabilitate setată la ",
-    toastSubSaved: "✓ Abonament & Încasare salvate!",
+    toastSubSaved: "✓ Abonament și încasare salvate!",
     toastPaymentUpdated: "✓ Încasare actualizată!",
     confirmTitle: "Confirmare",
     cancelBtn: "Renunță",
@@ -319,8 +319,8 @@ const i18n = {
     toastAlreadyCurrent: "You are already in the current week!",
     toastBackCurrent: "✓ Returned to current week!",
     toastWorkoutSaved: "✓ Workout saved!",
-    toastPresenceMarked: "✓ Attendance marked & session deducted!",
-    toastSlotFreed: "✓ Slot freed!",
+    toastPresenceMarked: "✓ Attendance marked and session deducted!",
+    toastSlotFreed: "✓ Slot cleared!",
     toastHourAdded: "✓ Hour added: ",
     toastAddedProg: "✓ Added to bookings!",
     toastMovedHold: "✓ Moved to Hold!",
@@ -331,7 +331,7 @@ const i18n = {
     toastArchived: "✓ Client archived!",
     toastExtended: "✓ Extended until ",
     toastValiditySet: "✓ Validity set to ",
-    toastSubSaved: "✓ Subscription & Payment saved!",
+    toastSubSaved: "✓ Subscription and payment saved!",
     toastPaymentUpdated: "✓ Payment updated!",
     confirmTitle: "Confirmation",
     cancelBtn: "Cancel",
@@ -1671,12 +1671,22 @@ if ('serviceWorker' in navigator) {
   actualizeaza();
 })();
 
+// La schimbarea tab-ului: o vibrație scurtă și toată bara pulsează o dată (clasa nav-puls, în style.css)
+function pulsBaraJos(nav) {
+  if (!nav) return;
+  try { if (navigator.vibrate) navigator.vibrate(10); } catch (e) {}
+  nav.classList.remove('nav-puls');
+  void nav.offsetWidth;
+  nav.classList.add('nav-puls');
+}
+
 function animaPilaMercur(nouIndex) {
   const pill = document.getElementById('navMercuryPill');
   if (!pill) return;
   const drop = pill.querySelector('.nav-mercury-drop');
-  
+
   if (drop && nouIndex !== tabIndexCurent) {
+    pulsBaraJos(pill.parentElement);
     drop.classList.add('mercury-morph');
     setTimeout(() => {
       drop.classList.remove('mercury-morph');
@@ -2849,7 +2859,7 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
   if (!endCard) return;
 
   endCard.style.transition = 'none';
-  endCard.classList.remove('state-ora-17', 'state-ora-18');
+  endCard.classList.remove('state-ora-17', 'state-ora-18', 'end-strans', 'end-fara-icon');
   endCard.style.minHeight = '';
 
   if (!closestBlock) {
@@ -2870,23 +2880,30 @@ function calibreazaLayoutEcran(oraCheie, closestBlock) {
 
   let vh = window.innerHeight;
   let topOffset = getTopOffsetSubZile();
-  // Înălțimea normală a barei de jos (56px), nu cea de moment: bara se poate afla compactă sau în animație
-  let hNav = 56;
-  // Bara de jos plutește la 10px de margine; +12px spațiu ca istoricul să rămână deasupra ei
-  // Cu bara compactă (la scroll în jos) pagina se scurtează cu 12px (padding-bottom 72 → 60 în style.css):
-  // cardul de final primește acești 12px în plus, altfel la capăt ora curentă coboară și se vede o fâșie din ora anterioară
-  const DIFERENTA_NAV_COMPACT = 12;
+  // Înălțimea normală a barei de jos (62px), nu cea de moment: bara se poate afla strânsă sau în animație.
+  // Strângerea barei nu mai schimbă înălțimea paginii (e doar transform în style.css).
+  let hNav = 62;
   // Distanța reală de la bara de jos la marginea ecranului (pe Android include și zona barei de gesturi), nu 10px fixe
   const navJos = document.getElementById('bottomNav');
   const margineJos = navJos ? Math.max(10, Math.round(vh - navJos.getBoundingClientRect().bottom)) : 10;
-  // -12: spațiu liber între Istoric și bara de jos (pe Orar, pagina are în jos 12px în plus, vezi body.pe-orar în style.css)
-  let spatiuVizibilUtil = vh - topOffset - hNav - margineJos - 12 - 12 + DIFERENTA_NAV_COMPACT;
+  // -12 -12: spațiul liber dintre Istoric și bara de jos (pe Orar, pagina are în jos 12px în plus, vezi body.pe-orar în style.css)
+  let spatiuVizibilUtil = vh - topOffset - hNav - margineJos - 12 - 12;
 
   let istoricEl = document.getElementById('detailsIstoricOrar') || endCard;
   let blockRect = closestBlock.getBoundingClientRect();
   let istoricRect = istoricEl.getBoundingClientRect();
 
   let inaltimeDeLaCardLaBazaIstoric = istoricRect.bottom - blockRect.top;
+
+  // Ultima oră nu încape pe ecran cu tot cu cardul de final și Istoric (multe locuri pe oră, ecran scund):
+  // cardul de final se strânge (ilustrația mică, apoi doar textul), ca Istoricul să nu ajungă sub bara de jos
+  if (inaltimeDeLaCardLaBazaIstoric > spatiuVizibilUtil && endCard.classList.contains('state-ora-18')) {
+    for (const cls of ['end-strans', 'end-fara-icon']) {
+      endCard.classList.add(cls);
+      inaltimeDeLaCardLaBazaIstoric = istoricEl.getBoundingClientRect().bottom - closestBlock.getBoundingClientRect().top;
+      if (inaltimeDeLaCardLaBazaIstoric <= spatiuVizibilUtil) break;
+    }
+  }
 
   if (inaltimeDeLaCardLaBazaIstoric < spatiuVizibilUtil) {
     let deficit = spatiuVizibilUtil - inaltimeDeLaCardLaBazaIstoric;
@@ -9133,6 +9150,7 @@ function clientaTab(tab) {
   if (pill && idx !== -1) {
     const drop = pill.querySelector('.nav-mercury-drop');
     if (drop && tab !== clientaTabCurent) {
+      pulsBaraJos(pill.parentElement);
       drop.classList.add('mercury-morph');
       setTimeout(() => drop.classList.remove('mercury-morph'), 260);
     }
@@ -10604,7 +10622,6 @@ async function verificaSesiuneSupabase() {
 window.onload = async function() {
   reseteazaDateIncasariAzi();
   leagaAscultatoriCuratareErori();
-  initSwipeNavigation();
   aplicaTraduceriInterfataStatic();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -10913,82 +10930,6 @@ window.addEventListener('popstate', () => {
 
 // În faza de captură: unele butoane opresc propagarea (ex. sertarul calendarului din header)
 ['click', 'touchend'].forEach(ev => document.addEventListener(ev, () => setTimeout(sincronizeazaIstoricInapoi, 350), { capture: true, passive: true }));
-
-function initSwipeNavigation() {
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-  let esteGestBlocat = false;
-
-  document.addEventListener('touchstart', (e) => {
-    esteGestBlocat = false;
-    if (!e.touches || e.touches.length !== 1) {
-      esteGestBlocat = true;
-      return;
-    }
-
-    if (tipTabCurent === 'plan' || esteModClientaShare) {
-      esteGestBlocat = true;
-      return;
-    }
-
-    let target = e.target;
-    if (target && (target.closest('.day-selector') || target.tagName === 'TEXTAREA' || target.closest('.app-drawer') || target.closest('.auth-card'))) {
-      esteGestBlocat = true;
-      return;
-    }
-
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-  }, { passive: true });
-
-  document.addEventListener('touchend', (e) => {
-    if (esteGestBlocat || !touchStartX) return;
-    if (!e.changedTouches || e.changedTouches.length === 0) return;
-
-    let touchEndX = e.changedTouches[0].clientX;
-    let touchEndY = e.changedTouches[0].clientY;
-    let deltaX = touchEndX - touchStartX;
-    let deltaY = touchEndY - touchStartY;
-    let absX = Math.abs(deltaX);
-    let absY = Math.abs(deltaY);
-    let durata = Date.now() - touchStartTime;
-
-    let esteOrizontal = absX > (absY * 1.25);
-    let pragMinim = (durata < 320) ? 35 : 55;
-
-    const ecranClienta = document.getElementById('clientaScreen');
-    if (ecranClienta && !ecranClienta.classList.contains('auth-hidden')) {
-      // Ecranul clientei: swipe între Acasă, Orar, Istoric (nu și în interiorul unui plan deschis)
-      const i = TABURI_CLIENTA.indexOf(clientaTabCurent);
-      const j = i + (deltaX < 0 ? 1 : -1);
-      if (esteOrizontal && absX >= pragMinim && !dateClienta.planCurent && (!antrPers.ecran || antrPers.ecran === 'nutritie') && i !== -1 && j >= 0 && j < TABURI_CLIENTA.length) {
-        clientaTab(TABURI_CLIENTA[j]);
-      }
-    } else if (esteOrizontal && absX >= pragMinim) {
-      if (deltaX < 0) {
-        if (tabIndexCurent < tabsOrder.length - 1) {
-          let nextTab = tabsOrder[tabIndexCurent + 1];
-          let btn = document.querySelectorAll('#bottomNav button')[nextTab.idx];
-          let titluTab = currentLang === 'en' ? nextTab.titleEn : nextTab.titleRo;
-          comutaTab(nextTab.id, titluTab, btn, nextTab.tip, nextTab.idx);
-        }
-      } else {
-        if (tabIndexCurent > 0) {
-          let prevTab = tabsOrder[tabIndexCurent - 1];
-          let btn = document.querySelectorAll('#bottomNav button')[prevTab.idx];
-          let titluTab = currentLang === 'en' ? prevTab.titleEn : prevTab.titleRo;
-          comutaTab(prevTab.id, titluTab, btn, prevTab.tip, prevTab.idx);
-        }
-      }
-    }
-
-    touchStartX = 0;
-    touchStartY = 0;
-    touchStartTime = 0;
-  }, { passive: true });
-}
 
 function incarcaBazaDateSilencios(clientaSelectataDupaActualizare = null, aliniazaLaOraCurenta = false) {
   callBackend("getTotBazaDeDate", {}, function(data) {
@@ -11636,17 +11577,22 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
     comutaTab('tabFisa', 'Fișă Client', document.getElementById('navBtnFisa'), 'fisa', 2);
     deschideClientaDinLista(c.nume);
   };
-  // Trage în jos de mâner ca să închizi
-  const maner = foaie.querySelector('.fisa-scurta-maner');
+  // Trage în jos de oriunde de pe fișă (nu doar de mâner) ca să închizi; butoanele rămân butoane.
+  // animation = 'none': animația de intrare ține transformarea ocupată și fișa nu ar urma degetul.
+  const maner = foaie;
   let y0 = null;
-  maner.addEventListener('pointerdown', e => { y0 = e.clientY; maner.setPointerCapture(e.pointerId); foaie.style.transition = 'none'; });
+  maner.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    y0 = e.clientY; foaie.style.animation = 'none'; foaie.style.transition = 'none';
+    try { maner.setPointerCapture(e.pointerId); } catch (x) {}
+  });
   maner.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
   const gata = e => {
     if (y0 === null) return;
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (dy > 90) inchideFisaScurta(); else foaie.style.transform = '';
+    if (dy > 60) inchideFisaScurta(); else foaie.style.transform = '';
   };
   maner.addEventListener('pointerup', gata);
   maner.addEventListener('pointercancel', gata);
@@ -11796,6 +11742,8 @@ function randeazaOrarInstant() {
   let saptamanaCheie = getSaptamanaCheie();
   let tagZiCautat = saptamanaCheie + "_" + ziCurentaCheie;
   let eTrecuta = esteSaptamanaTrecuta();
+  // Săptămâna trecută e doar de citit: fără „Oră suplimentară” și fără cardul de final (vezi style.css)
+  document.getElementById('tabOrar')?.classList.toggle('saptamana-trecuta', eTrecuta);
   actualizeazaTitluOrar(null);
 
   let oreStandard = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
@@ -12635,10 +12583,13 @@ function trimiteBifarePrezenta(d) {
     try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
   }
 
+  // Totul se actualizează pe loc (eticheta orei, „Bifează toți clienții”, cifrele zilei), nu abia când răspunde baza:
+  // altfel schimbarea apărea cu întârziere și părea că apăsările repetate mai bifează o dată
+  if (slotExistent) randeazaOrarInstant();
   let btnSave = document.getElementById('btn_save_' + slotDomKey);
   if (btnSave) {
     btnSave.disabled = true;
-    btnSave.classList.add('btn-save-check-disabled');
+    btnSave.classList.add('btn-save-check-disabled', 'bifa-acum');
   }
 
   callBackend("bifeazaPrezenta", {
@@ -12705,6 +12656,8 @@ function anuleazaSlot(zi, ora, slotIdx) {
       slotExistent.antrenament = "";
       slotExistent.bifat = false;
       try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+      // Rândul se redesenează pe loc (avatarul redevine cifră), nu abia când răspunde baza
+      randeazaOrarInstant();
     }
 
     showToast(t('toastSlotFreed'));
@@ -12829,10 +12782,12 @@ function stergeOraCustom(zi, ora) {
       }
       DB.orarSloturi = (DB.orarSloturi || []).filter(s => !(s && (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === getSaptamanaCheie() + "_Marți")) && normalizeazaOraUi(s.ora) === ora));
       randeazaOrarInstant();
-      // Saltul la ora de dinaintea celei șterse (de obicei noua ultimă oră), cu cardul de final recalculat
+      // Azi: saltul la ora curentă. În altă zi: la ora de dinaintea celei șterse. Cardul de final se recalculează.
       const inainte = Array.from(document.querySelectorAll('#sloturiContainer .hour-block'))
         .map(b => b.getAttribute('data-ora')).filter(o => o && o < normalizeazaOraUi(ora)).pop();
-      if (ziCurentaCheie === zi && inainte) aratOraInOrar(inainte);
+      const esteAzi = esteSaptamanaActiva() && zi === ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"][new Date().getDay()];
+      if (ziCurentaCheie === zi && esteAzi) autoScrollLaOraCurenta();
+      else if (ziCurentaCheie === zi && inainte) aratOraInOrar(inainte);
       showToast(tr(`Ora ${ora} a fost ștearsă`, `${ora} removed`));
       incarcaBazaDateSilencios();
     });
@@ -14943,7 +14898,7 @@ function arataNotificariRapid() {
   // Trage de mâner: în jos închide, în sus deschide pagina completă
   const maner = foaie.querySelector('.fisa-scurta-maner');
   let y0 = null;
-  maner.addEventListener('pointerdown', e => { y0 = e.clientY; maner.setPointerCapture(e.pointerId); foaie.style.transition = 'none'; });
+  maner.addEventListener('pointerdown', e => { y0 = e.clientY; maner.setPointerCapture(e.pointerId); foaie.style.animation = 'none'; foaie.style.transition = 'none'; });
   maner.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(-60, e.clientY - y0)}px)`; });
   const gata = e => {
     if (y0 === null) return;
@@ -18133,7 +18088,7 @@ const SECTIUNI_INSCRIERE = [
     { id: 'pozeProgres', tip: 'alegere', ob: true, optiuni: OPTIUNI_DA_NU, ro: 'Ești de acord să faci poze de progres? Le văd doar eu, ca antrenor, și nu le folosesc în alt scop.', en: 'Do you agree to take progress photos? Only I, as your trainer, see them, and they are not used for anything else.' },
     { id: 'urgenta', tip: 'text', ro: 'Contact pentru urgențe (nume și telefon)', en: 'Emergency contact (name and phone)' }
   ] },
-  { ro: 'Istoric medical & sănătate', en: 'Medical history & health', intrebari: [
+  { ro: 'Istoric medical și sănătate', en: 'Medical history & health', intrebari: [
     { id: 'afectiuni', tip: 'danu', ob: true, ro: 'Suferi de afecțiuni medicale? (ex: probleme cardiace, respiratorii, diabet, scolioză, hipertensiune etc.)', en: 'Do you have any medical conditions? (e.g. heart or breathing problems, diabetes, scoliosis, high blood pressure)' },
     { id: 'dureri', tip: 'danu', ob: true, ro: 'Ai dureri articulare sau accidentări anterioare? (genunchi, umeri, zona lombară etc.)', en: 'Do you have joint pain or previous injuries? (knees, shoulders, lower back etc.)' },
     { id: 'restrictii', tip: 'danu', ob: true, ro: 'Ai restricții de efort fizic recomandate de medic?', en: 'Has a doctor recommended any limits on physical effort?' },
@@ -18157,7 +18112,7 @@ const SECTIUNI_INSCRIERE = [
       { id: 'activ', ro: 'Activ', en: 'Active' }, { id: 'foarteActiv', ro: 'Foarte activ', en: 'Very active' }
     ], ro: 'Cât de mult te miști zilnic?', en: 'How active are you day to day?' }
   ] },
-  { ro: 'Obiective personale & motivație', en: 'Personal goals & motivation', intrebari: [
+  { ro: 'Obiective personale și motivație', en: 'Personal goals & motivation', intrebari: [
     { id: 'obiectivPrincipal', tip: 'alegere', ob: true, optiuni: OPTIUNI_OBIECTIVE, ro: 'Care este obiectivul tău principal? (alege unul)', en: 'What is your main goal? (pick one)' },
     // „obiective” = alte obiective; în fișele mai vechi conține toate obiectivele bifate
     { id: 'obiective', tip: 'multi', optiuni: OPTIUNI_OBIECTIVE, ro: 'Alte obiective (opțional)', en: 'Other goals (optional)' },
@@ -18185,7 +18140,7 @@ const SECTIUNI_INSCRIERE = [
     ], ro: 'Intervalele orare preferate', en: 'Preferred time slots' },
     { id: 'intervaleNota', tip: 'paragraf', ro: 'Detalii despre program (opțional, ex.: lucrez în ture)', en: 'Schedule details (optional, e.g. I work shifts)' }
   ] },
-  { ro: 'Așteptări & angajament', en: 'Expectations & commitment', intrebari: [
+  { ro: 'Așteptări și angajament', en: 'Expectations & commitment', intrebari: [
     { id: 'asteptari', tip: 'paragraf', ro: 'Ce aștepți de la mine ca antrenor personal?', en: 'What do you expect from me as your personal trainer?' },
     { id: 'deStiut', tip: 'paragraf', ro: 'Există ceva ce ar trebui să știu înainte să începem?', en: 'Is there anything I should know before we start?' },
     { id: 'deUnde', tip: 'alegere', optiuni: [

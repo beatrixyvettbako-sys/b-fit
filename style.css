@@ -371,7 +371,7 @@ body {
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text);
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   min-height: 100dvh;
 }
@@ -3220,7 +3220,7 @@ nav {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 40px;
   z-index: 1000;
-  height: 56px;
+  height: 62px;
   padding: 3px 4px;
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.35),
               0 3px 10px rgba(var(--primary-rgb), 0.12),
@@ -3246,22 +3246,13 @@ nav {
   color: var(--text-muted);
 }
 
-[data-theme="light"] nav button.active,
-[data-theme="light"] nav button.active span {
-  color: var(--primary);
-}
-
-[data-theme="light"] nav button.active svg {
-  stroke: var(--primary);
-}
-
 /* BULA GLISANTĂ COMPACTĂ, MOV TRANSPARENTĂ */
 .nav-mercury-pill {
   position: absolute;
   top: 4px;
   left: 4px;
   width: calc(25% - 2px);
-  height: 48px;
+  height: 54px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3272,8 +3263,8 @@ nav {
 
 .nav-mercury-drop {
   width: 90%;
-  height: 42px;
-  border-radius: 24px;
+  height: 48px;
+  border-radius: 26px;
   background: rgba(var(--accent-rgb), 0.26);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -3295,44 +3286,38 @@ nav {
 }
 
 /* BARA COMPACTĂ LA SCROLL ÎN JOS (doar iconițe), revine la scroll în sus */
+/* Toată bara se strânge într-o singură mișcare (doar transform și opacitate): pagina nu își schimbă înălțimea,
+   deci la capătul de jos derularea nu mai sare înainte și înapoi */
 nav {
-  transition: height 0.25s ease, width 0.25s ease, max-width 0.25s ease;
+  transform-origin: 50% 100%;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 nav.nav-compact {
-  height: 44px;
-  max-width: 300px;
+  transform: translateX(-50%) scale(0.84);
 }
 
-/* Când bara e compactă (12px mai joasă), pagina se termină cu 12px mai jos, ca spațiul până la bară să rămână același */
-body:has(nav.nav-compact) {
-  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+nav button .nav-icon {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-nav button span {
-  transition: opacity 0.15s ease;
+nav.nav-compact button .nav-icon {
+  transform: translateY(7px);
 }
 
 nav.nav-compact button span {
   opacity: 0;
-  height: 0;
-  overflow: hidden;
 }
 
-.nav-mercury-pill {
-  transition: transform 0.32s cubic-bezier(0.34, 1.35, 0.64, 1), height 0.25s ease;
+/* La schimbarea tab-ului, toată bara pulsează scurt, ca o picătură */
+@keyframes navPuls {
+  0% { scale: 1; }
+  35% { scale: 1.025 0.94; }
+  100% { scale: 1; }
 }
 
-.nav-mercury-drop {
-  transition: transform 0.22s cubic-bezier(0.34, 1.5, 0.64, 1), height 0.25s ease;
-}
-
-nav.nav-compact .nav-mercury-pill {
-  height: 36px;
-}
-
-nav.nav-compact .nav-mercury-drop {
-  height: 32px;
+nav.nav-puls {
+  animation: navPuls 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Zona dintre bara de jos și marginea ecranului: blochează atingerile accidentale */
@@ -3351,7 +3336,7 @@ nav button {
   padding: 0;
   border: none;
   background: transparent;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   line-height: 1;
   color: rgba(255, 255, 255, 0.52);
   cursor: pointer;
@@ -3367,7 +3352,7 @@ nav button {
 
 nav button .nav-icon {
   width: 100%;
-  height: 22px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3376,8 +3361,8 @@ nav button .nav-icon {
 }
 
 nav button svg {
-  width: 19px;
-  height: 19px;
+  width: 21px;
+  height: 21px;
   stroke: currentColor;
   fill: none;
   stroke-width: 2;
@@ -3392,22 +3377,16 @@ nav button svg {
 nav button span {
   font-weight: 600;
   letter-spacing: -0.2px;
-  transition: color 0.18s ease;
+  transition: opacity 0.18s ease;
 }
 
-/* STARE ACTIVĂ: TEXT & ICONIȚĂ MOV MINIMALIST LUMINOS */
+/* STARE ACTIVĂ: aceeași culoare ca restul; tab-ul ales se vede după bulă, textul îngroșat și forma umplută */
 nav button.active {
-  color: var(--accent-purple-light);
   font-weight: 800;
 }
 
 nav button.active svg {
-  stroke: var(--accent-purple-light);
   transform: scale(1.06);
-}
-
-nav button.active span {
-  color: var(--accent-purple-light);
 }
 
 /* TRANZIȚII TAB-URI */
@@ -9078,6 +9057,10 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   color: #fff !important;
   border: 1px solid rgba(255, 255, 255, 0.6) !important;
   opacity: 1;
+}
+
+/* Săritura apare doar în clipa bifării, nu la fiecare redesenare a orarului */
+#tabOrar .btn-save-check.bifa-acum {
   animation: bifaPop 0.4s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 
@@ -9155,6 +9138,27 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   position: relative;
   width: 88px;
   height: 88px;
+}
+
+/* Ultima oră nu încape pe ecran (multe locuri pe oră): cardul de final se strânge, pus din calibreazaLayoutEcran */
+#tabOrar .end-schedule-card.end-strans {
+  padding: 6px 14px;
+  min-height: 0;
+  gap: 4px;
+}
+
+#tabOrar .end-schedule-card.end-strans .end-schedule-icon-wrap {
+  zoom: 0.5;
+}
+
+#tabOrar .end-schedule-card.end-fara-icon .end-schedule-icon-wrap {
+  display: none;
+}
+
+/* Săptămâna trecută: rămâne doar Istoricul sub ore */
+#tabOrar.saptamana-trecuta .extra-hour-card,
+#tabOrar.saptamana-trecuta .end-schedule-card {
+  display: none;
 }
 
 .final-orb {
@@ -11178,9 +11182,20 @@ body.pe-orar::before {
 }
 
 /* Fișa pe scurt: acțiuni mici, unul lângă altul, în stilul Orarului */
+/* Butoanele stau unul sub altul, pe toată lățimea; cel principal primul */
 .fisa-scurta-actiuni {
   display: flex;
+  flex-direction: column;
   gap: 8px;
+}
+
+.fisa-scurta-actiune-principala {
+  order: -1;
+}
+
+/* Fișa pe scurt se trage în jos de oriunde (nu doar de mâner) ca să se închidă */
+#fisaScurta:not(.cautare-client):not(.notif-rapid) {
+  touch-action: none;
 }
 
 .fisa-scurta-actiune {
@@ -11223,13 +11238,13 @@ body.pe-orar::before {
   position: relative;
   flex: 0 1 auto;
   min-width: 0;
-  height: 36px;
+  height: 44px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border-radius: 12px;
-  font-size: 0.8rem;
+  border-radius: 14px;
+  font-size: 0.86rem;
   font-weight: 700;
   font-family: inherit;
   white-space: nowrap;
@@ -11564,11 +11579,7 @@ html #tabOrar .day-selector {
 
 /* Pe Orar, pagina are în jos 12px în plus, ca Istoricul să rămână deasupra barei de jos și la ultima oră a zilei */
 body.pe-orar {
-  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
-}
-
-body.pe-orar:has(nav.nav-compact) {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Bara de zile: aceeași poziție lipită înainte și după unirea cu antetul, deci unirea e instantă, fără salt */
