@@ -941,13 +941,6 @@ header {
   gap: 10px;
 }
 
-.drawer-profile-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  pointer-events: none;
-}
-
 .drawer-avatar-wrap {
   width: 42px;
   height: 42px;
@@ -1042,6 +1035,157 @@ header {
   font-weight: 700;
   color: var(--text-muted);
   line-height: 1;
+}
+
+/* ===== Meniul în stilul nou: cardul de profil, grupuri de sticlă cu rânduri, ieșirea din cont la final ===== */
+.meniu-corp {
+  gap: 0;
+}
+
+/* În antet, la derulare: avatar mic și numele, la stânga (apar / dispar ca titlul ecranelor „stil-nou”) */
+.meniu-antet-profil {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.meniu-antet-profil .drawer-avatar-wrap {
+  width: 30px;
+  height: 30px;
+  border-width: 1px;
+}
+
+.meniu-antet-profil .drawer-avatar-wrap svg {
+  width: 16px;
+  height: 16px;
+}
+
+.meniu-antet-nume {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Corpul derulează: cardurile își păstrează înălțimea întreagă, nu se strâng ca să încapă */
+.meniu-corp > * {
+  flex-shrink: 0;
+}
+
+.meniu-profil {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  text-align: left;
+  font-family: inherit;
+  color: var(--m-text);
+  cursor: pointer;
+}
+
+.meniu-profil > * {
+  position: relative;
+}
+
+.meniu-profil .drawer-avatar-wrap {
+  width: 56px;
+  height: 56px;
+}
+
+.meniu-profil-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.meniu-profil-text b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meniu-profil-text small {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--m-muted);
+}
+
+/* Rândurile din grupuri: fără card propriu, despărțite de linii fine; iconița în bulă, ca ceasul de pe Orar */
+.lista-sticla .drawer-nav-card {
+  position: relative;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.lista-sticla .drawer-nav-card:last-child {
+  border-bottom: 0;
+}
+
+.lista-sticla .drawer-nav-card:active {
+  transform: none;
+  background: var(--m-btn);
+}
+
+.lista-sticla .drawer-nav-icon {
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.14);
+  border: 1px solid rgba(var(--accent-light-rgb), 0.45);
+  box-shadow: var(--m-float-sm);
+}
+
+.lista-sticla .drawer-nav-icon svg {
+  stroke: var(--m-accent-text);
+}
+
+.lista-sticla .drawer-nav-title {
+  color: var(--m-text);
+}
+
+.lista-sticla .drawer-nav-desc {
+  color: var(--m-muted);
+}
+
+.meniu-iesire {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 18px;
+  padding: 14px;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .meniu-iesire {
+  color: #f87171;
+}
+
+.meniu-iesire > * {
+  position: relative;
+}
+
+.meniu-iesire svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .profile-avatar-center {
@@ -1193,29 +1337,6 @@ header {
   opacity: 0.9;
 }
 
-.btn-logout-glass {
-  width: 100%;
-  padding: 10px;
-  font-weight: 800;
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  color: var(--text);
-  border-radius: 11px;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.btn-logout-glass:active {
-  transform: scale(0.98);
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.35);
-  color: #b91c1c;
-}
 
 /* Profil → Datele tale: export și ștergere cont */
 .profile-date-tale {
@@ -2117,7 +2238,7 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 /* În Notificări cardul e de sticlă, ca lista de dedesubt */
-.notificari-lista.card-push {
+.lista-sticla.card-push {
   padding: 12px 14px;
 }
 
@@ -2138,7 +2259,7 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 /* Setări › Notificări: un rând pe tip, cu comutator */
-.setari-notificari-lista {
+.setari-lista-sticla {
   padding: 4px 14px;
 }
 
@@ -2212,7 +2333,7 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 /* Notificările: grupate pe zile, fiecare grup un card de sticlă ca pe Orar, cu rânduri despărțite de linii fine */
-.notificari-grup {
+.lista-titlu {
   margin: 16px 6px 8px;
   font-size: 0.74rem;
   font-weight: 700;
@@ -2220,7 +2341,7 @@ html[data-rol="clienta"] #bottomNav {
   color: var(--m-muted);
 }
 
-.notificari-lista {
+.lista-sticla {
   position: relative;
   overflow: hidden;
   border-radius: 24px;
@@ -2229,7 +2350,7 @@ html[data-rol="clienta"] #bottomNav {
   box-shadow: var(--m-shadow);
 }
 
-.notificari-lista::before {
+.lista-sticla::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -2238,11 +2359,11 @@ html[data-rol="clienta"] #bottomNav {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 32%);
 }
 
-html:not([data-theme="dark"]) .notificari-lista::before {
+html:not([data-theme="dark"]) .lista-sticla::before {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
 
-.notificari-lista .notificari-gol {
+.lista-sticla .notificari-gol {
   position: relative;
   padding: 18px;
 }
@@ -2278,7 +2399,7 @@ html:not([data-theme="dark"]) .notificari-lista::before {
 }
 
 /* În listele de notificări, × e o bulă mică de sticlă, la mijlocul rândului */
-.notificari-lista .notificare-x {
+.lista-sticla .notificare-x {
   top: 50%;
   bottom: auto;
   right: 10px;
@@ -2290,7 +2411,7 @@ html:not([data-theme="dark"]) .notificari-lista::before {
   font-size: 0.95rem;
 }
 
-.notificari-lista .notificare-x:active {
+.lista-sticla .notificare-x:active {
   transform: translateY(-50%) scale(0.9);
 }
 
@@ -3251,12 +3372,12 @@ select.poza-comp-data {
   right: 0;
   height: calc(var(--drawer-footer-h) + env(safe-area-inset-bottom, 0px));
   padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)); /* deasupra barei de navigare a telefonului */
-  border-top: 1px solid var(--border);
   text-align: center;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
-  color: var(--text-muted);
-  background: var(--card-bg);
+  color: var(--m-muted);
+  /* Stilul nou: fără bandă și fără linie, textul stă discret pe fundalul sertarului */
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -3269,11 +3390,12 @@ select.poza-comp-data {
   font-size: 0.66rem;
   font-weight: 600;
   white-space: nowrap;
+  opacity: 0.85;
 }
 
 .drawer-footer-legal a {
   color: inherit;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .rock-hand {
@@ -4689,7 +4811,9 @@ select.form-control {
 }
 
 /* CONFIRMĂRI & HOLD: stilul nou (sticla din Orar) */
-#tabProgramari {
+/* Ecranele trecute pe stilul nou: textele din machetă și aceleași margini */
+#tabProgramari,
+#tabIncasari {
   --text: var(--m-text);
   --text-muted: var(--m-muted);
   padding: 10px 8px 0;
@@ -4746,7 +4870,7 @@ html:not([data-theme="dark"]) .hold-header::after {
   display: none;
 }
 
-#tabProgramari .prog-row > .slot-num {
+:is(#tabProgramari, #tabIncasari) .prog-row > .slot-num {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
@@ -4984,68 +5108,108 @@ html:not([data-theme="dark"]) .hold-header::after {
   height: 13px;
 }
 
-.incasari-table-fit {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.74rem;
-  margin-top: 8px;
-  table-layout: fixed;
-}
-
-.incasari-table-fit th {
-  background: var(--primary-light);
-  color: var(--primary);
-  padding: 5px 3px;
-  font-weight: 700;
-  text-align: left;
-}
-
-.incasari-table-fit td {
-  padding: 5px 3px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
-  word-break: break-word;
-  overflow: hidden;
-  line-height: 1.2;
-}
-
-.total-incasari-card {
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  border-radius: 10px;
-  padding: 8px 12px;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.total-incasari-label {
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.total-incasari-count {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  margin-top: 2px;
-}
-
-.total-incasari-val {
-  font-size: 1.18rem;
-  font-weight: 900;
+/* ===== Încasări în stilul nou: cifrele lunii, „De reînnoit”, încasările pe zile, fereastra „Încasare nouă” ===== */
+.inc-suma {
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
   color: #15803d;
+  white-space: nowrap;
 }
 
-[data-theme="dark"] .total-incasari-val {
+[data-theme="dark"] .inc-suma {
   color: #4ade80;
 }
 
+.inc-suma.gol {
+  color: var(--text-muted);
+}
+
+.inc-stare-expirat {
+  color: #b91c1c;
+}
+
+.inc-stare-curand {
+  color: #b45309;
+}
+
+[data-theme="dark"] .inc-stare-expirat {
+  color: #f87171;
+}
+
+[data-theme="dark"] .inc-stare-curand {
+  color: #fbbf24;
+}
+
+.inc-incaseaza {
+  height: 34px;
+  padding: 0 12px;
+}
+
+#incReinnoire:not(:empty) {
+  margin-bottom: 14px;
+}
+
+/* .fisa-scurta e flex: fără regula asta, `hidden` n-ar ascunde fereastra */
+.incasare-foaie[hidden] {
+  display: none;
+}
+
+.incasare-foaie {
+  max-height: 88dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 4px;
+}
+
+/* Fereastra derulează: câmpurile își păstrează înălțimea, nu se strâng ca să încapă */
+.incasare-foaie > * {
+  flex-shrink: 0;
+}
+
+.incasare-foaie-titlu {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+/* Câmpurile din fereastră: sticlă, ca pastilele de dedesubt (aceleași câmpuri ca înainte, doar alt aspect) */
+.incasare-foaie label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.incasare-foaie .form-control {
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid var(--m-border);
+  background-color: var(--m-btn);
+  color: var(--m-text);
+  box-shadow: none;
+}
+
+/* Ca „Fișa completă” din fișa pe scurt, dar la final (clasa principală o pune altfel prima: order -1) */
+.incasare-foaie .incasare-salveaza {
+  order: 0;
+  flex-shrink: 0;
+  width: 100%;
+  height: 48px;
+  margin-top: 6px;
+  justify-content: center;
+}
+
+/* Abonamentul și metoda: pastile de sticlă; cea aleasă pare apăsată (ca filtrele) */
+.pastile-alegere {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pastile-alegere .istoric-toate {
+  height: 38px;
+}
 .progress-wrapper {
   background: var(--border);
   border-radius: 10px;
@@ -8920,7 +9084,7 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 }
 
 /* Ceasul / lacătul orei: bulă de sticlă în culoarea aplicației */
-#tabOrar .btn-lock-hour,
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
 #tabOrar .hour-icon-static:not(.camp-ora-icona) {
   margin-right: 0;
   border-radius: 16px;
@@ -8928,13 +9092,13 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   border: 1px solid rgba(var(--accent-light-rgb), 0.45);
 }
 
-[data-theme="dark"] #tabOrar .btn-lock-hour,
+[data-theme="dark"] :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
 [data-theme="dark"] #tabOrar .hour-icon-static:not(.camp-ora-icona) {
   background: rgba(var(--accent-rgb), 0.22);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px -6px rgba(0, 0, 0, 0.6);
 }
 
-[data-theme="dark"] #tabOrar .btn-lock-hour svg,
+[data-theme="dark"] :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour svg,
 [data-theme="dark"] #tabOrar .hour-icon-static:not(.camp-ora-icona) svg {
   stroke: var(--accent-purple-light);
 }
@@ -9410,6 +9574,7 @@ body.orar-titlu-strans .tab-content .orar-titlu-text,
 }
 
 .stil-nou-ecran .stil-nou-antet {
+  border-bottom: 0;
   color: var(--m-text);
   transition: background-color 0.2s ease;
 }
@@ -9421,6 +9586,8 @@ body.orar-titlu-strans .tab-content .orar-titlu-text,
 }
 
 .stil-nou-antet .clienta-title {
+  font-size: 1.06rem; /* ca titlul mic de pe Orar (#pageTitle) */
+  font-weight: 800;
   transition: opacity 0.2s ease;
 }
 
@@ -9699,7 +9866,7 @@ button.orar-cifra:disabled {
 }
 
 /* Istoric prezențe: bară de sticlă cu iconița într-un cerc */
-#detailsIstoricOrar {
+:is(#detailsIstoricOrar, #detailsIstoricIncasari) {
   border-radius: 22px !important;
 }
 
@@ -9707,6 +9874,12 @@ button.orar-cifra:disabled {
    (cardurile și titlurile zilelor sunt cele din Notificări, rândurile cele din Confirmări) */
 .istoric-orar {
   margin-top: 12px;
+}
+
+/* Istoricul Încasărilor: aceleași margini ca Istoricul de pe Orar (acolo sunt scrise direct în HTML) */
+#detailsIstoricIncasari {
+  margin-top: 10px;
+  padding: 12px;
 }
 
 .istoric-luna {
@@ -10289,7 +10462,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
-#tabOrar #detailsIstoricOrar {
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari) {
   background: var(--m-card) !important;
   border: 1px solid var(--m-border) !important;
   box-shadow: var(--m-shadow);
@@ -10319,14 +10492,14 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 }
 
 /* Ceasul / lacătul orei */
-#tabOrar .btn-lock-hour,
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
 #tabOrar .hour-icon-static:not(.camp-ora-icona) {
   width: 34px;
   height: 34px;
   box-shadow: var(--m-float-sm);
 }
 
-#tabOrar .btn-lock-hour svg,
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour svg,
 #tabOrar .hour-icon-static:not(.camp-ora-icona) svg {
   width: 19px;
   height: 19px;
@@ -10447,7 +10620,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 }
 
 /* „Oră suplimentară” și „Istoric prezențe”: același ceas în bulă ca ora de pe card, text pe măsură */
-#tabOrar .orar-titlu-cu-ceas {
+:is(#tabOrar, #detailsIstoricIncasari) .orar-titlu-cu-ceas {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -10458,13 +10631,13 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   white-space: nowrap;
 }
 
-#tabOrar .orar-titlu-cu-ceas > span:last-child {
+:is(#tabOrar, #detailsIstoricIncasari) .orar-titlu-cu-ceas > span:last-child {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-#tabOrar .orar-titlu-cu-ceas .btn-lock-hour {
+:is(#tabOrar, #detailsIstoricIncasari) .orar-titlu-cu-ceas .btn-lock-hour {
   cursor: inherit;
 }
 
@@ -10487,15 +10660,15 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 #tabOrar .hour-block,
 .orar-cifra,
 #tabOrar .extra-hour-card,
-#tabOrar #detailsIstoricOrar,
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari),
 #tabOrar .calendar-expandable-card,
 #tabOrar .btn-save-check,
 #tabOrar .btn-clear,
-#tabOrar .btn-lock-hour,
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
 #tabOrar .slot-num-btn,
 #tabOrar .btn-bifeaza-ora,
 #tabOrar #btnAddOraCustomAction,
-#tabOrar .drawer-nav-btn,
+:is(#tabOrar, .istoric-luna) .drawer-nav-btn,
 :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn {
   position: relative;
 }
@@ -10504,15 +10677,15 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 .orar-cifra::before,
 #tabOrar .day-selector::before,
 #tabOrar .extra-hour-card::before,
-#tabOrar #detailsIstoricOrar::before,
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari)::before,
 #tabOrar .calendar-expandable-card.is-expanded::before,
 #tabOrar .btn-save-check::before,
 #tabOrar .btn-clear::before,
-#tabOrar .btn-lock-hour::before,
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour::before,
 #tabOrar .slot-num-btn::before,
 #tabOrar .btn-bifeaza-ora::before,
 #tabOrar #btnAddOraCustomAction::before,
-#tabOrar .drawer-nav-btn::before,
+:is(#tabOrar, .istoric-luna) .drawer-nav-btn::before,
 .final-orb::before,
 :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn::before,
 body.stil-nou #bottomNav::before {
@@ -10600,8 +10773,8 @@ body.stil-nou #pageTitle {
   grid-area: azi;
 }
 
-#tabOrar .drawer-nav-btn,
-[data-theme="light"] #tabOrar .drawer-nav-btn {
+:is(#tabOrar, .istoric-luna) .drawer-nav-btn,
+[data-theme="light"] :is(#tabOrar, .istoric-luna) .drawer-nav-btn {
   flex: none;
   width: 44px;
   height: 44px;
@@ -10613,9 +10786,18 @@ body.stil-nou #pageTitle {
   box-shadow: var(--m-float-sm);
 }
 
-#tabOrar .drawer-nav-btn svg {
+:is(#tabOrar, .istoric-luna) .drawer-nav-btn svg {
   width: 18px;
   height: 18px;
+}
+
+/* Săgețile ‹ › ale lunii (Istoric, Încasări) n-au culoarea în markup */
+.istoric-luna .drawer-nav-btn svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 #tabOrar .drawer-btn-today,
@@ -10624,11 +10806,13 @@ body.stil-nou #pageTitle {
 }
 
 /* Antetul derulat, pe toate ecranele în stilul nou: aceeași sticlă ca bara de zile lipită pe Orar (se unesc într-un panou) */
-body.stil-nou.orar-titlu-strans #mainAppHeader {
+body.stil-nou.orar-titlu-strans #mainAppHeader,
+.stil-nou-ecran.titlu-strans .stil-nou-antet {
   background: rgba(255, 255, 255, 0.55);
 }
 
-[data-theme="dark"] body.stil-nou.orar-titlu-strans #mainAppHeader {
+[data-theme="dark"] body.stil-nou.orar-titlu-strans #mainAppHeader,
+[data-theme="dark"] .stil-nou-ecran.titlu-strans .stil-nou-antet {
   background: rgba(20, 28, 34, 0.6);
 }
 
@@ -11070,7 +11254,7 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
   font-weight: 800;
 }
 
-/* Rândurile sunt cele din pagina completă (.notificare, într-un card .notificari-lista); aici lista derulează în fereastră */
+/* Rândurile sunt cele din pagina completă (.notificare, într-un card .lista-sticla); aici lista derulează în fereastră */
 .notif-rapid-lista {
   overflow-y: auto;
   min-height: 0;
@@ -11149,7 +11333,7 @@ body.stil-nou,
 }
 
 /* Tema deschisă: lumina din stânga-sus vizibilă (pe alb, „soft-light” nu se vede) */
-html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, #tabOrar #detailsIstoricOrar, #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, #tabOrar .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
+html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
@@ -11160,20 +11344,21 @@ html:not([data-theme="dark"]) :is(#customToast)::after {
 }
 
 /* Butoanele de sticlă pe tema deschisă: margine luminoasă și umbră moale, ca reflexia de pe tema întunecată */
-html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), #tabOrar .drawer-nav-btn, #tabOrar .btn-sterge-ora, #mainAppHeader .header-icon-bubble-btn ) {
+html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .btn-sterge-ora, #mainAppHeader .header-icon-bubble-btn ) {
   border-color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
 /* Ceasul / lacătul orei: fără contur alb */
-#tabOrar .btn-lock-hour,
-html:not([data-theme="dark"]) body.pe-orar #tabOrar .btn-lock-hour {
+:is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
+html:not([data-theme="dark"]) body.pe-orar :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour {
   border-color: transparent;
 }
 
 /* Conținutul cardurilor stă deasupra luminii de sticlă, ca textul (ora, cifrele) să nu pară șters */
 #tabOrar :is(.hour-block, .extra-hour-card, #detailsIstoricOrar, .calendar-expandable-card) > *,
+#detailsIstoricIncasari > *,
 .orar-cifra > * {
   position: relative;
   z-index: 1;
@@ -11196,7 +11381,7 @@ html:not([data-theme="dark"]) body.pe-orar #tabOrar .btn-lock-hour {
 }
 
 /* Ceasul orei pe tema deschisă, ca în machetă: bulă albastră deschisă cu margine albastră fină */
-html:not([data-theme="dark"]) body.pe-orar #tabOrar .btn-lock-hour,
+html:not([data-theme="dark"]) body.pe-orar :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour,
 html:not([data-theme="dark"]) body.pe-orar #tabOrar .hour-icon-static:not(.camp-ora-icona) {
   background: rgba(var(--accent-rgb), 0.14);
   border: 1px solid rgba(var(--accent-light-rgb), 0.45);
@@ -11600,23 +11785,25 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* X de golire, cât timp scrii în câmp (poziția vine din app.js) */
+/* × de golire din câmpuri: aceeași bulă de sticlă ca × de pe notificări (poziția vine din app.js) */
 .camp-goleste {
   position: fixed;
+  z-index: 30000;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border-radius: 50%;
   display: flex;
-  color: var(--text-muted);
-  background: rgba(var(--primary-rgb), 0.1);
-  border: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--m-muted);
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+  cursor: pointer;
 }
 
 .camp-goleste[hidden] {
   display: none;
-}
-
-[data-theme="dark"] .camp-goleste {
-  background: rgba(255, 255, 255, 0.12);
-  color: #c3d0d2;
 }
 
 /* ===================== Derulare fluidă pe Android (același aspect, mai puțin de lucru pentru telefon) ===================== */
@@ -11647,7 +11834,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* Lumina de sticlă pe tema întunecată: aceeași intensitate, fără amestec de culori */
-[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, #tabOrar #detailsIstoricOrar, #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, #tabOrar .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, #tabOrar .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, .custom-modal-card, .final-orb)::before {
+[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, .custom-modal-card, .final-orb)::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 42%);
 }
@@ -11725,22 +11912,12 @@ body.stil-nou {
   .btn-notificari:not(.btn-mesaje) .notificari-bulina::after { animation: none; }
 }
 
-/* X de golire: mai mic */
-.camp-goleste {
-  z-index: 30000;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
 .camp-goleste svg {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 3;
+  stroke-width: 2.6;
   stroke-linecap: round;
 }
 
@@ -11748,7 +11925,7 @@ input.slot-input:focus,
 input[list]:focus,
 input[type="search"]:focus,
 input.cautare-client-camp:focus {
-  padding-right: 28px !important;
+  padding-right: 36px !important; /* locul bulei × (26px, la 6px de margine) */
 }
 
 /* ===================== Glisarea pe slot: fundal de sticlă colorată, iconiță care crește, rândul ridicat ===================== */
@@ -11878,6 +12055,7 @@ html:not([data-theme="dark"]) :is(body.stil-nou #mainAppHeader, .stil-nou-antet)
 }
 
 body.stil-nou.orar-titlu-strans #mainAppHeader,
+.stil-nou-ecran.titlu-strans .stil-nou-antet,
 #tabOrar .day-selector,
 body.stil-nou #bottomNav {
   backdrop-filter: blur(10px);

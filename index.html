@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal207">
+  <link rel="stylesheet" href="style.css?v=fitFinal208">
 </head>
 <body>
 
@@ -483,23 +483,16 @@
 
   <!-- MENIU LATERAL FULL-SCREEN STRUCTURAT PE STRATURI -->
   <div id="appDrawerBackdrop" class="drawer-backdrop" onclick="inchideMeniuLateral()"></div>
-  <div id="appDrawer" class="app-drawer">
+  <div id="appDrawer" class="app-drawer stil-nou-ecran">
 
     <!-- STRATUL 1: HUB PRINCIPAL -->
     <div id="drawerMainView" class="drawer-view-layer active">
-      <div class="drawer-header">
-        <div class="drawer-profile-info">
-          <div class="drawer-avatar-wrap" id="drawerUserAvatar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <div>
-            <div style="font-size:0.74rem; opacity:0.85; font-weight:600;" id="drawerGreetingLabel" data-en="Hi,">Salut,</div>
-            <div style="font-size:1.05rem; font-weight:800; line-height:1.2;" id="drawerUserNameLabel"></div>
-          </div>
-        </div>
+      <!-- Antet transparent; la derulare (cardul de profil iese din ecran) apar avatarul mic și numele, iar antetul devine sticlă -->
+      <div class="drawer-header meniu-antet stil-nou-antet">
+        <span class="clienta-title meniu-antet-profil">
+          <span class="drawer-avatar-wrap meniu-antet-avatar"></span>
+          <b class="meniu-antet-nume"></b>
+        </span>
         <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -508,22 +501,25 @@
         </button>
       </div>
 
-      <div class="drawer-body">
-        <!-- 1. Card Navigare Setări Profil -->
-        <div class="drawer-nav-card" onclick="navigheazaSubMeniu('profile')">
-          <div class="drawer-nav-card-left">
-            <div class="drawer-nav-icon">
-              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            </div>
-            <div>
-              <div class="drawer-nav-title" id="drawerMenuProfileTitle" data-en="Profile">Profil</div>
-              <div class="drawer-nav-desc" id="drawerMenuProfileDesc" data-en="Avatar, name, password" hidden>Avatar, nume, parolă</div>
-            </div>
-          </div>
-          <div class="drawer-nav-arrow">›</div>
-        </div>
+      <div class="drawer-body meniu-corp">
+        <!-- Cardul de profil: poza, numele, ce poți schimba; apăsat deschide Profilul -->
+        <button type="button" class="meniu-profil lista-sticla" onclick="navigheazaSubMeniu('profile')">
+          <span class="drawer-avatar-wrap" id="drawerUserAvatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </span>
+          <span class="meniu-profil-text">
+            <small id="drawerGreetingLabel" data-en="Hi,">Salut,</small>
+            <b id="drawerUserNameLabel"></b>
+            <small data-en="Profile, password, log out">Profil, parolă, ieșire din cont</small>
+          </span>
+          <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
 
-        <!-- 2. Card Navigare Plan de Antrenament (Liquid Glass Mov Minimalist) -->
+        <div class="lista-titlu doar-antrenor" data-en="Training">Antrenament</div>
+        <div class="lista-sticla doar-antrenor">
         <div class="drawer-nav-card doar-antrenor" onclick="deschideSectiunePlanAntrenamentDinMeniu()">
           <div class="drawer-nav-card-left">
             <div class="drawer-nav-icon">
@@ -531,21 +527,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" id="drawerMenuWorkoutTitle">Plan de Antrenament</div>
-              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc" hidden>Programe, export PDF, trimitere la clienți</div>
-            </div>
-          </div>
-          <div class="drawer-nav-arrow">›</div>
-        </div>
-
-        <!-- 3. Card Navigare Setări Aplicație -->
-        <div class="drawer-nav-card" onclick="navigheazaSubMeniu('settings')">
-          <div class="drawer-nav-card-left">
-            <div class="drawer-nav-icon">
-              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
-            </div>
-            <div>
-              <div class="drawer-nav-title" id="drawerMenuSettingsTitle" data-en="App Settings">Setări Aplicație</div>
-              <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Appearance, language, schedule" hidden>Aspect, limbă, orar</div>
+              <div class="drawer-nav-desc" id="drawerMenuWorkoutDesc">Programe, export PDF, trimitere la clienți</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -559,11 +541,15 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Community">Comunitate</div>
+              <div class="drawer-nav-desc" data-en="Challenges, leaderboard, feed">Provocări, clasament, activitate</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
         </div>
+        </div>
 
+        <div class="lista-titlu doar-antrenor" data-en="Nutrition">Nutriție</div>
+        <div class="lista-sticla doar-antrenor">
         <!-- Card Navigare Rețete (antrenor: rețete pentru toți clienții lui) -->
         <div class="drawer-nav-card doar-antrenor" onclick="deschideReteteAntrenor()">
           <div class="drawer-nav-card-left">
@@ -572,6 +558,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Recipes">Rețete</div>
+              <div class="drawer-nav-desc" data-en="For all your clients">Pentru toți clienții tăi</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -585,6 +572,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Meal plans">Planuri alimentare</div>
+              <div class="drawer-nav-desc" data-en="Clients' plans and templates">Planurile clienților și șabloane</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -598,6 +586,24 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Check a product">Verifică un produs</div>
+              <div class="drawer-nav-desc" data-en="Scan or search the label">Scanezi sau cauți eticheta</div>
+            </div>
+          </div>
+          <div class="drawer-nav-arrow">›</div>
+        </div>
+        </div>
+
+        <div class="lista-titlu" data-en="App">Aplicație</div>
+        <div class="lista-sticla">
+        <!-- Card Navigare Setări Aplicație -->
+        <div class="drawer-nav-card" onclick="navigheazaSubMeniu('settings')">
+          <div class="drawer-nav-card-left">
+            <div class="drawer-nav-icon">
+              <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+            </div>
+            <div>
+              <div class="drawer-nav-title" id="drawerMenuSettingsTitle" data-en="Settings">Setări</div>
+              <div class="drawer-nav-desc" id="drawerMenuSettingsDesc" data-en="Theme, language, notifications">Temă, limbă, notificări</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -611,6 +617,7 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="What's new">Noutăți</div>
+              <div class="drawer-nav-desc" data-en="What changed in the app">Ce s-a schimbat în aplicație</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
@@ -624,16 +631,11 @@
             </div>
             <div>
               <div class="drawer-nav-title" data-en="Report a problem">Raportează o problemă</div>
+              <div class="drawer-nav-desc" data-en="A problem or a suggestion">O problemă sau o sugestie</div>
             </div>
           </div>
           <div class="drawer-nav-arrow">›</div>
         </div>
-
-        <!-- Buton Deconectare cu Stil Liquid Glass -->
-        <div style="margin-top:auto; padding-top:12px;">
-          <button type="button" class="btn btn-logout-glass" onclick="deconectareUtilizator()">
-            <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg> <span id="drawerLogoutBtnText" data-en="Log out">Ieși din cont</span>
-          </button>
         </div>
       </div>
     </div>
@@ -1146,6 +1148,12 @@
           <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDateJson" onclick="exportaDateleMeleJson()" data-en="Technical export (JSON)">Export tehnic (JSON)</button>
           <button type="button" class="btn btn-clear profile-date-btn profile-sterge-cont" id="btnStergeCont" onclick="stergeContulMeu()" data-en="Delete account">Șterge contul</button>
         </div>
+
+        <!-- Ieșirea din cont: ultima în Profil (acolo e tot ce ține de cont), separată, cu text roșu -->
+        <button type="button" class="meniu-iesire lista-sticla" onclick="deconectareUtilizator()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
+          <span id="drawerLogoutBtnText" data-en="Log out">Ieși din cont</span>
+        </button>
       </div>
     </div>
 
@@ -1819,16 +1827,44 @@
 
     <!-- 4. ÎNCASĂRI -->
     <div id="tabIncasari" class="tab-content">
-      <div class="card" id="cardInregistrareIncasare">
-        <h3 style="margin-top: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
-          <svg viewBox="0 0 24 24" style="width:20px; height:20px; stroke:var(--primary); fill:none; stroke-width:2;">
-            <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-            <line x1="2" y1="10" x2="22" y2="10"></line>
-            <circle cx="14" cy="15" r="1.8" fill="var(--primary)" stroke="none"></circle>
-            <circle cx="17" cy="15" r="1.8" fill="var(--primary)" stroke="none" opacity="0.6"></circle>
-          </svg>
-          <span id="incasareTitleText">Înregistrare Plată Nouă</span>
-        </h3>
+      <!-- Ca pe Orar: titlul mare și + pentru o încasare nouă; luna cu ‹ ›, cifrele lunii, cine are de reînnoit, încasările pe zile -->
+      <div class="orar-titlu-mare">
+        <div class="orar-titlu-text"><h1 id="incTitluText">Încasări</h1></div>
+        <button type="button" class="orar-cauta-btn" id="btnIncasareNoua" onclick="deschideIncasareNoua()" title="Încasare nouă" aria-label="Încasare nouă" data-en-title="New payment" data-en-aria="New payment">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <div id="incReinnoire"></div>
+
+      <!-- Istoricul încasărilor, ca Istoricul prezențelor de pe Orar: luna cu ‹ ›, căutare, cifrele lunii, încasările pe zile -->
+      <details id="detailsIstoricIncasari" ontoggle="peComutareIstoricIncasari(this)">
+        <summary class="summary-toggle-clean">
+          <span class="orar-titlu-cu-ceas">
+            <span class="btn-lock-hour" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M7 15h3"/></svg></span>
+            <span id="historyIncSummaryText" data-en="Payment history">Istoric Încasări</span>
+          </span>
+          <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </summary>
+        <div class="istoric-orar">
+          <div class="istoric-luna">
+            <button type="button" class="drawer-nav-btn" onclick="schimbaLunaIncasari(-1)" id="btnIncLunaInapoi"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+            <b id="incLunaText"></b>
+            <button type="button" class="drawer-nav-btn" onclick="schimbaLunaIncasari(1)" id="btnIncLunaInainte"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+          </div>
+          <div class="istoric-cauta">
+            <span class="istoric-cauta-camp">
+              <input type="text" id="filtruClientaIncasari" placeholder="Caută client" autocomplete="off" list="listaClienteVizibile" oninput="filtreazaIstoricIncasariInstant()" onchange="filtreazaIstoricIncasariInstant()">
+            </span>
+          </div>
+          <div class="orar-cifre" id="incCifre"></div>
+          <div id="incasariLista"></div>
+        </div>
+      </details>
+
+      <!-- Încasare nouă: același formular și aceeași salvare (salveazaIncasare), într-o fereastră care urcă de jos -->
+      <div class="fisa-scurta incasare-foaie" id="cardInregistrareIncasare" hidden>
+        <div class="fisa-scurta-maner"><span></span></div>
+        <h3 class="incasare-foaie-titlu"><span id="incasareTitleText">Înregistrare Plată Nouă</span></h3>
         
         <div class="form-group">
           <label id="labelIncNume">Nume Client (Existent sau Nou)</label>
@@ -1838,26 +1874,28 @@
 
         <div class="form-group">
           <label id="labelIncTip">Tip Abonament</label>
-          <select id="incasareTip" class="form-control select-faded" onchange="actualizeazaStilSelect(this); autoSelecteazaSuma()">
+          <!-- Lista rămâne sursa valorii (salvarea, validarea, Setările o folosesc); se alege din pastilele de dedesubt -->
+          <select id="incasareTip" class="form-control select-faded" hidden onchange="actualizeazaStilSelect(this); autoSelecteazaSuma()">
             <option value="" id="optSelectSubPlaceholder">Alege tip abonament</option>
           </select>
+          <div class="pastile-alegere" id="incTipPastile" data-select="incasareTip"></div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px;">
-          <div class="form-group">
-            <label id="labelIncSuma">Sumă (RON)</label>
-            <select id="selectSumaPreset" class="form-control select-faded" onchange="actualizeazaStilSelect(this); gestioneazaSchimbareSumaPreset()">
-              <option value="" id="optSumaPlaceholder">Suma</option>
-              <option value="custom" data-en="Other amount...">Altă sumă...</option>
-            </select>
-            <input type="number" id="incasareSumaCustom" class="form-control" placeholder="Sumă (RON)" style="margin-top:6px; display:none;">
-          </div>
-          <div class="form-group">
-            <label id="labelIncMetoda">Metodă Plată</label>
-            <select id="incasareMetoda" class="form-control select-faded" onchange="actualizeazaStilSelect(this)">
-              <option value="" id="optMetodaPlaceholder">Metoda Plata</option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label id="labelIncMetoda">Metodă Plată</label>
+          <select id="incasareMetoda" class="form-control select-faded" hidden onchange="actualizeazaStilSelect(this)">
+            <option value="" id="optMetodaPlaceholder">Metoda Plata</option>
+          </select>
+          <div class="pastile-alegere" id="incMetodaPastile" data-select="incasareMetoda"></div>
+        </div>
+
+        <div class="form-group">
+          <label id="labelIncSuma">Sumă (RON)</label>
+          <select id="selectSumaPreset" class="form-control select-faded" onchange="actualizeazaStilSelect(this); gestioneazaSchimbareSumaPreset()">
+            <option value="" id="optSumaPlaceholder">Suma</option>
+            <option value="custom" data-en="Other amount...">Altă sumă...</option>
+          </select>
+          <input type="number" id="incasareSumaCustom" class="form-control" placeholder="Sumă (RON)" style="margin-top:6px; display:none;">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -1878,63 +1916,10 @@
           </div>
         </div>
 
-        <button class="btn" style="width: 100%; margin-top: 4px;" id="submitAbonamentBtn" onclick="salveazaIncasare()">
+        <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala incasare-salveaza" id="submitAbonamentBtn" onclick="salveazaIncasare()">
           Salvează încasarea
         </button>
       </div>
-
-      <details id="detailsIstoricIncasari" style="margin-top: 10px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 12px;" ontoggle="peComutareIstoricIncasari(this)">
-        <summary class="summary-toggle-clean">
-          <span>
-            <svg class="icon-history-svg" viewBox="0 0 24 24">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-              <path d="M3 3v5h5"></path>
-              <path d="M12 7v5l4 2"></path>
-            </svg>
-            <span id="historyIncSummaryText">Istoric Încasări</span>
-          </span>
-          <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
-        </summary>
-        <div style="margin-top: 10px;">
-          
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
-            <div class="form-group" style="margin-bottom:0;">
-              <label id="labelFiltruCliInc">Filtrează client:</label>
-              <input type="text" id="filtruClientaIncasari" class="form-control" placeholder="Toți clienții" data-en-placeholder="All clients" data-en-placeholder="All clients" list="listaClienteVizibile" oninput="filtreazaIstoricIncasariInstant()" onchange="filtreazaIstoricIncasariInstant()">
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label id="labelFiltruLunaInc">Filtrează lună:</label>
-              <select id="filtruLunaIncasari" class="form-control" onchange="filtreazaIstoricIncasariInstant()">
-                <option value="">Toate lunile</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="total-incasari-card">
-            <div>
-              <div class="total-incasari-label" id="totalIncLabelText">Total Încasări</div>
-              <div class="total-incasari-count" id="totalIncasariCount">0 plăți găsite</div>
-            </div>
-            <div class="total-incasari-val" id="totalIncasariVal">0 RON</div>
-          </div>
-
-          <table class="incasari-table-fit">
-            <thead>
-              <tr>
-                <th style="width:19%;" data-en="Date">Data</th>
-                <th style="width:27%;" data-en="Client">Client</th>
-                <th style="width:17%;" data-en="Amount">Sumă</th>
-                <th style="width:16%; text-align:center;" data-en="Method">Metodă</th>
-                <th style="width:15%;" data-en="Plan">Abonam.</th>
-                <th style="width:6%;"></th>
-              </tr>
-            </thead>
-            <tbody id="incasariIstoricTbody">
-              <tr><td colspan="6" style="text-align:center; color:#888;">Nici o înregistrare</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </details>
     </div>
 
     <!-- 5. PLAN DE ANTRENAMENT (ECRAN SECUNDAR DEDICAT) -->
@@ -2060,7 +2045,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal207"></script>
-  <script src="app.js?v=fitFinal207"></script>
+  <script src="sabloane.js?v=fitFinal208"></script>
+  <script src="app.js?v=fitFinal208"></script>
 </body>
 </html>
