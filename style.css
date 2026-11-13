@@ -3619,7 +3619,8 @@ nav button.active svg {
 
 /* CARDURI GENERALE & DETAILS */
 .card,
-details {
+/* Hold din Confirmări e și el un <details>, dar sticla o au antetul și cardul lui, nu cutia din jur */
+details:where(:not(.prog-hold)) {
   background: var(--card-bg) !important;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border) !important;
