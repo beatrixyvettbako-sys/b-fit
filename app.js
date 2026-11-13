@@ -1619,6 +1619,23 @@ function gasesteClientaValida(numeIntrodus) {
   if (ecranClienta) urmareste(ecranClienta, 'clientaNav', () => ecranClienta.scrollTop);
 })();
 
+// Enter (tasta „Gata” de pe telefon) la câmpurile de un rând și la notițele scurte: închide tastatura,
+// iar ieșirea din câmp salvează ca de obicei — nu mai trebuie apăsat în afara câmpului.
+// Rămân neatinse: formularele (autentificare, mesaje), câmpurile cu Enter propriu (căutări, adăugări)
+// și textele lungi pe mai multe rânduri (mesaje, planuri, notițe din fișă).
+(function () {
+  const CAMPURI_SCURTE = 'input:is([type=text], [type=search], [type=number], [type=tel], [type=email], [type=url], :not([type])), textarea:is(.prog-mentiuni-textarea, .fisa-scurta-mentiune, .hour-motiv-input)';
+  const esteScurt = el => el && el.matches && el.matches(CAMPURI_SCURTE) && !el.closest('form');
+  document.addEventListener('focusin', e => {
+    if (esteScurt(e.target) && !e.target.hasAttribute('enterkeyhint')) e.target.setAttribute('enterkeyhint', 'done');
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.shiftKey || e.isComposing || !esteScurt(e.target) || e.target.hasAttribute('onkeydown')) return;
+    e.preventDefault();
+    e.target.blur();
+  });
+})();
+
 // Service worker: pagina se ia mereu de pe internet (versiunea nouă apare la deschidere), fișierele merg și offline
 // Local (127.0.0.1 / localhost) fără service worker, ca modificările să se vadă imediat la testare
 if ('serviceWorker' in navigator) {
@@ -10344,6 +10361,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 205, data: '2026-11-13',
+    client: [],
+    antrenor: [
+      ['Pe Confirmări apeși pe un client și vezi orele programate săptămâna asta, ședințele pe săptămână, mențiunea și „Mută în Hold”, toate într-un loc.', 'In Check-in, tap a client to see this week’s booked sessions, sessions per week, the note and “Move to Hold”, all in one place.'],
+      ['Când scrii, tasta Enter („Gata”) închide tastatura și salvează; nu mai trebuie să apeși în afara câmpului.', 'When typing, the Enter key (“Done”) closes the keyboard and saves; no need to tap outside the field.']
+    ]
+  },
   { v: 203, data: '2026-11-13',
     client: [],
     antrenor: [
@@ -11610,7 +11634,7 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
   const maner = foaie;
   let y0 = null;
   maner.addEventListener('pointerdown', e => {
-    if (e.target.closest('button')) return;
+    if (e.target.closest('button, textarea, input')) return;
     y0 = e.clientY; foaie.style.animation = 'none'; foaie.style.transition = 'none';
     try { maner.setPointerCapture(e.pointerId); } catch (x) {}
   });
@@ -11744,6 +11768,9 @@ function deschideCautareClient() {
 }
 
 function inchideFisaScurta() {
+  // Un câmp din fișă care încă are cursorul își salvează textul (blur) înainte să dispară fereastra
+  const foaie = document.getElementById('fisaScurta');
+  if (foaie && foaie.contains(document.activeElement)) document.activeElement.blur();
   document.getElementById('fisaScurtaFundal')?.remove();
   document.getElementById('fisaScurta')?.remove();
 }
@@ -12910,13 +12937,13 @@ function randeazaProgramariInstant() {
     if (elPerioada) elPerioada.textContent = `${tr('Săptămâna', 'Week')} ${perioada}`;
     const elTitlu = document.getElementById('progTitluText');
     if (elTitlu) elTitlu.textContent = tr('Confirmări', 'Check-in');
-    const elNota = document.getElementById('progNotaAuto');
-    if (elNota) elNota.textContent = tr('Reminder automat: luni și miercuri seara', 'Automatic reminder: Monday and Wednesday evening');
     // Cifrele săptămânii, ca pe Orar; o apăsare arată doar grupul ales (filtrul doar ascunde rânduri, indicii rămân aceiași)
     const elCifre = document.getElementById('progCifre');
     if (elCifre) {
       elCifre.hidden = !cuTinta.length;
-      const cifra = (grup, nr, text, culoare) => `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruConfirmari === grup ? ' activ' : ''}" data-grup="${grup}" onclick="filtreazaConfirmari('${grup}')"><b>${nr}</b><span>${text}</span></button>`;
+      // Un grup gol nu se poate alege (lista ar rămâne goală); dacă grupul ales s-a golit între timp, filtrul se anulează
+      if (filtruConfirmari && !{ zero, partial: partiale, complet: complete }[filtruConfirmari]) filtruConfirmari = null;
+      const cifra = (grup, nr, text, culoare) => `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruConfirmari === grup ? ' activ' : ''}" data-grup="${grup}"${nr ? '' : ' disabled'} onclick="filtreazaConfirmari('${grup}')"><b>${nr}</b><span>${text}</span></button>`;
       elCifre.innerHTML = cifra('zero', zero, zero === 1 ? tr('neprogramat', 'not booked') : tr('neprogramați', 'not booked'), 'rosu')
         + cifra('partial', partiale, tr('parțial', 'partly'), 'portocaliu')
         + cifra('complet', complete, complete === 1 ? tr('complet', 'complete') : tr('compleți', 'complete'), 'verde');
@@ -12925,20 +12952,26 @@ function randeazaProgramariInstant() {
     const actHtml = randuriSaptamana.map((r, i) => {
       const cls = !r.tinta ? 'fara' : r.facute >= r.tinta ? 'complet' : r.facute ? 'partial' : 'zero';
       const stare = r.tinta ? `<button type="button" class="prog-saptamana ${cls}" onclick="apasaStareSaptamana(${i})" title="${r.facute >= r.tinta ? tr('Are toate ședințele programate', 'All sessions booked') : tr('Trimite un reminder', 'Send a reminder')}">${r.facute >= r.tinta ? '✓' : r.facute ? '◐' : '○'} ${r.facute}/${r.tinta}</button>` : '';
-      const sub = r.tinta ? `<button type="button" class="prog-tinta" onclick="seteazaTintaSaptamana(${i})">${r.tinta} ${tr('pe săpt.', 'a week')}${r.c && r.c.sedinteSaptamana ? ' ✎' : ''}</button>`
-        : `<span class="prog-tinta">${escAttr(r.stare || '–')}</span>`;
       const mentiune = r.conf ? r.conf.mentiuni : '';
-      return `
-        <div class="prog-row${mentiune ? ' are-mentiune' : ''}" data-grup="${cls}">
-          ${r.c ? `<div class="slot-num" role="button" tabindex="0" onclick="arataFisaScurta('${escAttr(r.c.id)}')">${avatarSlotHtml(r.c)}</div>` : '<div class="slot-num"></div>'}
+      // Rândurile vechi, fără client în listă, n-au fișă pe scurt: mențiunea și Hold rămân pe rând
+      if (!r.c) return `
+        <div class="prog-row" data-grup="${cls}">
           <div class="prog-info">
             <span class="prog-name">${escAttr(r.nume)}</span>
-            ${sub}
-            <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="ieseMentiuneSaptamana(this, ${i})">${escAttr(mentiune)}</textarea>
+            <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiuneSaptamana(${i}, this.value)">${escAttr(mentiune)}</textarea>
+          </div>
+          <button type="button" class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
+        </div>`;
+      // Tot rândul deschide fișa pe scurt (ținta, mențiunea, Hold); pastila trimite reminderul
+      return `
+        <div class="prog-row prog-row-client" data-grup="${cls}" onclick="arataFisaConfirmari(${i}, event)">
+          <div class="slot-num">${avatarSlotHtml(r.c)}</div>
+          <div class="prog-info">
+            <span class="prog-name">${escAttr(r.nume)}</span>
+            ${!r.tinta ? `<span class="prog-sub">${escAttr(r.stare || '–')}</span>` : ''}
+            ${mentiune ? `<span class="prog-sub prog-mentiune">${escAttr(mentiune)}</span>` : ''}
           </div>
           ${stare}
-          <button type="button" class="btn-trash-action prog-mentiune-btn" onclick="deschideMentiuneSaptamana(this)" title="${tr('Mențiune', 'Note')}" aria-label="${tr('Mențiune', 'Note')}">${SVG_MENTIUNE}</button>
-          <button type="button" class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
         </div>`;
     }).join('');
     actContainer.innerHTML = actHtml || `<div class="prog-gol">${t('noRecords')}</div>`;
@@ -12950,7 +12983,7 @@ function randeazaProgramariInstant() {
     // În Hold motivul pauzei e chiar rostul rândului, deci câmpul rămâne mereu vizibil
     (DB.progHold || []).forEach(item => {
       holdHtml += `
-        <div class="prog-row are-mentiune">
+        <div class="prog-row">
           <div class="prog-info">
             <span class="prog-name">${escAttr(item.nume)}</span>
             <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
@@ -12965,7 +12998,7 @@ function randeazaProgramariInstant() {
         <div class="prog-row">
           <div class="prog-info">
             <span class="prog-name">${escAttr(c.nume)}</span>
-            <span class="prog-tinta">⏸ ${escAttr(stareAbonamentClienta(c).text)}</span>
+            <span class="prog-sub">⏸ ${escAttr(stareAbonamentClienta(c).text)}</span>
           </div>
         </div>`;
     });
@@ -12983,7 +13016,6 @@ function randeazaProgramariInstant() {
 let randuriSaptamana = [];
 const SVG_PAUZA_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>';
 const SVG_DIN_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
-const SVG_MENTIUNE = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
 
 // Grupul arătat de cifrele de sus (zero / partial / complet); null = toți
 let filtruConfirmari = null;
@@ -12995,18 +13027,41 @@ function filtreazaConfirmari(grup) {
   document.querySelectorAll('#progCifre .orar-cifra').forEach(b => b.classList.toggle('activ', b.dataset.grup === filtruConfirmari));
 }
 
-// Mențiunea se vede doar când există; iconița deschide același câmp, salvarea rămâne cea de la ieșirea din câmp
-function deschideMentiuneSaptamana(btn) {
-  const rand = btn.closest('.prog-row');
-  rand.classList.add('scrie-mentiune');
-  rand.querySelector('.prog-mentiuni-textarea').focus();
-}
-
-function ieseMentiuneSaptamana(el, i) {
-  const rand = el.closest('.prog-row');
-  rand.classList.remove('scrie-mentiune');
-  rand.classList.toggle('are-mentiune', !!el.value.trim());
-  schimbaMentiuneSaptamana(i, el.value);
+// Fișa pe scurt din Confirmări: aceeași fereastră ca pe Orar, plus ținta pe săptămână, mențiunea și mutarea în Hold.
+// Salvările sunt cele de pe rând de până acum (seteazaTintaSaptamana, schimbaMentiuneSaptamana, mutaInHoldSaptamana).
+function arataFisaConfirmari(i, e) {
+  const r = randuriSaptamana[i];
+  if (!r || !r.c || (e && e.target.closest('button'))) return;
+  arataFisaScurta(r.c.id);
+  const actiuni = document.querySelector('#fisaScurta .fisa-scurta-actiuni');
+  if (!actiuni) return;
+  // Orele deja programate săptămâna asta (din orar), în ordinea zilelor; ✓ = prezență bifată
+  const zileChei = ['Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata', 'Duminica'];
+  const zileNume = currentLang === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['Luni', 'Marți', 'Miercuri', 'Joi', 'Vineri', 'Sâmbătă', 'Duminică'];
+  const ore = (r.programari || []).map(s => ({ zi: zileChei.indexOf(s.ziRaw.split('_').pop().replace('Marți', 'Marti')), ora: normalizeazaOraUi(s.ora), bifat: s.bifat }))
+    .sort((a, b) => a.zi - b.zi || a.ora.localeCompare(b.ora));
+  const bloc = document.createElement('div');
+  bloc.className = 'fisa-scurta-confirmari';
+  bloc.innerHTML = `
+    <div class="fisa-scurta-zile">
+      <span>${tr('Programat săptămâna asta', 'Booked this week')}</span>
+      <div>${ore.length ? ore.map(o => `<em class="${o.bifat ? 'bifat' : ''}">${o.bifat ? '✓ ' : ''}${zileNume[o.zi] || ''} ${o.ora}</em>`).join('') : `<small>${tr('Nicio oră încă', 'No sessions yet')}</small>`}</div>
+    </div>
+    ${r.tinta ? `<button type="button" class="fisa-scurta-rand" id="btnFisaTinta"><span>${tr('Ședințe pe săptămână', 'Sessions per week')}</span><b>${r.tinta}${r.c.sedinteSaptamana ? '' : ` <small>${tr('automat', 'auto')}</small>`}</b></button>` : ''}
+    <textarea rows="2" class="fisa-scurta-mentiune" placeholder="${tr('Mențiune (ex. vine doar seara)', 'Note (e.g. evenings only)')}">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>`;
+  const camp = bloc.querySelector('textarea');
+  // Ultima valoare trimisă: a doua ieșire din câmp nu mai salvează (altfel prima mențiune ar crea două rânduri)
+  let salvat = r.conf ? r.conf.mentiuni : '';
+  camp.onblur = () => {
+    if (camp.value === salvat) return;
+    salvat = camp.value;
+    schimbaMentiuneSaptamana(i, camp.value);
+    randeazaProgramariInstant();
+  };
+  if (r.tinta) bloc.querySelector('#btnFisaTinta').onclick = () => { inchideFisaScurta(); seteazaTintaSaptamana(i); };
+  actiuni.before(bloc);
+  actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaHold">${SVG_PAUZA_HOLD}${tr('Mută în Hold', 'Move to Hold')}</button>`);
+  actiuni.querySelector('#btnFisaHold').onclick = () => { inchideFisaScurta(); mutaInHoldSaptamana(i); };
 }
 
 // bifate = ședințele făcute deja săptămâna asta (scăzute din `ramase`): se adaugă înapoi, ca ținta să nu scadă în timpul săptămânii
@@ -13040,7 +13095,7 @@ function randuriConfirmariSaptamana() {
     const bifate = aleSaptamanii.filter(x => x.bifat).length;
     return {
       c, nume: c.nume, bifate, tinta: areTinta ? tintaSaptamanaClient(c, bifate) : 0, stare: areTinta ? '' : s.text,
-      facute: aleSaptamanii.length,
+      facute: aleSaptamanii.length, programari: aleSaptamanii,
       conf: aleLui.find(p => p.mentiuni) || aleLui[0] || null
     };
   });

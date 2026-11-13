@@ -36,6 +36,10 @@ Scopul: fiecare schimbare lasă codul cel puțin la fel de curat și de rapid cu
 - Animezi doar `transform` și `opacity`. `backdrop-filter`, umbrele mari și `will-change` se folosesc cu măsură (pe telefon costă la fiecare cadru). Nu folosești `:has()` pe `html`/`body` pentru stări care se schimbă des.
 - Pseudo-elementele nu intră în `:is()`.
 
+### Comportamente comune (nu le repeta pe fiecare element)
+- **Enter pe tastatura telefonului:** un singur listener în `app.js`, cu `CAMPURI_SCURTE`, închide tastatura la câmpurile de un rând și pune tasta „Gata”. Un câmp nou de un rând nu are nevoie de `onkeydown`. O notiță scurtă nouă (`textarea`) se adaugă în `CAMPURI_SCURTE`. Câmpurile cu `onkeydown` propriu, formularele și textele lungi rămân neatinse.
+- **Selecția de text** e oprită pe `body` și permisă doar în câmpuri. Nu mai pui `user-select: none` pe elemente.
+
 ### HTML (`index.html`)
 - ID-urile, clasele de stare, `onclick`-urile și `list="listaClienteVizibile"` nu se redenumesc și nu se șterg (vezi `CLAUDE.md`, Zero regresii). Elementele noi urmează tiparul celor existente din același ecran.
 

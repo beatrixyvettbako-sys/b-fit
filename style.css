@@ -374,6 +374,10 @@ body {
   padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
   min-height: 100dvh;
+  /* Ca o aplicație, nu ca o pagină: textele nu se selectează la apăsare lungă (câmpurile da, mai jos) */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Câmpurile (inclusiv cele de dată) nu moștenesc singure fontul; fără asta browserul pune Arial / monospace */
@@ -381,6 +385,14 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+/* În câmpuri textul se poate selecta, copia și lipi */
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 body.no-scroll {
@@ -576,7 +588,6 @@ header {
   transition: transform 0.15s ease, opacity 0.15s ease;
   flex-shrink: 0;
   pointer-events: auto;
-  user-select: none;
 }
 
 /* Iconița Orar deschide calendarul: inel și strălucire discrete, ca să se vadă că e apăsabilă */
@@ -934,7 +945,6 @@ header {
   display: flex;
   align-items: center;
   gap: 12px;
-  user-select: none;
   pointer-events: none;
 }
 
@@ -1169,7 +1179,6 @@ header {
   box-shadow: 0 2px 5px rgba(var(--accent-rgb), 0.45);
   cursor: pointer;
   transition: transform 0.15s ease, opacity 0.15s ease;
-  user-select: none;
   border: 1px solid rgba(255, 255, 255, 0.85);
 }
 
@@ -4666,7 +4675,16 @@ html:not([data-theme="dark"]) .hold-header::after {
   width: 40px;
   height: 40px;
   font-size: 0.8rem;
+}
+
+/* Tot rândul unui client deschide fișa pe scurt */
+.prog-row-client {
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.prog-row-client:active {
+  background: var(--m-btn);
 }
 
 .prog-info {
@@ -4694,17 +4712,9 @@ html:not([data-theme="dark"]) .hold-header::after {
   text-align: center;
 }
 
-/* Sub titlul mare: reminderul automat, ca să nu trimiți de mână ce pleacă oricum */
-.prog-nota-auto {
-  margin: -4px 4px 12px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-/* Acțiunile de pe rând: discrete, gri; Scoate din Hold păstrează accentul */
-.btn-trash-action:is(.prog-hold-btn, .prog-mentiune-btn),
-[data-theme="dark"] .btn-trash-action:is(.prog-hold-btn, .prog-mentiune-btn) { color: var(--m-muted); flex-shrink: 0; }
+/* Hold pe rândurile fără client (doar acolo rămâne pe rând): discret, gri; Scoate din Hold păstrează accentul */
+.btn-trash-action.prog-hold-btn,
+[data-theme="dark"] .btn-trash-action.prog-hold-btn { color: var(--m-muted); flex-shrink: 0; }
 .prog-hold-btn svg rect { fill: currentColor; stroke: none; }
 .btn-trash-action.prog-din-hold-btn { color: var(--primary); flex-shrink: 0; }
 [data-theme="dark"] .btn-trash-action.prog-din-hold-btn { color: var(--accent-purple-light); }
@@ -4747,13 +4757,9 @@ html:not([data-theme="dark"]) .hold-header::after {
   text-overflow: ellipsis;
 }
 
-/* Ținta pe săptămână sub nume (apăsată, o schimbi) sau starea abonamentului, la cei fără țintă */
-.prog-tinta {
+/* Sub nume: starea abonamentului (la cei fără țintă) și mențiunea, pe un rând */
+.prog-sub {
   max-width: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  font-family: inherit;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
@@ -4762,8 +4768,8 @@ html:not([data-theme="dark"]) .hold-header::after {
   text-overflow: ellipsis;
 }
 
-button.prog-tinta {
-  cursor: pointer;
+.prog-mentiune {
+  font-style: italic;
 }
 
 /* Pastila „programat X din Y”: apăsată, trimite reminderul */
@@ -4790,24 +4796,18 @@ button.prog-tinta {
 [data-theme="dark"] .prog-saptamana.partial { color: #fbbf24; }
 [data-theme="dark"] .prog-saptamana.zero { color: #f87171; }
 
-/* Mențiunea apare doar când există sau când o scrii (iconița de creion) */
-.prog-row:not(.are-mentiune):not(.scrie-mentiune) .prog-mentiuni-textarea {
-  display: none;
-}
-
 .prog-mentiuni-textarea {
   width: 100%;
-  margin-top: 5px;
-  border: 1px solid var(--m-border);
+  margin-top: 6px;
+  border: 1px solid var(--m-divider);
   background: var(--m-btn);
-  box-shadow: var(--m-float-sm);
-  padding: 5px 8px;
-  font-size: 0.76rem;
+  padding: 7px 10px;
+  font-size: 0.8rem;
   color: var(--text);
   outline: none;
   border-radius: 12px;
-  resize: vertical;
-  min-height: 26px;
+  resize: none;
+  min-height: 32px;
   font-family: inherit;
   line-height: 1.25;
   word-break: break-word;
@@ -5089,7 +5089,6 @@ button.prog-tinta {
   cursor: pointer;
   font-size: 0.88rem;
   outline: none;
-  user-select: none;
 }
 
 .icon-history-title {
@@ -9299,6 +9298,15 @@ nav button .nav-icon .cal-zi {
   padding: 6px 4px 10px;
 }
 
+/* Titlul e ori mare în pagină, ori mic în antet: nu amândouă deodată când te oprești la jumătatea derulării */
+.orar-titlu-text {
+  transition: opacity 0.2s ease;
+}
+
+body.orar-titlu-strans .orar-titlu-text {
+  opacity: 0;
+}
+
 .orar-titlu-mare span {
   font-size: 0.9rem;
   font-weight: 600;
@@ -9386,6 +9394,11 @@ button.orar-cifra {
 
 .orar-cifra.activ {
   border: 1.5px solid var(--accent-purple);
+}
+
+button.orar-cifra:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 [data-theme="dark"] .orar-cifra {
@@ -9705,8 +9718,8 @@ button.orar-cifra {
 }
 
 .fisa-scurta-grila b {
-  font-size: 1.3rem;
-  letter-spacing: -0.4px;
+  font-size: 1.1rem;
+  letter-spacing: -0.3px;
   line-height: 1.15;
   font-weight: 800;
   overflow: hidden;
@@ -9720,6 +9733,106 @@ button.orar-cifra {
 
 .fisa-scurta-grila b.portocaliu {
   color: #9a5b00;
+}
+
+/* Din Confirmări: orele programate săptămâna asta, ținta pe săptămână (apăsată, o schimbi) și mențiunea */
+.fisa-scurta-confirmari {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fisa-scurta-zile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.fisa-scurta-zile > span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.fisa-scurta-zile > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fisa-scurta-zile em {
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--m-border, var(--glass-border));
+  background: var(--m-btn, var(--input-glass-bg));
+  font-style: normal;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.fisa-scurta-zile em.bifat {
+  color: #15803d;
+  border-color: rgba(21, 128, 61, 0.3);
+}
+
+[data-theme="dark"] .fisa-scurta-zile em.bifat {
+  color: #4ade80;
+}
+
+.fisa-scurta-zile small {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.fisa-scurta-rand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--m-border, var(--glass-border));
+  background: var(--m-card, var(--input-glass-bg));
+  box-shadow: var(--m-shadow);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fisa-scurta-rand b {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.fisa-scurta-rand small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.fisa-scurta-mentiune {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid var(--m-border, var(--glass-border));
+  background: var(--m-btn, var(--input-glass-bg));
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  resize: none;
+  outline: none;
+}
+
+.fisa-scurta-mentiune:focus {
+  border-color: var(--accent-purple);
 }
 
 .fisa-scurta-buton {
@@ -9943,8 +10056,8 @@ body.stil-nou:not(.orar-titlu-strans) #mainAppHeader {
 
 body.stil-nou #mainAppHeader .header-icon-bubble-btn,
 body.stil-nou #mainAppHeader .header-icon-bubble-btn.header-icon-clickable {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   background: var(--m-card);
   border: 1px solid var(--m-border);
   color: var(--m-text);
@@ -9952,8 +10065,8 @@ body.stil-nou #mainAppHeader .header-icon-bubble-btn.header-icon-clickable {
 }
 
 body.stil-nou #mainAppHeader .header-icon-bubble-btn svg {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
 }
 
 body.stil-nou #mainAppHeader #headerIconOrarBtn {
