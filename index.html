@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal202">
+  <link rel="stylesheet" href="style.css?v=fitFinal203">
 </head>
 <body>
 
@@ -1461,21 +1461,25 @@
 
     <!-- 2. PROGRAMĂRI -->
     <div id="tabProgramari" class="tab-content">
-      <div class="prog-table-container">
-        <div class="prog-grid-layout prog-header">
-          <div class="prog-header-hash">#</div>
-          <div data-en="Name">Nume</div>
-          <div data-en="This week">Săptămâna</div>
-          <div data-en="Notes">Mențiuni</div>
-          <div></div>
+      <!-- Ca pe Orar: titlul mare cu săptămâna, apoi cifrele (sunt și filtre) -->
+      <div class="orar-titlu-mare">
+        <div class="orar-titlu-text">
+          <span id="progPerioada"></span>
+          <h1 id="progTitluText">Confirmări</h1>
         </div>
+      </div>
+      <div class="orar-cifre" id="progCifre" hidden></div>
+      <p class="prog-nota-auto" id="progNotaAuto"></p>
+      <div class="prog-table-container">
         <div id="progActiveList" class="loader">Se preiau programările...</div>
       </div>
 
-      <div class="hold-header" id="holdHeaderTitle">HOLD</div>
-      <div class="prog-table-container" style="border-radius: 0 0 24px 24px; border-top: none;">
-        <div id="progHoldList" class="loader">Se preiau clienții din Hold...</div>
-      </div>
+      <details class="prog-hold">
+        <summary class="hold-header"><span id="holdHeaderTitle">HOLD</span><span id="progHoldNr"></span></summary>
+        <div class="prog-table-container">
+          <div id="progHoldList" class="loader">Se preiau clienții din Hold...</div>
+        </div>
+      </details>
     </div>
 
     <!-- 3. FIȘĂ CLIENTĂ -->
@@ -2071,7 +2075,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal202"></script>
-  <script src="app.js?v=fitFinal202"></script>
+  <script src="sabloane.js?v=fitFinal203"></script>
+  <script src="app.js?v=fitFinal203"></script>
 </body>
 </html>

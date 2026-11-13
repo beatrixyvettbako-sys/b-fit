@@ -3199,15 +3199,6 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="4.5"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line><text class="cal-zi" x="12" y="18.3" font-size="8.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text></svg>
       </button>
     `;
-  } else if (tipTab === 'prog') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 11l3 3L22 4"></path>
-          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-        </svg>
-      </div>
-    `;
   } else if (tipTab === 'fisa') {
     iconHtml = `
       <div class="header-static-icon">
@@ -10353,6 +10344,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 203, data: '2026-11-13',
+    client: [],
+    antrenor: [
+      ['Confirmări are aspectul Orarului: sus vezi câți clienți sunt neprogramați, parțial sau compleți; apeși pe o cifră și vezi doar grupul acela.', 'Check-in now looks like the schedule: at the top you see how many clients are not booked, partly or fully booked; tap a number to see only that group.'],
+      ['Apeși pe avatarul unui client și vezi fișa pe scurt. Mențiunea apare doar când are text; o scrii din iconița de creion.', 'Tap a client’s avatar to see their quick profile. The note only shows when it has text; write it from the pencil icon.'],
+      ['Hold e strâns jos, cu numărul de clienți; îl deschizi când ai nevoie.', 'Hold is folded at the bottom with the number of clients; open it when you need it.']
+    ]
+  },
   { v: 192, data: '2026-11-12',
     client: [
       ['Aplicația are un aspect nou, mai aerisit, cu butoane și ferestre de sticlă.', 'The app has a fresh, airier look with glass buttons and windows.'],
@@ -11463,7 +11462,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   // Etichetă simplă pe pagină pentru stilurile Orarului (în loc de body:has(#tabOrar.active), costisitor la derulare)
   document.body.classList.toggle('pe-orar', tabId === 'tabOrar');
   // Tab-urile trecute pe stilul nou (al Orarului): fundalul cu pete de lumină și cardurile de sticlă
-  document.body.classList.toggle('stil-nou', ['tabProgramari'].includes(tabId));
+  document.body.classList.toggle('stil-nou', ['tabOrar', 'tabProgramari'].includes(tabId));
 
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) {
@@ -12750,6 +12749,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
 
 // La pornire Orarul e tab-ul deschis
 document.body.classList.toggle('pe-orar', !!document.querySelector('#tabOrar.active'));
+document.body.classList.toggle('stil-nou', !!document.querySelector('#tabOrar.active, #tabProgramari.active'));
 
 // Ora aleasă după „+”: se adaugă singură, fără încă o apăsare
 document.getElementById('inputOraCustom')?.addEventListener('change', e => {
@@ -12906,63 +12906,73 @@ function randeazaProgramariInstant() {
     const partiale = cuTinta.filter(r => r.facute && r.facute < r.tinta).length, zero = cuTinta.length - complete - partiale;
     const luni = new Date(dataReferintaLuniBaza), duminica = new Date(luni.getTime() + 6 * 86400000);
     const perioada = luni.getMonth() === duminica.getMonth() ? `${luni.getDate()} – ${formatZiLuna(duminica)}` : `${formatZiLuna(luni)} – ${formatZiLuna(duminica)}`;
-    const rezumat = cuTinta.length ? `<div class="prog-rezumat">
-        <div class="prog-rezumat-sus"><span>${tr('Săptămâna', 'Week')} ${perioada}</span><b>${complete}<small> / ${cuTinta.length} ${tr('compleți', 'complete')}</small></b></div>
-        <div class="prog-rezumat-bara"><i style="width:${Math.round(complete / cuTinta.length * 100)}%"></i></div>
-        <div class="prog-rezumat-legenda">
-          ${zero ? `<span class="zero">○ ${zero} ${zero === 1 ? tr('neprogramat', 'not booked') : tr('neprogramați', 'not booked')}</span>` : ''}
-          ${partiale ? `<span class="partial">◐ ${partiale} ${tr('parțial', 'partly')}</span>` : ''}
-          ${complete ? `<span class="complet">✓ ${complete} ${tr('complet', 'complete')}</span>` : ''}
-        </div>
-      </div>` : '';
+    const elPerioada = document.getElementById('progPerioada');
+    if (elPerioada) elPerioada.textContent = `${tr('Săptămâna', 'Week')} ${perioada}`;
+    const elTitlu = document.getElementById('progTitluText');
+    if (elTitlu) elTitlu.textContent = tr('Confirmări', 'Check-in');
+    const elNota = document.getElementById('progNotaAuto');
+    if (elNota) elNota.textContent = tr('Reminder automat: luni și miercuri seara', 'Automatic reminder: Monday and Wednesday evening');
+    // Cifrele săptămânii, ca pe Orar; o apăsare arată doar grupul ales (filtrul doar ascunde rânduri, indicii rămân aceiași)
+    const elCifre = document.getElementById('progCifre');
+    if (elCifre) {
+      elCifre.hidden = !cuTinta.length;
+      const cifra = (grup, nr, text, culoare) => `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruConfirmari === grup ? ' activ' : ''}" data-grup="${grup}" onclick="filtreazaConfirmari('${grup}')"><b>${nr}</b><span>${text}</span></button>`;
+      elCifre.innerHTML = cifra('zero', zero, zero === 1 ? tr('neprogramat', 'not booked') : tr('neprogramați', 'not booked'), 'rosu')
+        + cifra('partial', partiale, tr('parțial', 'partly'), 'portocaliu')
+        + cifra('complet', complete, complete === 1 ? tr('complet', 'complete') : tr('compleți', 'complete'), 'verde');
+    }
+    actContainer.dataset.filtru = filtruConfirmari || '';
     const actHtml = randuriSaptamana.map((r, i) => {
       const cls = !r.tinta ? 'fara' : r.facute >= r.tinta ? 'complet' : r.facute ? 'partial' : 'zero';
-      const stare = r.tinta ? `<button type="button" class="prog-saptamana ${cls}" onclick="apasaStareSaptamana(${i})" title="${r.facute >= r.tinta ? tr('Are toate ședințele programate', 'All sessions booked') : tr('Trimite un reminder', 'Send a reminder')}">${r.facute >= r.tinta ? '✓' : r.facute ? '◐' : '○'} ${r.facute}/${r.tinta}</button>`
-        : `<span class="prog-saptamana fara">${escAttr(r.stare || '–')}</span>`;
+      const stare = r.tinta ? `<button type="button" class="prog-saptamana ${cls}" onclick="apasaStareSaptamana(${i})" title="${r.facute >= r.tinta ? tr('Are toate ședințele programate', 'All sessions booked') : tr('Trimite un reminder', 'Send a reminder')}">${r.facute >= r.tinta ? '✓' : r.facute ? '◐' : '○'} ${r.facute}/${r.tinta}</button>` : '';
+      const sub = r.tinta ? `<button type="button" class="prog-tinta" onclick="seteazaTintaSaptamana(${i})">${r.tinta} ${tr('pe săpt.', 'a week')}${r.c && r.c.sedinteSaptamana ? ' ✎' : ''}</button>`
+        : `<span class="prog-tinta">${escAttr(r.stare || '–')}</span>`;
+      const mentiune = r.conf ? r.conf.mentiuni : '';
       return `
-        <div class="prog-grid-layout prog-row">
-          <div class="prog-idx">${i + 1}</div>
-          <div class="prog-name"><span class="prog-nume-bloc"><span>${escAttr(r.nume)}</span>${r.tinta ? `<button type="button" class="prog-tinta" onclick="seteazaTintaSaptamana(${i})">${r.tinta} ${tr('pe săpt.', 'a week')}${r.c && r.c.sedinteSaptamana ? ' ✎' : ''}</button>` : ''}</span></div>
-          <div>${stare}</div>
-          <div>
-            <textarea rows="${r.conf && r.conf.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiuneSaptamana(${i}, this.value)">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>
+        <div class="prog-row${mentiune ? ' are-mentiune' : ''}" data-grup="${cls}">
+          ${r.c ? `<div class="slot-num" role="button" tabindex="0" onclick="arataFisaScurta('${escAttr(r.c.id)}')">${avatarSlotHtml(r.c)}</div>` : '<div class="slot-num"></div>'}
+          <div class="prog-info">
+            <span class="prog-name">${escAttr(r.nume)}</span>
+            ${sub}
+            <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="ieseMentiuneSaptamana(this, ${i})">${escAttr(mentiune)}</textarea>
           </div>
-          <div style="text-align:center;">
-            <button class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
-          </div>
+          ${stare}
+          <button type="button" class="btn-trash-action prog-mentiune-btn" onclick="deschideMentiuneSaptamana(this)" title="${tr('Mențiune', 'Note')}" aria-label="${tr('Mențiune', 'Note')}">${SVG_MENTIUNE}</button>
+          <button type="button" class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
         </div>`;
     }).join('');
-    actContainer.innerHTML = actHtml ? rezumat + actHtml : `<div style="padding:10px; color:#888; text-align:center;">${t('noRecords')}</div>`;
+    actContainer.innerHTML = actHtml || `<div class="prog-gol">${t('noRecords')}</div>`;
   }
 
   if (holdContainer) {
     let holdHtml = '';
     let pausePlaceholder = currentLang === 'en' ? 'Pause reason...' : 'Motiv pauză...';
-    (DB.progHold || []).forEach((item, index) => {
+    // În Hold motivul pauzei e chiar rostul rândului, deci câmpul rămâne mereu vizibil
+    (DB.progHold || []).forEach(item => {
       holdHtml += `
-        <div class="prog-grid-layout-hold prog-row hold-row">
-          <div class="prog-idx">${index + 1}</div>
-          <div class="prog-name">${escAttr(item.nume)}</div>
-          <div style="grid-column: 3 / 4;">
-            <textarea rows="${item.mentiuni ? 2 : 1}" class="prog-mentiuni-textarea prog-mentiuni-hold" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
+        <div class="prog-row are-mentiune">
+          <div class="prog-info">
+            <span class="prog-name">${escAttr(item.nume)}</span>
+            <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
           </div>
-          <div style="text-align:center;">
-            <button class="btn-trash-action prog-din-hold-btn" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din Hold', 'Take out of Hold')}" aria-label="${tr('Scoate din Hold', 'Take out of Hold')}">${SVG_DIN_HOLD}</button>
-          </div>
-        </div>
-      `;
-    });
-    // Abonamentele înghețate din fișă apar și ele aici (doar de citit; se reiau din fișă)
-    (DB.clienti || []).filter(c => esteInghetat(c) && !(DB.progHold || []).some(p => randulClientei(p, c, p.nume))).forEach((c, i) => {
-      holdHtml += `
-        <div class="prog-grid-layout-hold prog-row hold-row">
-          <div class="prog-idx">${(DB.progHold || []).length + i + 1}</div>
-          <div class="prog-name">${escAttr(c.nume)}</div>
-          <div style="grid-column: 3 / 4;" class="prog-inghetat">⏸ ${escAttr(stareAbonamentClienta(c).text)}</div>
-          <div></div>
+          <button type="button" class="btn-trash-action prog-din-hold-btn" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din Hold', 'Take out of Hold')}" aria-label="${tr('Scoate din Hold', 'Take out of Hold')}">${SVG_DIN_HOLD}</button>
         </div>`;
     });
-    holdContainer.innerHTML = holdHtml || `<div style="padding:10px; color:#888; text-align:center;">${t('noClientsHold')}</div>`;
+    // Abonamentele înghețate din fișă apar și ele aici (doar de citit; se reiau din fișă)
+    const inghetati = (DB.clienti || []).filter(c => esteInghetat(c) && !(DB.progHold || []).some(p => randulClientei(p, c, p.nume)));
+    inghetati.forEach(c => {
+      holdHtml += `
+        <div class="prog-row">
+          <div class="prog-info">
+            <span class="prog-name">${escAttr(c.nume)}</span>
+            <span class="prog-tinta">⏸ ${escAttr(stareAbonamentClienta(c).text)}</span>
+          </div>
+        </div>`;
+    });
+    holdContainer.innerHTML = holdHtml || `<div class="prog-gol">${t('noClientsHold')}</div>`;
+    const elHoldNr = document.getElementById('progHoldNr');
+    const nrHold = (DB.progHold || []).length + inghetati.length;
+    if (elHoldNr) elHoldNr.textContent = nrHold ? `(${nrHold})` : '';
   }
 }
 
@@ -12973,6 +12983,31 @@ function randeazaProgramariInstant() {
 let randuriSaptamana = [];
 const SVG_PAUZA_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>';
 const SVG_DIN_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+const SVG_MENTIUNE = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>';
+
+// Grupul arătat de cifrele de sus (zero / partial / complet); null = toți
+let filtruConfirmari = null;
+
+function filtreazaConfirmari(grup) {
+  filtruConfirmari = filtruConfirmari === grup ? null : grup;
+  const lista = document.getElementById('progActiveList');
+  if (lista) lista.dataset.filtru = filtruConfirmari || '';
+  document.querySelectorAll('#progCifre .orar-cifra').forEach(b => b.classList.toggle('activ', b.dataset.grup === filtruConfirmari));
+}
+
+// Mențiunea se vede doar când există; iconița deschide același câmp, salvarea rămâne cea de la ieșirea din câmp
+function deschideMentiuneSaptamana(btn) {
+  const rand = btn.closest('.prog-row');
+  rand.classList.add('scrie-mentiune');
+  rand.querySelector('.prog-mentiuni-textarea').focus();
+}
+
+function ieseMentiuneSaptamana(el, i) {
+  const rand = el.closest('.prog-row');
+  rand.classList.remove('scrie-mentiune');
+  rand.classList.toggle('are-mentiune', !!el.value.trim());
+  schimbaMentiuneSaptamana(i, el.value);
+}
 
 // bifate = ședințele făcute deja săptămâna asta (scăzute din `ramase`): se adaugă înapoi, ca ținta să nu scadă în timpul săptămânii
 function tintaAutomataSaptamana(c, bifate) {

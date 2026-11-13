@@ -16,12 +16,14 @@ Regulile de cod (modifici în loc să adaugi, ștergi ce rămâne fără efect, 
 - **Antet de tabel / etichete:** `color: var(--m-muted)`, 0.7rem, fără bandă colorată. Separatoarele folosesc `var(--m-divider)`, iar ultimul rând nu are linie.
 - **Cifre mari** (ca `.orar-cifra`): 1.6rem, 800, `letter-spacing: -0.5px`, cu eticheta dedesubt.
 - **Text pe ecran:** pe containerul tab-ului pui `--text: var(--m-text); --text-muted: var(--m-muted); padding: 10px 8px 0;`.
-- **Fundalul cu pete de lumină:** adaugi id-ul tab-ului în lista din `comutaTab` (`app.js`, clasa `stil-nou` pe `body`). Regulile fundalului folosesc deja `body:is(.pe-orar, .stil-nou)`, deci nu le copiezi.
+- **Clasa `stil-nou` pe `body`** aduce fundalul cu pete de lumină, antetul transparent cu butoane-bulă și bara de jos de sticlă. Ca să treci un ecran pe stilul nou, adaugi id-ul tab-ului în cele două liste din `app.js`: cea din `comutaTab` și cea de la pornire, lângă `pe-orar`. `pe-orar` rămâne doar pentru ce ține strict de Orar (bara de zile, calibrarea).
+- **Titlul mare și cifrele de sus:** refolosești `.orar-titlu-mare` / `.orar-titlu-text` și `.orar-cifre` / `.orar-cifra` (variante de culoare `-verde`, `-rosu`, `-portocaliu`, `-accent`). Ca filtru, `.orar-cifra` e `<button>`, iar cea aleasă primește clasa `activ`.
+- **Avatar:** `.slot-num` cu `avatarSlotHtml(c)`, iar apăsarea deschide `arataFisaScurta(id)`.
 - Culorile de sens rămân cele din `CLAUDE.md` (verde, roșu, portocaliu Hold).
 
 ## Ordinea redesign-ului (o versiune per ecran)
 
-Gata: Orar, Confirmări. Urmează: Încasări → Fișă client → Plan antrenament / alimentar → Chat → Notificări → Setări și submeniuri → ferestre (`customModal`, fișa pe scurt, căutare) → ecranul clientului (`#clientaScreen`).
+Gata: Orar, Confirmări (titlu mare, cifre-filtru, rânduri cu avatar, mențiune la cerere, Hold strâns). Urmează: Încasări → Fișă client → Plan antrenament / alimentar → Chat → Notificări → Setări și submeniuri → ferestre (`customModal`, fișa pe scurt, căutare) → ecranul clientului (`#clientaScreen`).
 
 ## Verificare înainte de „gata”
 
