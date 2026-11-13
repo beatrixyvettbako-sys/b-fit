@@ -2116,8 +2116,17 @@ html[data-rol="clienta"] #bottomNav {
   white-space: nowrap;
 }
 
+/* În Notificări cardul e de sticlă, ca lista de dedesubt */
+.notificari-lista.card-push {
+  padding: 12px 14px;
+}
+
+.card-push > span {
+  position: relative;
+}
+
 /* Notificări blocate: × în colțul din dreapta-sus (același stil ca la notificări) */
-.card.card-push-blocat {
+.card-push.card-push-blocat {
   position: relative;
   padding-right: 36px;
 }
@@ -2268,6 +2277,23 @@ html:not([data-theme="dark"]) .notificari-lista::before {
   border-bottom: none;
 }
 
+/* În listele de notificări, × e o bulă mică de sticlă, la mijlocul rândului */
+.notificari-lista .notificare-x {
+  top: 50%;
+  bottom: auto;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  font-size: 0.95rem;
+}
+
+.notificari-lista .notificare-x:active {
+  transform: translateY(-50%) scale(0.9);
+}
+
 .notificare-x {
   position: absolute;
   right: 4px;
@@ -2346,11 +2372,13 @@ html:not([data-theme="dark"]) .notificari-lista::before {
   color: var(--text-muted);
 }
 
-.notificare small {
-  flex-shrink: 0;
+/* Ora: sub mesaj, mică și discretă (în dreapta rămâne doar ×) */
+.notificare-text small {
+  margin-top: 3px;
   font-size: 0.7rem;
+  font-weight: 600;
   color: var(--text-muted);
-  white-space: nowrap;
+  opacity: 0.85;
 }
 
 .lipsa-checkin-rand {
@@ -5137,6 +5165,24 @@ html:not([data-theme="dark"]) .hold-header::after {
   cursor: pointer;
   font-size: 0.88rem;
   outline: none;
+}
+
+/* Săgeata secțiunilor care se deschid: fină, se rotește în jos când secțiunea e deschisă */
+.summary-sageata {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+  transition: transform 0.2s ease;
+}
+
+details[open] > summary .summary-sageata {
+  transform: rotate(90deg);
 }
 
 .icon-history-title {
@@ -9467,13 +9513,15 @@ button.orar-cifra {
   cursor: pointer;
 }
 
-/* Cifra aleasă pare apăsată: o nuanță de accent și o umbră interioară, fără contur */
-.orar-cifra.activ {
+/* Cifra aleasă (și „Toate lunile” din Istoric) pare apăsată: o nuanță de accent și o umbră interioară, fără contur */
+.orar-cifra.activ,
+.istoric-toate.activ {
   background: rgba(var(--accent-rgb), 0.14);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-[data-theme="dark"] .orar-cifra.activ {
+[data-theme="dark"] .orar-cifra.activ,
+[data-theme="dark"] .istoric-toate.activ {
   background: rgba(var(--accent-rgb), 0.22);
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.35);
 }
@@ -9655,14 +9703,83 @@ button.orar-cifra:disabled {
   border-radius: 22px !important;
 }
 
-#detailsIstoricOrar .icon-history-svg {
-  width: 34px;
-  height: 34px;
-  padding: 8px;
-  box-sizing: border-box;
-  border-radius: 50%;
-  background: rgba(var(--accent-rgb), 0.14);
-  border: 1px solid rgba(var(--accent-light-rgb), 0.45);
+/* Istoric prezențe: luna ca săptămâna din Orar (‹ ›), căutare de sticlă, cifrele perioadei, prezențele pe zile
+   (cardurile și titlurile zilelor sunt cele din Notificări, rândurile cele din Confirmări) */
+.istoric-orar {
+  margin-top: 12px;
+}
+
+.istoric-luna {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.istoric-luna b {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.istoric-cauta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.istoric-cauta-camp {
+  flex: 1;
+  min-width: 0;
+}
+
+.istoric-cauta-camp input {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  color: var(--m-text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.istoric-toate {
+  flex-shrink: 0;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  color: var(--m-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* Cifrele din Istoric stau într-un card mai îngust: margine laterală ca la pastilele-filtru din Confirmări */
+#istoricCifre .orar-cifra {
+  padding-inline: 12px;
+}
+
+/* Antrenamentul, ca pastilă mică în dreapta rândului */
+.istoric-ant {
+  flex-shrink: 0;
+  max-width: 40%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10329,12 +10446,26 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   stroke: var(--m-accent-text);
 }
 
-#tabOrar .extra-hour-card > div:first-child {
-  color: var(--m-muted) !important;
+/* „Oră suplimentară” și „Istoric prezențe”: același ceas în bulă ca ora de pe card, text pe măsură */
+#tabOrar .orar-titlu-cu-ceas {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--m-text);
+  white-space: nowrap;
 }
 
-#tabOrar .extra-hour-card .plan-btn-svg {
-  stroke: var(--m-accent-text);
+#tabOrar .orar-titlu-cu-ceas > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tabOrar .orar-titlu-cu-ceas .btn-lock-hour {
+  cursor: inherit;
 }
 
 .orar-cifra b {
@@ -10565,10 +10696,11 @@ body.zile-lipite #tabOrar .day-selector::before {
   cursor: pointer;
 }
 
-/* Mesajele scurte (toast): același stil ca „Anulează”, jos, cu un punct colorat */
+/* Mesajele scurte (toast): același stil ca „Anulează”, cu un punct colorat; sus, peste mijlocul antetului (ca pe iPhone),
+   unde nu le acoperă tastatura și nici ferestrele care urcă de jos (fișa pe scurt, notificările); atingerile trec prin ele */
 #customToast {
-  top: auto;
-  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  top: calc(env(safe-area-inset-top, 0px) + 1px);
+  bottom: auto;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -10578,7 +10710,7 @@ body.zile-lipite #tabOrar .day-selector::before {
   border-radius: 18px;
   text-align: left;
   font-size: 0.88rem;
-  transform: translateX(-50%) translateY(16px);
+  transform: translateX(-50%) translateY(-16px);
 }
 
 #customToast.show {

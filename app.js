@@ -90,7 +90,7 @@ const i18n = {
     futureWeekState: "Săptămâna viitoare",
     endScheduleTitle: "Ziua-i gata, caloriile-s topite!",
     endScheduleSubtitle: "Antrenorul a supraviețuit și azi!",
-    addExtraHour: "Oră suplimentară",
+    addExtraHour: "Adaugă oră",
     addBtn: "Adaugă",
     historyOrarTitle: "Istoric Prezențe",
     filterClient: "Filtrează după client:",
@@ -244,7 +244,7 @@ const i18n = {
     futureWeekState: "Next week",
     endScheduleTitle: "Day is done, calories burned!",
     endScheduleSubtitle: "The coach survived today too!",
-    addExtraHour: "Extra hour",
+    addExtraHour: "Add hour",
     addBtn: "Add",
     historyOrarTitle: "Attendance History",
     filterClient: "Filter by client:",
@@ -3096,6 +3096,7 @@ function peComutareIstoricIncasari(detailsEl) {
 
 function peComutareIstoricOrar(detailsEl) {
   if (detailsEl && detailsEl.open) {
+    filtreazaIstoricOrarInstant(); // cât a fost închis nu avea lățime: eticheta lunii se potrivește abia acum
     setTimeout(() => {
       let headerEl = document.getElementById('mainAppHeader');
       let daySelector = document.getElementById('dayButtonsContainer');
@@ -3107,15 +3108,8 @@ function peComutareIstoricOrar(detailsEl) {
         behavior: 'smooth'
       });
     }, 80);
-  } else if (detailsEl && !detailsEl.open) {
-    let d = new Date();
-    let zileChei = ["Duminica", "Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata"];
-    if (esteSaptamanaActiva() && ziCurentaCheie === zileChei[d.getDay()]) {
-      setTimeout(() => {
-        autoScrollLaOraCurenta();
-      }, 50);
-    }
   }
+  // La închidere pagina rămâne unde e (fără salt la ora curentă, care te scotea din locul în care erai)
 }
 
 function peComutareIstoricFisa(detailsEl) {
@@ -3282,8 +3276,6 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('btnAddOraCustomAction').setAttribute('aria-label', tr('Adaugă', 'Add'));
   actualizeazaDataIconite();
   document.getElementById('historyOrarSummaryText').innerText = t('historyOrarTitle');
-  document.getElementById('labelFiltruCliOrar').innerText = t('filterClient');
-  document.getElementById('labelFiltruLunaOrar').innerText = t('filterMonth');
 
   document.getElementById('holdHeaderTitle').innerText = t('holdSection').toUpperCase();
 
@@ -10368,6 +10360,16 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 207, data: '2026-11-13',
+    client: [
+      ['După ce schimbi contul, notificările rămân pornite pe telefon, fără să le mai activezi.', 'After switching accounts, notifications stay on for your phone, no need to turn them on again.']
+    ],
+    antrenor: [
+      ['Istoricul prezențelor de pe Orar e nou: alegi luna cu ‹ ›, vezi prezențele pe zile, câți clienți au venit și cum stai față de luna trecută.', 'The attendance history on the schedule is new: pick the month with ‹ ›, see attendance by day, how many clients came and how you compare with last month.'],
+      ['Cauți un client în istoric și vezi câte ședințe a făcut, de când n-a mai venit și cum stă cu programările săptămâna asta.', 'Search a client in the history to see their sessions, how long since their last visit and this week’s bookings.'],
+      ['Antrenamentul ales după bifare se salvează și în istoric.', 'A workout chosen after marking attendance is now saved to the history too.']
+    ]
+  },
   { v: 205, data: '2026-11-13',
     client: [],
     antrenor: [
@@ -12423,6 +12425,8 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
   if (slotExistent) {
     slotExistent.clienta = numeExact;
     slotExistent.antrenament = antrenament;
+    // Locul e deja bifat: prezența din istoric primește și ea antrenamentul (altfel rămâne cel de la bifare, de obicei „-”)
+    if (slotExistent.bifat) actualizeazaAntrenamentPrezenta(dataCalendar, oraNorm, numeExact, antrenament);
     try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
   }
 
@@ -12436,6 +12440,18 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
     if (avertizare) showToast('⚠ ' + avertizare, 'error');
     else showToast(t('toastWorkoutSaved'));
   });
+}
+
+// Doar textul antrenamentului din prezență (aceeași potrivire ca la bifare: dată + oră + client); numărul de ședințe nu se schimbă.
+// Memoria se actualizează pe loc (cache-ul local îl scrie apelantul), baza în fundal.
+async function actualizeazaAntrenamentPrezenta(data, ora, clienta, antrenament) {
+  const p = (DB.prezente || []).find(x => x && x.data === data && normalizeazaOraUi(x.ora || '') === ora && cheieNume(x.clienta || '') === cheieNume(clienta));
+  if (p) p.antrenament = antrenament;
+  if (!supabaseClient) return;
+  let q = supabaseClient.from('prezente').update({ antrenament: antrenament || '' }).eq('data', data).eq('ora', ora).ilike('clienta', clienta.trim());
+  if (utilizatorCurent) q = q.eq('user_id', utilizatorCurent.id);
+  const { error } = await q;
+  if (error) showToast(tr('Antrenamentul nu s-a salvat în istoric. Verifică internetul și reîncearcă.', 'The workout was not saved to the history. Check your internet and try again.'), 'error');
 }
 
 // ✓ pe un loc: se trimite imediat (ca înainte), cu o vibrație scurtă pe telefoanele care o permit
@@ -12864,58 +12880,125 @@ function stergeOraCustom(zi, ora) {
   document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Remove');
 }
 
+// ---- Istoric prezențe (Orar): luna aleasă cu ‹ › sau tot istoricul, opțional un client ----
+// Sus trei cifre: fără client = prezențe, clienți diferiți, față de luna trecută; cu client = ședințe, ultima prezență, media pe săptămână
+let istoricLuna = (() => { const d = new Date(); return { an: d.getFullYear(), luna: d.getMonth() }; })();
+let istoricToate = false;
+
+function schimbaLunaIstoric(pas) {
+  const d = new Date(istoricLuna.an, istoricLuna.luna + pas, 1);
+  istoricLuna = { an: d.getFullYear(), luna: d.getMonth() };
+  istoricToate = false;
+  filtreazaIstoricOrarInstant();
+}
+
+function comutaToateLunileIstoric() {
+  istoricToate = !istoricToate;
+  filtreazaIstoricOrarInstant();
+}
+
 function filtreazaIstoricOrarInstant() {
-  let fEl = document.getElementById('filtruClientaOrar');
-  let fLuna = document.getElementById('filtruLunaOrar');
-  let filtruCli = fEl ? fEl.value.toLowerCase().trim() : "";
-  let filtruLuna = fLuna ? curataNumeLuna(fLuna.value) : "";
-  let tbody = document.getElementById('istoricOrarTbody');
-  if (!tbody) return;
+  const lista = document.getElementById('istoricOrarLista');
+  if (!lista) return;
+  const camp = document.getElementById('filtruClientaOrar');
+  const cauta = camp.value.toLowerCase().trim();
+  const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
+  const numeLuna = (an, luna) => { const s = new Date(an, luna, 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' }); return s.charAt(0).toUpperCase() + s.slice(1); };
 
-  const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
+  // Toate prezențele cu momentul lor; perioada = luna aleasă (sau tot istoricul); clientul = numele conține textul căutat
+  const toate = (DB.prezente || []).filter(p => p && p.data).map(p => ({ p, t: parseazaDataOraRo(p.data, p.ora) })).filter(x => x.t);
+  const inLuna = (x, an, luna) => { const d = new Date(x.t); return d.getFullYear() === an && d.getMonth() === luna; };
+  const alClientului = x => !cauta || (x.p.clienta || '').toLowerCase().includes(cauta);
+  const filtrate = toate.filter(x => alClientului(x) && (istoricToate || inLuna(x, istoricLuna.an, istoricLuna.luna))).sort((a, b) => b.t - a.t);
 
-  let filtrate = (DB.prezente || []).filter(p => {
-    if (!p) return false;
-    let potrivesteCli = !filtruCli || (p.clienta && p.clienta.toLowerCase() === filtruCli);
-    let potrivesteLuna = true;
+  document.getElementById('istoricLunaText').textContent = istoricToate ? tr('Tot istoricul', 'All time') : numeLuna(istoricLuna.an, istoricLuna.luna);
+  document.getElementById('btnIstoricToate').classList.toggle('activ', istoricToate);
+  document.getElementById('btnIstoricToate').textContent = tr('Toate lunile', 'All months');
+  camp.placeholder = tr('Caută client', 'Find client');
 
-    if (filtruLuna) {
-      let lunaPrezenta = "";
-      if (p.data && p.data.indexOf('.') !== -1) {
-        let parts = p.data.split('.');
-        if (parts.length === 3) {
-          let m = parseInt(parts[1], 10);
-          if (m >= 1 && m <= 12) lunaPrezenta = luniRoNume[m - 1];
-        }
-      }
-      potrivesteLuna = (lunaPrezenta === filtruLuna);
+  // Zilele scurse din perioadă (luna curentă doar până azi), pentru media pe săptămână și comparația cu luna trecută
+  const azi = new Date();
+  const esteLunaCurenta = istoricLuna.an === azi.getFullYear() && istoricLuna.luna === azi.getMonth();
+  const zileLuna = new Date(istoricLuna.an, istoricLuna.luna + 1, 0).getDate();
+  const zilePerioada = istoricToate
+    ? Math.max(1, Math.ceil((azi - Math.min(...filtrate.map(x => x.t), azi)) / 86400000))
+    : (esteLunaCurenta ? azi.getDate() : zileLuna);
+  const cifra = (nr, text, culoare) => `<div class="orar-cifra${culoare ? ' orar-cifra-' + culoare : ''}"><b>${nr}</b><span>${text}</span></div>`;
+  let cifre;
+  if (cauta) {
+    const ultima = toate.filter(alClientului).sort((a, b) => b.t - a.t)[0];
+    const zileDeLaUltima = ultima ? Math.floor((new Date(azi).setHours(0, 0, 0, 0) - new Date(ultima.t).setHours(0, 0, 0, 0)) / 86400000) : null;
+    // Săptămâna asta, ca pastila de pe Confirmări: programate din ținta lui (doar când căutarea arată un singur client)
+    const gasiti = (DB.clienti || []).filter(c => c && c.nume && c.nume.toLowerCase().includes(cauta));
+    const rand = gasiti.length === 1 ? randuriConfirmariSaptamana().find(r => r.c && r.c.id === gasiti[0].id) : null;
+    const saptamana = rand && rand.tinta
+      ? cifra(`${rand.facute}/${rand.tinta}`, tr('săpt. asta', 'this week'), rand.facute >= rand.tinta ? 'verde' : rand.facute ? 'portocaliu' : 'rosu')
+      : cifra('–', tr('săpt. asta', 'this week'));
+    cifre = cifra(filtrate.length, filtrate.length === 1 ? tr('ședință', 'session') : tr('ședințe', 'sessions'), 'accent')
+      + cifra(zileDeLaUltima === null ? '–' : zileDeLaUltima === 0 ? tr('azi', 'today') : zileDeLaUltima,
+        zileDeLaUltima === 0 || zileDeLaUltima === null ? tr('ultima oară', 'last time') : zileDeLaUltima === 1 ? tr('zi în urmă', 'day ago') : tr('zile în urmă', 'days ago'))
+      + saptamana;
+  } else {
+    const clienti = new Set(filtrate.map(x => (x.p.clienta || '').trim().toLowerCase())).size;
+    let comparatie = cifra(Math.round(filtrate.length / Math.max(1, zilePerioada / 7) * 10) / 10, tr('pe săpt.', 'per week'), 'verde');
+    if (!istoricToate) {
+      // Aceleași zile din luna trecută (la luna curentă, doar primele zile scurse), ca să nu compar o lună începută cu una întreagă
+      const prec = new Date(istoricLuna.an, istoricLuna.luna - 1, 1);
+      const nrPrec = toate.filter(x => inLuna(x, prec.getFullYear(), prec.getMonth()) && new Date(x.t).getDate() <= zilePerioada).length;
+      const dif = nrPrec ? Math.round((filtrate.length - nrPrec) / nrPrec * 100) : null;
+      // Luna întreagă („față de octombrie”); pe ecranele înguste, unde nu încape, forma scurtă (vezi mai jos)
+      const cuMajuscula = s => s.charAt(0).toUpperCase() + s.slice(1);
+      const lunaLunga = cuMajuscula(prec.toLocaleDateString(loc, { month: 'long' }));
+      const lunaScurt = cuMajuscula(prec.toLocaleDateString(loc, { month: 'short' }).replace(/\.?$/, '.'));
+      comparatie = cifra(dif === null ? '–' : `${dif > 0 ? '+' : ''}${dif}%`, `${tr('față de', 'vs')} ${lunaLunga}`, dif === null ? '' : dif >= 0 ? 'verde' : 'rosu')
+        .replace('<span>', `<span data-scurt="${tr('față de', 'vs')} ${lunaScurt}">`);
     }
+    cifre = cifra(filtrate.length, filtrate.length === 1 ? tr('prezență', 'attendance') : tr('prezențe', 'attended'), 'accent')
+      + cifra(clienti, clienti === 1 ? tr('client', 'client') : tr('clienți', 'clients'))
+      + comparatie;
+  }
+  document.getElementById('istoricCifre').innerHTML = cifre;
+  document.querySelectorAll('#istoricCifre span[data-scurt]').forEach(s => { if (s.scrollWidth > s.clientWidth + 1) s.textContent = s.dataset.scurt; });
 
-    return potrivesteCli && potrivesteLuna;
-  });
-
-  filtrate.sort((a, b) => {
-    let tA = parseazaDataOraRo(a.data, a.ora);
-    let tB = parseazaDataOraRo(b.data, b.ora);
-    return tB - tA;
-  });
-
-  if (filtrate.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${t('noPresenceFound')}</td></tr>`;
+  if (!filtrate.length) {
+    lista.innerHTML = `<div class="notificari-lista"><div class="notificari-gol">${t('noPresenceFound')}</div></div>`;
     return;
   }
-  let html = '';
-  filtrate.forEach(item => {
-    html += `
-      <tr>
-        <td><b>${escAttr(item.data)}</b></td>
-        <td style="font-weight:700;">${escAttr(item.ora || '-')}</td>
-        <td style="font-weight:700; color:var(--primary);">${escAttr(item.clienta)}</td>
-        <td>${escAttr(traduceValoare(item.antrenament) || '-')}</td>
-      </tr>
-    `;
+  // Pe zile: „Joi, 12 noiembrie”, fiecare zi un card de sticlă; rândul ca pe Confirmări (avatarul deschide fișa pe scurt)
+  const zile = [];
+  filtrate.forEach(x => {
+    const cheie = new Date(x.t).toDateString();
+    if (!zile.length || zile[zile.length - 1].cheie !== cheie) zile.push({ cheie, t: x.t, randuri: [] });
+    zile[zile.length - 1].randuri.push(x.p);
   });
-  tbody.innerHTML = html;
+  // Prezențele salvate înainte de actualizeazaAntrenamentPrezenta pot avea „-” deși în orar s-a ales antrenamentul după bifare:
+  // pentru ele îl luăm din slotul aceleiași zile, ore și client
+  const zileChei = ['Duminica', 'Luni', 'Marti', 'Miercuri', 'Joi', 'Vineri', 'Sambata'];
+  const antrenamentDinOrar = p => {
+    const d = new Date(parseazaDataOraRo(p.data, p.ora));
+    const luni = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+    const zi = zileChei[d.getDay()];
+    const prefix = `W_${isoDinData(luni).replace(/-/g, '_')}_`;
+    const s = (DB.orarSloturi || []).find(x => x && x.clienta && (x.ziRaw === prefix + zi || (zi === 'Marti' && x.ziRaw === prefix + 'Marți'))
+      && normalizeazaOraUi(x.ora) === normalizeazaOraUi(p.ora || '') && cheieNume(x.clienta) === cheieNume(p.clienta || ''));
+    return s && s.antrenament ? s.antrenament : '';
+  };
+  lista.innerHTML = zile.map(z => {
+    const eticheta = new Date(z.t).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' });
+    return `<div class="notificari-grup">${eticheta.replace(/(^|\s)(\p{L})/gu, (m, sp, l) => sp + l.toUpperCase())}</div>
+      <div class="notificari-lista">${z.randuri.map(p => {
+        const c = (DB.clienti || []).find(x => x && x.id === p.client_id) || gasesteClientaValida(p.clienta);
+        const ant = traduceValoare(p.antrenament && p.antrenament !== '-' ? p.antrenament : antrenamentDinOrar(p));
+        return `<div class="prog-row${c ? ' prog-row-client' : ''}"${c ? ` onclick="arataFisaScurta('${escAttr(c.id)}')"` : ''}>
+          <div class="slot-num">${c ? avatarSlotHtml(c) : ''}</div>
+          <div class="prog-info">
+            <span class="prog-name">${escAttr(p.clienta)}</span>
+            <span class="prog-sub">${escAttr(normalizeazaOraUi(p.ora || '') || '–')}</span>
+          </div>
+          ${ant && ant !== '-' ? `<span class="istoric-ant">${escAttr(ant)}</span>` : ''}
+        </div>`;
+      }).join('')}</div>`;
+  }).join('');
 }
 
 function getPillClass(val) {
@@ -13680,6 +13763,9 @@ function inchidePanouMesaje() {
 // Bulina de pe butonul Mesaje din antet: câte mesaje necitite au venit de la celălalt (toți clienții, la antrenor)
 async function actualizeazaBulinaMesaje() {
   if (!supabaseClient || !utilizatorCurent) return;
+  // Până se confirmă rolul acestui cont (la pornire sau după schimbarea contului), „ale mele” nu se știe sigur:
+  // mesajul tău încă necitit de celălalt ar apărea o clipă ca „1” primit
+  if (rolSalvat(utilizatorCurent.id) !== rolUtilizator) return;
   const { count, error } = await supabaseClient.from('mesaje').select('id', { count: 'exact', head: true }).eq('citit', false).neq('autor', autorulMeu());
   if (error) return;
   document.querySelectorAll('.mesaje-bulina-antet').forEach(b => {
@@ -14465,7 +14551,7 @@ function randeazaCereriInscriere() {
           <span>${tr('Cereri noi de înscriere', 'New sign-up requests')}</span>
           <b class="cereri-numar">${cereri.length}</b>
         </span>
-        <span style="font-size: 0.8rem; opacity: 0.6;">▼</span>
+        <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
       </summary>
       <div class="cereri-nota">${tr('Acceptă cererea când persoana vine la prima ședință. Dacă nu mai vine, șterge cererea.', 'Accept the request when the person comes to the first session. If they don’t come, delete the request.')}</div>
       ${cereri.map((c, i) => `<details class="cerere-item" ontoggle="randeazaCerereDeschisa(this, ${i})">
@@ -14741,10 +14827,24 @@ async function salveazaAbonamentPush(abonament) {
   return !error && data === 'ok';
 }
 
-// La fiecare deschidere, abonamentul existent se leagă din nou de contul logat și de limba curentă
+// Abonamentul acestui dispozitiv (cel existent sau unul nou); cere ca permisiunea să fie deja dată
+async function aboneazaDispozitiv() {
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (!reg) throw new Error('fara service worker');
+  const cheie = Uint8Array.from(atob(VAPID_PUBLIC.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  return await reg.pushManager.getSubscription()
+    || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cheie });
+}
+
+// Oprite din Setări pe acest dispozitiv: rămân oprite și după reconectare, până le pornești din nou
+const CHEIE_PUSH_OPRIT = 'BFIT_PUSH_OPRIT';
+const pushOpritManual = () => { try { return !!localStorage.getItem(CHEIE_PUSH_OPRIT); } catch (e) { return false; } };
+
+// La fiecare deschidere / conectare, abonamentul se leagă de contul logat și de limba curentă.
+// La deconectare abonamentul se șterge, dar permisiunea telefonului rămâne: la noul cont îl refacem fără să mai întrebăm.
 async function sincronizeazaPush() {
-  if (!suportaPush() || Notification.permission !== 'granted') return;
-  const abonament = await abonamentPushCurent().catch(() => null);
+  if (!suportaPush() || Notification.permission !== 'granted' || pushOpritManual()) return;
+  const abonament = await aboneazaDispozitiv().catch(() => null);
   if (abonament) salveazaAbonamentPush(abonament);
 }
 
@@ -14753,12 +14853,9 @@ async function activeazaPush() {
   const permisiune = await Notification.requestPermission();
   if (permisiune === 'granted') {
     try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (!reg) throw new Error('fara service worker');
-      const cheie = Uint8Array.from(atob(VAPID_PUBLIC.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
-      const abonament = await reg.pushManager.getSubscription()
-        || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: cheie });
+      const abonament = await aboneazaDispozitiv();
       if (!(await salveazaAbonamentPush(abonament))) throw new Error('salvare');
+      try { localStorage.removeItem(CHEIE_PUSH_OPRIT); } catch (e) {}
       showToast(tr('✓ Notificările sunt pornite pe acest dispozitiv', '✓ Notifications are on for this device'));
       actualizeazaCardPushAcasa();
     } catch (e) {
@@ -14801,7 +14898,7 @@ function htmlCardPush() {
   } else {
     return '';
   }
-  return `<div class="card card-push${blocate ? ' card-push-blocat' : ''}"><span>${text}</span>${buton}</div>`;
+  return `<div class="notificari-lista card-push${blocate ? ' card-push-blocat' : ''}"><span>${text}</span>${buton}</div>`;
 }
 
 // Setări › Notificări: starea pe acest telefon și pornirea / oprirea lor (și după ce cardul de la clopoțel a fost închis)
@@ -14827,6 +14924,7 @@ async function comutaNotificariSetari() {
   } else if (stare === 'pornite') {
     customConfirm(tr('Oprești notificările?', 'Turn off notifications?'), tr('Pe acest dispozitiv nu mai primești notificări. Le poți porni oricând de aici.', 'This device will stop getting notifications. You can turn them back on here anytime.'), async () => {
       await dezaboneazaPush();
+      try { localStorage.setItem(CHEIE_PUSH_OPRIT, '1'); } catch (e) {}
       actualizeazaCardPushAcasa();
       showToast(tr('✓ Notificările sunt oprite pe acest dispozitiv', '✓ Notifications are off for this device'));
       actualizeazaRezumatNotificari();
@@ -15018,8 +15116,7 @@ function arataNotificariRapid() {
       // Același rând ca în pagina completă de notificări (bulina colorată după tip, ora), fără ×
       return `<button type="button" class="notificare necitita notif-rapid-rand" data-id="${escAttr(n.id)}">
         <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
-        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
-        <small>${escAttr(cand(n.created_at))}</small></button>`;
+        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span><small>${escAttr(cand(n.created_at))}</small></span></button>`;
     }).join('')}</div>
     <button type="button" class="notif-rapid-toate">${tr('Vezi toate', 'See all')}</button>`;
   foaie.querySelectorAll('.notif-rapid-rand').forEach(b => {
@@ -15102,8 +15199,7 @@ function randeazaNotificari() {
     grupuri[grupa(n)].push(`<div class="notificare-rand">
       <button type="button" class="notificare${n.citit ? '' : ' necitita'}" ${actiune}>
         <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
-        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span></span>
-        <small>${escAttr(cand(n.created_at))}</small>
+        <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span><small>${escAttr(cand(n.created_at))}</small></span>
       </button>
       <button type="button" class="notificare-x" onclick="ascundeNotificare('${n.id}')" aria-label="${tr('Șterge notificarea', 'Remove notification')}">×</button>
     </div>`);

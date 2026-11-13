@@ -33,8 +33,9 @@ Majoritatea tabelelor păstrează forma din vechiul Google Sheets: cheia de rân
 
 ## Bifare și anulare (contabilitatea ședințelor)
 
-- **`bifeazaPrezenta`:** slot `bifat = true`; inserează sau actualizează rândul în `prezente` (după `data` + `ora` + `clienta`); dacă nici antrenamentul, nici abonamentul nu e „gratuit”: `efectuate + 1`, `ramase = max(0, incluse - efectuate)`, iar la `ramase == 0` → `status = 'Finalizat'`.
-- **`anuleazaSlot`:** golește slotul; doar dacă era bifat: șterge rândul din `prezente` și, dacă nu era gratuit, `efectuate - 1`, recalculează `ramase`, `status = 'Activ'`.
+- **`bifeazaPrezenta`:** slot `bifat = true`; inserează sau actualizează rândul în `prezente` (după `data` + `ora` + `clienta`); `efectuate + 1`, `ramase = max(0, incluse - efectuate)`, iar la `ramase == 0` → `status = 'Finalizat'` (verificat în cod: nu mai depinde de antrenament).
+- **`anuleazaSlot`:** golește slotul; doar dacă era bifat: șterge rândul din `prezente`, `efectuate - 1`, recalculează `ramase`, `status = 'Activ'`.
+- **Antrenament schimbat după bifare** (`peSchimbareAntrenament` → `actualizeazaAntrenamentPrezenta`): se actualizează doar `prezente.antrenament` (aceeași potrivire dată + oră + client), fără să atingă ședințele.
 - Orice modificare a acestor fluxuri trebuie să păstreze simetria bifare ↔ anulare.
 
 ## Erori și cache local
