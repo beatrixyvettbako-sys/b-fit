@@ -365,6 +365,39 @@ html, body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Barele de derulare cu mouse (calculator, tabletă cu mouse): subțiri, rotunjite, în culoarea aplicației, fără fundal.
+   Pe telefon rămâne bara sistemului (subțire, dispare singură): una stilizată ar ocupa loc și ar îngusta pagina.
+   Barele ascunse (scrollbar-width: none în regula lor) rămân ascunse. */
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: rgba(var(--accent-rgb), 0.35) padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(var(--accent-rgb), 0.6);
+  }
+
+  /* Firefox nu are pseudo-elementele de mai sus */
+  @supports not selector(::-webkit-scrollbar) {
+    html {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(var(--accent-rgb), 0.45) transparent;
+    }
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--bg);
@@ -935,10 +968,15 @@ header {
   overflow-x: hidden;
   overflow-y: auto; /* Profil etc. pot depăși ecranul mic: derulează în loc să ascundă sub subsol */
   overscroll-behavior: contain;
+  scrollbar-width: none; /* ca într-o aplicație: fără bară, nici când meniul depășește ecranul cu câțiva pixeli */
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.drawer-body::-webkit-scrollbar {
+  display: none;
 }
 
 .drawer-avatar-wrap {
@@ -2361,6 +2399,11 @@ html[data-rol="clienta"] #bottomNav {
 
 html:not([data-theme="dark"]) .lista-sticla::before {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
+}
+
+/* Rândurile stau deasupra luminii (altfel lumina albă trece peste primul nume din card); :where = orice regulă proprie (ex. × absolut) câștigă */
+:where(.lista-sticla > *) {
+  position: relative;
 }
 
 .lista-sticla .notificari-gol {
@@ -5121,6 +5164,11 @@ html:not([data-theme="dark"]) .hold-header::after {
   color: #4ade80;
 }
 
+/* Prețul de pe plăci și suma din plată: același verde ca sumele din istoric (pe tema deschisă, în regulile lor) */
+[data-theme="dark"] :is(.placi-abonament small, .incasare-suma b:not(.gol), .incasare-suma .form-control) {
+  color: #4ade80;
+}
+
 .inc-suma.gol {
   color: var(--text-muted);
 }
@@ -5159,7 +5207,13 @@ html:not([data-theme="dark"]) .hold-header::after {
   max-height: 88dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  gap: 4px;
+  touch-action: pan-y;
+  gap: 8px;
+}
+
+/* Se trage în jos de mâner și de titlu; restul ferestrei derulează */
+.incasare-foaie :is(.fisa-scurta-maner, .incasare-foaie-titlu) {
+  touch-action: none;
 }
 
 /* Fereastra derulează: câmpurile își păstrează înălțimea, nu se strâng ca să încapă */
@@ -5176,6 +5230,7 @@ html:not([data-theme="dark"]) .hold-header::after {
 
 /* Câmpurile din fereastră: sticlă, ca pastilele de dedesubt (aceleași câmpuri ca înainte, doar alt aspect) */
 .incasare-foaie label {
+  margin: 0;
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--m-muted);
@@ -5190,25 +5245,217 @@ html:not([data-theme="dark"]) .hold-header::after {
   box-shadow: none;
 }
 
+/* Clientul: ca rândul „Alege client” din Orar (bulă + nume scris direct pe card, starea dedesubt) */
+.incasare-client {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.incasare-foaie .incasare-client .slot-num {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  font-size: 0.95rem;
+}
+
+.incasare-client .slot-num svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.incasare-client-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Ca „Alege client” din Orar: textul aliniat cu starea de dedesubt, iar cât scrii doar o nuanță slabă */
+.incasare-client .form-control {
+  height: 24px;
+  margin-left: -6px;
+  padding: 0 6px;
+  border-radius: 8px;
+  line-height: 24px;
+  transition: background-color 0.2s ease;
+  border: 0;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.incasare-client .form-control:focus {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
 /* Ca „Fișa completă” din fișa pe scurt, dar la final (clasa principală o pune altfel prima: order -1) */
 .incasare-foaie .incasare-salveaza {
   order: 0;
   flex-shrink: 0;
   width: 100%;
   height: 48px;
-  margin-top: 6px;
   justify-content: center;
+}
+
+.incasare-foaie .incasare-salveaza.fara-suma {
+  opacity: 0.5;
+}
+
+/* Bara butonului: lipită jos cât derulează câmpurile, netransparentă (nimic nu se vede prin ea), până la marginea ferestrei */
+.incasare-bara {
+  position: sticky;
+  bottom: calc(-24px - env(safe-area-inset-bottom, 0px));
+  z-index: 2;
+  margin: 0 -16px calc(-24px - env(safe-area-inset-bottom, 0px));
+  padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  background: var(--card-bg-solid);
+  border-top: 1px solid var(--m-divider);
+}
+
+/* Datele: două rânduri de pastile în același card; a doua etichetă puțin mai jos */
+.incasare-date label + .pastile-alegere ~ label {
+  margin-top: 6px;
+}
+
+/* „Altă dată…”: câmpul de dată stă invizibil peste pastilă, ca atingerea să deschidă calendarul telefonului */
+.pastila-data {
+  position: relative;
+  display: inline-flex;
+}
+
+.pastila-data input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
 /* Abonamentul și metoda: pastile de sticlă; cea aleasă pare apăsată (ca filtrele) */
 .pastile-alegere {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .pastile-alegere .istoric-toate {
+  height: 34px;
+}
+
+/* Pastilele din fereastră stau pe carduri albe: umbra mică de sticlă le desparte de card pe tema deschisă */
+.incasare-foaie .istoric-toate {
+  box-shadow: var(--m-float-sm);
+}
+
+/* Abonamentele: plăci pe două coloane, numele și prețul dedesubt */
+.placi-abonament {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.placi-abonament .istoric-toate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  height: 52px;
+  padding: 0 10px;
+  border-radius: 16px;
+  text-align: left;
+}
+
+.placi-abonament :is(b, small) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.placi-abonament b {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.placi-abonament small {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+/* Suma: cifră mare, ca cifrele de pe Orar; „Altă sumă” în dreapta */
+.incasare-suma {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+/* Suma (din abonament sau scrisă): verde, ca prețurile de pe plăci și sumele din istoric */
+.incasare-suma b,
+.incasare-suma .form-control {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #15803d;
+}
+
+.incasare-suma b.gol {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--m-muted);
+}
+
+/* Suma scrisă: ca un câmp de pe card (nuanță slabă doar cât scrii, fără contur), aliniată cu cifra, fără săgețile de sus/jos */
+.incasare-suma .form-control {
+  flex: 1;
+  min-width: 0;
   height: 38px;
+  margin-left: -10px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  appearance: textfield;
+  -moz-appearance: textfield;
+  transition: background-color 0.2s ease;
+}
+
+.incasare-suma .form-control:focus {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+/* Gol: textul câmpului are mărimea placeholderului, ca acesta să stea centrat pe verticală */
+.incasare-suma .form-control:placeholder-shown {
+  font-size: 0.9rem;
+}
+
+.incasare-suma .form-control::-webkit-inner-spin-button,
+.incasare-suma .form-control::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.incasare-suma .form-control::placeholder {
+  font-weight: 600;
+}
+
+.incasare-suma .istoric-toate {
+  height: 34px;
+  margin-left: auto;
 }
 .progress-wrapper {
   background: var(--border);
@@ -9245,12 +9492,12 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 700;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
+/* Câmpurile scrise direct pe card: doar o nuanță slabă cât scrii, fără contur (cursorul arată restul) */
 #tabOrar .slot-input:focus {
   background: rgba(var(--accent-rgb), 0.08);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
 }
 
 #tabOrar .slot-input::placeholder {
@@ -10024,7 +10271,7 @@ button.orar-cifra:disabled {
 }
 
 /* Avatarul (inițiale sau poză): în fișa pe scurt și pe rândurile din Confirmări */
-:is(.fisa-scurta-antet, .prog-row) .slot-num {
+:is(.fisa-scurta-antet, .prog-row, .incasare-client) .slot-num {
   position: relative;
   width: 48px;
   height: 48px;
@@ -10038,7 +10285,7 @@ button.orar-cifra:disabled {
   color: var(--primary);
 }
 
-:is(.fisa-scurta-antet, .prog-row) .slot-num img {
+:is(.fisa-scurta-antet, .prog-row, .incasare-client) .slot-num img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -10052,7 +10299,8 @@ button.orar-cifra:disabled {
   gap: 10px;
 }
 
-.fisa-scurta-grila > div {
+.fisa-scurta-grila > div,
+.incasare-foaie .form-group {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -10066,7 +10314,8 @@ button.orar-cifra:disabled {
 }
 
 /* Aceeași lumină din stânga-sus ca pastilele de sus (programați / prezenți) */
-.fisa-scurta-grila > div::before {
+.fisa-scurta-grila > div::before,
+.incasare-foaie .form-group::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -10076,8 +10325,16 @@ button.orar-cifra:disabled {
   mix-blend-mode: soft-light;
 }
 
-.fisa-scurta-grila > div > * {
+.fisa-scurta-grila > div > *,
+.incasare-foaie .form-group > * {
   position: relative;
+}
+
+/* Încasarea nouă: fiecare câmp e un card ca cele din grilă */
+.incasare-foaie .form-group {
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .fisa-scurta-grila span {
@@ -10224,13 +10481,14 @@ button.orar-cifra:disabled {
   border-color: rgba(255, 255, 255, 0.12);
 }
 
-[data-theme="dark"] .fisa-scurta-grila > div {
+[data-theme="dark"] .fisa-scurta-grila > div,
+[data-theme="dark"] .incasare-foaie .form-group {
   background: var(--m-card, rgba(255, 255, 255, 0.06));
   border-color: var(--m-border, rgba(255, 255, 255, 0.1));
   box-shadow: var(--m-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.08));
 }
 
-[data-theme="dark"] :is(.fisa-scurta-antet, .prog-row) .slot-num {
+[data-theme="dark"] :is(.fisa-scurta-antet, .prog-row, .incasare-client) .slot-num {
   background: rgba(var(--accent-rgb), 0.22);
   color: var(--accent-purple-light);
 }
@@ -10577,7 +10835,6 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 
 #tabOrar .slot-select-type:focus {
   background-color: rgba(var(--accent-rgb), 0.08) !important;
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
 }
 
 /* ✓ nebifat: cerc de sticlă gol; bifat: verde de sticlă cu ✓ alb */
@@ -10950,12 +11207,11 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
   padding: 6px 8px;
   margin-left: -2px;
   font-size: 0.95rem;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 #tabOrar .hour-motiv-input:focus {
   background: rgba(var(--accent-rgb), 0.08);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
 }
 
 #tabOrar .hour-motiv-overlay {
@@ -11220,14 +11476,14 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
 [data-theme="dark"] #tabOrar .slot-input:-webkit-autofill,
 [data-theme="dark"] #tabOrar .slot-input:-webkit-autofill:hover,
 [data-theme="dark"] #tabOrar .slot-input:-webkit-autofill:focus,
-[data-theme="dark"] #tabOrar .slot-input:autofill {
+[data-theme="dark"] #tabOrar .slot-input:autofill,
+.incasare-client .form-control:-webkit-autofill,
+.incasare-client .form-control:-webkit-autofill:hover,
+.incasare-client .form-control:-webkit-autofill:focus,
+.incasare-client .form-control:autofill {
   -webkit-text-fill-color: var(--m-text);
   box-shadow: none;
   transition: background-color 99999s ease-out 0s;
-}
-
-#tabOrar .slot-input:-webkit-autofill:focus {
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.35);
 }
 
 /* Clopoțelul: bulină roșie care pulsează, fără cifră (la mesaje rămâne cifra) */
@@ -11804,6 +12060,17 @@ input[type="search"]::-webkit-search-cancel-button {
 
 .camp-goleste[hidden] {
   display: none;
+}
+
+/* Pe câmpurile scrise direct pe card (rând de ~26px), bula mai mică, ca să nu umple rândul */
+.camp-goleste.mic {
+  width: 20px;
+  height: 20px;
+}
+
+.camp-goleste.mic svg {
+  width: 8px;
+  height: 8px;
 }
 
 /* ===================== Derulare fluidă pe Android (același aspect, mai puțin de lucru pentru telefon) ===================== */

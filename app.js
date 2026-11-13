@@ -132,7 +132,8 @@ const i18n = {
     recentHistoryTitle: "Istoric Prezențe",
     noPresenceYet: "Nici o prezență înregistrată încă.",
     newPaymentTitle: "Înregistrare Plată Nouă",
-    clientNameIncPlaceholder: "Alege din listă sau scrie nume nou",
+    clientNameIncPlaceholder: "Caută sau adaugă client",
+    clientIncLabel: "Client",
     selectSubPlaceholder: "Alege tip abonament",
     sumLabel: "Sumă",
     sumPresetPlaceholder: "Suma",
@@ -141,7 +142,7 @@ const i18n = {
     paymentMethodPlaceholder: "Metoda Plata",
     payDateLabel: "Dată Plată",
     payStartLabel: "Dată Start",
-    paySubmitBtn: "Salvează încasarea",
+    paySubmitBtn: "Încasează",
     paySavingBtn: "Se salvează...",
     themeTitle: "Temă",
     lightTheme: "Luminos",
@@ -282,7 +283,8 @@ const i18n = {
     recentHistoryTitle: "Attendance History",
     noPresenceYet: "No attendance recorded yet.",
     newPaymentTitle: "Register New Payment",
-    clientNameIncPlaceholder: "Choose from list or type new name",
+    clientNameIncPlaceholder: "Search or add client",
+    clientIncLabel: "Client",
     selectSubPlaceholder: "Choose subscription type",
     sumLabel: "Amount",
     sumPresetPlaceholder: "Amount",
@@ -291,7 +293,7 @@ const i18n = {
     paymentMethodPlaceholder: "Payment Method",
     payDateLabel: "Payment Date",
     payStartLabel: "Start Date",
-    paySubmitBtn: "Save payment",
+    paySubmitBtn: "Collect",
     paySavingBtn: "Saving...",
     themeTitle: "Theme",
     lightTheme: "Light",
@@ -3305,7 +3307,7 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('labelFiltruLunaFisa').innerText = t('filterMonth');
 
   document.getElementById('incasareTitleText').innerText = t('newPaymentTitle');
-  document.getElementById('labelIncNume').innerText = t('clientNamePlaceholder');
+  document.getElementById('labelIncNume').innerText = t('clientIncLabel');
   document.getElementById('incasareNume').placeholder = t('clientNameIncPlaceholder');
   document.getElementById('labelIncTip').innerText = t('subTypeLabel');
   document.getElementById('optSelectSubPlaceholder').innerText = t('selectSubPlaceholder');
@@ -3315,7 +3317,7 @@ function aplicaTraduceriInterfataStatic() {
   aplicaSetariPlatiUI();
   document.getElementById('labelIncDataPlata').innerText = t('payDateLabel');
   document.getElementById('labelIncDataStart').innerText = t('payStartLabel');
-  document.getElementById('submitAbonamentBtn').innerText = t('paySubmitBtn');
+  actualizeazaButonIncasare(); // cu suma, dacă e aleasă
 
 
   document.getElementById('themeSectionTitle').innerText = t('themeTitle');
@@ -10350,6 +10352,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 210, data: '2026-11-14',
+    client: [],
+    antrenor: [
+      ['Plata nouă e mai rapidă: alegi abonamentul dintr-o placă cu prețul pe ea, suma se completează singură (sau scrii alta), iar butonul „Încasează 520 RON” e mereu jos, la vedere.', 'New payment is faster: pick the membership from a tile showing its price, the amount fills in by itself (or type another), and the “Collect 520 RON” button is always visible at the bottom.'],
+      ['Când alegi clientul la plată, vezi câte ședințe mai are și până când îi e valabil abonamentul.', 'When you pick the client for a payment, you see how many sessions they have left and until when their membership is valid.'],
+      ['Data plății și data de start se aleg din pastile („Azi”, „La prima ședință”, „Altă dată”), iar fereastra se închide trăgând-o în jos.', 'Payment and start dates are picked from pills (“Today”, “At first session”, “Other date”), and the window closes when you swipe it down.']
+    ]
+  },
   { v: 208, data: '2026-11-13',
     client: [
       ['Meniul are un aspect nou, cu profilul tău sus. „Ieși din cont” e acum în Profil, la final.', 'The menu has a new look, with your profile at the top. “Log out” is now at the bottom of Profile.']
@@ -11642,27 +11652,31 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
     comutaTab('tabFisa', 'Fișă Client', document.getElementById('navBtnFisa'), 'fisa', 2);
     deschideClientaDinLista(c.nume);
   };
-  // Trage în jos de oriunde de pe fișă (nu doar de mâner) ca să închizi; butoanele rămân butoane.
-  // animation = 'none': animația de intrare ține transformarea ocupată și fișa nu ar urma degetul.
-  const maner = foaie;
+  trageInJosCaSaInchizi(foaie, inchideFisaScurta); // de oriunde de pe fișă, nu doar de mâner
+  document.body.append(fundal, foaie);
+  sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+// Fereastra de jos urmează degetul trasă în jos și se închide după 60px; butoanele și câmpurile rămân ale lor.
+// `zona` (opțional): doar de acolo se trage, la ferestrele care derulează.
+// animation = 'none': animația de intrare ține transformarea ocupată și fereastra n-ar urma degetul.
+function trageInJosCaSaInchizi(foaie, inchide, zona) {
   let y0 = null;
-  maner.addEventListener('pointerdown', e => {
-    if (e.target.closest('button, textarea, input')) return;
+  foaie.addEventListener('pointerdown', e => {
+    if (e.target.closest('button, textarea, input, select') || (zona && !e.target.closest(zona))) return;
     y0 = e.clientY; foaie.style.animation = 'none'; foaie.style.transition = 'none';
-    try { maner.setPointerCapture(e.pointerId); } catch (x) {}
+    try { foaie.setPointerCapture(e.pointerId); } catch (x) {}
   });
-  maner.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+  foaie.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
   const gata = e => {
     if (y0 === null) return;
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (dy > 60) inchideFisaScurta(); else foaie.style.transform = '';
+    if (dy > 60) inchide(); else foaie.style.transform = '';
   };
-  maner.addEventListener('pointerup', gata);
-  maner.addEventListener('pointercancel', gata);
-  document.body.append(fundal, foaie);
-  sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+  foaie.addEventListener('pointerup', gata);
+  foaie.addEventListener('pointercancel', gata);
 }
 
 // Cheia săptămânii (W_AAAA_LL_ZZ, lunea) la `pas` săptămâni după săptămâna afișată
@@ -11771,10 +11785,7 @@ function deschideCautareClient() {
     });
   };
   camp.addEventListener('input', deseneaza);
-  const maner = foaie.querySelector('.fisa-scurta-maner');
-  let y0 = null;
-  maner.addEventListener('pointerdown', e => { y0 = e.clientY; maner.setPointerCapture(e.pointerId); });
-  maner.addEventListener('pointerup', e => { if (y0 !== null && e.clientY - y0 > 90) inchideFisaScurta(); y0 = null; });
+  trageInJosCaSaInchizi(foaie, inchideFisaScurta, '.fisa-scurta-maner');
   document.body.append(fundal, foaie);
   sincronizeazaIstoricInapoi();
   setTimeout(() => camp.focus(), 60);
@@ -12442,7 +12453,7 @@ function peSchimbareAntrenament(zi, ora, slotIdx) {
       try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
     }
     if (avertizare) showToast('⚠ ' + avertizare, 'error');
-    else showToast(t('toastWorkoutSaved'));
+    else showToast(antrenament ? t('toastWorkoutSaved') : tr('✓ Antrenament scos', '✓ Workout removed'));
   });
 }
 
@@ -12774,9 +12785,13 @@ function anuleazaSlot(zi, ora, slotIdx) {
   const pozitioneaza = () => {
     if (!camp || !camp.isConnected || !camp.value) { btn.hidden = true; return; }
     const r = camp.getBoundingClientRect();
-    // Bula de 26px: centrată pe verticală, la 6px de marginea din dreapta a câmpului
-    btn.style.top = `${Math.round(r.top + r.height / 2 - 13)}px`;
-    btn.style.left = `${Math.round(r.right - 32)}px`;
+    // Bula: 26px la câmpurile cu chenar, 20px la cele scrise direct pe card (clientul din Orar și din plată);
+    // centrată pe verticală, la 6px de marginea din dreapta a câmpului
+    const mic = camp.matches('#tabOrar .slot-input, .incasare-client input');
+    const d = mic ? 20 : 26;
+    btn.classList.toggle('mic', mic);
+    btn.style.top = `${Math.round(r.top + r.height / 2 - d / 2)}px`;
+    btn.style.left = `${Math.round(r.right - d - 6)}px`;
     btn.hidden = false;
   };
 
@@ -15775,25 +15790,94 @@ function activeazaAbonamentFaraPlata() {
     }));
 }
 
-function autoSelecteazaSuma() {
+// Alt abonament ales: suma devine prețul lui, iar suma scrisă se golește. Revenirea din „Altă sumă” la preț
+// (pastreazaSumaScrisa) doar ascunde câmpul: apăsat iar, „Altă sumă” arată suma scrisă înainte
+function autoSelecteazaSuma(pastreazaSumaScrisa = false) {
   let tip = document.getElementById('incasareTip').value;
   let selPreset = document.getElementById('selectSumaPreset');
-  let customInp = document.getElementById('incasareSumaCustom');
   if (!selPreset) return;
 
   if (!tip || tip === "") {
     selPreset.value = "";
-    if (customInp) customInp.style.display = 'none';
+    inchideSumaScrisa(!pastreazaSumaScrisa);
     actualizeazaStilSelect(selPreset);
+    actualizeazaSumaIncasare();
     return;
   }
 
   const pret = regulaAbonament(tip).pret;
   if (pret !== null && pret !== undefined) {
     seteazaValoareSelect(selPreset, String(pret));
-    if (customInp) customInp.style.display = 'none';
+    inchideSumaScrisa(!pastreazaSumaScrisa);
   }
   actualizeazaStilSelect(selPreset);
+  actualizeazaSumaIncasare();
+}
+
+// Ascunde câmpul „Altă sumă”; `goleste` șterge și suma scrisă (alt abonament ales, după salvare)
+function inchideSumaScrisa(goleste) {
+  const c = document.getElementById('incasareSumaCustom');
+  if (!c) return;
+  c.style.display = 'none';
+  if (goleste) c.value = '';
+}
+
+// Cifra mare arată exact suma care se salvează (getSumaSelectata); la „Altă sumă” se scrie în câmpul de pe același rând
+function actualizeazaSumaIncasare() {
+  const sel = document.getElementById('selectSumaPreset');
+  const text = document.getElementById('incasareSumaText');
+  const custom = sel.value === 'custom';
+  text.hidden = custom;
+  text.classList.toggle('gol', !sel.value);
+  text.textContent = sel.value ? `${sel.value} ${setariStudio.moneda}` : tr('Alege abonamentul', 'Pick a membership');
+  document.getElementById('btnIncAltaSuma').classList.toggle('activ', custom);
+  actualizeazaButonIncasare();
+}
+
+// Butonul de jos arată suma care se salvează („Încasează 520 RON”); fără sumă doar „Încasează”, estompat
+// (rămâne apăsabil, ca verificările de la salvare să spună ce lipsește). Cât salvează, nu se atinge
+function actualizeazaButonIncasare() {
+  const b = document.getElementById('submitAbonamentBtn');
+  if (!b || b.disabled) return;
+  const suma = getSumaSelectata();
+  const areSuma = suma !== '' && !isNaN(Number(suma));
+  b.innerText = areSuma ? `${t('paySubmitBtn')} ${suma} ${setariStudio.moneda}` : t('paySubmitBtn');
+  b.classList.toggle('fara-suma', !areSuma);
+}
+
+// Datele ca pastile: „Azi” / „La prima ședință” scriu în câmpurile de dată (aceleași ca la salvare);
+// „Altă dată” are câmpul peste ea și arată ziua aleasă din calendar
+const dataIsoPeste = pas => { const d = new Date(); d.setDate(d.getDate() + pas); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const valoarePastilaData = b => b.dataset.zi === '' ? '' : dataIsoPeste(Number(b.dataset.zi));
+
+function alegeDataIncasare(ev) {
+  const b = ev.target.closest('button[data-camp]');
+  if (!b) return;
+  document.getElementById(b.dataset.camp).value = valoarePastilaData(b);
+  actualizeazaPastileDateIncasare();
+}
+
+function actualizeazaPastileDateIncasare() {
+  document.querySelectorAll('#incDatePastile .pastile-alegere').forEach(rand => {
+    const camp = rand.querySelector('input[type="date"]');
+    const rapide = [...rand.querySelectorAll('button[data-camp]')];
+    const aleasa = rapide.find(b => valoarePastilaData(b) === camp.value);
+    rapide.forEach(b => b.classList.toggle('activ', b === aleasa));
+    const alta = rand.querySelector('.pastila-data button');
+    const altaZi = !!camp.value && !aleasa;
+    alta.classList.toggle('activ', altaZi);
+    alta.textContent = altaZi
+      ? new Date(`${camp.value}T00:00`).toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'short' })
+      : tr('Altă dată', 'Other date');
+  });
+}
+
+// „Altă sumă” deschide câmpul de sumă scrisă; apăsat din nou, revine la prețul abonamentului ales (suma scrisă rămâne)
+function alegeAltaSumaIncasare() {
+  const sel = document.getElementById('selectSumaPreset');
+  if (sel.value === 'custom') { autoSelecteazaSuma(true); return; }
+  sel.value = 'custom';
+  sel.dispatchEvent(new Event('change'));
 }
 
 function gestioneazaSchimbareSumaPreset() {
@@ -15804,8 +15888,9 @@ function gestioneazaSchimbareSumaPreset() {
     customInp.style.display = 'block';
     customInp.focus();
   } else {
-    customInp.style.display = 'none';
+    inchideSumaScrisa(false);
   }
+  actualizeazaSumaIncasare();
 }
 
 function getSumaSelectata() {
@@ -15952,7 +16037,11 @@ function deschideIncasareNoua(pre) {
     }
   }
   construiestePastileIncasare();
+  arataClientIncasare();
+  actualizeazaSumaIncasare();
+  actualizeazaPastileDateIncasare();
   foaie.hidden = false;
+  foaie.scrollTop = 0; // fereastra rămâne în pagină între deschideri: pornește mereu de sus, nu de unde a rămas
   if (!document.getElementById('incasareFundal')) {
     const fundal = document.createElement('div');
     fundal.className = 'fisa-scurta-fundal';
@@ -15963,24 +16052,61 @@ function deschideIncasareNoua(pre) {
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
 }
 
+// Sub nume: abonamentul de acum (ca în „De reînnoit”), ca să știi ce reînnoiești; bula arată avatarul clientului ales
+const ICONITA_CLIENT = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+function arataClientIncasare(ev) {
+  const inp = document.getElementById('incasareNume');
+  const nume = inp.value.trim();
+  const c = gasesteClientaValida(nume);
+  // Ales din listă: ieșim din câmp (ca în Orar și Fișă), altfel Chrome ține textul negru de „completat automat” până la blur
+  if (ev && esteAlegereDinLista(inp, ev) && c) inp.blur();
+  const avatar = document.getElementById('incasareAvatar');
+  avatar.classList.remove('are-poza');
+  avatar.innerHTML = c ? avatarSlotHtml(c) : ICONITA_CLIENT;
+  const stare = document.getElementById('incasareStare');
+  const s = c && stareAbonamentClienta(c);
+  stare.className = `prog-sub${s ? ` inc-stare-${s.tip}` : ''}`;
+  // Abonament în curs: câte ședințe mai are din câte și până când; altfel abonamentul și starea lui
+  const pana = c && c.dataExpirare && c.dataExpirare !== '-' ? c.dataExpirare.slice(0, 5) : '';
+  const inCurs = s && (s.tip === 'activ' || s.tip === 'curand');
+  const mic = s ? s.text.charAt(0).toLowerCase() + s.text.slice(1) : '';
+  stare.textContent = !nume ? '' : !c ? tr('Client nou', 'New client')
+    : s.tip === 'nou' ? s.text
+    : inCurs ? tr(`${c.ramase} din ${c.incluse} ședințe rămase`, `${c.ramase} of ${c.incluse} sessions left`)
+      + (s.zile !== undefined ? ` · ${mic}` : pana ? ` · ${tr('până pe', 'until')} ${pana}` : '')
+    : `${numeAbonamentClienta(c.tipAbonament)} · ${mic}`;
+}
+
 function inchideIncasareNoua() {
   const foaie = document.getElementById('cardInregistrareIncasare');
-  if (foaie) foaie.hidden = true;
+  if (foaie) {
+    foaie.hidden = true;
+    foaie.style.transform = foaie.style.animation = ''; // după tragere: la următoarea deschidere urcă iar de jos
+  }
   document.getElementById('incasareFundal')?.remove();
 }
 
+// Fereastra rămâne în pagină (nu se recreează), deci tragerea se leagă o singură dată; restul ei derulează
+trageInJosCaSaInchizi(document.getElementById('cardInregistrareIncasare'), inchideIncasareNoua, '.fisa-scurta-maner, .incasare-foaie-titlu');
+
 // Pastilele citesc opțiunile din liste (le completează Setările) și scriu în ele; schimbarea pornește aceleași reacții ca înainte
 function construiestePastileIncasare() {
-  document.querySelectorAll('#cardInregistrareIncasare .pastile-alegere').forEach(cont => {
+  document.querySelectorAll('#cardInregistrareIncasare .pastile-alegere[data-select]').forEach(cont => {
     const sel = document.getElementById(cont.dataset.select);
+    // Abonamentele: plăci cu prețul dedesubt (din Setări, ca suma propusă); metodele: pastile simple
+    const cuPret = sel.id === 'incasareTip';
     cont.innerHTML = [...sel.options].filter(o => o.value).map(o =>
-      `<button type="button" class="istoric-toate${o.value === sel.value ? ' activ' : ''}" data-valoare="${escAttr(o.value)}">${escAttr(o.textContent)}</button>`).join('');
+      `<button type="button" class="istoric-toate${o.value === sel.value ? ' activ' : ''}" data-valoare="${escAttr(o.value)}">${cuPret
+        ? `<b>${escAttr(o.textContent)}</b><small>${escAttr(String(regulaAbonament(o.value).pret))} ${escAttr(setariStudio.moneda)}</small>`
+        : escAttr(o.textContent)}</button>`).join('');
+    // Pastila aleasă, apăsată din nou, se deselectează (lista revine la gol, ca înainte de alegere; suma se golește odată cu tipul)
     cont.onclick = e => {
       const b = e.target.closest('button');
       if (!b) return;
-      sel.value = b.dataset.valoare;
+      const deselectat = b.classList.contains('activ');
+      sel.value = deselectat ? '' : b.dataset.valoare;
       sel.dispatchEvent(new Event('change'));
-      cont.querySelectorAll('button').forEach(x => x.classList.toggle('activ', x === b));
+      cont.querySelectorAll('button').forEach(x => x.classList.toggle('activ', !deselectat && x === b));
     };
   });
 }
@@ -16047,7 +16173,7 @@ function salveazaIncasare(mod) {
       esteIncasareInCurs = false;
       if (btnSubmit) {
         btnSubmit.disabled = false;
-        btnSubmit.innerText = t('paySubmitBtn');
+        actualizeazaButonIncasare();
         btnSubmit.style.opacity = '';
         btnSubmit.style.pointerEvents = '';
       }
@@ -16077,11 +16203,7 @@ function salveazaIncasare(mod) {
       actualizeazaStilSelect(selPreset);
     }
     
-    let cInp = document.getElementById('incasareSumaCustom');
-    if (cInp) {
-      cInp.value = '';
-      cInp.style.display = 'none';
-    }
+    inchideSumaScrisa(true);
     
     let selMetoda = document.getElementById('incasareMetoda');
     if (selMetoda) {
@@ -16101,7 +16223,7 @@ function salveazaIncasare(mod) {
     esteIncasareInCurs = false;
     if (btnSubmit) {
       btnSubmit.disabled = false;
-      btnSubmit.innerText = t('paySubmitBtn');
+      actualizeazaButonIncasare();
       btnSubmit.style.opacity = '';
       btnSubmit.style.pointerEvents = '';
     }
@@ -16478,8 +16600,11 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
     btn.setAttribute('role', 'option');
     btn.textContent = opt.text;
     btn.onclick = () => {
-      sel.value = opt.value;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      // Ca lista nativă: aceeași opțiune aleasă din nou nu e o schimbare (fără salvare și fără toast)
+      if (sel.value !== opt.value) {
+        sel.value = opt.value;
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       if (laAlegere) laAlegere();
     };
     panel.appendChild(btn);
