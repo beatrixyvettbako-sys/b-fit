@@ -3868,9 +3868,10 @@ nav button.active svg {
 }
 
 /* CARDURI GENERALE & DETAILS */
-/* Hold din Confirmări e și el un <details>, dar sticla o au antetul și cardul lui, nu cutia din jur */
+/* Hold din Confirmări e și el un <details>, dar sticla o au antetul și cardul lui, nu cutia din jur;
+   istoricele (Orar, Încasări) își au sticla lor, doar cât sunt închise */
 .card,
-details:where(:not(.prog-hold)) {
+details:where(:not(.prog-hold, #detailsIstoricOrar, #detailsIstoricIncasari)) {
   background: var(--card-bg) !important;
   border-radius: var(--radius);
   border: 1px solid var(--glass-border) !important;
@@ -5325,10 +5326,28 @@ html:not([data-theme="dark"]) .hold-header::after {
   margin-top: 6px;
 }
 
-/* „Altă dată…”: câmpul de dată stă invizibil peste pastilă, ca atingerea să deschidă calendarul telefonului */
+/* „Altă dată”: câmpul de dată stă invizibil peste pastilă, ca atingerea să deschidă calendarul telefonului;
+   iconița de calendar arată că pastila deschide un calendar */
 .pastila-data {
   position: relative;
   display: inline-flex;
+}
+
+.pastila-data button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pastila-data svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.7;
 }
 
 .pastila-data input {
@@ -5434,7 +5453,9 @@ html:not([data-theme="dark"]) .hold-header::after {
   transition: background-color 0.2s ease;
 }
 
+/* Cât scrii: nuanța slabă și loc în dreapta pentru × de golire (bula de 20px) */
 .incasare-suma .form-control:focus {
+  padding-right: 32px;
   background: rgba(var(--accent-rgb), 0.08);
 }
 
@@ -5670,17 +5691,15 @@ details[open] > summary .summary-sageata {
   flex-basis: 100%;
 }
 
+/* Editarea plății: fundalul ferestrei de jos (ca .fisa-scurta-fundal); fereastra e .fisa-scurta, lipită jos.
+   Fără animație de opacitate aici: ar opri blurul ferestrei (prin ea s-ar vedea pagina) */
 #modalEditareIncasareBackdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 12, 24, 0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 10001;
   display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  overscroll-behavior: contain;
 }
 
 .modal-edit-card {
@@ -10114,7 +10133,7 @@ button.orar-cifra:disabled {
 
 /* Istoric prezențe: bară de sticlă cu iconița într-un cerc */
 :is(#detailsIstoricOrar, #detailsIstoricIncasari) {
-  border-radius: 22px !important;
+  border-radius: 22px;
 }
 
 /* Istoric prezențe: luna ca săptămâna din Orar (‹ ›), căutare de sticlă, cifrele perioadei, prezențele pe zile
@@ -10720,9 +10739,14 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
+/* Închis e o bară de sticlă; deschis rămâne doar titlul, iar zilele își au cardurile lor (fără sticlă peste sticlă) */
 :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari) {
-  background: var(--m-card) !important;
-  border: 1px solid var(--m-border) !important;
+  border: 1px solid transparent;
+}
+
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari):not([open]) {
+  background: var(--m-card);
+  border-color: var(--m-border);
   box-shadow: var(--m-shadow);
   backdrop-filter: blur(24px) saturate(185%);
   -webkit-backdrop-filter: blur(24px) saturate(185%);
@@ -10888,6 +10912,13 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   white-space: nowrap;
 }
 
+/* Istoricul deschis (fără card în jur): titlul devine titlul secțiunii */
+:is(#detailsIstoricOrar, #detailsIstoricIncasari)[open] .orar-titlu-cu-ceas {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
 :is(#tabOrar, #detailsIstoricIncasari) .orar-titlu-cu-ceas > span:last-child {
   min-width: 0;
   overflow: hidden;
@@ -10934,7 +10965,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 .orar-cifra::before,
 #tabOrar .day-selector::before,
 #tabOrar .extra-hour-card::before,
-:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari)::before,
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari):not([open])::before, /* deschis: cardurile din el au lumina lor; a lui s-ar întinde pe tot istoricul */
 #tabOrar .calendar-expandable-card.is-expanded::before,
 #tabOrar .btn-save-check::before,
 #tabOrar .btn-clear::before,
