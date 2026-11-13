@@ -59,4 +59,6 @@ Comunică cu utilizatoarea în română, concis și tehnic, fără introduceri s
 - `orar-layout`: tab-ul Orar: sloturi, scroll automat, calibrare pe ecran.
 - `traduceri`: suportul RO/EN.
 - `supabase-date`: tabele, coloane și reguli de business pentru date.
+- `cod-curat`: la orice modificare de cod: modifici în loc să adaugi, ștergi ce rămâne fără efect, fără duplicate, performanță pe telefon, verificare fără regresii.
+- `stil-nou`: rețeta vizuală a redesign-ului (sticla din Orar) și ordinea ecranelor.
 - `comparatie-nisa`: înainte de funcții noi sau schimbări de flux: cum fac aplicațiile de top, ce reproșează utilizatorii, propunere mai bună.

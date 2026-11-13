@@ -11462,6 +11462,8 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   tipTabCurent = tipTab;
   // Etichetă simplă pe pagină pentru stilurile Orarului (în loc de body:has(#tabOrar.active), costisitor la derulare)
   document.body.classList.toggle('pe-orar', tabId === 'tabOrar');
+  // Tab-urile trecute pe stilul nou (al Orarului): fundalul cu pete de lumină și cardurile de sticlă
+  document.body.classList.toggle('stil-nou', ['tabProgramari'].includes(tabId));
 
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) {
