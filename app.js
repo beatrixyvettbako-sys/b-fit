@@ -104,7 +104,7 @@ const i18n = {
     holdSection: "Hold",
     noRecords: "Nici o înregistrare",
     noClientsHold: "Niciun client în Hold",
-    addNewClientTitle: "Adaugă un Client Nou în Aplicație",
+    addNewClientTitle: "Client nou",
     clientNamePlaceholder: "Nume și prenume client",
     saveClientBtn: "Salvează Clientul",
     selectClientLabel: "SELECTEAZĂ CLIENTUL",
@@ -255,7 +255,7 @@ const i18n = {
     holdSection: "Hold",
     noRecords: "No records",
     noClientsHold: "No clients in Hold",
-    addNewClientTitle: "Add New Client to App",
+    addNewClientTitle: "New client",
     clientNamePlaceholder: "Client Full Name",
     saveClientBtn: "Save Client",
     selectClientLabel: "SELECT CLIENT",
@@ -10351,6 +10351,12 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 213, data: '2026-11-14',
+    client: [],
+    antrenor: [
+      ['Fișa începe acum cu lista „Clienți”: cauți direct, iar sus vezi câți clienți ai, câți sunt de urmărit și câți sunt arhivați (apasă o cifră ca să filtrezi). Un client nou îl adaugi cu +.', 'The Client tab now opens with your “Clients” list: search right away, and the numbers at the top show your clients, who needs attention and who is archived (tap a number to filter). Add a new client with +.']
+    ]
+  },
   { v: 211, data: '2026-11-14',
     client: [],
     antrenor: [
@@ -10917,6 +10923,7 @@ function pasInapoiTelefon() {
   if (document.getElementById('notifRapid')) return inchideNotificariRapid;
   if (document.getElementById('fisaScurta')) return inchideFisaScurta;
   if (document.getElementById('incasareFundal')) return inchideIncasareNoua;
+  if (document.getElementById('clientNouFundal')) return inchideClientNou;
   const modal = MODALE_INAPOI.find(([id]) => document.getElementById(id)?.style.display === 'flex');
   if (modal) return modal[1];
   if (vizibil('panouPoze')) return inchidePanouPoze;
@@ -11372,18 +11379,36 @@ function areAbonamentActiv(c) {
   return regulaAbonament(c.tipAbonament).fel === 'abonament' && ['activ', 'curand', 'inghetat'].includes(stareAbonamentClienta(c).tip);
 }
 
+// Cu o fișă deschisă: titlul, căutarea și filtrele listei se ascund, iar fișa stă în cardul ei
+function marcheazaFisaDeschisa(deschisa) {
+  document.getElementById('tabFisa').classList.toggle('fisa-deschisa', deschisa);
+  document.getElementById('fisaCard').classList.toggle('card', deschisa);
+}
+
+// Filtrul „Arhivați” ține locul bifei „Arată și arhivate”: o bifează (și lista de nume din tot ecranul îi include, ca înainte),
+// iar celelalte filtre o debifează
+function alegeFiltruListaFisa(id) {
+  filtruListaFisa = id;
+  const bifa = document.getElementById('checkArataArhivate');
+  if (bifa && bifa.checked !== (id === 'arhivati')) {
+    bifa.checked = id === 'arhivati';
+    populeazaSelectoriCliente(); // redesenează și lista
+  } else {
+    randeazaListaClienteFisa();
+  }
+}
+
 function randeazaListaClienteFisa() {
   const lista = document.getElementById('listaClienteFisa');
   const emptyState = document.getElementById('fisaEmptyState');
   if (!lista) return;
-  const arataArhivate = document.getElementById('checkArataArhivate')?.checked;
   const cauta = (document.getElementById('selectClientaFisa')?.value || '').trim().toLowerCase();
-  const toate = (DB.clienti || [])
-    .map(c => { const s = stareAbonamentClienta(c); return { c, s, r: stareRetentie(c, s) }; })
-    .filter(x => arataArhivate || x.s.tip !== 'arhivat');
+  const cuStare = (DB.clienti || []).map(c => { const s = stareAbonamentClienta(c); return { c, s, r: stareRetentie(c, s) }; });
+  const toate = cuStare.filter(x => x.s.tip !== 'arhivat');
+  const arhivati = cuStare.filter(x => x.s.tip === 'arhivat');
 
-  // Fără nicio clientă (antrenor nou): rămâne cardul gol, cu explicația
-  if (toate.length === 0) {
+  // Fără niciun client (antrenor nou): rămâne cardul gol, cu explicația
+  if (cuStare.length === 0) {
     lista.hidden = true;
     if (emptyState) emptyState.style.display = 'flex';
     return;
@@ -11393,18 +11418,21 @@ function randeazaListaClienteFisa() {
 
   const deUrmarit = toate.filter(x => x.s.urmarit).length;
   const deReactivat = toate.filter(x => x.r).length;
-  if ((filtruListaFisa === 'urmarit' && !deUrmarit) || (filtruListaFisa === 'reactivat' && !deReactivat)) filtruListaFisa = 'toate';
+  if ((filtruListaFisa === 'urmarit' && !deUrmarit) || (filtruListaFisa === 'reactivat' && !deReactivat)
+    || (filtruListaFisa === 'arhivati' && !arhivati.length)) filtruListaFisa = 'toate';
   const ordine = { expirat: 0, curand: 1, nou: 2, activ: 3, inghetat: 3, arhivat: 4 };
   const reactivare = filtruListaFisa === 'reactivat';
-  const vizibile = toate
-    .filter(x => filtruListaFisa === 'toate' || (reactivare ? x.r : x.s.urmarit))
+  const vizibile = (filtruListaFisa === 'arhivati' ? arhivati : toate)
+    .filter(x => ['toate', 'arhivati'].includes(filtruListaFisa) || (reactivare ? x.r : x.s.urmarit))
     .filter(x => !cauta || x.c.nume.toLowerCase().includes(cauta))
     .sort((a, b) => reactivare ? (b.r.zile - a.r.zile) : ((ordine[a.s.tip] - ordine[b.s.tip]) || a.c.nume.localeCompare(b.c.nume)));
 
-  const filtru = (id, text, n) => `<button type="button" class="lista-filtru${filtruListaFisa === id ? ' active' : ''}" onclick="filtruListaFisa='${id}'; randeazaListaClienteFisa()">${text}<span>${n}</span></button>`;
-  const initiale = nume => nume.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
-  let html = `<div class="lista-filtre">${filtru('toate', tr('Toate', 'All'), toate.length)}${deUrmarit ? filtru('urmarit', tr('De urmărit', 'Needs attention'), deUrmarit) : ''}${deReactivat ? filtru('reactivat', tr('De reactivat', 'Win back'), deReactivat) : ''}</div>`;
-  html += vizibile.length ? vizibile.map(({ c, s, r }) => {
+  // Cifrele-filtru, ca pe Confirmări: apar doar cele care au clienți
+  // `scurt`: eticheta pe ecranele înguste, când sunt 4 cifre (scurteazaEticheteCifre)
+  const filtru = (id, text, n, culoare, scurt) => `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruListaFisa === id ? ' activ' : ''}" onclick="alegeFiltruListaFisa('${id}')"><b>${n}</b><span${scurt ? ` data-scurt="${scurt}"` : ''}>${text}</span></button>`;
+  let html = `<div class="orar-cifre fisa-filtre">${filtru('toate', tr('Clienți', 'Clients'), toate.length, 'accent')}${deUrmarit ? filtru('urmarit', tr('De urmărit', 'Attention'), deUrmarit, 'portocaliu', tr('Urmărit', 'Watch')) : ''}${deReactivat ? filtru('reactivat', tr('De reactivat', 'Win back'), deReactivat, 'rosu', tr('Inactivi', 'Inactive')) : ''}${arhivati.length ? filtru('arhivati', tr('Arhivați', 'Archived'), arhivati.length, 'gri', tr('Arhivă', 'Archive')) : ''}</div>`;
+
+  html += vizibile.length ? `<div class="lista-sticla fisa-lista">${vizibile.map(({ c, s, r }) => {
     const detalii = s.tip === 'nou' ? tr('Abonamentul se adaugă din Încasări', 'Add the subscription in Payments')
       : [traduceValoare(c.tipAbonament), c.dataExpirare && c.dataExpirare !== '-' ? tr('până la ', 'until ') + c.dataExpirare : ''].filter(Boolean).join(' · ');
     // În „De reactivat”: semaforul (zile fără prezență) în locul stării abonamentului și butonul de mesaj
@@ -11417,8 +11445,9 @@ function randeazaListaClienteFisa() {
         ${stare}
       </button>`;
     return reactivare ? `<div class="lista-rand">${rand}<button type="button" class="lista-mesaj" data-nume="${escAttr(c.nume)}" onclick="trimiteMesajReactivare(this.dataset.nume)" aria-label="${tr('Trimite mesaj', 'Send message')}"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button></div>` : rand;
-  }).join('') : `<div class="lista-gol">${tr('Niciun client găsit.', 'No client found.')}</div>`;
+  }).join('')}</div>` : `<div class="lista-gol">${tr('Niciun client găsit.', 'No client found.')}</div>`;
   lista.innerHTML = html;
+  scurteazaEticheteCifre(lista);
 }
 
 // Din fișa deschisă înapoi la lista tuturor clientelor
@@ -11427,9 +11456,35 @@ function inapoiLaListaClienteFisa() {
   sel.value = '';
   actualizeazaStilSelect(sel);
   filtruListaFisa = 'toate';
+  const bifa = document.getElementById('checkArataArhivate');
+  if (bifa && bifa.checked) { bifa.checked = false; populeazaSelectoriCliente(); }
   afiseazaFisaClientaInstant();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
+
+// Client nou: fereastra de jos, ca plata nouă (formularul și salvarea rămân creeazaClientaNouaDirect)
+function deschideClientNou() {
+  const foaie = document.getElementById('detailsDetailsAdaugareClienta');
+  foaie.hidden = false;
+  foaie.scrollTop = 0;
+  if (!document.getElementById('clientNouFundal')) {
+    const fundal = document.createElement('div');
+    fundal.className = 'fisa-scurta-fundal';
+    fundal.id = 'clientNouFundal';
+    fundal.onclick = inchideClientNou;
+    document.body.append(fundal);
+  }
+  sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+function inchideClientNou() {
+  const foaie = document.getElementById('detailsDetailsAdaugareClienta');
+  foaie.hidden = true;
+  foaie.style.transform = foaie.style.animation = '';
+  document.getElementById('clientNouFundal')?.remove();
+}
+
+trageInJosCaSaInchizi(document.getElementById('detailsDetailsAdaugareClienta'), inchideClientNou, '.fisa-scurta-maner, .incasare-foaie-titlu');
 
 function deschideClientaDinLista(nume) {
   const sel = document.getElementById('selectClientaFisa');
@@ -11513,7 +11568,7 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   // Etichetă simplă pe pagină pentru stilurile Orarului (în loc de body:has(#tabOrar.active), costisitor la derulare)
   document.body.classList.toggle('pe-orar', tabId === 'tabOrar');
   // Tab-urile trecute pe stilul nou (al Orarului): fundalul cu pete de lumină și cardurile de sticlă
-  document.body.classList.toggle('stil-nou', ['tabOrar', 'tabProgramari', 'tabIncasari'].includes(tabId));
+  document.body.classList.toggle('stil-nou', ['tabOrar', 'tabProgramari', 'tabIncasari', 'tabFisa'].includes(tabId));
 
   const bottomNav = document.getElementById('bottomNav');
   if (bottomNav) {
@@ -12859,7 +12914,7 @@ function anuleazaSlot(zi, ora, slotIdx) {
 
 // La pornire Orarul e tab-ul deschis
 document.body.classList.toggle('pe-orar', !!document.querySelector('#tabOrar.active'));
-document.body.classList.toggle('stil-nou', !!document.querySelector('#tabOrar.active, #tabProgramari.active, #tabIncasari.active'));
+document.body.classList.toggle('stil-nou', !!document.querySelector('#tabOrar.active, #tabProgramari.active, #tabIncasari.active, #tabFisa.active'));
 
 // Ora aleasă după „+”: se adaugă singură, fără încă o apăsare
 document.getElementById('inputOraCustom')?.addEventListener('change', e => {
@@ -13380,6 +13435,7 @@ function afiseazaFisaClientaInstant() {
   let client = nume ? (DB.clienti || []).find(c => c && c.nume.toLowerCase() === nume.toLowerCase()) : null;
   if (!client) {
     container.style.display = 'none';
+    marcheazaFisaDeschisa(false);
     randeazaListaClienteFisa();
     return;
   }
@@ -13387,6 +13443,7 @@ function afiseazaFisaClientaInstant() {
   if (emptyState) emptyState.style.display = 'none';
   document.getElementById('listaClienteFisa').hidden = true;
   container.style.display = 'block';
+  marcheazaFisaDeschisa(true);
   randeazaAntetFisa(client);
   randeazaNotaClient(client);
 
@@ -15688,6 +15745,7 @@ function creeazaClientaNouaDirect(confirmatDublura = false) {
 
   callBackend("adaugaClientaDirect", { nume: nume, tip: tip, telefon: inpTel ? inpTel.value : '' }, function() {
     showToast(t('toastClientAdded'));
+    inchideClientNou();
     if (inp) inp.value = '';
     if (inpTel) inpTel.value = '';
     incarcaBazaDateSilencios();

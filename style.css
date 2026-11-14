@@ -4857,10 +4857,63 @@ select.form-control {
 /* CONFIRMĂRI & HOLD: stilul nou (sticla din Orar) */
 /* Ecranele trecute pe stilul nou: textele din machetă și aceleași margini */
 #tabProgramari,
-#tabIncasari {
+#tabIncasari,
+#tabFisa {
   --text: var(--m-text);
   --text-muted: var(--m-muted);
   padding: 10px 8px 0;
+}
+
+/* ===== Fișă, lista de clienți: titlul mare, căutarea, cifrele-filtru, recenții și rândurile într-un card de sticlă ===== */
+#tabFisa.fisa-deschisa :is(.fisa-lista-sus, .fisa-cauta) {
+  display: none;
+}
+
+.fisa-cauta {
+  margin-bottom: 12px;
+}
+
+/* Câte cifre apar (2–4), atâtea coloane egale */
+.fisa-filtre {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+}
+
+#tabFisa .fisa-lista :is(.lista-clienta, .lista-rand) {
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#tabFisa .fisa-lista .lista-clienta {
+  padding: 12px 14px;
+}
+
+#tabFisa .fisa-lista .lista-rand {
+  align-items: center;
+  padding-right: 12px;
+}
+
+#tabFisa .fisa-lista .lista-rand .lista-clienta {
+  border-bottom: 0;
+}
+
+#tabFisa .fisa-lista > :last-child {
+  border-bottom: 0;
+}
+
+#tabFisa .fisa-lista .lista-mesaj {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-accent-text);
 }
 
 .prog-table-container {
