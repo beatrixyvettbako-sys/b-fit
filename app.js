@@ -71,7 +71,7 @@ let tabAnteriorPlan = 'orar';
 const tabsOrder = [
   { id: 'tabOrar', titleRo: 'Orar', titleEn: 'Schedule', tip: 'orar', idx: 0 },
   { id: 'tabProgramari', titleRo: 'Confirmări', titleEn: 'Check-in', tip: 'prog', idx: 1 },
-  { id: 'tabFisa', titleRo: 'Fișă Client', titleEn: 'Client Profile', tip: 'fisa', idx: 2 },
+  { id: 'tabFisa', titleRo: 'Clienți', titleEn: 'Clients', tip: 'fisa', idx: 2 },
   { id: 'tabIncasari', titleRo: 'Încasări', titleEn: 'Payments', tip: 'incasari', idx: 3 }
 ];
 
@@ -81,7 +81,7 @@ const i18n = {
     appTitle: "Orar",
     navOrar: "Orar",
     navProg: "Confirmări",
-    navFisa: "Fișă",
+    navFisa: "Clienți",
     navIncasari: "Încasări",
     pastWeek: "Săpt. Trecută",
     today: "Azi",
@@ -112,11 +112,11 @@ const i18n = {
     selectClientOption: "Alege clientul...",
     emptyStateTitle: "Niciun client selectat",
     emptyStateDesc: "Alege un client din lista de mai sus pentru a-i vizualiza progresul, abonamentul și istoricul.",
-    sessionsRemaining: "ȘEDINȚE RĂMASE",
+    sessionsRemaining: "Ședințe rămase",
     statusLabel: "STATUS",
-    validityLabel: "VALABILITATE PÂNĂ LA",
+    validityLabel: "Valabil până la",
     sessionsDone: "ȘEDINȚE EFECTUATE",
-    editClientTitle: "Editează / Ajustează Datele Clientului",
+    editClientTitle: "Editează clientul",
     renameClientLabel: "Nume Client (Redenumește peste tot)",
     subTypeLabel: "Tip Abonament",
     startDateLabel: "Dată Start",
@@ -129,7 +129,7 @@ const i18n = {
     setBtn: "Setează",
     archiveBtn: "Arhivează / Ascunde din Liste",
     reactivateBtn: "Reactivează Clientul (Arată în Liste)",
-    recentHistoryTitle: "Istoric Prezențe",
+    recentHistoryTitle: "Prezențe și plăți",
     noPresenceYet: "Nici o prezență înregistrată încă.",
     newPaymentTitle: "Înregistrare Plată Nouă",
     clientNameIncPlaceholder: "Caută sau adaugă client",
@@ -232,7 +232,7 @@ const i18n = {
     appTitle: "Schedule",
     navOrar: "Schedule",
     navProg: "Check-in",
-    navFisa: "Profile",
+    navFisa: "Clients",
     navIncasari: "Payments",
     pastWeek: "Past Week",
     today: "Today",
@@ -263,11 +263,11 @@ const i18n = {
     selectClientOption: "Choose client...",
     emptyStateTitle: "No client selected",
     emptyStateDesc: "Choose a client from the list above to view their progress, subscription, and history.",
-    sessionsRemaining: "SESSIONS LEFT",
+    sessionsRemaining: "Sessions left",
     statusLabel: "STATUS",
-    validityLabel: "VALID UNTIL",
+    validityLabel: "Valid until",
     sessionsDone: "SESSIONS DONE",
-    editClientTitle: "Edit / Adjust Client Data",
+    editClientTitle: "Edit client",
     renameClientLabel: "Client Name (Rename everywhere)",
     subTypeLabel: "Subscription Type",
     startDateLabel: "Start Date",
@@ -280,7 +280,7 @@ const i18n = {
     setBtn: "Set",
     archiveBtn: "Archive / Hide from lists",
     reactivateBtn: "Reactivate Client (Show in lists)",
-    recentHistoryTitle: "Attendance History",
+    recentHistoryTitle: "Attendance & payments",
     noPresenceYet: "No attendance recorded yet.",
     newPaymentTitle: "Register New Payment",
     clientNameIncPlaceholder: "Search or add client",
@@ -3225,18 +3225,15 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
       </button>
     `;
   } else if (tipTab === 'fisa') {
-    iconHtml = `
-      <div class="header-static-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="3"></rect>
-          <circle cx="12" cy="10" r="3"></circle>
-          <path d="M7 17c0-2 2.5-3 5-3s5 1 5 3"></path>
-        </svg>
-      </div>
-    `;
+    // Butonul din stânga al tab-ului Clienți: + (client nou) pe listă, ⋯ (datele clientului) cu o fișă deschisă
+    iconHtml = `<button class="header-icon-bubble-btn" id="btnClientNou" onclick="apasaButonAntetFisa()"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"></svg></button>`;
+  } else if (tipTab === 'incasari') {
+    // Încasări: + (încasare nouă) în stânga antetului, vizibil și la derulare
+    iconHtml = `<button class="header-icon-bubble-btn" id="btnIncasareNoua" onclick="deschideIncasareNoua()" title="${tr('Încasare nouă', 'New payment')}" aria-label="${tr('Încasare nouă', 'New payment')}"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round"><path stroke-width="2.4" d="M12 5v14M5 12h14"/></svg></button>`;
   }
   wrapper.innerHTML = `${iconHtml}<span id="pageTitle">${titlu}</span>`;
   actualizeazaDataIconite();
+  actualizeazaButonAntetFisa();
 }
 
 // Iconițele de calendar (antet + bara de jos) arată ziua de azi, nu o dată fixă
@@ -10351,6 +10348,17 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 214, data: '2026-11-14',
+    client: [],
+    antrenor: [
+      ['Fișa clientului e refăcută: sus ai Sună, Mesaj și Încasează, iar mesajele necitite apar ca bulină pe butonul „Mesaj”.', 'The client profile is redesigned: Call, Message and Collect are at the top, and unread messages show as a badge on the “Message” button.'],
+      ['Abonamentul e într-un singur loc: apeși cardul lui ca să activezi, să prelungești, să pui pauză sau să corectezi ședințele.', 'The subscription lives in one place: tap its card to activate, extend, pause or correct the sessions.'],
+      ['Vezi dintr-o privire prezența pe ultimele 8 săptămâni, greutatea și orele viitoare ale clientului (apasă o oră ca să ajungi în Orar).', 'See at a glance the last 8 weeks of attendance, the weight and the client’s upcoming sessions (tap one to open the Schedule).'],
+      ['Istoricul arată acum prezențele și plățile la un loc, pe luni; apeși o plată ca să o modifici.', 'History now shows sessions and payments together, by month; tap a payment to edit it.'],
+      ['Numele, telefonul, emailul, arhivarea și ștergerea sunt la ⋯ din stânga-sus; telefonul, contul și linkul de check-in sunt în „Cont și contact”.', 'Name, phone, email, archive and delete are under ⋯ at the top left; phone, account and the check-in link are in “Account and contact”.'],
+      ['Tab-ul „Fișă” se numește acum „Clienți”, iar + pentru client nou și pentru încasare nouă e în stânga-sus, mereu la îndemână.', 'The “Profile” tab is now called “Clients”, and the + for a new client or a new payment sits at the top left, always within reach.']
+    ]
+  },
   { v: 213, data: '2026-11-14',
     client: [],
     antrenor: [
@@ -10924,6 +10932,7 @@ function pasInapoiTelefon() {
   if (document.getElementById('fisaScurta')) return inchideFisaScurta;
   if (document.getElementById('incasareFundal')) return inchideIncasareNoua;
   if (document.getElementById('clientNouFundal')) return inchideClientNou;
+  if (document.getElementById('foaieFisaFundal')) return inchideFoaieFisa;
   const modal = MODALE_INAPOI.find(([id]) => document.getElementById(id)?.style.display === 'flex');
   if (modal) return modal[1];
   if (vizibil('panouPoze')) return inchidePanouPoze;
@@ -11335,14 +11344,19 @@ function stareAbonamentClienta(c) {
 
 // Semafor de retenție: clienții care nu mai vin. Galben = 14–29 de zile fără prezență; roșu = 30+ zile,
 // sau abonament terminat și nereînnoit de cel puțin 7 zile. Peste 180 de zile nu mai apar (de arhivat, nu de reactivat).
+const prezenteleClientului = c => (DB.prezente || []).filter(p => p && randulClientei(p, c, p.clienta));
+
+// Câte zile au trecut de la ultima prezență bifată (null = nicio prezență)
+function zileDeLaUltimaPrezenta(c) {
+  const ultima = prezenteleClientului(c).reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0);
+  if (!ultima) return null;
+  return Math.round((new Date().setHours(0, 0, 0, 0) - new Date(ultima).setHours(0, 0, 0, 0)) / 86400000);
+}
+
 function stareRetentie(c, s) {
   if (s.tip === 'arhivat' || s.tip === 'nou' || s.tip === 'inghetat') return null;
-  const ultima = (DB.prezente || []).filter(p => randulClientei(p, c, p.clienta))
-    .reduce((max, p) => Math.max(max, parseazaDataOraRo(p.data)), 0);
-  if (!ultima) return null;
-  const azi = new Date(); azi.setHours(0, 0, 0, 0);
-  const zile = Math.round((azi - new Date(ultima).setHours(0, 0, 0, 0)) / 86400000);
-  if (zile < 7 || zile > 180) return null;
+  const zile = zileDeLaUltimaPrezenta(c);
+  if (zile === null || zile < 7 || zile > 180) return null;
   if (zile >= 30 || (s.tip === 'expirat' && zile >= 7)) return { culoare: 'rosu', zile };
   return zile >= 14 ? { culoare: 'galben', zile } : null;
 }
@@ -11379,10 +11393,49 @@ function areAbonamentActiv(c) {
   return regulaAbonament(c.tipAbonament).fel === 'abonament' && ['activ', 'curand', 'inghetat'].includes(stareAbonamentClienta(c).tip);
 }
 
-// Cu o fișă deschisă: titlul, căutarea și filtrele listei se ascund, iar fișa stă în cardul ei
+// Cu o fișă deschisă: titlul, căutarea și filtrele listei se ascund (fișa are cardurile ei, fără un card mare în jur)
 function marcheazaFisaDeschisa(deschisa) {
   document.getElementById('tabFisa').classList.toggle('fisa-deschisa', deschisa);
-  document.getElementById('fisaCard').classList.toggle('card', deschisa);
+  if (!deschisa) inchideFoaieFisa();
+  actualizeazaButonAntetFisa();
+}
+
+function esteFisaDeschisa() { return document.getElementById('tabFisa').classList.contains('fisa-deschisa'); }
+
+function actualizeazaButonAntetFisa() {
+  const btn = document.getElementById('btnClientNou');
+  if (!btn) return;
+  const deschisa = esteFisaDeschisa();
+  btn.title = deschisa ? tr('Editează clientul', 'Edit client') : tr('Client nou', 'New client');
+  btn.setAttribute('aria-label', btn.title);
+  btn.querySelector('svg').innerHTML = deschisa ? '<path stroke-width="3.2" d="M5 12h.01M12 12h.01M19 12h.01"/>' : '<path stroke-width="2.4" d="M12 5v14M5 12h14"/>';
+}
+
+function apasaButonAntetFisa() {
+  if (esteFisaDeschisa()) deschideFoaieFisa('detailsEditareFisa'); else deschideClientNou();
+}
+
+// Ferestrele de jos ale fișei („Abonament” din card, „Editează clientul” din ⋯): una deschisă pe rând
+function deschideFoaieFisa(id) {
+  inchideFoaieFisa();
+  const foaie = document.getElementById(id);
+  foaie.hidden = false;
+  foaie.scrollTop = 0;
+  const fundal = document.createElement('div');
+  fundal.className = 'fisa-scurta-fundal';
+  fundal.id = 'foaieFisaFundal';
+  fundal.onclick = inchideFoaieFisa;
+  document.body.append(fundal);
+  sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+function inchideFoaieFisa() {
+  ['foaieAbonament', 'detailsEditareFisa'].forEach(id => {
+    const foaie = document.getElementById(id);
+    foaie.hidden = true;
+    foaie.style.transform = foaie.style.animation = '';
+  });
+  document.getElementById('foaieFisaFundal')?.remove();
 }
 
 // Filtrul „Arhivați” ține locul bifei „Arată și arhivate”: o bifează (și lista de nume din tot ecranul îi include, ca înainte),
@@ -11485,6 +11538,7 @@ function inchideClientNou() {
 }
 
 trageInJosCaSaInchizi(document.getElementById('detailsDetailsAdaugareClienta'), inchideClientNou, '.fisa-scurta-maner, .incasare-foaie-titlu');
+['foaieAbonament', 'detailsEditareFisa'].forEach(id => trageInJosCaSaInchizi(document.getElementById(id), inchideFoaieFisa, '.fisa-scurta-maner, .incasare-foaie-titlu'));
 
 function deschideClientaDinLista(nume) {
   const sel = document.getElementById('selectClientaFisa');
@@ -11710,7 +11764,7 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
   if (dinSlot) foaie.querySelector('#btnRepetaSaptamanal').onclick = () => { inchideFisaScurta(); repetaSaptamanal(c, zi, ora, slotIdx); };
   foaie.querySelector('#btnFisaCompleta').onclick = () => {
     inchideFisaScurta();
-    comutaTab('tabFisa', 'Fișă Client', document.getElementById('navBtnFisa'), 'fisa', 2);
+    comutaTab('tabFisa', 'Clienți', document.getElementById('navBtnFisa'), 'fisa', 2);
     deschideClientaDinLista(c.nume);
   };
   trageInJosCaSaInchizi(foaie, inchideFisaScurta); // de oriunde de pe fișă, nu doar de mâner
@@ -11858,7 +11912,7 @@ function deschideCautareClient() {
         const c = (DB.clienti || []).find(x => x.id === b.dataset.id);
         inchideFisaScurta();
         if (!c) return;
-        comutaTab('tabFisa', 'Fișă Client', document.getElementById('navBtnFisa'), 'fisa', 2);
+        comutaTab('tabFisa', 'Clienți', document.getElementById('navBtnFisa'), 'fisa', 2);
         deschideClientaDinLista(c.nume);
       };
     });
@@ -13462,12 +13516,22 @@ function afiseazaFisaClientaInstant() {
   document.getElementById('graficBara').style.width = procent + '%';
   document.getElementById('graficProcent').innerText = procent + '%';
   document.getElementById('graficProgresText').innerText = progresText;
-  document.getElementById('fisaTipAbonamentAfisat').innerText = traduceValoare(client.tipAbonament);
+  // Inelul: cât a mai rămas din abonament (plin = toate ședințele rămase), cu numărul lor în mijloc
+  const areSedinte = client.incluse > 0;
+  document.getElementById('fisaInelAbonament').innerHTML = htmlInelProgres(areSedinte ? Math.max(0, client.ramase) / client.incluse * 100 : 0, areSedinte ? client.ramase : '–');
+  document.getElementById('fisaAbonamentRamase').innerText = areSedinte
+    ? tr(`${client.ramase} din ${client.incluse} ședințe rămase`, `${client.ramase} of ${client.incluse} sessions left`) : tr('Apasă ca să activezi unul', 'Tap to activate one');
+  document.getElementById('fisaTipAbonamentAfisat').innerText = areSedinte ? traduceValoare(client.tipAbonament) : tr('Fără abonament', 'No subscription');
+  document.getElementById('fisaValabilitate').parentElement.hidden = !areSedinte;
 
   // Aceeași stare ca în lista de clienți (după dată și ședințe), nu doar câmpul `status` salvat
   let badge = document.getElementById('fisaStatusBadge');
   let stLower = (client.status || '').toLowerCase();
   const stare = stareAbonamentClienta(client);
+  document.getElementById('fisaInelAbonament').className = `inel-${stare.tip}`;
+  randeazaAcumFisa(client, stare);
+  randeazaTileFisa(client);
+  randeazaProgramariFisa(client);
   // Îngheață / Reia: doar cât există un abonament propriu-zis în desfășurare (sau deja înghețat)
   const btnIngh = document.getElementById('btnInghetareAbonament');
   if (btnIngh) {
@@ -13478,13 +13542,8 @@ function afiseazaFisaClientaInstant() {
       ? tr(`${stare.text}. Zilele de pauză se adaugă la expirare când îl reiei.`, `${stare.text}. The paused days are added to the expiry when you resume.`)
       : tr('Pentru concediu sau boală: zilele se opresc, ședințele rămân.', 'For holidays or illness: the days stop, the sessions stay.');
   }
-  if (stare.tip === 'activ' || stare.tip === 'curand') {
-    badge.innerHTML = `<span class="badge badge-activ">${tr('Activ', 'Active')}</span>`;
-  } else if (stare.tip === 'expirat') {
-    badge.innerHTML = `<span class="badge badge-expirat">${stare.text}</span>`;
-  } else {
-    badge.innerHTML = `<span class="badge badge-arhivat">${stare.text}</span>`;
-  }
+  // Starea, cu aceeași pastilă ca în lista de clienți („Expiră în 3 zile”, „1 ședință”, „Expirat”…); fără abonament o spune deja titlul
+  badge.innerHTML = stare.tip === 'nou' ? '' : `<span class="lista-stare ${stare.tip}">${escAttr(stare.tip === 'activ' ? tr('Activ', 'Active') : stare.text)}</span>`;
 
   document.getElementById('btnStergeClientDefinitivText').innerText = tr('Șterge definitiv', 'Delete permanently');
   let btnArch = document.getElementById('btnArhivareToggle');
@@ -13680,19 +13739,14 @@ function trimiteNotaInConversatie(s, e, valoare) {
   trimiteContextInConversatie('nota', valoare, { exercitiu: ex ? ex.exercitiu || '' : '', zi: ses.titlu || '' });
 }
 
-// Fișa clientului (antrenor): blocul Mesaje apare doar pentru clienții cu cont în aplicație
+// Fișa clientului (antrenor): mesajele necitite apar ca bulină pe butonul „Mesaj” (doar clienții cu cont îl au)
 async function randeazaBlocMesaje(client) {
-  const bloc = document.getElementById('blocMesajeClient');
-  if (!bloc) return;
-  bloc.hidden = !client.contConectat;
   if (!client.contConectat) return;
-  const stare = document.getElementById('mesajeClientStare');
-  const ultimul = document.getElementById('mesajeClientUltimul');
   const r = await rezumatMesaje(client.id);
-  if (clientaFisaCurenta() !== client) return;
-  stare.textContent = r && r.necitite ? (r.necitite === 1 ? tr('1 necitit', '1 unread') : tr(`${r.necitite} necitite`, `${r.necitite} unread`)) : '';
-  stare.classList.toggle('mesaje-necitite', !!(r && r.necitite));
-  ultimul.textContent = textUltimulMesaj(r) || tr('Niciun mesaj încă. Clientul îți poate răspunde din aplicație.', 'No messages yet. The client can reply in the app.');
+  const bulina = document.querySelector('#fisaAntetClient .notificari-bulina');
+  if (clientaFisaCurenta() !== client || !bulina) return;
+  bulina.hidden = !(r && r.necitite);
+  bulina.textContent = r && r.necitite ? r.necitite : '';
 }
 
 function deschideMesajeAntrenor() {
@@ -14238,7 +14292,8 @@ function randeazaAntetFisa(client) {
   const date = [
     r.varsta ? `${r.varsta} ${tr('ani', 'yrs')}` : '',
     r.inaltime ? `${r.inaltime} cm` : '',
-    r.obiectivPrincipal ? textInscriere(OPTIUNI_OBIECTIVE.find(o => o.id === r.obiectivPrincipal) || { ro: r.obiectivPrincipal, en: r.obiectivPrincipal }) : ''
+    r.obiectivPrincipal ? textInscriere(OPTIUNI_OBIECTIVE.find(o => o.id === r.obiectivPrincipal) || { ro: r.obiectivPrincipal, en: r.obiectivPrincipal }) : '',
+    textUltimaPrezenta(zileDeLaUltimaPrezenta(client))
   ].filter(Boolean).join(' · ');
   const probleme = problemeSanatate(r);
   const eticheta = id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id]);
@@ -14247,10 +14302,99 @@ function randeazaAntetFisa(client) {
       ${probleme.map(id => `<span><b>${eticheta(id)}</b>${r[id + 'Detalii'] ? `: ${escAttr(r[id + 'Detalii'])}` : ''}</span>`).join('')}
       ${r.urgenta ? `<span><b>${eticheta('urgenta')}</b>: ${escAttr(r.urgenta)}</span>` : ''}
     </div>` : '';
+  // Acțiunile de zi cu zi, ca la un contact: Sună (dacă are telefon), Mesaj (dacă are cont), Încasează
+  const tel = (client.telefon || '').replace(/[^\d+]/g, '');
+  const actiune = (svg, text) => `<svg viewBox="0 0 24 24">${svg}</svg><span>${text}</span>`;
+  const actiuni = `<div class="fisa-actiuni">
+      ${tel ? `<a class="fisa-actiune" href="tel:${escAttr(tel)}">${actiune('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>', tr('Sună', 'Call'))}</a>` : ''}
+      ${client.contConectat ? `<button type="button" class="fisa-actiune" onclick="deschideMesajeAntrenor()">${actiune('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>', tr('Mesaj', 'Message'))}<b class="notificari-bulina" hidden></b></button>` : ''}
+      <button type="button" class="fisa-actiune" onclick="incaseazaDinFisa()">${actiune('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>', tr('Încasează', 'Collect'))}</button>
+    </div>`;
   document.getElementById('fisaAntetClient').innerHTML = `<div class="fisa-profil">
       <span class="fisa-profil-avatar">${client.authUserId ? avatarSlotHtml(client) : escAttr(initiale)}</span>
       <span class="fisa-profil-text"><b>${escAttr(client.nume)}</b>${date ? `<small>${escAttr(date)}</small>` : ''}</span>
-    </div>${banda}`;
+    </div>${actiuni}${banda}`;
+}
+
+const textUltimaPrezenta = zile => zile === null ? '' : zile === 0 ? tr('a venit azi', 'came today')
+  : zile === 1 ? tr('a venit ieri', 'came yesterday') : tr(`ultima dată acum ${zile} zile`, `last came ${zile} days ago`);
+
+// „Acum”: clientul care n-a mai venit (semaforul de retenție din lista „De reactivat”), cu mesajul de reactivare gata scris.
+// Restul stărilor au locul lor pe fișă (abonamentul în cardul lui, orele în Programări, planul în secțiunea lui).
+function randeazaAcumFisa(client, stare) {
+  const r = stareRetentie(client, stare);
+  document.getElementById('fisaAcum').innerHTML = r ? `<div class="lista-sticla fisa-acum">
+      <div class="fisa-acum-rand"><i class="fisa-acum-punct ${r.culoare === 'rosu' ? 'rosu' : 'portocaliu'}"></i><span>${tr(`N-a mai venit de ${r.zile} zile`, `Hasn’t come for ${r.zile} days`)}</span>
+        <button type="button" class="istoric-toate" onclick="trimiteMesajReactivare(clientaFisaCurenta().nume)">${tr('Scrie-i', 'Message')}</button></div></div>` : '';
+}
+
+// Căsuțele cu desen de sub abonament: prezența pe ultimele 8 săptămâni (bare) și greutatea (linie, doar dacă are cântăriri)
+let greutateTila = { id: null, puncte: [] }; // cântăririle clientului din fișă, citite o dată pe client (și la deschiderea Progresului)
+function randeazaTileFisa(client) {
+  const luni = lunaSaptamanii(new Date());
+  const peSapt = Array(8).fill(0);
+  prezenteleClientului(client).forEach(p => {
+    const ms = parseazaDataOraRo(p.data);
+    const i = ms ? 7 - Math.round((luni - lunaSaptamanii(new Date(ms))) / 604800000) : -1;
+    if (i >= 0 && i < 8) peSapt[i]++;
+  });
+  const maxim = Math.max(...peSapt, client.sedinteSaptamana || 0, 1);
+  const nr = n => n.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 });
+  const bare = peSapt.map((n, i) => { const h = n ? Math.max(4, n / maxim * 26) : 2; return `<rect x="${i * 10}" y="${28 - h}" width="7" height="${h}" rx="2"${n ? '' : ' class="gol"'}/>`; }).join('');
+  const p = greutateTila.id === client.id ? greutateTila.puncte.slice(-8) : [];
+  let tilaGreutate = '';
+  if (p.length) {
+    const min = Math.min(...p.map(q => q.kg)), interval = (Math.max(...p.map(q => q.kg)) - min) || 1;
+    const dif = p[p.length - 1].kg - p[0].kg;
+    const linie = p.length > 1 ? `<svg class="fisa-tila-linie" viewBox="0 0 77 28" aria-hidden="true"><polyline points="${p.map((q, i) => `${(i * 77 / (p.length - 1)).toFixed(1)},${(25 - (q.kg - min) / interval * 22).toFixed(1)}`).join(' ')}"/></svg>` : '';
+    tilaGreutate = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsProgresClienta')">${linie}
+        <b>${p.length > 1 ? (dif > 0 ? '+' : dif < 0 ? '−' : '') + nr(Math.abs(dif)) : nr(p[0].kg)} kg</b>
+        <span>${p.length > 1 ? tr(`greutate · acum ${nr(p[p.length - 1].kg)} kg`, `weight · now ${nr(p[p.length - 1].kg)} kg`) : tr('greutate', 'weight')}</span></button>`;
+  }
+  document.getElementById('fisaTile').innerHTML = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsIstoricFisa')">
+      <svg class="fisa-tila-bare" viewBox="0 0 77 28" aria-hidden="true">${bare}</svg>
+      <b>${nr(peSapt.slice(4).reduce((a, b) => a + b, 0) / 4)}</b><span>${tr('ședințe pe săptămână', 'sessions a week')}</span></button>${tilaGreutate}`;
+  if (greutateTila.id !== client.id) incarcaGreutateTila(client);
+}
+
+async function incarcaGreutateTila(client) {
+  greutateTila = { id: client.id, puncte: [] };
+  const [ck, gr] = await Promise.all([
+    supabaseClient.from('checkin_saptamanal').select('greutate, updated_at, saptamana').eq('client_id', client.id),
+    supabaseClient.from('greutati').select('data, greutate').eq('client_id', client.id)
+  ]);
+  if (greutateTila.id !== client.id) return;
+  greutateTila.puncte = puncteGreutate(client.fisaInscriere, ck.error ? [] : ck.data, gr.error ? [] : gr.data);
+  if (greutateTila.puncte.length && clientaFisaCurenta() === client) randeazaTileFisa(client);
+}
+
+// Orele viitoare ale clientului (de azi înainte, cel mult 6), din orarul încărcat; ședințele pe săptămână doar dacă sunt setate în Confirmări
+function randeazaProgramariFisa(client) {
+  const azi = new Date().setHours(0, 0, 0, 0);
+  const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
+  const ore = (DB.orarSloturi || []).filter(s => s && s.clienta && randulClientei(s, client, s.clienta))
+    .map(s => ({ s, d: dataSlot(s.ziRaw, s.ora) })).filter(x => x.d && x.d >= azi).sort((a, b) => a.d - b.d).slice(0, 6);
+  document.getElementById('fisaProgramari').innerHTML = `<div class="lista-sticla fisa-programari">
+      <div class="fisa-programari-sus"><b>${tr('Programări', 'Bookings')}</b>${client.sedinteSaptamana ? `<span>${client.sedinteSaptamana} ${tr('pe săptămână', 'a week')}</span>` : ''}</div>
+      ${ore.length ? `<div class="fisa-programari-ore">${ore.map(({ s, d }) => `<button type="button" class="istoric-toate${s.bifat ? ' activ' : ''}" onclick="mergiLaOraDinOrar('${isoDinData(d)}', '${escAttr(normalizeazaOraUi(s.ora))}')">${s.bifat ? '✓ ' : ''}${
+        new Date(d).setHours(0, 0, 0, 0) === azi ? tr('Azi', 'Today') : `${d.toLocaleDateString(loc, { weekday: 'short' }).replace(/[.,]/g, '')} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`} · ${normalizeazaOraUi(s.ora)}</button>`).join('')}</div>`
+        : `<small>${tr('Nicio oră programată de azi înainte.', 'No upcoming sessions.')}</small>`}
+    </div>`;
+}
+
+// Deschide o secțiune a fișei (Progres, Istoric, Fișa de obiective) și o aduce în ecran
+function deschideSectiuneFisa(id) {
+  const det = document.getElementById(id);
+  det.open = true;
+  setTimeout(() => det.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+}
+
+// „Încasează” din fișă: plata nouă (din Încasări), deja completată cu clientul și abonamentul lui, ca „De reînnoit”
+function incaseazaDinFisa() {
+  const c = clientaFisaCurenta();
+  if (!c) return;
+  comutaTab('tabIncasari', 'Încasări', document.getElementById('navBtnIncasari'), 'incasari', 3);
+  deschideIncasareNoua({ nume: c.nume, tip: c.tipAbonament });
 }
 
 // ---- Fișa de obiective editabilă (sql/2026-11-07_fisa_obiective_editare.sql): antrenorul din fișă, clientul din Fișa mea ----
@@ -14567,7 +14711,8 @@ const formatKg = kg => kg.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO
 const formatZiLuna = d => d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'short' });
 
 // Grafic cu o singură serie (fără legendă; titlul o numește): linie 2px, puncte cu inel de suprafață,
-// etichete doar pe primul și ultimul punct; atingerea unui punct îi arată valoarea dedesubt
+// etichete doar pe primul și ultimul punct; atingerea unui punct îi arată valoarea dedesubt.
+// Suprafața de sub linie (.grafic-arie) se vede doar pe ecranele trecute pe stilul nou (fișa antrenorului)
 // opt (graficul de progres pe exerciții): { unitate, aria, gol } în locul textelor pentru greutatea corporală
 function htmlGraficGreutate(puncte, opt = {}) {
   const unitate = opt.unitate ?? 'kg';
@@ -14597,6 +14742,7 @@ function htmlGraficGreutate(puncte, opt = {}) {
   }).join('');
   return `<svg class="grafic-greutate" viewBox="0 0 ${L} ${H}" role="img" aria-label="${escAttr(opt.aria || tr('Greutatea în timp', 'Weight over time'))}">
       ${linii}
+      <path d="${traseu} L${x(puncte[puncte.length - 1].d).toFixed(1)},${H - jos} L${x(puncte[0].d).toFixed(1)},${H - jos} Z" class="grafic-arie"/>
       <path d="${traseu}" class="grafic-linie"/>
       ${cercuri}
       <text x="${st}" y="${H - 6}" class="grafic-axa">${formatZiLuna(puncte[0].d)}</text>
@@ -15437,9 +15583,7 @@ function deschideNotificare(id) {
     const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
     if (client) {
       deschideClientaDinLista(client.nume);
-      const det = document.getElementById('detailsFisaInscriere');
-      det.open = true;
-      setTimeout(() => det.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      deschideSectiuneFisa('detailsFisaInscriere');
     }
     return;
   }
@@ -15447,9 +15591,7 @@ function deschideNotificare(id) {
     const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
     if (client) {
       deschideClientaDinLista(client.nume);
-      const det = document.getElementById('detailsProgresClienta');
-      det.open = true;
-      setTimeout(() => det.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+      deschideSectiuneFisa('detailsProgresClienta');
     }
   } else if (n.tip === 'abonamente_expira') {
     inapoiLaListaClienteFisa();
@@ -15513,6 +15655,8 @@ async function incarcaProgresFisa() {
   const checkinuri = error ? [] : (data || []);
   // Fără tabelul greutati (scriptul SQL nerulat) graficul merge doar cu check-in-urile
   greutatiFisa = resGreutati.error ? [] : (resGreutati.data || []);
+  greutateTila = { id: client.id, puncte: puncteGreutate(client.fisaInscriere, checkinuri, greutatiFisa) };
+  randeazaTileFisa(client);
   const planuriClient = (DB.planuri || []).filter(p => randulClientei(p, client, p.clienta));
   const antrenamenteClient = resAntrPers && !resAntrPers.error ? resAntrPers.data : [];
   // Zilele de antrenament ale clientului, pentru țintele de pauză din rapoartele de nutriție
@@ -15584,48 +15728,64 @@ function invitaClienta(confirmatDublura = false) {
   }, function() { btn.disabled = false; });
 }
 
+// Istoricul fișei: prezențele și plățile clientului la un loc, pe zile (cele mai noi sus), cu filtrul pe lună și cifrele perioadei.
+// Plata se deschide pentru editare la apăsare, ca în Încasări.
+// Perioada: tot istoricul (la deschidere) sau luna aleasă cu ‹ ›, ca în istoricul din Orar
+let istoricFisaLuna = (() => { const d = new Date(); return { an: d.getFullYear(), luna: d.getMonth() }; })();
+let istoricFisaToate = true;
+
+function schimbaLunaIstoricFisa(pas) {
+  // Din „tot istoricul”, prima apăsare arată luna curentă
+  const d = new Date(istoricFisaLuna.an, istoricFisaLuna.luna + (istoricFisaToate ? 0 : pas), 1);
+  istoricFisaLuna = { an: d.getFullYear(), luna: d.getMonth() };
+  istoricFisaToate = false;
+  filtreazaIstoricFisaInstant();
+}
+
+function comutaToateLunileIstoricFisa() {
+  istoricFisaToate = !istoricFisaToate;
+  filtreazaIstoricFisaInstant();
+}
+
 function filtreazaIstoricFisaInstant() {
-  let sel = document.getElementById('selectClientaFisa');
-  let istoricDiv = document.getElementById('istoricPrezenteList');
-  let fLuna = document.getElementById('filtruLunaFisa');
-  if (!sel || !istoricDiv) return;
-  let nume = sel.value.trim();
-  let filtruLuna = fLuna ? curataNumeLuna(fLuna.value) : "";
-
-  const luniRoNume = ["Ianuarie", "Februarie", "Martie", "Aprilie", "Mai", "Iunie", "Iulie", "August", "Septembrie", "Octombrie", "Noiembrie", "Decembrie"];
-
-  let prezenteClienta = (DB.prezente || []).filter(p => {
-    if (!p || !p.clienta || !randulClientei(p, clientaFisaCurenta(), p.clienta)) return false;
-
-    if (filtruLuna) {
-      let lunaPrezenta = "";
-      if (p.data && p.data.indexOf('.') !== -1) {
-        let parts = p.data.split('.');
-        if (parts.length === 3) {
-          let m = parseInt(parts[1], 10);
-          if (m >= 1 && m <= 12) lunaPrezenta = luniRoNume[m - 1];
-        }
-      }
-      return lunaPrezenta === filtruLuna;
-    }
-    return true;
-  });
-
-  prezenteClienta.sort((a, b) => {
-    let tA = parseazaDataOraRo(a.data, a.ora);
-    let tB = parseazaDataOraRo(b.data, b.ora);
-    return tB - tA;
-  });
-
-  if (prezenteClienta.length === 0) {
-    istoricDiv.innerHTML = `<div style="color:var(--text-muted);">${t('noPresenceYet')}</div>`;
-  } else {
-    let h = '';
-    prezenteClienta.forEach(p => {
-      h += `<div style="padding:5px 0; border-bottom:1px solid var(--border);">• <b>${escAttr(p.data)}</b> (${escAttr(p.ora || '-')}) - ${escAttr(traduceValoare(p.antrenament) || '-')}</div>`;
-    });
-    istoricDiv.innerHTML = h;
+  const istoricDiv = document.getElementById('istoricPrezenteList');
+  const client = clientaFisaCurenta();
+  if (!istoricDiv || !client) return;
+  const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
+  const numeLuna = new Date(istoricFisaLuna.an, istoricFisaLuna.luna, 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' });
+  document.getElementById('istoricFisaLunaText').textContent = istoricFisaToate ? tr('Tot istoricul', 'All time') : numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1);
+  document.getElementById('btnIstoricFisaToate').classList.toggle('activ', istoricFisaToate);
+  const inLuna = t => { const d = new Date(t); return d.getFullYear() === istoricFisaLuna.an && d.getMonth() === istoricFisaLuna.luna; };
+  const randuri = prezenteleClientului(client).map(p => ({ t: parseazaDataOraRo(p.data, p.ora), p }))
+    .concat((DB.incasari || []).filter(i => i && randulClientei(i, client, i.clienta)).map(i => ({ t: parseazaDataOraRo(i.data, null), i })))
+    .filter(x => istoricFisaToate || (x.t && inLuna(x.t)))
+    .sort((a, b) => b.t - a.t);
+  const plati = randuri.filter(x => x.i);
+  const cifre = document.getElementById('istoricFisaCifre');
+  cifre.innerHTML = htmlCifra(randuri.length - plati.length, tr('prezențe', 'sessions'), 'accent')
+    + htmlCifra(Math.round(plati.reduce((s, x) => s + valoareSuma(x.i.suma), 0)).toLocaleString(loc), `${setariStudio.moneda} ${tr('încasat', 'paid')}`, 'verde');
+  scurteazaEticheteCifre(cifre);
+  if (!randuri.length) {
+    istoricDiv.innerHTML = `<div class="lista-sticla"><div class="notificari-gol">${t('noPresenceYet')}</div></div>`;
+    return;
   }
+  const zile = [];
+  randuri.forEach(x => {
+    const cheie = x.t ? new Date(x.t).toDateString() : '';
+    if (!zile.length || zile[zile.length - 1].cheie !== cheie) zile.push({ cheie, t: x.t, randuri: [] });
+    zile[zile.length - 1].randuri.push(x);
+  });
+  istoricDiv.innerHTML = zile.map(z => `<div class="lista-titlu">${z.t ? new Date(z.t).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/(^|\s)(\p{L})/gu, (m, sp, l) => sp + l.toUpperCase()) : '–'}</div>
+      <div class="lista-sticla">${z.randuri.map(({ p, i }) => {
+        if (p) return `<div class="prog-row fisa-istoric-rand"><i class="fisa-acum-punct accent"></i>
+          <div class="prog-info"><span class="prog-name">${tr('Prezență', 'Session')} · ${escAttr(p.ora || '-')}</span><span class="prog-sub">${escAttr(traduceValoare(p.antrenament) || '–')}</span></div></div>`;
+        const tip = i.tip && i.tip.trim() !== '-' ? numeAbonamentClienta(i.tip) : '';
+        const metoda = i.metoda && i.metoda.trim() !== '-' ? i.metoda : '';
+        // encodeURIComponent lasă apostroful necodificat, iar el ar închide argumentul din onclick
+        return `<div class="prog-row prog-row-client fisa-istoric-rand" onclick="deschideModalEditareIncasare('${encodeURIComponent(JSON.stringify(i)).replace(/'/g, '%27')}')"><i class="fisa-acum-punct verde"></i>
+          <div class="prog-info"><span class="prog-name">${tr('Plată', 'Payment')}</span><span class="prog-sub">${escAttr([tip, metoda].filter(Boolean).join(' · ') || '–')}</span></div>
+          <b class="inc-suma${sumaFaraMoneda(i.suma) ? '' : ' gol'}">${escAttr(formateazaSuma(i.suma))}</b></div>`;
+      }).join('')}</div>`).join('');
 }
 
 // Telefon și email în fișă: atingerea pornește apelul / emailul; fără valoare apare „—”
