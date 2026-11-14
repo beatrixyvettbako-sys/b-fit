@@ -8363,9 +8363,39 @@ input.serie-camp {
   color: #15803d;
 }
 
-/* Istoricul fișei: rândurile de prezență / plată încep cu un punct colorat, nu cu avatar */
+/* Istoricul fișei: rândurile încep cu iconița felului lor (bifă verde-accent = prezență, card verde = plată), nu cu avatar */
 .fisa-istoric-rand {
   gap: 12px;
+}
+
+.fisa-istoric-icon {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+}
+
+.fisa-istoric-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fisa-istoric-icon.prezenta {
+  color: var(--m-accent-text);
+}
+
+.fisa-istoric-icon.plata {
+  color: #15803d;
 }
 
 /* Luna la mijloc între ‹ ›, „Toate lunile” la capăt */

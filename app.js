@@ -16057,6 +16057,9 @@ function invitaClienta(confirmatDublura = false) {
   }, function() { btn.disabled = false; });
 }
 
+const ICON_ISTORIC_PREZENTA = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON_ISTORIC_PLATA = '<svg viewBox="0 0 24 24"><rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/></svg>';
+
 // Istoricul fișei: prezențele și plățile clientului la un loc, pe zile (cele mai noi sus), cu filtrul pe lună și cifrele perioadei.
 // Plata se deschide pentru editare la apăsare, ca în Încasări.
 // Perioada: tot istoricul (la deschidere) sau luna aleasă cu ‹ ›, ca în istoricul din Orar
@@ -16106,13 +16109,14 @@ function filtreazaIstoricFisaInstant() {
   });
   istoricDiv.innerHTML = zile.map(z => `<div class="lista-titlu">${z.t ? new Date(z.t).toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/(^|\s)(\p{L})/gu, (m, sp, l) => sp + l.toUpperCase()) : '–'}</div>
       <div class="lista-sticla">${z.randuri.map(({ p, i }) => {
-        if (p) return `<div class="prog-row fisa-istoric-rand"><i class="fisa-acum-punct accent"></i>
-          <div class="prog-info"><span class="prog-name">${tr('Prezență', 'Session')} · ${escAttr(p.ora || '-')}</span><span class="prog-sub">${escAttr(traduceValoare(p.antrenament) || '–')}</span></div></div>`;
+        // Felul rândului îl spune iconița (bifă = prezență, card = plată); titlul e antrenamentul / abonamentul, nu cuvântul repetat
+        if (p) return `<div class="prog-row fisa-istoric-rand"><span class="fisa-istoric-icon prezenta">${ICON_ISTORIC_PREZENTA}</span>
+          <div class="prog-info"><span class="prog-name">${escAttr(traduceValoare(p.antrenament) || tr('Antrenament', 'Workout'))}</span><span class="prog-sub">${escAttr(p.ora || '–')}</span></div></div>`;
         const tip = i.tip && i.tip.trim() !== '-' ? numeAbonamentClienta(i.tip) : '';
         const metoda = i.metoda && i.metoda.trim() !== '-' ? i.metoda : '';
         // encodeURIComponent lasă apostroful necodificat, iar el ar închide argumentul din onclick
-        return `<div class="prog-row prog-row-client fisa-istoric-rand" onclick="deschideModalEditareIncasare('${encodeURIComponent(JSON.stringify(i)).replace(/'/g, '%27')}')"><i class="fisa-acum-punct verde"></i>
-          <div class="prog-info"><span class="prog-name">${tr('Plată', 'Payment')}</span><span class="prog-sub">${escAttr([tip, metoda].filter(Boolean).join(' · ') || '–')}</span></div>
+        return `<div class="prog-row prog-row-client fisa-istoric-rand" onclick="deschideModalEditareIncasare('${encodeURIComponent(JSON.stringify(i)).replace(/'/g, '%27')}')"><span class="fisa-istoric-icon plata">${ICON_ISTORIC_PLATA}</span>
+          <div class="prog-info"><span class="prog-name">${escAttr(tip || tr('Plată', 'Payment'))}</span><span class="prog-sub">${escAttr(metoda || '–')}</span></div>
           <b class="inc-suma${sumaFaraMoneda(i.suma) ? '' : ' gol'}">${escAttr(formateazaSuma(i.suma))}</b></div>`;
       }).join('')}</div>`).join('');
 }
