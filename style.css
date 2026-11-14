@@ -4234,7 +4234,8 @@ select.form-control {
 
 /* ===== Interiorul secțiunilor fișei pe stilul nou: cardurile, câmpurile, butoanele și graficele din ele iau culorile sticlei (--m-*).
    Aceleași componente apar și pe ecranul clientului, care rămâne neschimbat până la rândul lui. ===== */
-#detaliiFisa :is(.fisa-sectiune, .fisa-cont) {
+#detaliiFisa :is(.fisa-sectiune, .fisa-cont),
+#foaieProgresCorp {
   --card-bg: var(--m-btn);
   --glass-border: var(--m-border);
   --border: var(--m-divider);
@@ -4243,19 +4244,19 @@ select.form-control {
   --glass-shadow: var(--m-float-sm);
 }
 
-#progresFisaContinut .obiective-grup-titlu {
+#foaieProgresCorp .obiective-grup-titlu {
   margin-top: 18px;
   color: var(--m-muted);
 }
 
-#progresFisaContinut .progres-erou-val {
+#foaieProgresCorp .progres-erou-val {
   font-size: 1.9rem;
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--m-text);
 }
 
-#detaliiFisa :is(.fisa-sectiune, .fisa-cont) :is(.form-control, .greutate-sala, .btn, .plan-zi-card) {
+:is(#detaliiFisa :is(.fisa-sectiune, .fisa-cont), #foaieProgresCorp) :is(.form-control, .greutate-sala, .btn, .plan-zi-card) {
   background: var(--m-btn);
   border: 1px solid var(--m-border);
   border-radius: 12px;
@@ -4264,7 +4265,10 @@ select.form-control {
 }
 
 /* Comutatoarele din secțiuni (rapoartele pe 7 / 30 de zile, obiectivul de greutate): pastile de sticlă; cea aleasă, ca „Toate lunile” apăsat */
-#detaliiFisa .fisa-sectiune :is(.theme-option-btn, .antr-pers-activitate) {
+:is(#detaliiFisa .fisa-sectiune, #foaieProgresCorp) :is(.theme-option-btn, .antr-pers-activitate) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 42px;
   padding: 0 10px;
   font-size: 0.8rem;
@@ -4276,14 +4280,14 @@ select.form-control {
   font-weight: 700;
 }
 
-#detaliiFisa .fisa-sectiune :is(.theme-option-btn.active, .antr-pers-activitate.activ) {
+:is(#detaliiFisa .fisa-sectiune, #foaieProgresCorp) :is(.theme-option-btn.active, .antr-pers-activitate.activ) {
   background: rgba(var(--accent-rgb), 0.14);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.12);
   color: var(--m-accent-text);
 }
 
 /* Butoanele din secțiuni: de sticlă, cu text pronunțat (cele pline rămân doar în ferestrele de jos) */
-#detaliiFisa :is(.fisa-sectiune, .fisa-cont) .btn {
+:is(#detaliiFisa :is(.fisa-sectiune, .fisa-cont), #foaieProgresCorp) .btn {
   min-height: 40px;
   padding: 8px 14px;
   font-size: 0.82rem;
@@ -4305,43 +4309,174 @@ select.form-control {
   height: 0;
 }
 
-.fisa-sectiune .grafic-greutate,
+#foaieProgresCorp .grafic-greutate,
 .grafic-degrade {
   color: var(--m-accent-text);
 }
 
-.fisa-sectiune .grafic-arie {
+#foaieProgresCorp .grafic-arie {
   fill: url(#graficArie);
 }
 
-.fisa-sectiune .grafic-linie {
+#foaieProgresCorp .grafic-linie {
   stroke: currentColor;
   stroke-width: 2.5;
 }
 
-.fisa-sectiune .grafic-grila {
+#foaieProgresCorp .grafic-grila {
   stroke: var(--m-divider);
   stroke-dasharray: 3 4;
 }
 
-.fisa-sectiune .grafic-axa {
+#foaieProgresCorp .grafic-axa {
   fill: var(--m-muted);
 }
 
-.fisa-sectiune .grafic-valoare {
+#foaieProgresCorp .grafic-valoare {
   fill: var(--m-text);
 }
 
 /* Punctele mici; ultimul (valoarea de acum) mai mare */
-.fisa-sectiune .grafic-marca {
+#foaieProgresCorp .grafic-marca {
   r: 3;
   fill: currentColor;
   stroke: none;
 }
 
-.fisa-sectiune .grafic-punct:last-of-type .grafic-marca,
-.fisa-sectiune .grafic-punct.activ .grafic-marca {
+#foaieProgresCorp .grafic-punct:last-of-type .grafic-marca,
+#foaieProgresCorp .grafic-punct.activ .grafic-marca {
   r: 5.5;
+}
+
+/* Progres: plăcile (două pe rând), fiecare deschide fereastra ei */
+.progres-placi {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.progres-placa {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 14px;
+  font-family: inherit;
+  text-align: left;
+  color: var(--m-text);
+  cursor: pointer;
+}
+
+.progres-placa-titlu {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.progres-placa b {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+}
+
+.progres-placa b small {
+  font-size: 0.8rem;
+  color: var(--m-muted);
+}
+
+.progres-placa > small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--m-muted);
+}
+
+/* „nou”: check-in pe care antrenorul nu l-a deschis încă */
+.progres-placa-nou {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #fff;
+  font-style: normal;
+  font-size: 0.64rem;
+  font-weight: 800;
+}
+
+/* Fereastra unei plăci: titlul cu × în dreapta; conținutul are culorile sticlei, ca secțiunile fișei */
+.foaie-progres-sus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.foaie-progres-sus .incasare-foaie-titlu {
+  margin: 0;
+}
+
+.foaie-inchide {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  color: var(--m-text);
+  cursor: pointer;
+}
+
+.foaie-inchide svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+#foaieProgresCorp {
+  --text: var(--m-text);
+  --text-muted: var(--m-muted);
+  padding-bottom: 8px;
+}
+
+#foaieProgresCorp > :first-child {
+  margin-top: 0;
+}
+
+/* Titlul de început al conținutului („Nutriție”) e deja titlul ferestrei */
+#foaieProgresCorp > .obiective-grup-titlu:first-child {
+  display: none;
+}
+
+/* Titlurile secțiunilor fișei rămân sus cât derulezi prin ele, ca să le poți închide oricând */
+#detaliiFisa .fisa-sectiune[open] {
+  overflow: visible;
+}
+
+#detaliiFisa .fisa-sectiune[open] > summary {
+  position: sticky;
+  top: calc(var(--header-height) + 6px);
+  z-index: 3;
+  margin: -14px -14px 0;
+  padding: 14px;
+  border-radius: 24px 24px 0 0;
+  background: var(--m-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Istoricul deschis: zilele lui sunt carduri de sticlă, deci cutia din jur rămâne fără sticlă (ca istoricele din Orar și Încasări) */
@@ -5436,6 +5571,51 @@ html:not([data-theme="dark"]) .hold-header::after {
   gap: 8px;
 }
 
+/* Comutatoare (Client nou: invitația, formularul): textul cu explicația dedesubt, comutatorul în dreapta; rândurile despărțite de o linie */
+.incasare-foaie .foaie-comutator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.foaie-comutator:not([hidden]) ~ .foaie-comutator:not([hidden]) {
+  border-top: 1px solid var(--m-divider);
+  padding-top: 12px;
+}
+
+.foaie-comutator span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.foaie-comutator b {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--m-text);
+}
+
+.foaie-comutator small {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--m-muted);
+}
+
+/* Fără niciun comutator vizibil (fără email și fără link de înscriere), cardul lor nu apare */
+#nouDupaSalvare:not(:has(.foaie-comutator:not([hidden]))) {
+  display: none;
+}
+
+/* Comutatorul ascuns rămâne ascuns (are display propriu) */
+.foaie-comutator[hidden] {
+  display: none;
+}
+
 /* Arhivează / Șterge: roșu, ca înainte (la „Reactivează” verdele îl pune afiseazaFisaClientaInstant) */
 #detailsEditareFisa .btn-archive {
   color: #b91c1c;
@@ -5492,7 +5672,8 @@ html:not([data-theme="dark"]) .hold-header::after {
 }
 
 /* Ca „Alege client” din Orar: textul aliniat cu starea de dedesubt, iar cât scrii doar o nuanță slabă */
-.incasare-client .form-control {
+/* Câmpul stă direct în card, fără al doilea chenar (Încasare nouă › Client; câmpurile de text din Client nou, Editează clientul, Abonament) */
+:is(.incasare-client, .camp-in-card) .form-control {
   height: 24px;
   margin-left: -6px;
   padding: 0 6px;
@@ -5505,7 +5686,7 @@ html:not([data-theme="dark"]) .hold-header::after {
   font-weight: 700;
 }
 
-.incasare-client .form-control:focus {
+:is(.incasare-client, .camp-in-card) .form-control:focus {
   background: rgba(var(--accent-rgb), 0.08);
 }
 
@@ -8010,6 +8191,23 @@ input.serie-camp {
   fill: var(--m-divider);
 }
 
+/* Săptămânile încheiate sub țintă: portocaliu (cea curentă e încă în desfășurare) */
+.fisa-tila-bare .sub {
+  fill: #f5b041;
+}
+
+.fisa-tila-bare .tinta {
+  stroke: var(--m-muted);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 3;
+}
+
+.fisa-tila b small {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
 .fisa-tila-linie polyline {
   fill: none;
   stroke: var(--m-accent-text);
@@ -8056,11 +8254,22 @@ input.serie-camp {
   font-size: 0.8rem;
 }
 
-/* Notița antrenorului: câmpul din fișă și cardul de pe Acasă al clientului */
+/* Notița antrenorului: câmpul din fișă (ca mențiunea din Confirmări, regula comună .fisa-scurta-mentiune) și cardul de pe Acasă al clientului */
 .nota-client-text {
-  margin-top: 8px;
-  font-family: inherit;
-  resize: vertical;
+  display: block;
+  margin-top: 10px;
+}
+
+/* „Trimite nota”: pastilă mică în dreapta, doar când nota s-a schimbat */
+.nota-client-trimite {
+  display: block;
+  margin: 8px 0 0 auto;
+  height: 36px;
+  color: var(--m-accent-text);
+}
+
+.nota-client-trimite[hidden] {
+  display: none;
 }
 
 .nota-antrenor-card {
@@ -10958,8 +11167,10 @@ button.orar-cifra:disabled {
   color: var(--text-muted);
 }
 
-.fisa-scurta-mentiune {
+.fisa-scurta-mentiune,
+.nota-client-text {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 14px;
   border-radius: 16px;
   border: 1px solid var(--m-border, var(--glass-border));
@@ -10972,7 +11183,7 @@ button.orar-cifra:disabled {
   outline: none;
 }
 
-.fisa-scurta-mentiune:focus {
+:is(.fisa-scurta-mentiune, .nota-client-text):focus {
   border-color: var(--accent-purple);
 }
 
@@ -12007,10 +12218,10 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
 [data-theme="dark"] #tabOrar .slot-input:-webkit-autofill:hover,
 [data-theme="dark"] #tabOrar .slot-input:-webkit-autofill:focus,
 [data-theme="dark"] #tabOrar .slot-input:autofill,
-.incasare-client .form-control:-webkit-autofill,
-.incasare-client .form-control:-webkit-autofill:hover,
-.incasare-client .form-control:-webkit-autofill:focus,
-.incasare-client .form-control:autofill {
+:is(.incasare-client, .camp-in-card) .form-control:-webkit-autofill,
+:is(.incasare-client, .camp-in-card) .form-control:-webkit-autofill:hover,
+:is(.incasare-client, .camp-in-card) .form-control:-webkit-autofill:focus,
+:is(.incasare-client, .camp-in-card) .form-control:autofill {
   -webkit-text-fill-color: var(--m-text);
   box-shadow: none;
   transition: background-color 99999s ease-out 0s;

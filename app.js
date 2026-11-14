@@ -2657,7 +2657,8 @@ async function executaActiuneSupabase(actionName, payload) {
   }
 
   if (actionName === "adaugaClientaDirect") {
-    const incluse = getNrSedinteAbonamentLocal(payload.tip);
+    // „Fără abonament” (-): zero ședințe, ca la editarea fișei
+    const incluse = payload.tip === '-' ? 0 : getNrSedinteAbonamentLocal(payload.tip);
     const rowDirect = {
       nume: payload.nume.trim(),
       tipAbonament: payload.tip,
@@ -2669,6 +2670,7 @@ async function executaActiuneSupabase(actionName, payload) {
       status: "Activ",
       telefon: (payload.telefon || "").trim()
     };
+    if (payload.email) rowDirect.email_invitatie = payload.email;
     if (uid) rowDirect.user_id = uid;
 
     const { data: ins } = await sb.from('cliente').insert([rowDirect]).select().single();
@@ -10348,6 +10350,17 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 215, data: '2026-11-15',
+    client: [],
+    antrenor: [
+      ['Client nou: poți scrie și emailul, iar cu un comutator îi trimiți invitația în aplicație și, dacă vrei, formularul de înscriere. Abonamentul îl alegi din plăci, iar la salvare se deschide direct fișa lui.', 'New client: you can add their email and, with a switch, send the app invitation and the sign-up form too. Pick the subscription from tiles, and their profile opens as soon as you save.'],
+      ['Progresul din fișă e pe plăci: Check-in, Exerciții, Nutriție, Obiective (și Ciclu). Fiecare se deschide într-o fereastră care se închide cu × sau trăgând în jos; un check-in nou are bulina „nou”.', 'Progress in the profile now uses tiles: Check-in, Exercises, Nutrition, Goals (and Cycle). Each opens in a window you close with × or by swiping down; a new check-in shows a “new” badge.'],
+      ['Ședințele pe săptămână arată ultimele 4 săptămâni, cu ținta din abonament ca linie punctată.', 'Sessions per week now show the last 4 weeks, with the subscription target as a dotted line.'],
+      ['Nota pentru client arată ca mențiunea din Confirmări; „Trimite nota” apare doar când ai schimbat textul.', 'The note for the client looks like the Check-in note; “Send note” appears only after you change the text.'],
+      ['Butoanele de trimitere se numesc acum „Distribuie” și „Copiază linkul”.', 'Sending buttons are now called “Share” and “Copy link”.'],
+      ['Confirmări trece singur pe săptămâna nouă, fără să repornești aplicația.', 'Check-in switches to the new week on its own, without restarting the app.']
+    ]
+  },
   { v: 214, data: '2026-11-14',
     client: [],
     antrenor: [
@@ -10877,6 +10890,7 @@ function gestioneazaRevenireForeground() {
     ziCurentaCheie = bazaNoua.getTime() > Date.now() ? "Luni" : getZiImplicitaAzi();
     actualizeazaBaraZile();
     randeazaOrarInstant();
+    randeazaProgramariInstant(); // Confirmări arată săptămâna de bază: trece și ea pe cea nouă
     if (tipTabCurent === 'orar' && ziCurentaCheie === "Luni" && bazaNoua.getTime() > Date.now()) {
       calibreazaLayoutEcran("", null);
       window.scrollTo({ top: 0, behavior: 'auto' });
@@ -11377,7 +11391,7 @@ function trimiteMesajClient(c, text, link) {
     tr('Textul e deja scris; îl poți modifica înainte să-l trimiți.', 'The text is ready; you can edit it before sending.'),
     () => deschideMesajeCuText(c, text));
   document.getElementById('modalBtnConfirm').innerText = tr('În aplicație', 'In the app');
-  aratButonAlternativModal(tr('WhatsApp, SMS…', 'WhatsApp, SMS…'), () => partajeaza(text, link));
+  aratButonAlternativModal(tr('Distribuie', 'Share'), () => partajeaza(text, link));
 }
 
 function deschideMesajeCuText(c, text) {
@@ -11430,7 +11444,8 @@ function deschideFoaieFisa(id) {
 }
 
 function inchideFoaieFisa() {
-  ['foaieAbonament', 'detailsEditareFisa'].forEach(id => {
+  progresDeschis = null;
+  ['foaieAbonament', 'detailsEditareFisa', 'foaieProgres'].forEach(id => {
     const foaie = document.getElementById(id);
     foaie.hidden = true;
     foaie.style.transform = foaie.style.animation = '';
@@ -11518,6 +11533,11 @@ function inapoiLaListaClienteFisa() {
 // Client nou: fereastra de jos, ca plata nouă (formularul și salvarea rămân creeazaClientaNouaDirect)
 function deschideClientNou() {
   const foaie = document.getElementById('detailsDetailsAdaugareClienta');
+  construiestePastileIncasare('#detailsDetailsAdaugareClienta');
+  // Linkul de înscriere se citește la prima nevoie (altfel doar din Setări); opțiunea apare doar dacă antrenorul are unul
+  const randFormular = document.getElementById('nouFormularRand');
+  randFormular.hidden = !codInscriereAntrenor;
+  if (!codInscriereAntrenor) incarcaCodInscriere().then(() => { randFormular.hidden = !codInscriereAntrenor; });
   foaie.hidden = false;
   foaie.scrollTop = 0;
   if (!document.getElementById('clientNouFundal')) {
@@ -11538,7 +11558,7 @@ function inchideClientNou() {
 }
 
 trageInJosCaSaInchizi(document.getElementById('detailsDetailsAdaugareClienta'), inchideClientNou, '.fisa-scurta-maner, .incasare-foaie-titlu');
-['foaieAbonament', 'detailsEditareFisa'].forEach(id => trageInJosCaSaInchizi(document.getElementById(id), inchideFoaieFisa, '.fisa-scurta-maner, .incasare-foaie-titlu'));
+['foaieAbonament', 'detailsEditareFisa', 'foaieProgres'].forEach(id => trageInJosCaSaInchizi(document.getElementById(id), inchideFoaieFisa, '.fisa-scurta-maner, .incasare-foaie-titlu'));
 
 function deschideClientaDinLista(nume) {
   const sel = document.getElementById('selectClientaFisa');
@@ -11639,6 +11659,9 @@ function comutaTab(tabId, titlu, btn, tipTab, tabIdx) {
   if (typeof tabIdx === 'number') {
     animaPilaMercur(tabIdx);
   }
+
+  // Confirmări: aplicația lăsată deschisă peste pragul de vineri seara / miezul nopții trece întâi pe săptămâna de acum
+  if (tipTab === 'prog') gestioneazaRevenireForeground();
 
   if (tipTab === 'incasari') {
     reseteazaDateIncasariAzi();
@@ -13496,6 +13519,13 @@ function afiseazaFisaClientaInstant() {
 
   if (emptyState) emptyState.style.display = 'none';
   document.getElementById('listaClienteFisa').hidden = true;
+  // Alt client: secțiunile cu săgeată pornesc închise, istoricul pe tot istoricul (la reîmprospătarea aceluiași client rămân cum erau)
+  if (container.dataset.client !== client.id) {
+    container.dataset.client = client.id;
+    container.querySelectorAll('details.fisa-sectiune').forEach(d => { d.open = false; });
+    istoricFisaToate = true;
+    progresParti = null;
+  }
   container.style.display = 'block';
   marcheazaFisaDeschisa(true);
   randeazaAntetFisa(client);
@@ -13691,7 +13721,8 @@ const ETICHETE_CLIENTA_INSCRIERE = {
 function randeazaNotaClient(client) {
   document.getElementById('notaClientText').value = client.notaClient || '';
   document.getElementById('notaClientStare').textContent = client.notaClientLa
-    ? `${tr('Actualizată', 'Updated')} ${formatZiLuna(new Date(client.notaClientLa))}` : '';
+    ? `${tr('Trimisă', 'Sent')} ${formatZiLuna(new Date(client.notaClientLa))}` : '';
+  actualizeazaButonNotaClient();
   randeazaBlocMesaje(client);
 }
 
@@ -14226,6 +14257,16 @@ async function actualizeazaCardMesajeAcasa() {
     </div>`;
 }
 
+// „Trimite nota” / „Șterge nota” apare doar când textul diferă de nota trimisă
+function actualizeazaButonNotaClient() {
+  const client = clientaFisaCurenta();
+  const btn = document.getElementById('btnSalveazaNotaClient');
+  if (!client || !btn) return;
+  const text = document.getElementById('notaClientText').value.trim();
+  btn.hidden = text === (client.notaClient || '');
+  btn.textContent = text ? tr('Trimite nota', 'Send note') : tr('Șterge nota', 'Remove note');
+}
+
 async function salveazaNotaClient() {
   const client = clientaFisaCurenta();
   if (!client) return;
@@ -14328,32 +14369,39 @@ function randeazaAcumFisa(client, stare) {
         <button type="button" class="istoric-toate" onclick="trimiteMesajReactivare(clientaFisaCurenta().nume)">${tr('Scrie-i', 'Message')}</button></div></div>` : '';
 }
 
-// Căsuțele cu desen de sub abonament: prezența pe ultimele 8 săptămâni (bare) și greutatea (linie, doar dacă are cântăriri)
+// Căsuțele cu desen de sub abonament: prezența pe ultimele 4 săptămâni (bare, ca perioada unui abonament), cu ținta pe săptămână
+// ca linie punctată, și greutatea (linie, doar dacă are cântăriri)
 let greutateTila = { id: null, puncte: [] }; // cântăririle clientului din fișă, citite o dată pe client (și la deschiderea Progresului)
 function randeazaTileFisa(client) {
   const luni = lunaSaptamanii(new Date());
-  const peSapt = Array(8).fill(0);
+  const peSapt = Array(4).fill(0); // ultima = săptămâna curentă, în desfășurare
   prezenteleClientului(client).forEach(p => {
     const ms = parseazaDataOraRo(p.data);
-    const i = ms ? 7 - Math.round((luni - lunaSaptamanii(new Date(ms))) / 604800000) : -1;
-    if (i >= 0 && i < 8) peSapt[i]++;
+    const i = ms ? 3 - Math.round((luni - lunaSaptamanii(new Date(ms))) / 604800000) : -1;
+    if (i >= 0 && i < 4) peSapt[i]++;
   });
-  const maxim = Math.max(...peSapt, client.sedinteSaptamana || 0, 1);
+  // Ținta: cea pusă în Confirmări sau, din abonament, ședințele împărțite la săptămânile de valabilitate (ex. 8 în 4 săptămâni = 2)
+  const zileAb = zileValabilitateAbonament(client.tipAbonament);
+  const tinta = client.sedinteSaptamana || (client.incluse > 0 && zileAb ? Math.round(client.incluse / (zileAb / 7) * 10) / 10 : 0);
+  const maxim = Math.max(...peSapt, tinta, 1);
   const nr = n => n.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 });
-  const bare = peSapt.map((n, i) => { const h = n ? Math.max(4, n / maxim * 26) : 2; return `<rect x="${i * 10}" y="${28 - h}" width="7" height="${h}" rx="2"${n ? '' : ' class="gol"'}/>`; }).join('');
+  const y = v => 28 - v / maxim * 26;
+  const bare = peSapt.map((n, i) => { const h = n ? Math.max(4, n / maxim * 26) : 2; return `<rect x="${i * 20 + 2}" y="${28 - h}" width="15" height="${h}" rx="3"${n ? (tinta && n < tinta && i < 3 ? ' class="sub"' : '') : ' class="gol"'}/>`; }).join('')
+    + (tinta ? `<line x1="0" x2="80" y1="${y(tinta).toFixed(1)}" y2="${y(tinta).toFixed(1)}" class="tinta"/>` : '');
+  const medie = peSapt.reduce((a, b) => a + b, 0) / 4;
   const p = greutateTila.id === client.id ? greutateTila.puncte.slice(-8) : [];
   let tilaGreutate = '';
   if (p.length) {
     const min = Math.min(...p.map(q => q.kg)), interval = (Math.max(...p.map(q => q.kg)) - min) || 1;
     const dif = p[p.length - 1].kg - p[0].kg;
     const linie = p.length > 1 ? `<svg class="fisa-tila-linie" viewBox="0 0 77 28" aria-hidden="true"><polyline points="${p.map((q, i) => `${(i * 77 / (p.length - 1)).toFixed(1)},${(25 - (q.kg - min) / interval * 22).toFixed(1)}`).join(' ')}"/></svg>` : '';
-    tilaGreutate = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsProgresClienta')">${linie}
+    tilaGreutate = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideFoaieProgres('greutate')">${linie}
         <b>${p.length > 1 ? (dif > 0 ? '+' : dif < 0 ? '−' : '') + nr(Math.abs(dif)) : nr(p[0].kg)} kg</b>
         <span>${p.length > 1 ? tr(`greutate · acum ${nr(p[p.length - 1].kg)} kg`, `weight · now ${nr(p[p.length - 1].kg)} kg`) : tr('greutate', 'weight')}</span></button>`;
   }
   document.getElementById('fisaTile').innerHTML = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsIstoricFisa')">
-      <svg class="fisa-tila-bare" viewBox="0 0 77 28" aria-hidden="true">${bare}</svg>
-      <b>${nr(peSapt.slice(4).reduce((a, b) => a + b, 0) / 4)}</b><span>${tr('ședințe pe săptămână', 'sessions a week')}</span></button>${tilaGreutate}`;
+      <svg class="fisa-tila-bare" viewBox="0 0 80 28" aria-hidden="true">${bare}</svg>
+      <b>${nr(medie)}${tinta ? `<small> / ${nr(tinta)}</small>` : ''}</b><span>${tinta ? tr('pe săptămână / ținta, ultimele 4', 'a week / target, last 4') : tr('pe săptămână, ultimele 4', 'a week, last 4')}</span></button>${tilaGreutate}`;
   if (greutateTila.id !== client.id) incarcaGreutateTila(client);
 }
 
@@ -14759,12 +14807,14 @@ function arataPunctGrafic(el) {
 }
 
 // Greutatea curentă + diferența față de început, graficul și ultimele check-in-uri
-// extra: { greutati (cântăriri la sală), obiectiv (cliente.obiectiv), antrenor (arată controalele de editare) }
+// extra: { greutati (cântăriri la sală), obiectiv (cliente.obiectiv), antrenor (arată controalele de editare),
+//          parte: 'greutate' | 'checkin' (fișa antrenorului le arată în ferestre separate; fără ea, totul, ca pe ecranul clientului) }
 function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   const greutati = extra.greutati || [];
   const puncte = puncteGreutate(fisaInscriere, checkinuri, greutati);
   const ob = obiectivClient(extra.obiectiv, fisaInscriere);
   let html = '';
+  if (extra.parte !== 'checkin') {
   if (puncte.length) {
     const ultim = puncte[puncte.length - 1].kg, dif = ultim - puncte[0].kg;
     const textDif = puncte.length < 2 || Math.abs(dif) < 0.05 ? tr('fără schimbare', 'no change')
@@ -14774,6 +14824,8 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   html += htmlObiectiv(ob, puncte);
   html += htmlGraficGreutate(puncte);
   if (extra.antrenor) html += htmlControaleProgres(ob, greutati);
+  }
+  if (extra.parte === 'greutate') return html;
   const comparatie = htmlComparatiePoze(checkinuri);
   if (comparatie) html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Poze de progres', 'Progress photos')}</div>${comparatie}`;
 
@@ -15591,7 +15643,7 @@ function deschideNotificare(id) {
     const client = (DB.clienti || []).find(c => c.id === n.date.client_id);
     if (client) {
       deschideClientaDinLista(client.nume);
-      deschideSectiuneFisa('detailsProgresClienta');
+      deschideFoaieProgres('checkin');
     }
   } else if (n.tip === 'abonamente_expira') {
     inapoiLaListaClienteFisa();
@@ -15631,11 +15683,18 @@ function trimiteMementoCheckin(i) {
 }
 
 // Check-in-urile se citesc din Supabase doar când secțiunea „Progres” e deschisă (nu intră în cache-ul DB)
-async function incarcaProgresFisa() {
+// Progresul din fișă: aceleași date ca înainte, arătate ca plăci; fiecare placă deschide fereastra ei (deschideFoaieProgres).
+// progresParti: pentru fiecare fereastră, funcția care îi desenează conținutul (la deschidere, deci mereu la zi)
+let progresParti = null; // { id: clientul, titluri, desen: { greutate: () => html, ... } }
+let progresDeschis = null; // fereastra de progres deschisă acum (cheia din progresParti.desen)
+
+// `forta`: încarcă și cu secțiunea închisă (placa de greutate de sus deschide direct fereastra)
+async function incarcaProgresFisa(forta) {
   const det = document.getElementById('detailsProgresClienta');
   const corp = document.getElementById('progresFisaContinut');
   const client = clientaFisaCurenta();
-  if (!det.open || !client) {
+  const activ = () => det.open || progresDeschis || forta;
+  if (!activ() || !client) {
     corp.innerHTML = '';
     return;
   }
@@ -15651,7 +15710,7 @@ async function incarcaProgresFisa() {
     incarcaNutritieAntrenor(client),
     incarcaCicluAntrenor(client)
   ]);
-  if (clientaFisaCurenta() !== client || !det.open) return;
+  if (clientaFisaCurenta() !== client || !activ()) return;
   const checkinuri = error ? [] : (data || []);
   // Fără tabelul greutati (scriptul SQL nerulat) graficul merge doar cu check-in-urile
   greutatiFisa = resGreutati.error ? [] : (resGreutati.data || []);
@@ -15662,21 +15721,113 @@ async function incarcaProgresFisa() {
   // Zilele de antrenament ale clientului, pentru țintele de pauză din rapoartele de nutriție
   raport.zileAntr = zileAntrenamentIso((DB.prezente || []).filter(p => (p.client_id && p.client_id === client.id) || (!p.client_id && randulClientei(p, client, p.clienta))),
     [], planuriClient, antrenamenteClient);
-  // Obiectivele clientului: antrenorul le vede, le adaugă și le modifică (fără tabel, secțiunea nu apare)
+  // Obiectivele clientului: antrenorul le vede, le adaugă și le modifică (fără tabel, placa nu apare)
   obiectiveUI = resObiective && !resObiective.error ? { rol: 'antrenor', clientId: client.id, userId: utilizatorCurent.id, lista: resObiective.data || [],
     sursa: { planuri: planuriClient, antrenamente: antrenamenteClient }, zileSapt: zileActiveSaptamanaAntrenor(client, planuriClient, antrenamenteClient), editare: null } : null;
-  corp.innerHTML = (obiectiveUI ? `<div class="obiective-grup-titlu">${tr('Obiective', 'Goals')}</div><div id="obiectiveContinut">${htmlObiective()}</div>` : '')
-    + htmlProgres(client.fisaInscriere, checkinuri, { greutati: greutatiFisa, obiectiv: client.obiectiv, antrenor: true })
-    + (checkinuri.length ? '' : `<div class="progres-gol">${client.contConectat
-      ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
-      : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`)
-    + `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Progres la exerciții', 'Exercise progress')}</div>`
-    + htmlProgresExercitii({ planuri: planuriClient, antrenamente: antrenamenteClient })
-    + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20))
-    + htmlNutritieAntrenor()
-    + htmlCicluAntrenor();
+  const sursaEx = { planuri: planuriClient, antrenamente: antrenamenteClient };
+  const faraCheckin = `<div class="progres-gol">${client.contConectat
+    ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
+    : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`;
+  const extra = { greutati: greutatiFisa, obiectiv: client.obiectiv, antrenor: true };
+  progresParti = { id: client.id, checkinuri, antrenamente: antrenamenteClient, desen: {
+    greutate: () => htmlProgres(client.fisaInscriere, checkinuri, { ...extra, parte: 'greutate' }),
+    checkin: () => checkinuri.length ? htmlProgres(client.fisaInscriere, checkinuri, { ...extra, parte: 'checkin' }) : faraCheckin,
+    exercitii: () => htmlProgresExercitii(sursaEx) + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20)),
+    nutritie: () => htmlNutritieAntrenor(),
+    obiective: () => obiectiveUI ? `<div id="obiectiveContinut">${htmlObiective()}</div>` : '',
+    ciclu: () => htmlCicluAntrenor()
+  } };
+  // Lista exercițiilor cu progres (pentru placă și pentru deschideProgresExercitiu)
+  htmlProgresExercitii(sursaEx);
+  randeazaPlaciProgres(client);
+  if (progresDeschis) deseneazaFoaieProgres();
+}
+
+const TITLURI_PROGRES = {
+  greutate: ['Greutate', 'Weight'], checkin: ['Check-in', 'Check-in'], exercitii: ['Exerciții', 'Exercises'],
+  nutritie: ['Nutriție', 'Nutrition'], obiective: ['Obiective', 'Goals'], ciclu: ['Ciclu', 'Cycle']
+};
+
+// Check-in-ul cel mai nou văzut de antrenor pe acest dispozitiv (bulina „nou” de pe placă)
+const cheieCheckinVazut = id => 'BFIT_CHECKIN_VAZUT_' + id;
+const momentCheckin = c => String(c.updated_at || c.saptamana || '');
+
+// Plăcile: cifra-cheie și un rând scurt; cele fără date nu apar (greutatea are placa ei sus, în fișă, cât are cântăriri)
+function randeazaPlaciProgres(client) {
+  const p = progresParti;
+  const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
+  const placa = (k, valoare, detaliu, nou) => `<button type="button" class="lista-sticla progres-placa" onclick="deschideFoaieProgres('${k}')">
+      <span class="progres-placa-titlu">${tr(...TITLURI_PROGRES[k])}${nou ? `<i class="progres-placa-nou">${tr('nou', 'new')}</i>` : ''}</span>
+      <b>${valoare}</b><small>${detaliu}</small></button>`;
+  const placi = [];
+  if (!greutateTila.puncte.length) placi.push(placa('greutate', '–', tr('Adaugă prima cântărire', 'Add the first weigh-in')));
+  // Check-in: săptămâna celui mai nou, energia și somnul lui
+  const ck = p.checkinuri.slice().sort((a, b) => momentCheckin(b).localeCompare(momentCheckin(a)));
+  if (ck.length || client.contConectat || client.checkinToken) {
+    const u = ck[0];
+    const r = u && u.raspunsuri;
+    const scoruri = u ? [r ? r.energie : u.energie, r ? r.somn : u.somn] : [];
+    const max = r ? 10 : 5;
+    let vazut = '';
+    try { vazut = localStorage.getItem(cheieCheckinVazut(client.id)) || ''; } catch (e) {}
+    placi.push(placa('checkin', u ? formatZiLuna(new Date(u.saptamana + 'T12:00:00')) : '–',
+      u ? [scoruri[0] != null ? `${tr('energie', 'energy')} ${scoruri[0]}/${max}` : '', scoruri[1] != null ? `${tr('somn', 'sleep')} ${scoruri[1]}/${max}` : ''].filter(Boolean).join(' · ') || tr(`${ck.length} check-in-uri`, `${ck.length} check-ins`)
+        : tr('Niciun check-in încă', 'No check-ins yet'),
+      u && momentCheckin(u) > vazut));
+  }
+  // Exerciții: câte au progres, cel mai bun câștig
+  const ex = listaProgresEx || [];
+  if (ex.length || p.antrenamente.length) {
+    const bun = ex.map(o => ({ o, s: textSchimbareEx(o) })).find(x => x.s.sus);
+    placi.push(placa('exercitii', ex.length || p.antrenamente.length,
+      bun ? `${bun.s.text} · ${escAttr(bun.o.nume)}` : ex.length ? tr('exerciții urmărite', 'exercises tracked') : tr('antrenamente proprii', 'own workouts')));
+  }
+  // Nutriție: ținta de calorii și câte zile din ultimele 7 a notat
+  if (nutritieFisa) {
+    const s = nutritieFisa.setari || {};
+    placi.push(placa('nutritie', s.kcal ? `${Number(s.kcal).toLocaleString(loc)}<small> kcal</small>` : '–',
+      s.vizibil_antrenor === false ? tr('Jurnal ascuns de client', 'Log hidden by the client') : tr(`${nutritieFisa.zile.length} din 7 zile notate`, `${nutritieFisa.zile.length} of 7 days logged`)));
+  }
+  if (obiectiveUI) {
+    const n = obiectiveUI.lista.length;
+    placi.push(placa('obiective', n || '–', n ? (n === 1 ? tr('obiectiv', 'goal') : tr('obiective', 'goals')) : tr('Adaugă un obiectiv', 'Add a goal')));
+  }
+  if (cicluFisa) {
+    const c = calculeazaCiclu(cicluFisa.setari, cicluFisa.menstruatii, aziIsoAntrPers());
+    const f = c && FAZE_CICLU[c.faza];
+    placi.push(placa('ciclu', f ? tr(f[0], f[1]) : '–', c ? textEstimareCiclu(c) : tr('Nicio menstruație notată', 'No period logged')));
+  }
+  document.getElementById('progresFisaContinut').innerHTML = `<div class="progres-placi">${placi.join('')}</div>`;
+}
+
+// Deschide fereastra unei plăci; datele se încarcă la nevoie (ex. din placa de greutate de sus, cu Progres închis)
+async function deschideFoaieProgres(k) {
+  const client = clientaFisaCurenta();
+  if (!client) return;
+  deschideFoaieFisa('foaieProgres');
+  progresDeschis = k;
+  document.getElementById('foaieProgresTitlu').textContent = tr(...TITLURI_PROGRES[k]);
+  if (!progresParti || progresParti.id !== client.id) {
+    document.getElementById('foaieProgresCorp').innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+    await incarcaProgresFisa(true);
+  } else {
+    deseneazaFoaieProgres();
+  }
+}
+
+function deseneazaFoaieProgres() {
+  const corp = document.getElementById('foaieProgresCorp');
+  const client = clientaFisaCurenta();
+  if (!progresDeschis || !progresParti || !client || progresParti.id !== client.id) return;
+  corp.innerHTML = progresParti.desen[progresDeschis]() || `<div class="progres-gol">${tr('Nimic de arătat încă.', 'Nothing to show yet.')}</div>`;
   umplePoze(corp);
   umplePozeAntr(corp);
+  // Check-in-urile deschise sunt văzute: bulina „nou” dispare
+  if (progresDeschis === 'checkin' && progresParti.checkinuri.length) {
+    const ultim = progresParti.checkinuri.map(momentCheckin).sort().pop();
+    try { localStorage.setItem(cheieCheckinVazut(client.id), ultim); } catch (e) {}
+    randeazaPlaciProgres(client);
+  }
 }
 
 function randeazaFisaInscriereDeschisa() {
@@ -15687,6 +15838,14 @@ function randeazaFisaInscriereDeschisa() {
   document.getElementById('fisaInscriereContinut').innerHTML = client.fisaInscriere
     ? htmlRaspunsuriInscriere(client.fisaInscriere) + htmlModificareFisa(client.fisaInscriere) + buton
     : `<div class="progres-gol">${tr('Clientul n-a completat încă formularul. Îl poți completa tu, din ce știi.', 'The client hasn’t filled in the form yet. You can fill it in from what you know.')}</div>` + buton;
+}
+
+// Emailul cu link-ul de acces în aplicație (true = trimis)
+async function trimiteEmailInvitatie(email) {
+  const captchaToken = await obtineTokenCaptcha().catch(() => null);
+  if (!captchaToken) return false;
+  const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE, data: { captcha_token: captchaToken } } });
+  return !error;
 }
 
 // Emailul se salvează întâi în fișă (leaga_cont_clienta îl caută la login), apoi se trimite link-ul de acces
@@ -15717,13 +15876,10 @@ function invitaClienta(confirmatDublura = false) {
       showToast(tr("Eroare sincronizare", "Sync error"), "error");
       return;
     }
-    const captchaToken = await obtineTokenCaptcha().catch(() => null);
-    const { error } = captchaToken
-      ? await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: URL_APLICATIE, data: { captcha_token: captchaToken } } })
-      : { error: true };
+    const trimis = await trimiteEmailInvitatie(email);
     btn.disabled = false;
-    if (error) showToast(tr('Emailul nu s-a putut trimite', 'Could not send the email'), 'error');
-    else showToast(tr('Invitație trimisă', 'Invitation sent'));
+    if (trimis) showToast(tr('Invitație trimisă', 'Invitation sent'));
+    else showToast(tr('Emailul nu s-a putut trimite', 'Could not send the email'), 'error');
     incarcaBazaDateSilencios(nume);
   }, function() { btn.disabled = false; });
 }
@@ -15885,31 +16041,68 @@ function salveazaEditareClienta() {
 function creeazaClientaNouaDirect(confirmatDublura = false) {
   let inp = document.getElementById('nouNumeClienta');
   let nume = inp ? inp.value.trim() : "";
-  let tip = document.getElementById('nouTipAbonament').value;
+  let selTip = document.getElementById('nouTipAbonament');
+  let tip = selTip.value || '-'; // nicio placă aleasă = fără abonament
   let inpTel = document.getElementById('nouTelefonClienta');
+  let inpEmail = document.getElementById('nouEmailClienta');
+  let email = inpEmail.value.trim().toLowerCase();
   if (!nume) { showToast(currentLang === 'en' ? "Enter name!" : "Introdu numele!", "error"); return; }
-  // Posibilă dublură: același telefon (cel mai sigur semn) sau același nume (pot fi și două persoane diferite): întrebăm
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showToast(t('authInvalidEmailFormat'), 'error'); return inpEmail.focus(); }
+  // Posibilă dublură: același telefon sau email (cele mai sigure semne) sau același nume (pot fi și două persoane diferite): întrebăm
   const cifre = v => String(v || '').replace(/\D/g, '').slice(-9);
   const tel = cifre(inpTel ? inpTel.value : '');
+  const cuEmail = c => !!email && [c.emailInvitatie, (c.fisaInscriere || {}).email].some(e => (e || '').trim().toLowerCase() === email);
   const existent = (DB.clienti || []).find(c => tel.length >= 9 && cifre(c.telefon) === tel)
+    || (DB.clienti || []).find(cuEmail)
     || (DB.clienti || []).find(c => cheieNume(c.nume) === cheieNume(nume));
   if (existent && !confirmatDublura) {
     const acelasiTel = tel.length >= 9 && cifre(existent.telefon) === tel;
     customConfirm(tr('Există deja în listă', 'Already in your list'),
       acelasiTel ? tr(`${existent.nume} are deja acest număr de telefon. Adaugi totuși o fișă nouă?`, `${existent.nume} already has this phone number. Add a new file anyway?`)
+        : cuEmail(existent) ? tr(`${existent.nume} are deja emailul ${email}. Adaugi totuși o fișă nouă?`, `${existent.nume} already has the email ${email}. Add a new file anyway?`)
         : tr(`Ai deja un client cu numele ${existent.nume}. Dacă e altă persoană, adaugă fișa; dacă e aceeași, deschide-i fișa existentă.`, `You already have a client named ${existent.nume}. If it’s someone else, add the file; if it’s the same person, open the existing file.`),
       () => creeazaClientaNouaDirect(true));
     document.getElementById('modalBtnConfirm').innerText = tr('Adaugă totuși', 'Add anyway');
     return;
   }
 
-  callBackend("adaugaClientaDirect", { nume: nume, tip: tip, telefon: inpTel ? inpTel.value : '' }, function() {
+  const invita = !!email && document.getElementById('nouInvitaClient').checked;
+  const formular = !!codInscriereAntrenor && document.getElementById('nouFormularClient').checked;
+  callBackend("adaugaClientaDirect", { nume: nume, tip: tip, telefon: inpTel ? inpTel.value : '', email: email }, async function() {
     showToast(t('toastClientAdded'));
     inchideClientNou();
-    if (inp) inp.value = '';
+    inp.value = inpEmail.value = '';
     if (inpTel) inpTel.value = '';
-    incarcaBazaDateSilencios();
+    selTip.value = '-';
+    document.getElementById('nouInvitaRand').hidden = true;
+    document.getElementById('nouFormularClient').checked = false;
+    incarcaBazaDateSilencios(nume); // se deschide fișa clientului nou: de acolo încasezi, programezi, completezi fișa de obiective
+    if (invita || formular) dupaClientNou(nume, email, invita ? await trimiteEmailInvitatie(email) : null, formular);
   });
+}
+
+// După salvare, un singur mesaj prin meniul de partajare al telefonului: linkul aplicației, dacă a fost invitat (emailul automat poate
+// ajunge în spam; intră cu emailul din fișă, deci contul se leagă oricum de ea), și formularul de înscriere, dacă a fost bifat.
+// Răspunsurile din formular vin ca cerere și se adaugă la fișa existentă când o accepți. `trimis`: null = fără invitație.
+function dupaClientNou(nume, email, trimis, formular) {
+  const prenume = nume.split(/\s+/)[0];
+  const invitat = trimis !== null;
+  const titlu = !invitat ? tr('Trimite formularul de înscriere', 'Send the sign-up form')
+    : trimis ? tr('Invitație trimisă pe email', 'Invitation sent by email') : tr('Emailul nu s-a putut trimite', 'Could not send the email');
+  const text = [
+    invitat ? tr(`${trimis ? 'Dacă nu o găsește (poate ajunge în spam), trimite-i' : 'Trimite-i'} linkul aplicației. Intră cu emailul ${email}.`,
+      `${trimis ? 'If they can’t find it (it may land in spam), send' : 'Send'} them the app link. They sign in with ${email}.`) : '',
+    formular ? tr(`${invitat ? 'În același mesaj primește și' : 'Primește într-un mesaj'} formularul de înscriere; răspunsurile ajung la Cereri noi.`,
+      `${invitat ? 'The same message includes' : 'They get'} the sign-up form${invitat ? '' : ' in a message'}; the answers arrive under New requests.`) : ''
+  ].filter(Boolean).join(' ');
+  // Mesajul gata scris: Distribuie (meniul telefonului) sau Copiază linkul (îl lipești unde vrei)
+  const intro = tr(`Bună, ${prenume}! Te-am adăugat în aplicația mea.`, `Hi ${prenume}! I’ve added you to my app.`);
+  const [mesaj, link] = !formular ? [`${intro} ${tr(`Intră cu emailul ${email}:`, `Sign in with ${email}:`)}`, URL_APLICATIE]
+    : invitat ? [`${intro} ${tr(`Intră cu emailul ${email}: ${URL_APLICATIE} . Completează și fișa de obiective:`, `Sign in with ${email}: ${URL_APLICATIE} . Please also fill in the goal-setting form:`)}`, linkInscriere(codInscriereAntrenor)]
+    : [tr(`Bună, ${prenume}! Completează fișa de obiective:`, `Hi ${prenume}! Please fill in the goal-setting form:`), linkInscriere(codInscriereAntrenor)];
+  customConfirm(titlu, text, () => partajeaza(mesaj, link));
+  document.getElementById('modalBtnConfirm').innerText = tr('Distribuie', 'Share');
+  aratButonAlternativModal(tr('Copiază linkul', 'Copy link'), () => copiazaText(`${mesaj} ${link}`));
 }
 
 function comutaArhivareClienta() {
