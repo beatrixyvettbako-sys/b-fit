@@ -4412,41 +4412,235 @@ select.form-control {
   font-weight: 800;
 }
 
-/* Fereastra unei plăci: titlul cu × în dreapta; conținutul are culorile sticlei, ca secțiunile fișei */
-.foaie-progres-sus {
+/* Check-in-urile din fișă: tendința energiei și a somnului, apoi un card pe săptămână */
+.checkin-tendinta,
+.checkin-card {
+  margin-bottom: 10px;
+  padding: 14px;
+}
+
+.checkin-tendinta-cifre {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.checkin-tendinta-cifre b {
+  font-size: 1.05rem;
+  color: var(--m-text);
+}
+
+.checkin-tendinta-cifre small {
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+.checkin-tendinta-cifre i {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: middle;
+}
+
+.checkin-tendinta svg {
+  display: block;
+  width: 100%;
+  height: 60px;
+  margin-top: 8px;
+}
+
+.checkin-tendinta polyline {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+:is(.checkin-tendinta i, .checkin-tendinta polyline).energie {
+  background: var(--m-accent-text);
+  stroke: var(--m-accent-text);
+}
+
+:is(.checkin-tendinta i, .checkin-tendinta polyline).somn {
+  background: #f5b041;
+  stroke: #f5b041;
+}
+
+.checkin-card-sus {
+  display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.foaie-progres-sus .incasare-foaie-titlu {
-  margin: 0;
-}
-
-.foaie-inchide {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+.checkin-card-sus > div {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 1px solid var(--m-border);
-  background: var(--m-btn);
+  flex-direction: column;
+  gap: 1px;
+}
+
+.checkin-card-sus b {
+  font-size: 0.95rem;
+  font-weight: 800;
   color: var(--m-text);
-  cursor: pointer;
 }
 
-.foaie-inchide svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.4;
-  stroke-linecap: round;
+.checkin-card-sus small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--m-muted);
 }
 
+.checkin-kg {
+  white-space: nowrap;
+}
+
+/* Scorurile: valoarea, schimbarea față de săptămâna dinainte și o bară colorată (verde 7+, portocaliu 5–6, roșu sub 5) */
+.checkin-metri {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.checkin-metru {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px 12px;
+  border-radius: 12px;
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+  overflow: hidden;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.checkin-metru b {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--m-text);
+  white-space: nowrap;
+}
+
+.checkin-metru b small {
+  font-size: 0.7rem;
+  color: var(--m-muted);
+}
+
+.checkin-metru > i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 4px;
+  border-radius: 0 4px 4px 0;
+}
+
+.checkin-metru.bun > i {
+  background: #15803d;
+}
+
+.checkin-metru.mediu > i {
+  background: #f5b041;
+}
+
+.checkin-metru.slab > i {
+  background: #b91c1c;
+}
+
+.checkin-dif {
+  margin-left: 4px;
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.checkin-dif.sus {
+  color: #15803d;
+}
+
+.checkin-dif.jos {
+  color: #b91c1c;
+}
+
+.checkin-dif.neutru {
+  color: var(--m-muted);
+}
+
+.checkin-etichete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.checkin-eticheta-mica {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-text);
+}
+
+.checkin-eticheta-mica.sus {
+  color: #15803d;
+}
+
+/* Răspunsurile: întrebarea mică, deasupra; victoria verde, provocarea portocalie, întrebarea clientului în accent, cu „Răspunde” */
+.checkin-raspuns {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--m-btn);
+  border-left: 3px solid var(--m-divider);
+}
+
+.checkin-raspuns span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.checkin-raspuns p {
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--m-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.checkin-raspuns.victorie {
+  border-left-color: #15803d;
+}
+
+.checkin-raspuns.provocare {
+  border-left-color: #f5b041;
+}
+
+.checkin-raspuns.intrebare {
+  border-left-color: var(--m-accent-text);
+}
+
+.checkin-raspuns .istoric-toate {
+  height: 34px;
+  margin-top: 8px;
+  color: var(--m-accent-text);
+}
+
+/* Fereastra unei plăci: conținutul are culorile sticlei, ca secțiunile fișei */
 #foaieProgresCorp {
   --text: var(--m-text);
   --text-muted: var(--m-muted);
@@ -4460,23 +4654,6 @@ select.form-control {
 /* Titlul de început al conținutului („Nutriție”) e deja titlul ferestrei */
 #foaieProgresCorp > .obiective-grup-titlu:first-child {
   display: none;
-}
-
-/* Titlurile secțiunilor fișei rămân sus cât derulezi prin ele, ca să le poți închide oricând */
-#detaliiFisa .fisa-sectiune[open] {
-  overflow: visible;
-}
-
-#detaliiFisa .fisa-sectiune[open] > summary {
-  position: sticky;
-  top: calc(var(--header-height) + 6px);
-  z-index: 3;
-  margin: -14px -14px 0;
-  padding: 14px;
-  border-radius: 24px 24px 0 0;
-  background: var(--m-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Istoricul deschis: zilele lui sunt carduri de sticlă, deci cutia din jur rămâne fără sticlă (ca istoricele din Orar și Încasări) */
@@ -8142,9 +8319,48 @@ input.serie-camp {
 }
 
 .fisa-programari-ore {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
   gap: 8px;
+}
+
+/* O oră programată: ziua, data mare, ora în accent (ca o filă de calendar) */
+.fisa-programare {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  min-width: 0;
+  padding: 9px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fisa-programare small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.fisa-programare b {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.fisa-programare span {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--m-accent-text);
+}
+
+.fisa-programare.bifat span {
+  color: #15803d;
 }
 
 /* Istoricul fișei: rândurile de prezență / plată încep cu un punct colorat, nu cu avatar */
@@ -8165,14 +8381,15 @@ input.serie-camp {
 }
 
 /* O singură căsuță (fără cântăriri): desenul în stânga, cifra lângă el */
-.fisa-tila:only-child {
+.fisa-tila:only-child,
+.fisa-tile.cu-ritm .fisa-tila {
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   column-gap: 16px;
 }
 
-.fisa-tila:only-child svg {
+:is(.fisa-tila:only-child, .fisa-tile.cu-ritm .fisa-tila) svg {
   grid-row: span 2;
   margin: 0;
 }
@@ -8191,21 +8408,66 @@ input.serie-camp {
   fill: var(--m-divider);
 }
 
-/* Săptămânile încheiate sub țintă: portocaliu (cea curentă e încă în desfășurare) */
-.fisa-tila-bare .sub {
-  fill: #f5b041;
+/* Ritmul abonamentului: tot rândul; o bară pe săptămână (făcute, curenta mai deschisă, rămase punctate) și concluzia cu butonul ei */
+.fisa-tile.cu-ritm {
+  grid-auto-flow: row;
 }
 
-.fisa-tila-bare .tinta {
+.fisa-ritm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 6px;
+  cursor: pointer;
+}
+
+.fisa-ritm-sus {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fisa-ritm-sus b {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.fisa-ritm-sus small,
+.fisa-ritm-text {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.fisa-ritm-bare {
+  width: 100%;
+  height: 40px;
+}
+
+.fisa-ritm-bare rect {
+  fill: var(--m-accent-text);
+}
+
+.fisa-ritm-bare .curent {
+  opacity: 0.6;
+}
+
+.fisa-ritm-bare .gol {
+  fill: var(--m-divider);
+}
+
+.fisa-ritm-bare .viitor {
+  fill: none;
   stroke: var(--m-muted);
   stroke-width: 1.2;
   stroke-dasharray: 3 3;
 }
 
-.fisa-tila b small {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--m-muted);
+.fisa-ritm-concluzie {
+  margin: 0 -14px;
+  border-top: 1px solid var(--m-divider);
 }
 
 .fisa-tila-linie polyline {

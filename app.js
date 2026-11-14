@@ -10350,6 +10350,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 216, data: '2026-11-15',
+    client: [],
+    antrenor: [
+      ['„Ritmul abonamentului” în fișă: vezi săptămânile abonamentului și dacă clientul își termină ședințele la timp, rămâne cu ședințe nefolosite (cu „Amintește-i”) sau le termină mai devreme (cu „Încasează”).', '“Subscription pace” in the profile: see the subscription weeks and whether the client will finish on time, leave sessions unused (with “Nudge”) or finish early (with “Collect”).'],
+      ['Check-in-urile arată mai clar: tendința energiei și a somnului, scoruri colorate cu schimbarea față de săptămâna dinainte și „Răspunde” la întrebările clientului.', 'Check-ins are clearer: energy and sleep trend, colour-coded scores with the change from the previous week, and “Reply” to the client’s questions.'],
+      ['Programările din fișă arată ca niște file de calendar, cu ziua întreagă, data și ora.', 'Bookings in the profile look like calendar cards, with the full day, date and time.']
+    ]
+  },
   { v: 215, data: '2026-11-15',
     client: [],
     antrenor: [
@@ -14366,29 +14374,103 @@ function randeazaAcumFisa(client, stare) {
   const r = stareRetentie(client, stare);
   document.getElementById('fisaAcum').innerHTML = r ? `<div class="lista-sticla fisa-acum">
       <div class="fisa-acum-rand"><i class="fisa-acum-punct ${r.culoare === 'rosu' ? 'rosu' : 'portocaliu'}"></i><span>${tr(`N-a mai venit de ${r.zile} zile`, `Hasn’t come for ${r.zile} days`)}</span>
-        <button type="button" class="istoric-toate" onclick="trimiteMesajReactivare(clientaFisaCurenta().nume)">${tr('Scrie-i', 'Message')}</button></div></div>` : '';
+        <button type="button" class="istoric-toate" onclick="trimiteMesajReactivare(clientaFisaCurenta().nume)">${tr('Amintește-i', 'Nudge')}</button></div></div>` : '';
 }
 
-// Căsuțele cu desen de sub abonament: prezența pe ultimele 4 săptămâni (bare, ca perioada unui abonament), cu ținta pe săptămână
-// ca linie punctată, și greutatea (linie, doar dacă are cântăriri)
+// Ritmul abonamentului: săptămânile abonamentului în curs (făcute / rămase) și concluzia din ritmul de până acum:
+// îl termină la timp, rămân ședințe nefolosite (Amintește-i) sau le termină înainte de expirare (Încasează).
+// null = fără abonament în desfășurare cu date (atunci placa arată prezența pe ultimele 4 săptămâni)
+const ZI_MS = 86400000;
+function ritmAbonament(c) {
+  const st = stareAbonamentClienta(c);
+  if (!['activ', 'curand', 'expirat'].includes(st.tip) || !(c.incluse > 0) || regulaAbonament(c.tipAbonament).fel !== 'abonament') return null;
+  const exp = parseazaDataOraRo(c.dataExpirare);
+  if (!exp) return null;
+  const sfarsit = new Date(exp).setHours(0, 0, 0, 0);
+  const startDat = parseazaDataOraRo(c.dataStart);
+  const start = startDat ? new Date(startDat).setHours(0, 0, 0, 0) : sfarsit - (zileValabilitateAbonament(c.tipAbonament) - 1) * ZI_MS;
+  const azi = new Date().setHours(0, 0, 0, 0);
+  if (azi < start || azi > sfarsit) return null;
+  const saptamani = Math.max(1, Math.ceil((sfarsit - start + ZI_MS) / (7 * ZI_MS)));
+  const curenta = Math.min(saptamani - 1, Math.floor((azi - start) / (7 * ZI_MS)));
+  const peSapt = Array(saptamani).fill(0);
+  prezenteleClientului(c).forEach(p => {
+    const t = parseazaDataOraRo(p.data);
+    if (!t) return;
+    const zi = new Date(t).setHours(0, 0, 0, 0);
+    if (zi >= start && zi <= sfarsit) peSapt[Math.min(saptamani - 1, Math.floor((zi - start) / (7 * ZI_MS)))]++;
+  });
+  const trecute = Math.round((azi - start) / ZI_MS) + 1; // zile scurse, cu azi
+  const ramaseZile = Math.round((sfarsit - azi) / ZI_MS) + 1;
+  const ramase = Math.max(0, c.ramase), facute = Math.max(0, c.efectuate);
+  const ritmZi = facute / trecute;
+  const r = { saptamani, curenta, peSapt, ramase, facute, ramaseZile, sfarsit, deSapt: ramase / Math.max(1, ramaseZile / 7) };
+  const data = ms => formatZiLuna(new Date(ms));
+  if (!ramase) return { ...r, cul: 'accent', text: tr('Toate ședințele sunt făcute', 'All sessions are done'), actiune: 'incasare' };
+  if (trecute < 7) return { ...r, cul: 'gri', text: tr('Ritmul apare după prima săptămână', 'The pace shows after the first week') };
+  if (!facute) return { ...r, cul: 'portocaliu', text: tr(`N-a venit încă; are ${ramase} ședințe până pe ${data(sfarsit)}`, `Hasn’t come yet; ${ramase} sessions left until ${data(sfarsit)}`), actiune: 'mesaj' };
+  const estimate = ritmZi * ramaseZile;
+  if (estimate + 0.5 >= ramase) {
+    const gata = azi + Math.max(0, Math.round(ramase / ritmZi) - 1) * ZI_MS;
+    return gata <= sfarsit - 4 * ZI_MS
+      ? { ...r, cul: 'accent', text: tr(`Termină ședințele pe ${data(gata)}, înainte de expirare`, `Finishes the sessions on ${data(gata)}, before expiry`), actiune: 'incasare' }
+      : { ...r, cul: 'verde', text: tr(`În ritm, le termină până pe ${data(sfarsit)}`, `On track to finish by ${data(sfarsit)}`) };
+  }
+  const nefolosite = Math.max(1, Math.round(ramase - estimate));
+  return { ...r, cul: 'portocaliu', actiune: 'mesaj',
+    text: tr(`La ritmul ăsta rămân ~${nefolosite} ${nefolosite === 1 ? 'ședință nefolosită' : 'ședințe nefolosite'}`, `At this pace ~${nefolosite} ${nefolosite === 1 ? 'session goes' : 'sessions go'} unused`) };
+}
+
+// „Amintește-i” din ritm: mesaj gata scris cu ședințele rămase și data expirării
+function trimiteMesajRitm() {
+  const c = clientaFisaCurenta();
+  const r = c && ritmAbonament(c);
+  if (!r) return;
+  const prenume = c.nume.trim().split(/\s+/)[0];
+  const pana = formatZiLuna(new Date(r.sfarsit));
+  trimiteMesajClient(c, tr(`Bună, ${prenume}! Mai ai ${r.ramase} ${r.ramase === 1 ? 'ședință' : 'ședințe'} până pe ${pana}. Hai să le programăm, ca să nu se piardă!`,
+    `Hi ${prenume}! You have ${r.ramase} ${r.ramase === 1 ? 'session' : 'sessions'} left until ${pana}. Let’s book them so none go to waste!`), c.contConectat ? URL_APLICATIE : undefined);
+}
+
+// Sub abonament: ritmul abonamentului (sau, fără abonament în desfășurare, prezența pe ultimele 4 săptămâni) și greutatea
 let greutateTila = { id: null, puncte: [] }; // cântăririle clientului din fișă, citite o dată pe client (și la deschiderea Progresului)
 function randeazaTileFisa(client) {
-  const luni = lunaSaptamanii(new Date());
-  const peSapt = Array(4).fill(0); // ultima = săptămâna curentă, în desfășurare
-  prezenteleClientului(client).forEach(p => {
-    const ms = parseazaDataOraRo(p.data);
-    const i = ms ? 3 - Math.round((luni - lunaSaptamanii(new Date(ms))) / 604800000) : -1;
-    if (i >= 0 && i < 4) peSapt[i]++;
-  });
-  // Ținta: cea pusă în Confirmări sau, din abonament, ședințele împărțite la săptămânile de valabilitate (ex. 8 în 4 săptămâni = 2)
-  const zileAb = zileValabilitateAbonament(client.tipAbonament);
-  const tinta = client.sedinteSaptamana || (client.incluse > 0 && zileAb ? Math.round(client.incluse / (zileAb / 7) * 10) / 10 : 0);
-  const maxim = Math.max(...peSapt, tinta, 1);
   const nr = n => n.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 });
-  const y = v => 28 - v / maxim * 26;
-  const bare = peSapt.map((n, i) => { const h = n ? Math.max(4, n / maxim * 26) : 2; return `<rect x="${i * 20 + 2}" y="${28 - h}" width="15" height="${h}" rx="3"${n ? (tinta && n < tinta && i < 3 ? ' class="sub"' : '') : ' class="gol"'}/>`; }).join('')
-    + (tinta ? `<line x1="0" x2="80" y1="${y(tinta).toFixed(1)}" y2="${y(tinta).toFixed(1)}" class="tinta"/>` : '');
-  const medie = peSapt.reduce((a, b) => a + b, 0) / 4;
+  const ritm = ritmAbonament(client);
+  let prezenta;
+  if (ritm) {
+    // O bară pe săptămână de abonament: făcute (plin), cea curentă mai deschisă, cele rămase punctate, cât ar trebui pe săptămână
+    // Scara: cel puțin 3 ședințe pe săptămână; câte i-ar trebui pe săptămână de acum încolo, cel mult toată înălțimea
+    const maxim = Math.max(...ritm.peSapt, 3);
+    const L = 300 / ritm.saptamani, H = 34, w = Math.min(L - 8, 34);
+    const bare = ritm.peSapt.map((n, i) => {
+      const x = i * L + (L - w) / 2;
+      if (i > ritm.curenta) { const h = Math.max(4, Math.min(ritm.deSapt, maxim) / maxim * (H - 2)); return `<rect x="${x}" y="${H - h}" width="${w}" height="${h}" rx="4" class="viitor"/>`; }
+      const h = n ? Math.max(5, n / maxim * (H - 2)) : 3;
+      return `<rect x="${x}" y="${H - h}" width="${w}" height="${h}" rx="4" class="${n ? (i === ritm.curenta ? 'curent' : '') : 'gol'}"/>`;
+    }).join('');
+    const buton = ritm.actiune === 'incasare' ? `<button type="button" class="istoric-toate" onclick="event.stopPropagation(); incaseazaDinFisa()">${tr('Încasează', 'Collect')}</button>`
+      : ritm.actiune === 'mesaj' ? `<button type="button" class="istoric-toate" onclick="event.stopPropagation(); trimiteMesajRitm()">${tr('Amintește-i', 'Nudge')}</button>` : '';
+    prezenta = `<div class="lista-sticla fisa-ritm" role="button" tabindex="0" onclick="deschideSectiuneFisa('detailsIstoricFisa')">
+        <div class="fisa-ritm-sus"><b>${tr('Ritmul abonamentului', 'Subscription pace')}</b><small>${tr(`săpt. ${ritm.curenta + 1} din ${ritm.saptamani}`, `week ${ritm.curenta + 1} of ${ritm.saptamani}`)}</small></div>
+        <svg class="fisa-ritm-bare" viewBox="0 0 300 ${H}" aria-hidden="true">${bare}</svg>
+        <div class="fisa-ritm-text">${tr(`${ritm.facute} făcute · ${ritm.ramase} rămase · ${ritm.ramaseZile} ${ritm.ramaseZile === 1 ? 'zi' : 'zile'}`, `${ritm.facute} done · ${ritm.ramase} left · ${ritm.ramaseZile} ${ritm.ramaseZile === 1 ? 'day' : 'days'}`)}</div>
+        <div class="fisa-acum-rand fisa-ritm-concluzie"><i class="fisa-acum-punct ${ritm.cul}"></i><span>${escAttr(ritm.text)}</span>${buton}</div>
+      </div>`;
+  } else {
+    const luni = lunaSaptamanii(new Date());
+    const peSapt = Array(4).fill(0); // ultima = săptămâna curentă, în desfășurare
+    prezenteleClientului(client).forEach(p => {
+      const ms = parseazaDataOraRo(p.data);
+      const i = ms ? 3 - Math.round((luni - lunaSaptamanii(new Date(ms))) / 604800000) : -1;
+      if (i >= 0 && i < 4) peSapt[i]++;
+    });
+    const maxim = Math.max(...peSapt, 1);
+    const bare = peSapt.map((n, i) => { const h = n ? Math.max(4, n / maxim * 26) : 2; return `<rect x="${i * 20 + 2}" y="${28 - h}" width="15" height="${h}" rx="3"${n ? '' : ' class="gol"'}/>`; }).join('');
+    prezenta = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsIstoricFisa')">
+      <svg class="fisa-tila-bare" viewBox="0 0 80 28" aria-hidden="true">${bare}</svg>
+      <b>${nr(peSapt.reduce((a, b) => a + b, 0) / 4)}</b><span>${tr('pe săptămână, ultimele 4', 'a week, last 4')}</span></button>`;
+  }
   const p = greutateTila.id === client.id ? greutateTila.puncte.slice(-8) : [];
   let tilaGreutate = '';
   if (p.length) {
@@ -14399,9 +14481,9 @@ function randeazaTileFisa(client) {
         <b>${p.length > 1 ? (dif > 0 ? '+' : dif < 0 ? '−' : '') + nr(Math.abs(dif)) : nr(p[0].kg)} kg</b>
         <span>${p.length > 1 ? tr(`greutate · acum ${nr(p[p.length - 1].kg)} kg`, `weight · now ${nr(p[p.length - 1].kg)} kg`) : tr('greutate', 'weight')}</span></button>`;
   }
-  document.getElementById('fisaTile').innerHTML = `<button type="button" class="lista-sticla fisa-tila" onclick="deschideSectiuneFisa('detailsIstoricFisa')">
-      <svg class="fisa-tila-bare" viewBox="0 0 80 28" aria-hidden="true">${bare}</svg>
-      <b>${nr(medie)}${tinta ? `<small> / ${nr(tinta)}</small>` : ''}</b><span>${tinta ? tr('pe săptămână / ținta, ultimele 4', 'a week / target, last 4') : tr('pe săptămână, ultimele 4', 'a week, last 4')}</span></button>${tilaGreutate}`;
+  const cont = document.getElementById('fisaTile');
+  cont.classList.toggle('cu-ritm', !!ritm);
+  cont.innerHTML = prezenta + tilaGreutate;
   if (greutateTila.id !== client.id) incarcaGreutateTila(client);
 }
 
@@ -14422,10 +14504,19 @@ function randeazaProgramariFisa(client) {
   const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
   const ore = (DB.orarSloturi || []).filter(s => s && s.clienta && randulClientei(s, client, s.clienta))
     .map(s => ({ s, d: dataSlot(s.ziRaw, s.ora) })).filter(x => x.d && x.d >= azi).sort((a, b) => a.d - b.d).slice(0, 6);
+  // Fiecare oră ca o filă de calendar: ziua întreagă (Azi / Mâine / Luni), data mare, ora; ✓ = prezența e bifată
+  const ziua = d => {
+    const zile = Math.round((new Date(d).setHours(0, 0, 0, 0) - azi) / 86400000);
+    if (zile === 0) return tr('Azi', 'Today');
+    if (zile === 1) return tr('Mâine', 'Tomorrow');
+    const z = d.toLocaleDateString(loc, { weekday: 'long' });
+    return z.charAt(0).toUpperCase() + z.slice(1);
+  };
   document.getElementById('fisaProgramari').innerHTML = `<div class="lista-sticla fisa-programari">
       <div class="fisa-programari-sus"><b>${tr('Programări', 'Bookings')}</b>${client.sedinteSaptamana ? `<span>${client.sedinteSaptamana} ${tr('pe săptămână', 'a week')}</span>` : ''}</div>
-      ${ore.length ? `<div class="fisa-programari-ore">${ore.map(({ s, d }) => `<button type="button" class="istoric-toate${s.bifat ? ' activ' : ''}" onclick="mergiLaOraDinOrar('${isoDinData(d)}', '${escAttr(normalizeazaOraUi(s.ora))}')">${s.bifat ? '✓ ' : ''}${
-        new Date(d).setHours(0, 0, 0, 0) === azi ? tr('Azi', 'Today') : `${d.toLocaleDateString(loc, { weekday: 'short' }).replace(/[.,]/g, '')} ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`} · ${normalizeazaOraUi(s.ora)}</button>`).join('')}</div>`
+      ${ore.length ? `<div class="fisa-programari-ore">${ore.map(({ s, d }) => `<button type="button" class="fisa-programare${s.bifat ? ' bifat' : ''}" onclick="mergiLaOraDinOrar('${isoDinData(d)}', '${escAttr(normalizeazaOraUi(s.ora))}')">
+          <small>${ziua(d)}</small><b>${d.getDate()} ${d.toLocaleDateString(loc, { month: 'short' }).replace('.', '')}</b><span>${s.bifat ? '✓ ' : ''}${normalizeazaOraUi(s.ora)}</span>
+        </button>`).join('')}</div>`
         : `<small>${tr('Nicio oră programată de azi înainte.', 'No upcoming sessions.')}</small>`}
     </div>`;
 }
@@ -14808,13 +14899,12 @@ function arataPunctGrafic(el) {
 
 // Greutatea curentă + diferența față de început, graficul și ultimele check-in-uri
 // extra: { greutati (cântăriri la sală), obiectiv (cliente.obiectiv), antrenor (arată controalele de editare),
-//          parte: 'greutate' | 'checkin' (fișa antrenorului le arată în ferestre separate; fără ea, totul, ca pe ecranul clientului) }
+//          parte: 'greutate' = fără poze și check-in-uri (fișa antrenorului le arată în fereastra Check-in, htmlCheckinuriAntrenor) }
 function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   const greutati = extra.greutati || [];
   const puncte = puncteGreutate(fisaInscriere, checkinuri, greutati);
   const ob = obiectivClient(extra.obiectiv, fisaInscriere);
   let html = '';
-  if (extra.parte !== 'checkin') {
   if (puncte.length) {
     const ultim = puncte[puncte.length - 1].kg, dif = ultim - puncte[0].kg;
     const textDif = puncte.length < 2 || Math.abs(dif) < 0.05 ? tr('fără schimbare', 'no change')
@@ -14824,7 +14914,6 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   html += htmlObiectiv(ob, puncte);
   html += htmlGraficGreutate(puncte);
   if (extra.antrenor) html += htmlControaleProgres(ob, greutati);
-  }
   if (extra.parte === 'greutate') return html;
   const comparatie = htmlComparatiePoze(checkinuri);
   if (comparatie) html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Poze de progres', 'Progress photos')}</div>${comparatie}`;
@@ -15731,7 +15820,7 @@ async function incarcaProgresFisa(forta) {
   const extra = { greutati: greutatiFisa, obiectiv: client.obiectiv, antrenor: true };
   progresParti = { id: client.id, checkinuri, antrenamente: antrenamenteClient, desen: {
     greutate: () => htmlProgres(client.fisaInscriere, checkinuri, { ...extra, parte: 'greutate' }),
-    checkin: () => checkinuri.length ? htmlProgres(client.fisaInscriere, checkinuri, { ...extra, parte: 'checkin' }) : faraCheckin,
+    checkin: () => checkinuri.length ? htmlCheckinuriAntrenor(client, checkinuri) : faraCheckin,
     exercitii: () => htmlProgresExercitii(sursaEx) + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20)),
     nutritie: () => htmlNutritieAntrenor(),
     obiective: () => obiectiveUI ? `<div id="obiectiveContinut">${htmlObiective()}</div>` : '',
@@ -15741,6 +15830,90 @@ async function incarcaProgresFisa(forta) {
   htmlProgresExercitii(sursaEx);
   randeazaPlaciProgres(client);
   if (progresDeschis) deseneazaFoaieProgres();
+}
+
+// Check-in-urile în fișa antrenorului: sus tendința energiei și a somnului, apoi câte un card pe săptămână, cu scorurile
+// colorate și schimbarea față de săptămâna dinainte, greutatea, performanța și răspunsurile; la întrebări, „Răspunde”.
+// (Ecranul clientului își păstrează lista lui, din htmlProgres.)
+function htmlCheckinuriAntrenor(client, checkinuri) {
+  const lista = checkinuri.slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana));
+  // Scorurile pe 10 (formatul vechi era pe 5)
+  const scor = (c, id) => { const r = c.raspunsuri; const v = r ? r[id] : c[id]; return v || v === 0 ? Number(v) * (r ? 1 : 2) : null; };
+  const nivel = v => v >= 7 ? 'bun' : v >= 5 ? 'mediu' : 'slab';
+  const sageata = (v, inainte) => v === null || inainte === null || v === inainte ? '' : `<i class="checkin-dif ${v > inainte ? 'sus' : 'jos'}">${v > inainte ? '↑' : '↓'}${Math.abs(v - inainte)}</i>`;
+  const azi = new Date().setHours(0, 0, 0, 0);
+  const cand = c => { const d = Math.round((azi - new Date(c.updated_at || c.saptamana + 'T12:00:00').setHours(0, 0, 0, 0)) / 86400000);
+    return d <= 0 ? tr('azi', 'today') : d === 1 ? tr('ieri', 'yesterday') : tr(`acum ${d} zile`, `${d} days ago`); };
+
+  // Tendința: energia și somnul pe ultimele 8 săptămâni (cel puțin două check-in-uri cu scoruri)
+  const serie = lista.slice(0, 8).reverse().map(c => ({ e: scor(c, 'energie'), s: scor(c, 'somn') }));
+  const cuScor = serie.filter(x => x.e !== null || x.s !== null);
+  let sus = '';
+  if (cuScor.length >= 2) {
+    const L = 300, H = 60, n = serie.length;
+    const linie = k => serie.map((x, i) => x[k] === null ? null : `${(n === 1 ? L / 2 : i * L / (n - 1)).toFixed(1)},${(H - 4 - (x[k] - 1) / 9 * (H - 8)).toFixed(1)}`).filter(Boolean).join(' ');
+    const medie = k => { const v = serie.map(x => x[k]).filter(x => x !== null); return v.length ? (v.reduce((a, b) => a + b, 0) / v.length).toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 }) : '–'; };
+    sus = `<div class="lista-sticla checkin-tendinta">
+        <div class="checkin-tendinta-cifre">
+          <span><i class="energie"></i>${tr('Energie', 'Energy')} <b>${medie('e')}</b></span>
+          <span><i class="somn"></i>${tr('Somn', 'Sleep')} <b>${medie('s')}</b></span>
+          <small>${tr(`media, ${n} săpt.`, `average, ${n} wks`)}</small>
+        </div>
+        <svg viewBox="0 0 ${L} ${H}" preserveAspectRatio="none" aria-hidden="true">
+          <polyline class="energie" points="${linie('e')}"/><polyline class="somn" points="${linie('s')}"/>
+        </svg>
+      </div>`;
+  }
+
+  const butonPoze = c => {
+    const n = pozeCurente.lista.filter(p => p.s === c.saptamana).length;
+    return n ? `<button type="button" class="checkin-poze-btn" onclick="deschidePanouPoze('${c.saptamana}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>${n}</button>` : '';
+  };
+  const carduri = lista.map((c, i) => {
+    const prec = lista[i + 1] || null;
+    const r = c.raspunsuri || {};
+    const kg = c.greutate != null ? Number(c.greutate) : null;
+    const kgPrec = prec && prec.greutate != null ? Number(prec.greutate) : null;
+    const difKg = kg !== null && kgPrec !== null && Math.abs(kg - kgPrec) >= 0.05
+      ? `<i class="checkin-dif neutru">${kg > kgPrec ? '+' : '−'}${formatKg(Math.round(Math.abs(kg - kgPrec) * 10) / 10)}</i>` : '';
+    const metru = (id, eticheta) => {
+      const v = scor(c, id);
+      if (v === null) return '';
+      return `<div class="checkin-metru ${nivel(v)}"><span>${eticheta}</span><b>${v}<small>/10</small>${sageata(v, prec ? scor(prec, id) : null)}</b><i style="width:${v * 10}%"></i></div>`;
+    };
+    const perf = (Array.isArray(r.performanta) ? r.performanta : []).map(id => {
+      const o = OPTIUNI_PERFORMANTA.find(x => x.id === id);
+      return `<span class="checkin-eticheta-mica${id === 'progres' ? ' sus' : ''}">${escAttr(o ? (id === 'progres' ? tr('↑ Greutăți / repetări', '↑ Weights / reps') : textInscriere(o)) : id)}</span>`;
+    }).join('');
+    const raspuns = (id, cls) => {
+      const q = INTREBARI_CHECKIN.find(x => x.id === id);
+      return r[id] ? `<div class="checkin-raspuns ${cls}"><span>${escAttr(textInscriere(q))}</span><p>${escAttr(r[id])}</p>${id === 'intrebari'
+        ? `<button type="button" class="istoric-toate" onclick="raspundeCheckin('${escAttr(c.saptamana)}')">${tr('Răspunde', 'Reply')}</button>` : ''}</div>` : '';
+    };
+    // Formatul vechi: o notă liberă în loc de răspunsuri
+    const nota = !c.raspunsuri && c.nota ? `<div class="checkin-raspuns"><p>${escAttr(c.nota)}</p></div>` : '';
+    return `<div class="lista-sticla checkin-card">
+        <div class="checkin-card-sus">
+          <div><b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b><small>${cand(c)}</small></div>
+          <span class="checkin-rand-dreapta">${butonPoze(c)}${kg !== null ? `<b class="checkin-kg">${formatKg(kg)} kg${difKg}</b>` : ''}</span>
+        </div>
+        <div class="checkin-metri">${metru('energie', tr('Energie', 'Energy'))}${metru('somn', tr('Somn', 'Sleep'))}</div>
+        ${perf ? `<div class="checkin-etichete">${perf}</div>` : ''}
+        ${raspuns('victorie', 'victorie')}${raspuns('provocare', 'provocare')}${raspuns('mese', '')}${raspuns('intrebari', 'intrebare')}${nota}
+      </div>`;
+  }).join('');
+  const comparatie = htmlComparatiePoze(checkinuri);
+  return sus + carduri + (comparatie ? `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Poze de progres', 'Progress photos')}</div>${comparatie}` : '');
+}
+
+// „Răspunde” la întrebarea din check-in: mesaj cu întrebarea citată (în aplicație sau prin Distribuie)
+function raspundeCheckin(saptamana) {
+  const c = clientaFisaCurenta();
+  const ck = progresParti && progresParti.checkinuri.find(x => x.saptamana === saptamana);
+  const q = ck && ck.raspunsuri && ck.raspunsuri.intrebari;
+  if (!c || !q) return;
+  trimiteMesajClient(c, tr(`Legat de întrebarea ta din check-in („${q}”): `, `About your check-in question (“${q}”): `));
 }
 
 const TITLURI_PROGRES = {
