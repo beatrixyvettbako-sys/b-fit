@@ -11683,6 +11683,38 @@ function trageInJosCaSaInchizi(foaie, inchide, zona) {
   };
   foaie.addEventListener('pointerup', gata);
   foaie.addEventListener('pointercancel', gata);
+  if (zona) trageInJosDinConținut(foaie, inchide, zona);
+}
+
+// Ferestrele care derulează (plata nouă, editarea plății): pe telefon se trag în jos și din conținut, ca în aplicațiile native,
+// dar doar când sunt derulate sus și degetul coboară; altfel derulează normal. Prin touch, pentru că derularea ia
+// evenimentele pointer (pointercancel) înainte ca fereastra să le poată urma.
+function trageInJosDinConținut(foaie, inchide, zona) {
+  let y0 = null, trage = false;
+  foaie.addEventListener('touchstart', e => {
+    y0 = e.touches.length === 1 && !e.target.closest(zona) ? e.touches[0].clientY : null;
+    trage = false;
+  }, { passive: true });
+  foaie.addEventListener('touchmove', e => {
+    if (y0 === null) return;
+    const dy = e.touches[0].clientY - y0;
+    if (!trage) {
+      if (foaie.scrollTop > 0 || dy <= 0) { y0 = null; return; }
+      trage = true;
+      foaie.style.animation = 'none'; foaie.style.transition = 'none';
+    }
+    e.preventDefault();
+    foaie.style.transform = `translateY(${Math.max(0, dy)}px)`;
+  }, { passive: false });
+  const gata = e => {
+    if (!trage) { y0 = null; return; }
+    const dy = e.changedTouches[0].clientY - y0;
+    y0 = null; trage = false;
+    foaie.style.transition = '';
+    if (dy > 80) inchide(); else foaie.style.transform = '';
+  };
+  foaie.addEventListener('touchend', gata);
+  foaie.addEventListener('touchcancel', gata);
 }
 
 // Cheia săptămânii (W_AAAA_LL_ZZ, lunea) la `pas` săptămâni după săptămâna afișată

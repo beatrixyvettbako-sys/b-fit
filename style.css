@@ -5207,9 +5207,12 @@ html:not([data-theme="dark"]) .hold-header::after {
 .incasare-foaie {
   max-height: 88dvh;
   overflow-y: auto;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  gap: 8px;
+  scrollbar-width: none; /* fără bară: altfel apare mereu și iese peste colțurile rotunjite de sus */
+  gap: 8px; /* derularea cu degetul: în regula comună .fisa-scurta (mai jos) */
+}
+
+.incasare-foaie::-webkit-scrollbar {
+  display: none;
 }
 
 /* Se trage în jos de mâner și de titlu; restul ferestrei derulează */
@@ -5306,19 +5309,26 @@ html:not([data-theme="dark"]) .hold-header::after {
   justify-content: center;
 }
 
+/* Fără sumă: doar textul e estompat (butonul plutește peste câmpuri; transparent, s-ar vedea textul de sub el) */
 .incasare-foaie .incasare-salveaza.fara-suma {
-  opacity: 0.5;
+  color: var(--m-muted);
 }
 
-/* Bara butonului: lipită jos cât derulează câmpurile, netransparentă (nimic nu se vede prin ea), până la marginea ferestrei */
+/* Butonul rămâne lipit jos cât derulează câmpurile; fără bară în jurul lui (doar butonul plutește, cu blur, ca textul
+   de dedesubt să nu se vadă prin el) */
 .incasare-bara {
   position: sticky;
   bottom: calc(-24px - env(safe-area-inset-bottom, 0px));
   z-index: 2;
   margin: 0 -16px calc(-24px - env(safe-area-inset-bottom, 0px));
   padding: 10px 16px calc(14px + env(safe-area-inset-bottom, 0px));
-  background: var(--card-bg-solid);
-  border-top: 1px solid var(--m-divider);
+  pointer-events: none;
+}
+
+.incasare-bara .incasare-salveaza {
+  pointer-events: auto;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 
 /* Datele: două rânduri de pastile în același card; a doua etichetă puțin mai jos */
@@ -10507,6 +10517,12 @@ button.orar-cifra:disabled {
   box-shadow: var(--m-shadow, inset 0 1px 0 rgba(255, 255, 255, 0.08));
 }
 
+/* Ferestrele de plată: cardurile cu nuanța albăstruie a sloturilor de pe Orar (acolo vine din fundalul paginii,
+   aici din culoarea temei), nu gri peste gri */
+[data-theme="dark"] .incasare-foaie .form-group {
+  background: rgba(var(--accent-rgb), 0.1);
+}
+
 [data-theme="dark"] :is(.fisa-scurta-antet, .prog-row, .incasare-client) .slot-num {
   background: rgba(var(--accent-rgb), 0.22);
   color: var(--accent-purple-light);
@@ -12406,8 +12422,10 @@ html:has(#customModalBackdrop[style*="flex"]) body {
   touch-action: none;
 }
 
+/* Ce derulează cu degetul în ferestre: listele lor și fereastra de plată (nouă și editare), unde se trage doar de mâner și titlu */
 .fisa-scurta .notif-rapid-lista,
-.fisa-scurta .cautare-client-rezultate {
+.fisa-scurta .cautare-client-rezultate,
+.fisa-scurta.incasare-foaie {
   touch-action: pan-y;
   overscroll-behavior: contain;
 }
