@@ -3076,20 +3076,41 @@ function autoScrollLaOraCurenta(faraHighlight = false) {
 // Istoricul deschis urcă sub antet (pe Orar, sub bara zilelor), cu un spațiu mic între ele
 const SPATIU_SUB_ISTORIC = 6;
 
+// Secțiunea deschisă urcă sub antet (`deasupra` = înălțimea ocupată sus). Cu puțin conținut sub ea pagina nu se poate derula
+// atât: un spațiu gol la finalul tab-ului face loc, cât e deschisă (la închidere dispare)
+function urcaSubAntet(el, deasupra) {
+  setTimeout(() => {
+    const tinta = Math.max(0, Math.round(el.getBoundingClientRect().top + window.pageYOffset - deasupra - SPATIU_SUB_ISTORIC));
+    const tab = el.closest('.tab-content');
+    if (tab) {
+      let spatiu = tab.querySelector(':scope > .spatiu-sub-antet');
+      if (!spatiu) {
+        spatiu = document.createElement('div');
+        spatiu.className = 'spatiu-sub-antet';
+        tab.append(spatiu);
+      }
+      // Înălțimea finală a paginii (secțiunea poate fi încă în animația de deschidere)
+      const inaltime = document.documentElement.scrollHeight - spatiu.offsetHeight + (el.scrollHeight - el.offsetHeight);
+      spatiu.style.height = Math.max(0, tinta + window.innerHeight - inaltime) + 'px';
+      el.addEventListener('toggle', () => { if (!el.open) spatiu.style.height = '0'; }, { once: true });
+    }
+    window.scrollTo({ top: tinta, behavior: 'smooth' });
+  }, 80);
+}
+
+// Secțiunile fișei (Plan, Progres, Fișa de obiective, Prezențe și plăți, Cont și contact) urcă sub antet la deschidere
+document.addEventListener('toggle', e => {
+  const det = e.target;
+  if (det.open && det.classList && det.classList.contains('fisa-sectiune')) urcaSubAntet(det, document.getElementById('mainAppHeader')?.offsetHeight || 50);
+}, true);
+
 function peComutareIstoricOrar(detailsEl) {
   if (detailsEl && detailsEl.open) {
     filtreazaIstoricOrarInstant(); // cât a fost închis nu avea lățime: eticheta lunii se potrivește abia acum
-    setTimeout(() => {
-      let headerEl = document.getElementById('mainAppHeader');
-      let daySelector = document.getElementById('dayButtonsContainer');
-      // Bara zilelor lipită stă cu 1px peste header (top: calc(var(--header-height) - 1px))
-      let hOffset = (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45);
-      let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: Math.max(0, Math.round(elTop - hOffset - SPATIU_SUB_ISTORIC)),
-        behavior: 'smooth'
-      });
-    }, 80);
+    let headerEl = document.getElementById('mainAppHeader');
+    let daySelector = document.getElementById('dayButtonsContainer');
+    // Bara zilelor lipită stă cu 1px peste header (top: calc(var(--header-height) - 1px))
+    urcaSubAntet(detailsEl, (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45));
   }
   // La închidere pagina rămâne unde e (fără salt la ora curentă, care te scotea din locul în care erai)
 }
@@ -3120,20 +3141,6 @@ document.addEventListener('click', (ev) => {
     det.open = true;
   }
 });
-
-function peComutareIstoricFisa(detailsEl) {
-  if (detailsEl && detailsEl.open) {
-    setTimeout(() => {
-      let headerEl = document.getElementById('mainAppHeader');
-      let hOffset = headerEl ? headerEl.offsetHeight : 50;
-      let elTop = detailsEl.getBoundingClientRect().top + window.pageYOffset;
-      window.scrollTo({
-        top: Math.max(0, Math.round(elTop - hOffset - SPATIU_SUB_ISTORIC)),
-        behavior: 'smooth'
-      });
-    }, 80);
-  }
-}
 
 // CONTROL HEADER STÂNGA / DREAPTA PE PLANUL DE ANTRENAMENT (BACK / CLOSE)
 function gestioneazaClickStangaHeader(event) {
@@ -13133,8 +13140,9 @@ function filtreazaIstoricOrarInstant() {
   const alClientului = x => !cauta || (x.p.clienta || '').toLowerCase().includes(cauta);
   const filtrate = toate.filter(x => alClientului(x) && (istoricToate || inLuna(x, istoricLuna.an, istoricLuna.luna))).sort((a, b) => b.t - a.t);
 
-  document.getElementById('istoricLunaText').textContent = istoricToate ? tr('Tot istoricul', 'All time') : numeLuna(istoricLuna.an, istoricLuna.luna);
-  document.getElementById('btnIstoricToate').classList.toggle('activ', istoricToate);
+  document.getElementById('istoricLunaText').textContent = istoricToate ? tr('Toate lunile', 'All months') : numeLuna(istoricLuna.an, istoricLuna.luna);
+  // Cu toate lunile alese, eticheta o spune deja: butonul apare doar cu o lună aleasă, ca să revii la toate
+  document.getElementById('btnIstoricToate').hidden = istoricToate;
   document.getElementById('btnIstoricToate').textContent = tr('Toate lunile', 'All months');
   camp.placeholder = tr('Caută client', 'Find client');
 
@@ -14391,7 +14399,8 @@ function ritmAbonament(c) {
   const start = startDat ? new Date(startDat).setHours(0, 0, 0, 0) : sfarsit - (zileValabilitateAbonament(c.tipAbonament) - 1) * ZI_MS;
   const azi = new Date().setHours(0, 0, 0, 0);
   if (azi < start || azi > sfarsit) return null;
-  const saptamani = Math.max(1, Math.ceil((sfarsit - start + ZI_MS) / (7 * ZI_MS)));
+  // Săptămâni întregi (30 de zile = 4, nu 5): zilele în plus intră în ultima săptămână
+  const saptamani = Math.max(1, Math.floor((sfarsit - start + ZI_MS) / (7 * ZI_MS)));
   const curenta = Math.min(saptamani - 1, Math.floor((azi - start) / (7 * ZI_MS)));
   const peSapt = Array(saptamani).fill(0);
   prezenteleClientului(c).forEach(p => {
@@ -14521,11 +14530,12 @@ function randeazaProgramariFisa(client) {
     </div>`;
 }
 
-// Deschide o secțiune a fișei (Progres, Istoric, Fișa de obiective) și o aduce în ecran
+// Deschide o secțiune a fișei (Istoric, Fișa de obiective) și o aduce sub antet
 function deschideSectiuneFisa(id) {
   const det = document.getElementById(id);
-  det.open = true;
-  setTimeout(() => det.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  // Închisă: deschiderea o urcă sub antet (listenerul de toggle); deja deschisă: o urcăm acum
+  if (det.open) urcaSubAntet(det, document.getElementById('mainAppHeader')?.offsetHeight || 50);
+  else det.open = true;
 }
 
 // „Încasează” din fișă: plata nouă (din Încasări), deja completată cu clientul și abonamentul lui, ca „De reînnoit”
@@ -16085,8 +16095,8 @@ function filtreazaIstoricFisaInstant() {
   if (!istoricDiv || !client) return;
   const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
   const numeLuna = new Date(istoricFisaLuna.an, istoricFisaLuna.luna, 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' });
-  document.getElementById('istoricFisaLunaText').textContent = istoricFisaToate ? tr('Tot istoricul', 'All time') : numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1);
-  document.getElementById('btnIstoricFisaToate').classList.toggle('activ', istoricFisaToate);
+  document.getElementById('istoricFisaLunaText').textContent = istoricFisaToate ? tr('Toate lunile', 'All months') : numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1);
+  document.getElementById('btnIstoricFisaToate').hidden = istoricFisaToate; // ca în istoricul din Orar
   const inLuna = t => { const d = new Date(t); return d.getFullYear() === istoricFisaLuna.an && d.getMonth() === istoricFisaLuna.luna; };
   const randuri = prezenteleClientului(client).map(p => ({ t: parseazaDataOraRo(p.data, p.ora), p }))
     .concat((DB.incasari || []).filter(i => i && randulClientei(i, client, i.clienta)).map(i => ({ t: parseazaDataOraRo(i.data, null), i })))
@@ -16111,7 +16121,7 @@ function filtreazaIstoricFisaInstant() {
       <div class="lista-sticla">${z.randuri.map(({ p, i }) => {
         // Felul rândului îl spune iconița (bifă = prezență, card = plată); titlul e antrenamentul / abonamentul, nu cuvântul repetat
         if (p) return `<div class="prog-row fisa-istoric-rand"><span class="fisa-istoric-icon prezenta">${ICON_ISTORIC_PREZENTA}</span>
-          <div class="prog-info"><span class="prog-name">${escAttr(traduceValoare(p.antrenament) || tr('Antrenament', 'Workout'))}</span><span class="prog-sub">${escAttr(p.ora || '–')}</span></div></div>`;
+          <div class="prog-info"><span class="prog-name">${escAttr((p.antrenament || '').trim().replace(/^-$/, '') ? traduceValoare(p.antrenament) : tr('Antrenament', 'Workout'))}</span><span class="prog-sub">${escAttr(p.ora || '–')}</span></div></div>`;
         const tip = i.tip && i.tip.trim() !== '-' ? numeAbonamentClienta(i.tip) : '';
         const metoda = i.metoda && i.metoda.trim() !== '-' ? i.metoda : '';
         // encodeURIComponent lasă apostroful necodificat, iar el ar închide argumentul din onclick
@@ -16540,10 +16550,7 @@ let incReinnoireLista = [];
 function peComutareIstoricIncasari(detailsEl) {
   if (!detailsEl.open) return;
   filtreazaIstoricIncasariInstant();
-  setTimeout(() => {
-    const hOffset = document.getElementById('mainAppHeader')?.offsetHeight || 50;
-    window.scrollTo({ top: Math.max(0, Math.round(detailsEl.getBoundingClientRect().top + window.pageYOffset - hOffset - SPATIU_SUB_ISTORIC)), behavior: 'smooth' });
-  }, 80);
+  urcaSubAntet(detailsEl, document.getElementById('mainAppHeader')?.offsetHeight || 50);
 }
 
 function schimbaLunaIncasari(pas) {
