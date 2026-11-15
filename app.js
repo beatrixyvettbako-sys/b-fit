@@ -3089,13 +3089,11 @@ function urcaSubAntet(el, deasupra) {
         spatiu.className = 'spatiu-sub-antet';
         tab.append(spatiu);
       }
-      // Înălțimea finală a paginii (secțiunea poate fi încă în animația de deschidere)
-      const inaltime = document.documentElement.scrollHeight - spatiu.offsetHeight + (el.scrollHeight - el.offsetHeight);
-      spatiu.style.height = Math.max(0, tinta + window.innerHeight - inaltime) + 'px';
+      spatiu.style.height = Math.max(0, tinta + window.innerHeight - (document.documentElement.scrollHeight - spatiu.offsetHeight)) + 'px';
       el.addEventListener('toggle', () => { if (!el.open) spatiu.style.height = '0'; }, { once: true });
     }
     window.scrollTo({ top: tinta, behavior: 'smooth' });
-  }, 80);
+  }, 300); // după animația de deschidere (280 ms): cu pagina încă scurtă, derularea s-ar opri mai jos
 }
 
 // Secțiunile fișei (Plan, Progres, Fișa de obiective, Prezențe și plăți, Cont și contact) urcă sub antet la deschidere
@@ -5271,7 +5269,7 @@ function randeazaNutritieZi() {
 
 // ---- Rapoarte (Nutriție › 📊 Rapoarte): ultimele 7 sau 30 de zile, cu export CSV ----
 // Rapoartele pe 7 / 30 de zile: clientul (Nutriție › Rapoarte) sau antrenorul (Fișă › Progres › Nutriție); unde = 'client' | 'antrenor'
-let raport = { zile: 7, jurnal: null, apa: null, setari: null, adaptiv: null, nume: '', unde: 'client' };
+let raport = { zile: 7, jurnal: null, apa: null, setari: null, adaptiv: null, nume: '' };
 
 async function deschideRapoarte() {
   antrPers.ecran = 'nutritie-rapoarte';
@@ -5285,7 +5283,7 @@ async function deschideRapoarte() {
   ]);
   if (!nutritie.adaptiv) nutritie.adaptiv = await incarcaDateAdaptive(dateClienta.fisa.id);
   Object.assign(raport, { jurnal: resJ.error ? null : (resJ.data || []), apa: resA.error ? null : (resA.data || []),
-    setari: nutritie.setari, adaptiv: nutritie.adaptiv, nume: dateClienta.fisa.nume || '', unde: 'client', zileAntr: nutritie.zileAntr });
+    setari: nutritie.setari, adaptiv: nutritie.adaptiv, nume: dateClienta.fisa.nume || '', zileAntr: nutritie.zileAntr });
   if (antrPers.ecran === 'nutritie-rapoarte') randeazaRapoarte();
 }
 
@@ -5301,7 +5299,7 @@ function zileRaport(n) {
 }
 
 function randeazaRapoarte() {
-  const el = document.getElementById(raport.unde === 'antrenor' ? 'raportNutritieFisa' : 'clientaContinut');
+  const el = document.getElementById('clientaContinut');
   if (el) el.innerHTML = htmlRapoarte();
 }
 
@@ -5357,8 +5355,7 @@ function htmlRapoarte() {
     <div class="nutritie-adauga-jos">
       <button type="button" class="btn btn-clear" id="btnJurnalPdf" onclick="exportaJurnalPdf()">⬇ ${tr('Descarcă jurnalul', 'Download the log')}</button>
     </div>
-    <div class="nutritie-sursa">${raport.unde === 'antrenor' ? tr('Mediile folosesc doar zilele încheiate în care clientul a notat ceva.', 'Averages only use finished days the client logged something.')
-      : tr('Mediile folosesc doar zilele încheiate în care ai notat ceva.', 'Averages only use finished days with something logged.')}</div>`;
+    <div class="nutritie-sursa">${tr('Mediile folosesc doar zilele încheiate în care ai notat ceva.', 'Averages only use finished days with something logged.')}</div>`;
 }
 
 // Jurnalul alimentar pe perioada raportului (7 / 30 de zile), ca PDF: fiecare zi cu totalurile ei și alimentele pe mese
@@ -5646,7 +5643,8 @@ function htmlAdaptiv(d, setari, inaltime, laAntrenor) {
   const fct = laAntrenor ? 'seteazaObiectivAntrenor' : 'seteazaObiectivNutritie';
   const ob = s.obiectiv || 'mentinere';
   const diferenta = propusa && s.kcal ? propusa.kcal - Number(s.kcal) : null;
-  return `<div class="card nutritie-adaptiv" id="${laAntrenor ? 'adaptivAntrenor' : 'nutritieAdaptiv'}">
+  // La antrenor stă în cardul țintelor (fără cardul lui)
+  return `<div class="${laAntrenor ? '' : 'card '}nutritie-adaptiv" id="${laAntrenor ? 'adaptivAntrenor' : 'nutritieAdaptiv'}">
     <b>${tr('Greutate și consum', 'Weight and expenditure')}</b>
     ${rez.tendinta ? `<div class="adaptiv-tendinta"><b>${formatKg(Math.round(rez.tendinta * 10) / 10)} kg</b> ${tr('tendința', 'trend')}${rez.ritmSapt !== null ? ` · ${textRitm(rez.ritmSapt)}` : ''}</div>` : ''}
     ${laAntrenor ? '' : `<div class="adaptiv-cantar">
@@ -5665,7 +5663,7 @@ function htmlAdaptiv(d, setari, inaltime, laAntrenor) {
         <div><div class="acasa-eticheta">${tr('Ținta propusă', 'Suggested target')}</div>
         <b>${propusa.kcal} kcal</b> <span class="acasa-antrenament-detalii">${s.kcal ? (Math.abs(diferenta) < 50 ? tr('· ținta de acum e potrivită', '· your current target fits') : `· ${tr('acum', 'now')} ${s.kcal} (${diferenta > 0 ? '+' : ''}${diferenta})`) : ''}</span>
         <div class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${propusa.proteine} g · ${tr('Carbohidrați', 'Carbohydrates')} ${propusa.carbo} g · ${tr('Grăsimi', 'Fat')} ${propusa.grasimi} g</div></div>
-        ${poateAplica && (diferenta === null || Math.abs(diferenta) >= 50) ? `<button type="button" class="btn" onclick="${laAntrenor ? 'aplicaPropunereAntrenor' : 'aplicaPropunereNutritie'}(this)">${tr('Aplică', 'Apply')}</button>` : ''}
+        ${poateAplica && (diferenta === null || Math.abs(diferenta) >= 50) ? `<button type="button" class="${laAntrenor ? 'istoric-toate' : 'btn'}" onclick="${laAntrenor ? 'aplicaPropunereAntrenor' : 'aplicaPropunereNutritie'}(this)">${tr('Aplică', 'Apply')}</button>` : ''}
       </div>
       ${!poateAplica ? `<div class="acasa-antrenament-detalii">${tr('Țintele tale le setează antrenorul; vede și el propunerea.', 'Your trainer sets your targets and sees this suggestion too.')}</div>` : ''}`
     : `<div class="acasa-antrenament-detalii adaptiv-motiv">${escAttr(rez.motiv)}</div>`}
@@ -6417,28 +6415,197 @@ function inapoiNutritie() {
 // ---- La antrenor (Fișă › Progres): țintele clientului și ultimele 7 zile din jurnal ----
 let nutritieFisa = null; // { client, setari, zile: [{ data, totaluri, randuri }] }
 
+// Nutriția în fișa antrenorului: rezumatul perioadei (calorii, macronutrienți și planul față de țintă); barele zilelor
+// aleg ziua de dedesubt, cu mesele ei. Apoi țintele pe un rând (✎ deschide câmpurile, obiectivul și ținta propusă) și greutatea.
+// Aceleași date și salvări ca înainte; ecranul clientului își păstrează rapoartele lui (htmlRapoarte).
+let nutritieEditorDeschis = false;
+let nutritieZiAleasa = null; // ziua deschisă sub grafic (iso); null = ultima zi notată
+
 function htmlNutritieAntrenor() {
   const n = nutritieFisa;
   if (!n) return '';
   const s = n.setari || {};
   const ascuns = s.vizibil_antrenor === false;
-  const zile = n.zile.map(z => `<details class="card antr-pers-antrenor"><summary><span class="acasa-eticheta">${escAttr(etichetaDataAntrPers(z.data))}</span>
-      <b>${Math.round(z.totaluri.kcal)}${s.kcal ? ` / ${tinteZi(s, z.data, raport.zileAntr).kcal}` : ''} kcal</b>${z.respectare && z.respectare.total ? ` <span class="plan-alim-zi${z.respectare.tinute === z.respectare.total ? ' is-tot' : ''}">${tr('plan', 'plan')} ${z.respectare.tinute}/${z.respectare.total}</span>` : ''} <span class="acasa-antrenament-detalii">${tr('Proteine', 'Protein')} ${Math.round(z.totaluri.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ${Math.round(z.totaluri.carbo)} g · ${tr('Grăsimi', 'Fat')} ${Math.round(z.totaluri.grasimi)} g</span></summary>
-      <ul>${z.randuri.map(x => `<li>${escAttr((MESE_NUTRITIE.find(m => m[0] === x.masa) || [, ''])[1])}: ${escAttr(x.nume)} · ${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal</li>`).join('')}</ul>
-    </details>`).join('');
-  return `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Nutriție', 'Nutrition')}</div>
-    <div class="antr-pers-campuri nutritie-tinte">
-      ${[['kcal', tr('Calorii (kcal)', 'Calories (kcal)')], ['proteine', tr('Proteine (g)', 'Protein (g)')], ['carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)')], ['grasimi', tr('Grăsimi (g)', 'Fat (g)')]].map(([k, et]) =>
-        `<label>${et}<input type="number" inputmode="numeric" id="tintaNutA_${k}" class="plan-ex-input" value="${s[k] ?? ''}"></label>`).join('')}
-      ${htmlCampCarboPauza('tintaNutA_', s, false)}
-    </div>
-    <button type="button" class="btn btn-clear" style="margin:8px 0; width:100%;" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele zilnice', 'Save daily targets')}</button>
-    ${htmlAdaptiv(n.adaptiv, s, (n.client.fisaInscriere || {}).inaltime, true)}
-    ${ascuns ? `<div class="progres-gol">${tr('Clientul a ascuns jurnalul alimentar.', 'The client has hidden their food log.')}</div>`
-      : `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Rapoarte', 'Reports')}</div>
-        <div id="raportNutritieFisa">${htmlRapoarte()}</div>
-        <div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Ultimele 7 zile', 'Last 7 days')}</div>
-        ${htmlRespectarePlan(n)}${zile || `<div class="progres-gol">${tr('Nimic notat în ultimele 7 zile.', 'Nothing logged in the last 7 days.')}</div>`}`}`;
+  const nr = v => Math.round(v).toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO');
+  const tinte = [['kcal', tr('Calorii', 'Calories'), 'kcal'], ['proteine', tr('Proteine', 'Protein'), 'g'], ['carbo', tr('Carbohidrați', 'Carbs'), 'g'], ['grasimi', tr('Grăsimi', 'Fat'), 'g']];
+  const ob = OBIECTIVE_CALCULATOR.find(o => o[0] === (s.obiectiv || 'mentinere'));
+  // Țintele, într-un singur card: titlul și obiectivul, cele 4 valori; „Modifică” deschide în același card câmpurile,
+  //   obiectivul și ținta propusă (în locul valorilor), ca să fie clar ce ține de ce
+  const pauza = s.kcal && s.carbo && s.carbo_pauza !== null && s.carbo_pauza !== undefined && Number(s.carbo_pauza) < Number(s.carbo)
+    ? `<div class="nutritie-tinte-pauza">${tr(`În zi de pauză: ${nr(s.kcal - (s.carbo - s.carbo_pauza) * 4)} kcal · C ${s.carbo_pauza} g`, `On rest days: ${nr(s.kcal - (s.carbo - s.carbo_pauza) * 4)} kcal · C ${s.carbo_pauza} g`)}</div>` : '';
+  const randTinte = `<div class="lista-sticla nutritie-tinte-card${nutritieEditorDeschis ? ' editare' : ''}">
+      <div class="nutritie-tinte-sus">
+        <span><b>${tr('Ținte zilnice', 'Daily targets')}</b><small>${tr('Obiectiv', 'Goal')}: ${tr(ob[3], ob[4]).toLowerCase()}</small></span>
+        <button type="button" class="istoric-toate" onclick="comutaEditorNutritie(this)">${nutritieEditorDeschis ? tr('Închide', 'Close') : tr('Modifică', 'Edit')}</button>
+      </div>
+      <div class="nutritie-tinte-valori">${tinte.map(([k, et, u]) => `<span><b>${s[k] ? nr(s[k]) : '–'}</b><small>${k === 'kcal' ? 'kcal' : `${et.toLowerCase()} (${u})`}</small></span>`).join('')}</div>
+      ${pauza}
+      <div class="nutritie-editor">
+        <div class="antr-pers-campuri nutritie-tinte">
+          ${tinte.map(([k, et, u]) => `<label>${et} (${u})<input type="number" inputmode="numeric" id="tintaNutA_${k}" class="plan-ex-input" value="${s[k] ?? ''}"></label>`).join('')}
+          ${htmlCampCarboPauza('tintaNutA_', s, false)}
+        </div>
+        <button type="button" class="istoric-toate nutritie-tinte-salveaza" onclick="salveazaTinteNutritieAntrenor()">${tr('Salvează țintele', 'Save targets')}</button>
+        ${htmlAdaptiv(n.adaptiv, s, (n.client.fisaInscriere || {}).inaltime, true)}
+      </div>
+    </div>`;
+  if (ascuns) return randTinte + `<div class="progres-gol">${tr('Clientul a ascuns jurnalul alimentar.', 'The client has hidden their food log.')}</div>`;
+  if (raport.jurnal === null) return randTinte + `<div class="progres-gol">${tr('Jurnalul nu e disponibil acum. Verifică internetul.', 'The log is not available right now. Check your internet.')}</div>`;
+
+  // Perioada (7 / 30 de zile): mediile folosesc doar zilele încheiate și notate (azi e încă în curs)
+  const zile = zileRaport(raport.zile);
+  zile.forEach(z => { z.tinta = tinteZi(s, z.data, raport.zileAntr); });
+  const complete = zile.filter(z => z.notat && !z.azi);
+  const medie = k => complete.length ? complete.reduce((t, z) => t + z.t[k], 0) / complete.length : 0;
+  const tintaKcal = Number(s.kcal) || 0;
+  const stare = z => !z.notat ? 'gol' : !tintaKcal ? '' : z.t.kcal > z.tinta.kcal * 1.1 ? 'peste' : z.t.kcal < z.tinta.kcal * 0.9 ? 'sub' : 'in';
+  const inTinta = complete.filter(z => stare(z) === 'in').length;
+  // Ziua de sub grafic: cea aleasă (dacă e în perioadă), altfel ultima notată, altfel azi
+  const notate = zile.filter(z => z.notat);
+  const ziua = zile.find(z => z.data === nutritieZiAleasa) || notate[notate.length - 1] || zile[zile.length - 1];
+  // Bare pe zile, colorate față de ținta fiecărei zile, cu linia țintei; apăsarea unei coloane alege ziua
+  const max = Math.max(tintaKcal * 1.25, ...zile.map(z => z.t.kcal), 1000), W = 300, H = 110, lat = W / zile.length; // H = înălțimea din .grafic-raport
+  const yT = tintaKcal ? (H - 4 - tintaKcal / max * (H - 8)).toFixed(1) : null;
+  const bare = zile.map((z, i) => { const h = z.notat ? Math.max(3, z.t.kcal / max * (H - 8)) : 3;
+    return (z === ziua ? `<rect class="rsel" x="${(i * lat).toFixed(1)}" y="0" width="${lat.toFixed(1)}" height="${H}" rx="4"/>` : '')
+      + `<rect class="rb ${stare(z)}${z.azi ? ' azi' : ''}" x="${(i * lat + lat * 0.18).toFixed(1)}" y="${(H - 4 - h).toFixed(1)}" width="${(lat * 0.64).toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(4, lat * 0.2).toFixed(1)}"/>`; }).join('')
+    + (yT ? `<line class="rl" x1="0" x2="${W}" y1="${yT}" y2="${yT}"/>` : '')
+    + zile.map((z, i) => `<rect class="rz" x="${(i * lat).toFixed(1)}" y="0" width="${lat.toFixed(1)}" height="${H}" onclick="alegeZiNutritie('${z.data}')"/>`).join('');
+  const zileScurt = raport.zile === 7 ? `<div class="nutritie-zile-etichete">${zile.map(z => `<span${z === ziua ? ' class="ales"' : ''}>${escAttr(etichetaDataAntrPers(z.data).slice(0, 2))}</span>`).join('')}</div>` : '';
+  const macro = ([k, et]) => {
+    const v = medie(k), t = Number(s[k]) || 0;
+    const cls = !t ? '' : Math.abs(v - t) <= t * 0.1 ? 'in' : v > t ? 'peste' : 'sub';
+    return `<div class="nutritie-macro-rand ${cls}"><span>${et}</span><i><em style="width:${t ? Math.min(100, Math.round(v / t * 100)) : 0}%"></em></i><b>${complete.length ? nr(v) : '–'}${t ? `<small> / ${t} g</small>` : '<small> g</small>'}</b></div>`;
+  };
+  const kcalMedie = medie('kcal');
+  const perioade = `<div class="comunitate-taburi comunitate-perioade">${[7, 30].map(z => `<button type="button" class="theme-option-btn${raport.zile === z ? ' active' : ''}" onclick="schimbaPerioadaNutritie(${z})">${z === 7 ? tr('Ultimele 7 zile', 'Last 7 days') : tr('Ultimele 30 de zile', 'Last 30 days')}</button>`).join('')}</div>`;
+  const rezumat = `<div class="lista-sticla nutritie-rezumat">
+      <div class="nutritie-rezumat-sus">
+        ${htmlInelProgres(tintaKcal ? kcalMedie / tintaKcal * 100 : 0, tintaKcal && complete.length ? `${Math.round(kcalMedie / tintaKcal * 100)}%` : '–', tintaKcal && complete.length && Math.abs(kcalMedie - tintaKcal) <= tintaKcal * 0.1)}
+        <div><b>${complete.length ? `${nr(kcalMedie)}${tintaKcal ? `<small> / ${nr(tintaKcal)}</small>` : ''} kcal` : tr('Nimic notat', 'Nothing logged')}</b>
+          <small>${tr('pe zi, în medie', 'a day, on average')}</small>
+          <small>${tr(`${notate.length} din ${zile.length} zile notate`, `${notate.length} of ${zile.length} days logged`)}${tintaKcal && complete.length ? tr(` · ${inTinta} în țintă`, ` · ${inTinta} on target`) : ''}</small></div>
+        <button type="button" class="drawer-nav-btn nutritie-descarca" id="btnJurnalPdf" onclick="exportaJurnalPdf()" aria-label="${tr('Descarcă jurnalul perioadei (PDF)', 'Download the period’s log (PDF)')}" title="${tr('Descarcă jurnalul (PDF)', 'Download the log (PDF)')}"><svg viewBox="0 0 24 24"><path d="M12 4v11"/><path d="M7 10l5 5 5-5"/><path d="M5 20h14"/></svg></button>
+      </div>
+      <svg class="grafic-raport nutritie-bare" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="group" aria-label="${tr('Alege ziua', 'Pick the day')}">${bare}</svg>${zileScurt}
+      ${tinte.slice(1).map(macro).join('')}
+      ${htmlRespectarePlan(n, zile[0].data)}
+    </div>`;
+  // Ziua aleasă: calorii și macronutrienți față de ținta zilei, apa, planul, apoi mesele cu alimentele
+  const zi = n.zile.find(x => x.data === ziua.data);
+  const st = stare(ziua);
+  const pas = d => { const x = notate[notate.indexOf(ziua) + d]; return x ? `alegeZiNutritie('${x.data}')` : ''; };
+  const sageata = (d, cale, et, en) => `<button type="button" class="drawer-nav-btn" onclick="${pas(d)}"${pas(d) ? '' : ' disabled'} aria-label="${tr(et, en)}"><svg viewBox="0 0 24 24"><path d="${cale}"/></svg></button>`;
+  const mese = zi ? MESE_NUTRITIE.map(([cod, ro, en]) => {
+    const r = zi.randuri.filter(x => x.masa === cod);
+    if (!r.length) return '';
+    return `<div class="nutritie-masa"><div class="nutritie-masa-sus"><b>${tr(ro, en)}</b><span>${nr(r.reduce((t, x) => t + Number(x.kcal || 0), 0))} kcal</span></div>
+      ${r.map(x => `<div class="nutritie-aliment"><span>${escAttr(x.nume)}</span><small>${formatKg(Number(x.cantitate_g))} g · ${Math.round(x.kcal)} kcal</small></div>`).join('')}</div>`;
+  }).join('') : '';
+  const ziCard = `<div class="lista-sticla nutritie-ziua">
+      <div class="istoric-luna">${sageata(-1, 'M15 6l-6 6 6 6', 'Ziua notată anterioară', 'Previous logged day')}<b>${ziua.azi ? tr('Azi', 'Today') : escAttr(etichetaDataAntrPers(ziua.data))}</b>${sageata(1, 'M9 6l6 6-6 6', 'Ziua notată următoare', 'Next logged day')}</div>
+      <div class="nutritie-ziua-cifre">
+        <span class="${st}"><b>${ziua.notat ? nr(ziua.t.kcal) : '–'}</b>${tintaKcal ? `<small>/ ${nr(ziua.tinta.kcal)} kcal</small>` : '<small>kcal</small>'}</span>
+        ${ziua.notat ? `<span><b>P ${nr(ziua.t.proteine)} · C ${nr(ziua.t.carbo)} · G ${nr(ziua.t.grasimi)}</b><small>g</small></span>` : ''}
+        <span><b>${ziua.apa}</b><small>${tr('pahare de apă', 'glasses of water')}</small></span>
+        ${zi && zi.respectare && zi.respectare.total ? `<span><b>${zi.respectare.tinute}/${zi.respectare.total}</b><small>${tr('mese din plan', 'plan meals')}</small></span>` : ''}
+      </div>
+      ${mese || `<div class="progres-gol">${tr('Nimic notat în ziua asta.', 'Nothing logged this day.')}</div>`}
+    </div>`;
+  return perioade + htmlConcluzieNutritie(n, { zile, complete, medie, tintaKcal, kcalMedie }) + rezumat + ziCard + randTinte;
+}
+
+// Concluzia perioadei, deasupra cifrelor: leagă greutatea de obiectiv și de calorii, ca antrenorul să știe ce are de făcut
+//   (greutatea merge spre obiectiv → nimic; nu merge, deși mănâncă în țintă → ținta e greșită: Aplică propunerea;
+//   nu merge și nu mănâncă în țintă → Mesaj). Cu prea puține zile notate concluziile nu se pot trage: îi ceri să noteze.
+function htmlConcluzieNutritie(n, p) {
+  const s = n.setari || {};
+  const rez = calculeazaAdaptiv(n.adaptiv);
+  const propusa = tintaPropusa(rez, s, (n.client.fisaInscriere || {}).inaltime);
+  const ob = OBIECTIVE_CALCULATOR.find(o => o[0] === (s.obiectiv || 'mentinere'));
+  const obiectiv = tr(ob[3], ob[4]).toLowerCase();
+  const trecute = p.zile.filter(z => !z.azi).length;
+  const abatere = p.tintaKcal && p.complete.length ? p.kcalMedie / p.tintaKcal - 1 : 0;
+  const inTinta = Math.abs(abatere) <= 0.1;
+  const ritm = rez && rez.ritmSapt;
+  const spreObiectiv = ritm === null || ritm === undefined ? null : ob[1] < 1 ? ritm <= -0.1 : ob[1] > 1 ? ritm >= 0.05 : Math.abs(ritm) < 0.25;
+  const difPropusa = propusa && s.kcal ? propusa.kcal - Number(s.kcal) : null;
+  const aplica = propusa && (difPropusa === null || Math.abs(difPropusa) >= 50)
+    ? `<button type="button" class="istoric-toate" onclick="aplicaPropunereAntrenor(this)">${tr(`Aplică ${propusa.kcal} kcal`, `Apply ${propusa.kcal} kcal`)}</button>` : '';
+  const mesaj = tip => `<button type="button" class="istoric-toate" onclick="trimiteMesajNutritie('${tip}')">${tr('Mesaj', 'Message')}</button>`;
+  const procent = `${Math.round(Math.abs(abatere) * 100)}%`;
+  let cul = 'verde', text, actiune = '';
+  if (!p.tintaKcal) {
+    cul = 'portocaliu'; text = tr('Nu are ținte zilnice: setează-le ca să vezi dacă mănâncă potrivit obiectivului.', 'No daily targets: set them to see if they eat right for the goal.');
+    actiune = aplica || `<button type="button" class="istoric-toate" onclick="nutritieEditorDeschis || comutaEditorNutritie(document.querySelector('.nutritie-tinte-sus .istoric-toate'))">${tr('Setează țintele', 'Set targets')}</button>`;
+  } else if (p.complete.length < Math.max(2, trecute / 2)) {
+    cul = 'portocaliu'; text = tr(`Doar ${p.complete.length} din ${trecute} zile notate: prea puțin ca să tragi concluzii.`, `Only ${p.complete.length} of ${trecute} days logged: too little to draw conclusions.`);
+    actiune = mesaj('noteaza');
+  } else if (spreObiectiv) {
+    text = tr(`Merge bine: greutatea ${textRitm(ritm)}, cum vrea obiectivul (${obiectiv}).`, `On track: weight ${textRitm(ritm)}, as the goal wants (${obiectiv}).`);
+    // Rezultatul vine, deși nu mănâncă în țintă: ținta nu reflectă ce mănâncă de fapt (propunerea din consum o corectează)
+    if (!inTinta) {
+      text += abatere > 0 ? tr(` Mănâncă cu ${procent} peste țintă, deci ținta poate crește.`, ` Eats ${procent} over target, so the target can go up.`)
+        : tr(` Mănâncă cu ${procent} sub țintă: verifică dacă notează tot.`, ` Eats ${procent} under target: check they log everything.`);
+      cul = 'accent';
+      actiune = abatere > 0 ? aplica : mesaj('noteaza');
+    }
+  } else if (spreObiectiv === false && inTinta) {
+    cul = 'rosu'; text = tr(`Mănâncă în țintă, dar greutatea e ${textRitm(ritm)}: ținta nu se potrivește obiectivului (${obiectiv}).`, `Eats on target, but weight is ${textRitm(ritm)}: the target doesn’t fit the goal (${obiectiv}).`);
+    actiune = aplica || `<button type="button" class="istoric-toate" onclick="nutritieEditorDeschis || comutaEditorNutritie(document.querySelector('.nutritie-tinte-sus .istoric-toate'))">${tr('Ajustează ținta', 'Adjust target')}</button>`;
+  } else if (!inTinta) {
+    cul = spreObiectiv === false ? 'rosu' : 'portocaliu';
+    text = abatere > 0 ? tr(`Mănâncă în medie cu ${procent} peste țintă`, `Eats ${procent} over target on average`) : tr(`Mănâncă în medie cu ${procent} sub țintă`, `Eats ${procent} under target on average`);
+    text += spreObiectiv === false ? tr(`, iar greutatea e ${textRitm(ritm)}.`, `, and weight is ${textRitm(ritm)}.`) : '.';
+    actiune = mesaj(abatere > 0 ? 'peste' : 'sub');
+  } else {
+    text = tr(`Mănâncă în țintă. Greutatea arată ritmul după câteva cântăriri.`, `Eats on target. Weight shows the pace after a few weigh-ins.`);
+  }
+  // Proteinele, separat: cea mai des întâlnită problemă, chiar când caloriile sunt bune
+  const tP = Number(s.proteine) || 0, mP = p.medie('proteine');
+  const proteine = tP && p.complete.length && mP < tP * 0.85
+    ? `<div class="nutritie-concluzie-rand"><i class="fisa-acum-punct portocaliu"></i><span>${tr(`Proteine: lipsesc ~${Math.round(tP - mP)} g pe zi.`, `Protein: ~${Math.round(tP - mP)} g short a day.`)}</span></div>` : '';
+  return `<div class="lista-sticla nutritie-concluzie">
+      <div class="nutritie-concluzie-rand"><i class="fisa-acum-punct ${cul}"></i><span>${text}</span></div>${proteine}
+      ${actiune ? `<div class="nutritie-concluzie-actiune">${actiune}</div>` : ''}
+    </div>`;
+}
+
+// Mesajul din concluzie, gata scris (se poate modifica înainte de trimitere)
+function trimiteMesajNutritie(tip) {
+  const c = clientaFisaCurenta();
+  if (!c) return;
+  const prenume = c.nume.trim().split(/\s+/)[0];
+  const texte = {
+    noteaza: [`Bună, ${prenume}! Notează-ți mesele în aplicație în zilele următoare, ca să-ți pot ajusta planul după ce mănânci de fapt.`, `Hi ${prenume}! Log your meals in the app over the next few days so I can adjust your plan to what you actually eat.`],
+    peste: [`Bună, ${prenume}! M-am uitat pe jurnalul tău: în ultimele zile ai fost peste ținta de calorii. Vrei să vedem împreună unde putem ajusta?`, `Hi ${prenume}! I looked at your log: you’ve been over your calorie target lately. Shall we see together where to adjust?`],
+    sub: [`Bună, ${prenume}! M-am uitat pe jurnalul tău: în ultimele zile ai mâncat sub ținta de calorii. Ai nevoie de idei de mese ca s-o atingi?`, `Hi ${prenume}! I looked at your log: you’ve been under your calorie target lately. Would meal ideas help you reach it?`]
+  }[tip];
+  trimiteMesajClient(c, tr(texte[0], texte[1]), c.contConectat ? URL_APLICATIE : undefined);
+}
+
+// O coloană din grafic (sau ‹ ›): ziua de sub grafic
+function alegeZiNutritie(iso) {
+  nutritieZiAleasa = iso;
+  deseneazaFoaieProgres();
+}
+
+// „Modifică” din cardul țintelor: câmpurile, obiectivul și ținta propusă; rămân deschise și după salvare (fereastra se redesenează)
+function comutaEditorNutritie(btn) {
+  nutritieEditorDeschis = !nutritieEditorDeschis;
+  const card = btn.closest('.nutritie-tinte-card');
+  card.classList.toggle('editare', nutritieEditorDeschis);
+  card.querySelector('.nutritie-tinte-sus .istoric-toate').textContent = nutritieEditorDeschis ? tr('Închide', 'Close') : tr('Modifică', 'Edit');
+  // Deschis: dacă încape în fereastră rămâne pe loc; altfel urcă întreg, cu un spațiu sub marginea ferestrei
+  const foaie = card.closest('.fisa-scurta');
+  if (!nutritieEditorDeschis || !foaie) return;
+  const sus = foaie.getBoundingClientRect().top + 12, c = card.getBoundingClientRect();
+  if (c.bottom > window.innerHeight || c.top < sus) foaie.scrollTo({ top: foaie.scrollTop + c.top - sus, behavior: 'smooth' });
+}
+
+function schimbaPerioadaNutritie(zile) {
+  raport.zile = zile;
+  deseneazaFoaieProgres();
 }
 
 // Respectarea planului alimentar într-o zi: o masă din plan e „ținută” dacă la ea s-a notat cel puțin un aliment
@@ -6452,16 +6619,18 @@ function respectarePlanZi(plan, randuri) {
   return { tinute: tinute.length, total: mese.length };
 }
 
-function htmlRespectarePlan(n) {
+// Planul alimentar în perioadă (de la `deLa`): mesele ținute din cele din plan, ca rândurile macronutrienților
+function htmlRespectarePlan(n, deLa) {
   if (!n.planAlim) return '';
-  const zile = n.zile.filter(z => z.respectare), t = zile.reduce((a, z) => a + z.respectare.tinute, 0), tot = zile.reduce((a, z) => a + z.respectare.total, 0);
-  return `<div class="card plan-alim-respectare"><b>${tr('Planul alimentar', 'Meal plan')}: ${tot ? `${t} ${tr('din', 'of')} ${tot} ${tr('mese', 'meals')} (${Math.round(t / tot * 100)}%)` : '–'}</b>
-    <span class="acasa-antrenament-detalii">${tr(`„${escAttr(n.planAlim.titlu)}”, în zilele notate din ultima săptămână. O masă contează când clientul notează la ea alimente dintr-o variantă din plan.`, `“${escAttr(n.planAlim.titlu)}”, on the logged days of the last week. A meal counts when the client logs foods from one of its options.`)}</span></div>`;
+  const zile = n.zile.filter(z => z.respectare && z.data >= deLa), t = zile.reduce((a, z) => a + z.respectare.tinute, 0), tot = zile.reduce((a, z) => a + z.respectare.total, 0);
+  if (!tot) return '';
+  const p = Math.round(t / tot * 100);
+  return `<div class="nutritie-macro-rand ${p >= 80 ? 'in' : p >= 50 ? 'sub' : 'peste'}" title="${escAttr(n.planAlim.titlu)}"><span>${tr('Din plan', 'From plan')}</span><i><em style="width:${p}%"></em></i><b>${t}<small> / ${tot} ${tr('mese', 'meals')}</small></b></div>`;
 }
 
-// Ultimele 30 de zile: rapoartele (7 / 30) și, dedesubt, alimentele din ultimele 7 zile
+// Ultimele 30 de zile: rapoartele (7 / 30) și, sub grafic, alimentele zilei alese
 async function incarcaNutritieAntrenor(client) {
-  const iso = isoDinData(new Date(Date.now() - 30 * 86400000)), iso7 = isoDinData(new Date(Date.now() - 6 * 86400000));
+  const iso = isoDinData(new Date(Date.now() - 30 * 86400000));
   const [resJ, resS, resA, resP] = await Promise.all([
     supabaseClient.from('jurnal_alimente').select('*').eq('client_id', client.id).gte('data', iso).order('data', { ascending: false }).order('created_at'),
     supabaseClient.from('setari_nutritie').select('*').eq('client_id', client.id).maybeSingle(),
@@ -6470,7 +6639,7 @@ async function incarcaNutritieAntrenor(client) {
   ]);
   if (resJ.error && resS.error) { nutritieFisa = null; return; }
   const peZi = new Map();
-  (resJ.data || []).filter(x => x.data >= iso7).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
+  (resJ.data || []).forEach(x => { if (!peZi.has(x.data)) peZi.set(x.data, []); peZi.get(x.data).push(x); });
   // Planul cel mai nou, de la data lui încolo (zilele de dinainte nu aveau plan)
   const planAlim = (resP && !resP.error && (resP.data || [])[0]) || null;
   const deLa = planAlim ? String(planAlim.created_at || planAlim.updated_at || '').slice(0, 10) : '';
@@ -6479,7 +6648,7 @@ async function incarcaNutritieAntrenor(client) {
       respectare: planAlim && data >= deLa ? respectarePlanZi(planAlim, randuri) : null })),
     adaptiv: await incarcaDateAdaptive(client.id) };
   Object.assign(raport, { jurnal: resJ.error ? null : (resJ.data || []), apa: resA.error ? [] : (resA.data || []),
-    setari: nutritieFisa.setari, adaptiv: nutritieFisa.adaptiv, nume: client.nume || '', unde: 'antrenor', zileAntr: null });
+    setari: nutritieFisa.setari, adaptiv: nutritieFisa.adaptiv, nume: client.nume || '', zileAntr: null });
 }
 
 async function salveazaTinteNutritieAntrenor() {
@@ -10357,6 +10526,15 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 219, data: '2026-11-15',
+    client: [],
+    antrenor: [
+      ['Nutriția din fișă e refăcută: sus vezi concluzia perioadei (merge sau nu spre obiectiv, de ce și ce poți face: „Aplică” ținta propusă sau „Mesaj”), apoi media caloriilor și a macronutrienților. Apeși o zi din grafic și vezi dedesubt ce a mâncat, pe mese.', 'Nutrition in the profile is redesigned: at the top, the period’s conclusion (on track for the goal or not, why, and what to do: “Apply” the suggested target or “Message”), then average calories and macros. Tap a day in the chart to see what they ate, by meal.'],
+      ['Țintele zilnice stau într-un singur card, cu obiectivul și ținta din zilele de pauză; „Modifică” deschide câmpurile, greutatea și ținta propusă în același card.', 'Daily targets sit in one card, with the goal and the rest-day target; “Edit” opens the fields, weight and suggested target in the same card.'],
+      ['Secțiunile fișei urcă exact sub antet când le deschizi, iar „Toate lunile” se numește acum „Toată perioada”.', 'Profile sections move right under the header when opened, and “All months” is now “All time”.'],
+      ['Câmpurile cu cifre nu mai au săgețile de sus/jos.', 'Number fields no longer show up/down arrows.']
+    ]
+  },
   { v: 216, data: '2026-11-15',
     client: [],
     antrenor: [
@@ -13140,10 +13318,10 @@ function filtreazaIstoricOrarInstant() {
   const alClientului = x => !cauta || (x.p.clienta || '').toLowerCase().includes(cauta);
   const filtrate = toate.filter(x => alClientului(x) && (istoricToate || inLuna(x, istoricLuna.an, istoricLuna.luna))).sort((a, b) => b.t - a.t);
 
-  document.getElementById('istoricLunaText').textContent = istoricToate ? tr('Toate lunile', 'All months') : numeLuna(istoricLuna.an, istoricLuna.luna);
+  document.getElementById('istoricLunaText').textContent = istoricToate ? tr('Toată perioada', 'All time') : numeLuna(istoricLuna.an, istoricLuna.luna);
   // Cu toate lunile alese, eticheta o spune deja: butonul apare doar cu o lună aleasă, ca să revii la toate
   document.getElementById('btnIstoricToate').hidden = istoricToate;
-  document.getElementById('btnIstoricToate').textContent = tr('Toate lunile', 'All months');
+  document.getElementById('btnIstoricToate').textContent = tr('Toată perioada', 'All time');
   camp.placeholder = tr('Caută client', 'Find client');
 
   // Zilele scurse din perioadă (luna curentă doar până azi), pentru media pe săptămână și comparația cu luna trecută
@@ -13541,6 +13719,8 @@ function afiseazaFisaClientaInstant() {
     container.querySelectorAll('details.fisa-sectiune').forEach(d => { d.open = false; });
     istoricFisaToate = true;
     progresParti = null;
+    nutritieEditorDeschis = false;
+    nutritieZiAleasa = null;
   }
   container.style.display = 'block';
   marcheazaFisaDeschisa(true);
@@ -15903,8 +16083,8 @@ function htmlCheckinuriAntrenor(client, checkinuri) {
     };
     // Formatul vechi: o notă liberă în loc de răspunsuri
     const nota = !c.raspunsuri && c.nota ? `<div class="checkin-raspuns"><p>${escAttr(c.nota)}</p></div>` : '';
-    return `<div class="lista-sticla checkin-card">
-        <div class="checkin-card-sus">
+    return `<div class="lista-sticla checkin-saptamana">
+        <div class="checkin-saptamana-sus">
           <div><b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b><small>${cand(c)}</small></div>
           <span class="checkin-rand-dreapta">${butonPoze(c)}${kg !== null ? `<b class="checkin-kg">${formatKg(kg)} kg${difKg}</b>` : ''}</span>
         </div>
@@ -15945,7 +16125,7 @@ function randeazaPlaciProgres(client) {
   const placi = [];
   if (!greutateTila.puncte.length) placi.push(placa('greutate', '–', tr('Adaugă prima cântărire', 'Add the first weigh-in')));
   // Check-in: săptămâna celui mai nou, energia și somnul lui
-  const ck = p.checkinuri.slice().sort((a, b) => momentCheckin(b).localeCompare(momentCheckin(a)));
+  const ck = p.checkinuri.slice().sort((a, b) => String(b.saptamana).localeCompare(String(a.saptamana)) || momentCheckin(b).localeCompare(momentCheckin(a)));
   if (ck.length || client.contConectat || client.checkinToken) {
     const u = ck[0];
     const r = u && u.raspunsuri;
@@ -15969,7 +16149,7 @@ function randeazaPlaciProgres(client) {
   if (nutritieFisa) {
     const s = nutritieFisa.setari || {};
     placi.push(placa('nutritie', s.kcal ? `${Number(s.kcal).toLocaleString(loc)}<small> kcal</small>` : '–',
-      s.vizibil_antrenor === false ? tr('Jurnal ascuns de client', 'Log hidden by the client') : tr(`${nutritieFisa.zile.length} din 7 zile notate`, `${nutritieFisa.zile.length} of 7 days logged`)));
+      s.vizibil_antrenor === false ? tr('Jurnal ascuns de client', 'Log hidden by the client') : (z7 => tr(`${z7} din 7 zile notate`, `${z7} of 7 days logged`))(nutritieFisa.zile.filter(z => z.data >= isoDinData(new Date(Date.now() - 6 * 86400000))).length)));
   }
   if (obiectiveUI) {
     const n = obiectiveUI.lista.length;
@@ -16095,7 +16275,7 @@ function filtreazaIstoricFisaInstant() {
   if (!istoricDiv || !client) return;
   const loc = currentLang === 'en' ? 'en-GB' : 'ro-RO';
   const numeLuna = new Date(istoricFisaLuna.an, istoricFisaLuna.luna, 1).toLocaleDateString(loc, { month: 'long', year: 'numeric' });
-  document.getElementById('istoricFisaLunaText').textContent = istoricFisaToate ? tr('Toate lunile', 'All months') : numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1);
+  document.getElementById('istoricFisaLunaText').textContent = istoricFisaToate ? tr('Toată perioada', 'All time') : numeLuna.charAt(0).toUpperCase() + numeLuna.slice(1);
   document.getElementById('btnIstoricFisaToate').hidden = istoricFisaToate; // ca în istoricul din Orar
   const inLuna = t => { const d = new Date(t); return d.getFullYear() === istoricFisaLuna.an && d.getMonth() === istoricFisaLuna.luna; };
   const randuri = prezenteleClientului(client).map(p => ({ t: parseazaDataOraRo(p.data, p.ora), p }))

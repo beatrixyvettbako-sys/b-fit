@@ -4414,7 +4414,7 @@ select.form-control {
 
 /* Check-in-urile din fișă: tendința energiei și a somnului, apoi un card pe săptămână */
 .checkin-tendinta,
-.checkin-card {
+.checkin-saptamana {
   margin-bottom: 10px;
   padding: 14px;
 }
@@ -4473,26 +4473,26 @@ select.form-control {
   stroke: #f5b041;
 }
 
-.checkin-card-sus {
+.checkin-saptamana-sus {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
 
-.checkin-card-sus > div {
+.checkin-saptamana-sus > div {
   display: flex;
   flex-direction: column;
   gap: 1px;
 }
 
-.checkin-card-sus b {
+.checkin-saptamana-sus b {
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--m-text);
 }
 
-.checkin-card-sus small {
+.checkin-saptamana-sus small {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--m-muted);
@@ -4638,6 +4638,382 @@ select.form-control {
   height: 34px;
   margin-top: 8px;
   color: var(--m-accent-text);
+}
+
+/* Nutriția din fișă: rezumatul perioadei, rândurile (ținte, greutate), zilele notate */
+.nutritie-rezumat {
+  margin-bottom: 10px;
+  padding: 14px;
+}
+
+.nutritie-rezumat-sus {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.nutritie-rezumat-sus > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nutritie-rezumat-sus b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.nutritie-rezumat-sus small,
+.nutritie-rezumat-sus b small {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.nutritie-rezumat .inel-progres .inel-text {
+  font-size: 12px;
+}
+
+.nutritie-bare {
+  margin-top: 12px;
+}
+
+.nutritie-bare .rb.gol {
+  fill: var(--m-divider);
+  opacity: 1;
+}
+
+.nutritie-bare .rb.azi {
+  opacity: 0.5;
+}
+
+/* Coloanele aleg ziua: zona apăsabilă e toată coloana, ziua aleasă are fundal slab */
+.nutritie-bare .rz {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.nutritie-bare .rsel {
+  fill: var(--m-btn);
+}
+
+.nutritie-zile-etichete .ales {
+  color: var(--m-accent-text);
+}
+
+.nutritie-zile-etichete {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  margin-top: 2px;
+  text-align: center;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+/* Macronutrienții: media față de țintă, bară verde în țintă (±10%), portocalie sub, roșie peste */
+.nutritie-macro-rand {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.nutritie-macro-rand > i {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--m-divider);
+  overflow: hidden;
+}
+
+.nutritie-macro-rand em {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--m-accent-text);
+}
+
+.nutritie-macro-rand.in em {
+  background: #15803d;
+}
+
+.nutritie-macro-rand.sub em {
+  background: #f5b041;
+}
+
+.nutritie-macro-rand.peste em {
+  background: #b91c1c;
+}
+
+.nutritie-macro-rand b {
+  font-size: 0.86rem;
+  color: var(--m-text);
+  white-space: nowrap;
+}
+
+.nutritie-macro-rand b small {
+  color: var(--m-muted);
+}
+
+/* Cardul țintelor: titlul și obiectivul, „Modifică”; cele 4 valori pe coloane; la editare câmpurile le iau locul */
+.nutritie-tinte-card {
+  margin-bottom: 10px;
+  padding: 12px 14px 14px;
+}
+
+.nutritie-tinte-sus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.nutritie-tinte-sus > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.nutritie-tinte-sus b {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.nutritie-tinte-sus small {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.nutritie-tinte-sus .istoric-toate {
+  height: 34px;
+  color: var(--m-accent-text);
+}
+
+.nutritie-tinte-valori {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.nutritie-tinte-valori span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  text-align: center;
+}
+
+.nutritie-tinte-valori span + span {
+  border-left: 1px solid var(--m-divider);
+}
+
+.nutritie-tinte-valori b {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.nutritie-tinte-valori small {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.nutritie-tinte-pauza {
+  margin-top: 10px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--m-muted);
+}
+
+.nutritie-editor,
+.nutritie-tinte-card.editare :is(.nutritie-tinte-valori, .nutritie-tinte-pauza) {
+  display: none;
+}
+
+.nutritie-tinte-card.editare .nutritie-editor {
+  display: block;
+}
+
+/* Câmpurile din card: fără contur, cu nuanța butoanelor (ca la Încasări) */
+.nutritie-editor .plan-ex-input {
+  border: 0;
+  border-radius: 12px;
+  background: var(--m-btn);
+  color: var(--m-text);
+}
+
+.nutritie-editor .antr-pers-campuri label {
+  color: var(--m-muted);
+}
+
+.nutritie-tinte-salveaza {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 10px 0 4px;
+  color: var(--m-accent-text);
+}
+
+/* Greutatea, obiectivul și ținta propusă: parte din card, despărțite printr-o linie, fără cardul lor */
+.nutritie-editor .nutritie-adaptiv {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--m-divider);
+}
+
+/* Descarcă jurnalul: iconița din colțul rezumatului (exportă perioada aleasă) */
+.nutritie-descarca {
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-left: auto;
+}
+
+/* Concluzia perioadei: punctul stării, fraza, acțiunea (Aplică / Mesaj / Setează) în dreapta jos */
+.nutritie-concluzie {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
+
+.nutritie-concluzie-rand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--m-text);
+}
+
+.nutritie-concluzie-rand + .nutritie-concluzie-rand {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--m-muted);
+}
+
+.nutritie-concluzie-rand .fisa-acum-punct {
+  flex-shrink: 0;
+  transform: translateY(-1px);
+}
+
+.nutritie-concluzie-actiune {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.nutritie-concluzie-actiune .istoric-toate {
+  color: var(--m-accent-text);
+}
+
+/* Ziua aleasă sub grafic: ‹ ziua ›, cifrele zilei, apoi mesele cu alimentele */
+.nutritie-ziua {
+  margin-bottom: 10px;
+  padding: 12px 14px 6px;
+}
+
+.nutritie-ziua .istoric-luna {
+  margin-bottom: 8px;
+}
+
+.nutritie-ziua .drawer-nav-btn:disabled {
+  opacity: 0.35;
+}
+
+.nutritie-ziua-cifre {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.nutritie-ziua-cifre span {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--m-btn);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.nutritie-ziua-cifre b {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.nutritie-ziua-cifre .in b {
+  color: #15803d;
+}
+
+.nutritie-ziua-cifre .sub b {
+  color: #f5b041;
+}
+
+.nutritie-ziua-cifre .peste b {
+  color: #b91c1c;
+}
+
+.nutritie-masa {
+  padding: 10px 0 6px;
+}
+
+.nutritie-masa + .nutritie-masa {
+  border-top: 1px solid var(--m-divider);
+}
+
+.nutritie-masa-sus,
+.nutritie-aliment {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.nutritie-masa-sus {
+  margin-bottom: 4px;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.nutritie-masa-sus span {
+  font-size: 0.78rem;
+  color: var(--m-accent-text);
+}
+
+.nutritie-aliment {
+  padding: 3px 0;
+  font-size: 0.82rem;
+  color: var(--m-text);
+}
+
+.nutritie-aliment span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nutritie-aliment small {
+  flex-shrink: 0;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-muted);
 }
 
 /* Fereastra unei plăci: conținutul are culorile sticlei, ca secțiunile fișei */
@@ -6015,7 +6391,7 @@ html:not([data-theme="dark"]) .hold-header::after {
   color: var(--m-muted);
 }
 
-/* Suma scrisă: ca un câmp de pe card (nuanță slabă doar cât scrii, fără contur), aliniată cu cifra, fără săgețile de sus/jos */
+/* Suma scrisă: ca un câmp de pe card (nuanță slabă doar cât scrii, fără contur), aliniată cu cifra */
 .incasare-suma .form-control {
   flex: 1;
   min-width: 0;
@@ -6025,8 +6401,6 @@ html:not([data-theme="dark"]) .hold-header::after {
   border: 0;
   border-radius: 10px;
   background: transparent;
-  appearance: textfield;
-  -moz-appearance: textfield;
   transition: background-color 0.2s ease;
 }
 
@@ -6039,12 +6413,6 @@ html:not([data-theme="dark"]) .hold-header::after {
 /* Gol: textul câmpului are mărimea placeholderului, ca acesta să stea centrat pe verticală */
 .incasare-suma .form-control:placeholder-shown {
   font-size: 0.9rem;
-}
-
-.incasare-suma .form-control::-webkit-inner-spin-button,
-.incasare-suma .form-control::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 .incasare-suma .form-control::placeholder {
@@ -10216,7 +10584,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .cumparaturi-rand small { color: var(--text-muted); }
 .cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }
 .plan-alim-fisier { display: flex; justify-content: center; width: 100%; margin: 6px 0 10px; cursor: pointer; }
-.plan-alim-respectare { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .plan-alim-zi { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(245, 176, 65, 0.18); color: #9a6408; white-space: nowrap; }
 .plan-alim-zi.is-tot { background: rgba(21, 128, 61, 0.12); color: #15803d; }
 .cumparaturi-raion {margin: 12px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
@@ -11962,7 +12329,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 #tabOrar .slot-num-btn,
 #tabOrar .btn-bifeaza-ora,
 #tabOrar #btnAddOraCustomAction,
-:is(#tabOrar, .istoric-luna) .drawer-nav-btn,
+:is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn,
 :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn {
   position: relative;
 }
@@ -11979,7 +12346,7 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 #tabOrar .slot-num-btn::before,
 #tabOrar .btn-bifeaza-ora::before,
 #tabOrar #btnAddOraCustomAction::before,
-:is(#tabOrar, .istoric-luna) .drawer-nav-btn::before,
+:is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn::before,
 .final-orb::before,
 :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn::before,
 body.stil-nou #bottomNav::before {
@@ -12067,8 +12434,8 @@ body.stil-nou #pageTitle {
   grid-area: azi;
 }
 
-:is(#tabOrar, .istoric-luna) .drawer-nav-btn,
-[data-theme="light"] :is(#tabOrar, .istoric-luna) .drawer-nav-btn {
+:is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn,
+[data-theme="light"] :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn {
   flex: none;
   width: 44px;
   height: 44px;
@@ -12080,13 +12447,13 @@ body.stil-nou #pageTitle {
   box-shadow: var(--m-float-sm);
 }
 
-:is(#tabOrar, .istoric-luna) .drawer-nav-btn svg {
+:is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn svg {
   width: 18px;
   height: 18px;
 }
 
-/* Săgețile ‹ › ale lunii (Istoric, Încasări) n-au culoarea în markup */
-.istoric-luna .drawer-nav-btn svg {
+/* Săgețile ‹ › ale lunii (Istoric, Încasări) și iconița de descărcare din Nutriție n-au culoarea în markup */
+:is(.istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 2.4;
@@ -12626,7 +12993,7 @@ body.stil-nou,
 }
 
 /* Tema deschisă: lumina din stânga-sus vizibilă (pe alb, „soft-light” nu se vede) */
-html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
+html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, .custom-modal-card )::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
@@ -12637,7 +13004,7 @@ html:not([data-theme="dark"]) :is(#customToast)::after {
 }
 
 /* Butoanele de sticlă pe tema deschisă: margine luminoasă și umbră moale, ca reflexia de pe tema întunecată */
-html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .btn-sterge-ora, #mainAppHeader .header-icon-bubble-btn ) {
+html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .btn-sterge-ora, #mainAppHeader .header-icon-bubble-btn ) {
   border-color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -13077,6 +13444,18 @@ input[type="search"]::-webkit-search-cancel-button {
   display: none;
 }
 
+/* Câmpurile numerice: fără săgețile de sus/jos (se scrie cu tastatura) */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* X de golire, cât timp scrii în câmp (poziția vine din app.js) */
 /* × de golire din câmpuri: aceeași bulă de sticlă ca × de pe notificări (poziția vine din app.js) */
 .camp-goleste {
@@ -13138,7 +13517,7 @@ input[type="search"]::-webkit-search-cancel-button {
 }
 
 /* Lumina de sticlă pe tema întunecată: aceeași intensitate, fără amestec de culori */
-[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, .custom-modal-card, .final-orb)::before {
+[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, .custom-modal-card, .final-orb)::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 42%);
 }
