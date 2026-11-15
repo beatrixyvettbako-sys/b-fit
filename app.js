@@ -9470,7 +9470,7 @@ function afiseazaFisaMeaClienta() {
       <span class="plan-zi-card-detalii">${tr('Calendarul, seria de săptămâni și insignele', 'Calendar, weekly streak and badges')}</span></span>
       <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
     </button>`;
-  html += `<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
+  html += `<div class="lista-sticla checkin-card">${htmlCheckinClienta()}</div>`;
   html += titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
   // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
   if ((dateClienta.planuri || []).length > 1) {
@@ -9511,8 +9511,8 @@ function afiseazaFisaMeaClienta() {
 // Check-in-ul săptămânal: aceleași întrebări ca formularul Google al antrenorului (fără poze, care vin separat).
 // Greutatea se salvează în coloana proprie (graficul), restul în `raspunsuri`.
 const OPTIUNI_PERFORMANTA = [
-  { id: 'progres', ro: 'S-au depășit greutățile/repetările pe exercițiile principale', en: 'Weights/reps went up on the main exercises' },
-  { id: 'mentinere', ro: 'Menținere', en: 'Maintained' }
+  { id: 'progres', ro: 'Am progresat', en: 'I progressed', sub: { ro: 'greutăți sau repetări mai mari', en: 'heavier weights or more reps' } },
+  { id: 'mentinere', ro: 'Am rămas la fel', en: 'I stayed the same', sub: { ro: 'aceleași greutăți și repetări', en: 'same weights and reps' } }
 ];
 const INTREBARI_CHECKIN = [
   { id: 'energie', tip: 'scala', min: 1, max: 10, ob: true, ro: 'Febră musculară și energie', en: 'Muscle soreness and energy',
@@ -9535,48 +9535,125 @@ function htmlCheckinClienta() {
   if (!checkinFormular) {
     if (facut) {
       return `${antet}<div class="checkin-facut">✓ ${tr('Făcut. Antrenorul tău îl vede în fișa ta.', 'Done. Your trainer can see it in your profile.')}</div>
-        <button type="button" class="btn btn-clear checkin-btn" onclick="deschideCheckin()">${tr('Modifică', 'Edit')}</button>`;
+        <button type="button" class="fisa-scurta-actiune checkin-btn" onclick="deschideCheckin()">${tr('Modifică', 'Edit')}</button>`;
     }
     return `${antet}<div class="checkin-subtitlu">${tr('Cum a fost săptămâna ta?', 'How was your week?')}</div>
-      <button type="button" class="btn checkin-btn" onclick="deschideCheckin()">${tr('Check-in săptămânal', 'Weekly check-in')}</button>`;
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala checkin-btn" onclick="deschideCheckin()">${tr('Check-in săptămânal', 'Weekly check-in')}</button>`;
   }
   const f = checkinFormular;
-  const eticheta = q => `<div class="checkin-eticheta">${escAttr(textInscriere(q))}${q.ob ? ' <span class="inscriere-obligatoriu">*</span>' : ''}</div>
+  const pas = Math.min(pasCheckin, PASI_CHECKIN.length - 1), ultim = pas === PASI_CHECKIN.length - 1;
+  // Scorul din check-in-ul de săptămâna trecută, lângă scală (formatul vechi era pe 5)
+  const anterior = checkinuriClienta.filter(k => k.saptamana < lunaSaptamaniiCurente()).sort((x, y) => y.saptamana.localeCompare(x.saptamana))[0];
+  const scorAnterior = id => { if (!anterior) return null; const r = anterior.raspunsuri; const v = r ? r[id] : anterior[id]; return v || v === 0 ? Number(v) * (r ? 1 : 2) : null; };
+  const nivel = n => n >= 7 ? 'bun' : n >= 5 ? 'mediu' : 'slab';
+  const eticheta = q => `<div class="checkin-eticheta"><span>${escAttr(textInscriere(q))}${q.ob ? ' <span class="inscriere-obligatoriu">*</span>' : ''}</span>${q.tip === 'scala' && scorAnterior(q.id) !== null ? `<small>${tr('săpt. trecută', 'last week')}: ${scorAnterior(q.id)}</small>` : ''}</div>
     ${q.detalii ? `<div class="checkin-detalii">${escAttr(textInscriere(q.detalii))}</div>` : ''}`;
   const camp = q => {
     if (q.tip === 'scala') {
       const note = [];
-      for (let n = q.min; n <= q.max; n++) note.push(`<button type="button" class="checkin-scala-btn${f[q.id] === n ? ' active' : ''}" onclick="alegeNotaCheckin('${q.id}', ${n})">${n}</button>`);
+      for (let n = q.min; n <= q.max; n++) note.push(`<button type="button" class="checkin-scala-btn${f[q.id] === n ? ` active ${nivel(n)}` : ''}" onclick="alegeNotaCheckin('${q.id}', ${n})">${n}</button>`);
       return `<div class="checkin-scala" style="grid-template-columns: repeat(${q.max - q.min + 1}, 1fr);">${note.join('')}</div>`;
     }
+    // Variantele (performanța): plăci, o singură alegere (se păstrează ca listă, ca în check-in-urile de până acum)
     if (q.tip === 'multi') {
-      return q.optiuni.map(o => `<label class="checkin-bifa"><input type="checkbox" ${(f[q.id] || []).includes(o.id) ? 'checked' : ''} onchange="bifeazaCheckin('${q.id}', '${o.id}', this.checked)"><span>${escAttr(textInscriere(o))}</span></label>`).join('');
+      return `<div class="pastile-alegere placi-abonament checkin-placi">${q.optiuni.map(o => `<button type="button" class="istoric-toate${(f[q.id] || []).includes(o.id) ? ' activ' : ''}" onclick="alegeVariantaCheckin('${q.id}', '${o.id}')"><b>${escAttr(textInscriere(o))}</b>${o.sub ? `<span>${escAttr(textInscriere(o.sub))}</span>` : ''}</button>`).join('')}</div>`;
     }
-    return `<textarea class="form-control checkin-nota-text" rows="1" maxlength="600" oninput="checkinFormular['${q.id}'] = this.value">${escAttr(f[q.id] || '')}</textarea>`;
+    return `<textarea class="form-control checkin-nota-text" rows="2" maxlength="600" oninput="checkinFormular['${q.id}'] = this.value; salveazaCiornaCheckin()">${escAttr(f[q.id] || '')}</textarea>`;
   };
-  return `${antet}
-    <div class="checkin-camp" id="checkinQ_greutate">
-      <div class="checkin-eticheta">${tr('Greutatea corporală', 'Body weight')} <span class="inscriere-obligatoriu">*</span></div>
+  const greutate = `<div class="checkin-camp" id="checkinQ_greutate">
+      <div class="checkin-eticheta"><span>${tr('Greutatea corporală', 'Body weight')} <span class="inscriere-obligatoriu">*</span></span></div>
       <div class="checkin-detalii">${tr('Media săptămânală (cântărit dimineața, pe stomacul gol) e mai relevantă decât o singură cântărire', 'The weekly average (weighed in the morning, on an empty stomach) tells more than a single weigh-in')}</div>
-      <div class="checkin-greutate"><input type="number" inputmode="decimal" step="0.1" min="30" max="300" class="form-control" value="${f.greutate ?? ''}" oninput="checkinFormular.greutate = this.value"><span>kg</span></div>
-    </div>
-    ${INTREBARI_CHECKIN.map(q => `<div class="checkin-camp" id="checkinQ_${q.id}">${eticheta(q)}${camp(q)}</div>`).join('')}
-    ${htmlPozeCheckin()}
-    <div class="inscriere-butoane">
-      <button type="button" class="btn btn-clear" onclick="checkinFormular = null; afiseazaFisaMeaClienta()">${tr('Renunță', 'Cancel')}</button>
-      <button type="button" class="btn" id="btnSalveazaCheckin" onclick="salveazaCheckinClienta()">${tr('Trimite', 'Send')}</button>
+      <div class="checkin-greutate"><input type="number" inputmode="decimal" step="0.1" min="30" max="300" class="form-control" value="${f.greutate ?? ''}" oninput="checkinFormular.greutate = this.value; salveazaCiornaCheckin()"><span>kg</span></div>
+      ${greutateSaptamana && !checkinLink ? `<div class="checkin-sursa">${tr(`Media celor ${greutateSaptamana.n} cântăriri din săptămâna asta: ${formatKg(greutateSaptamana.kg)} kg. O poți schimba.`, `Average of this week’s ${greutateSaptamana.n} weigh-ins: ${formatKg(greutateSaptamana.kg)} kg. You can change it.`)}${Number(String(f.greutate ?? '').replace(',', '.')) !== greutateSaptamana.kg ? ` <button type="button" class="fisa-link-nou" onclick="checkinFormular.greutate = greutateSaptamana.kg; salveazaCiornaCheckin(); redeseneazaCheckin()">${tr(`Folosește ${formatKg(greutateSaptamana.kg)} kg`, `Use ${formatKg(greutateSaptamana.kg)} kg`)}</button>` : ''}</div>` : ''}
     </div>`;
+  return `<div class="checkin-form-sus">
+      <div>${antet}<small>${intervalSaptamana(lunaSaptamaniiCurente())}</small></div>
+      <span>${pas + 1} / ${PASI_CHECKIN.length}</span>
+    </div>
+    <div class="checkin-pasi">${PASI_CHECKIN.map((x, i) => `<i${i <= pas ? ' class="gata"' : ''}></i>`).join('')}</div>
+    <div class="checkin-pas-titlu">${escAttr(textInscriere(PASI_CHECKIN[pas]))}</div>
+    ${pas === 0 ? greutate : ''}
+    ${INTREBARI_CHECKIN.filter(q => pasulCheckin(q.id) === pas).map(q => `<div class="checkin-camp" id="checkinQ_${q.id}">${eticheta(q)}${camp(q)}</div>`).join('')}
+    ${pas === 0 ? htmlPozeCheckin() : ''}
+    <div class="checkin-butoane">
+      <button type="button" class="fisa-scurta-actiune" onclick="${pas ? 'pasFormularCheckin(-1)' : 'checkinFormular = null; afiseazaFisaMeaClienta()'}">${pas ? tr('Înapoi', 'Back') : tr('Renunță', 'Cancel')}</button>
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnSalveazaCheckin" onclick="${ultim ? 'salveazaCheckinClienta()' : 'pasFormularCheckin(1)'}">${ultim ? tr('Trimite', 'Send') : tr('Continuă', 'Continue')}</button>
+    </div>`;
+}
+
+// Check-in-ul pe 3 pași scurți, cu aceleași întrebări: corpul, cum te-ai simțit, săptămâna ta
+const PASI_CHECKIN = [
+  { ro: 'Corpul', en: 'Your body', ids: ['greutate'] },
+  { ro: 'Cum te-ai simțit', en: 'How you felt', ids: ['energie', 'somn', 'performanta'] },
+  { ro: 'Săptămâna ta', en: 'Your week', ids: ['mese', 'victorie', 'provocare', 'intrebari'] }
+];
+let pasCheckin = 0;
+const pasulCheckin = id => { const i = PASI_CHECKIN.findIndex(p => p.ids.includes(id)); return i < 0 ? PASI_CHECKIN.length - 1 : i; };
+
+// Primul câmp obligatoriu necompletat din pașii dați: { id, mesaj } sau null
+function lipsaCheckin(pasi) {
+  const f = checkinFormular;
+  const kg = parseFloat(String(f.greutate ?? '').replace(',', '.'));
+  if (pasi.includes(0) && !(kg >= 30 && kg <= 300)) return { id: 'greutate', mesaj: tr('Scrie greutatea, între 30 și 300 kg.', 'Enter your weight, between 30 and 300 kg.') };
+  const q = INTREBARI_CHECKIN.find(q => {
+    const v = f[q.id];
+    const gol = Array.isArray(v) ? v.length === 0 : (q.tip === 'scala' ? typeof v !== 'number' : !String(v ?? '').trim());
+    return q.ob && gol && pasi.includes(pasulCheckin(q.id));
+  });
+  return q ? { id: q.id, mesaj: tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *') } : null;
+}
+
+// Arată câmpul lipsă: pe pasul lui, marcat cu roșu, în mijlocul ecranului
+function aratLipsaCheckin(l) {
+  pasCheckin = pasulCheckin(l.id);
+  redeseneazaCheckin();
+  const el = document.getElementById('checkinQ_' + l.id);
+  el?.classList.add('inscriere-eroare');
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast(l.mesaj, 'error');
+}
+
+function pasFormularCheckin(directie) {
+  if (directie > 0) { const l = lipsaCheckin([pasCheckin]); if (l) return aratLipsaCheckin(l); }
+  pasCheckin = Math.max(0, Math.min(PASI_CHECKIN.length - 1, pasCheckin + directie));
+  redeseneazaCheckin();
+  document.querySelector('.checkin-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Ciorna: ce a scris clientul rămâne pe telefon până trimite (fără poze); una pe client (sau link) și săptămână
+const cheieCiornaCheckin = () => `BFIT_CHECKIN_${checkinLink ? checkinLink.token : (dateClienta.fisa || {}).id}_${lunaSaptamaniiCurente()}`;
+function salveazaCiornaCheckin() {
+  if (!checkinFormular) return;
+  const { pozeNoi, pozeSterse, ...r } = checkinFormular;
+  try { localStorage.setItem(cheieCiornaCheckin(), JSON.stringify(r)); } catch (e) {}
+}
+function citesteCiornaCheckin() {
+  try { return JSON.parse(localStorage.getItem(cheieCiornaCheckin()) || 'null'); } catch (e) { return null; }
+}
+
+// Greutatea: media cântăririlor din săptămâna curentă (în aplicație); completează câmpul doar dacă e gol, rămâne editabil
+let greutateSaptamana = null; // { kg, n }
+async function incarcaGreutateSaptamana() {
+  const { data, error } = await supabaseClient.from('greutate_zilnica').select('kg').eq('client_id', dateClienta.fisa.id).gte('data', lunaSaptamaniiCurente());
+  const kg = (error ? [] : data || []).map(x => Number(x.kg)).filter(Boolean);
+  greutateSaptamana = kg.length ? { kg: rotunjeste1(kg.reduce((t, x) => t + x, 0) / kg.length), n: kg.length } : null;
+  if (!checkinFormular || !greutateSaptamana) return;
+  if (checkinFormular.greutate === undefined || checkinFormular.greutate === null || checkinFormular.greutate === '') checkinFormular.greutate = greutateSaptamana.kg;
+  if (document.querySelector('.checkin-card')) redeseneazaCheckin();
 }
 
 function deschideCheckin() {
   const facut = checkinuriClienta.find(c => c.saptamana === lunaSaptamaniiCurente());
-  // Check-in-ul săptămânii în formatul nou se poate modifica; unul în formatul vechi (note 1–5) pornește de la zero
-  checkinFormular = facut && facut.raspunsuri ? Object.assign({ greutate: facut.greutate }, facut.raspunsuri) : {};
+  // Check-in-ul săptămânii în formatul nou se poate modifica; unul în formatul vechi (note 1–5) pornește de la zero. Peste el, ciorna nesalvată
+  checkinFormular = Object.assign(facut && facut.raspunsuri ? Object.assign({ greutate: facut.greutate }, facut.raspunsuri) : {}, citesteCiornaCheckin() || {});
+  pasCheckin = 0;
   afiseazaFisaMeaClienta();
+  if (!checkinLink) incarcaGreutateSaptamana();
 }
 
 function alegeNotaCheckin(id, n) {
   checkinFormular[id] = n;
+  salveazaCiornaCheckin();
   redeseneazaCheckin();
 }
 
@@ -9728,7 +9805,7 @@ function umplePoze(radacina) {
 }
 
 function deschidePanouPoze(saptamana) {
-  document.getElementById('panouPozeTitlu').textContent = `${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(saptamana + 'T12:00:00'))}`;
+  document.getElementById('panouPozeTitlu').textContent = `${tr('Săptămâna', 'Week')} ${intervalSaptamana(saptamana)}`;
   document.getElementById('panouPoze').dataset.s = saptamana;
   document.getElementById('panouPoze').classList.remove('auth-hidden');
   randeazaPanouPoze();
@@ -9792,7 +9869,7 @@ function htmlCorpComparatie() {
   const coloana = (latura, s) => {
     const p = poze.find(x => x.s === s);
     const eticheta = s === prima ? tr('Început', 'Start') : s === ultima ? tr('Acum', 'Now') : tr('Săptămâna', 'Week');
-    const optiuni = poze.map(x => `<option value="${x.s}"${x.s === s ? ' selected' : ''}>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(x.s + 'T12:00:00'))}</option>`).join('');
+    const optiuni = poze.map(x => `<option value="${x.s}"${x.s === s ? ' selected' : ''}>${tr('Săptămâna', 'Week')} ${intervalSaptamana(x.s)}</option>`).join('');
     const kg = comparatiePoze.greutati[s];
     return `<div class="poza-comp">
         <div class="poza-comp-eticheta">${eticheta}</div>
@@ -9817,27 +9894,17 @@ function alegeComparatiePoze(camp, valoare) {
   umplePoze(bloc);
 }
 
-function bifeazaCheckin(id, optiune, bifat) {
-  const lista = (checkinFormular[id] || []).filter(x => x !== optiune);
-  checkinFormular[id] = bifat ? lista.concat(optiune) : lista;
+function alegeVariantaCheckin(id, optiune) {
+  checkinFormular[id] = [optiune];
+  salveazaCiornaCheckin();
+  redeseneazaCheckin();
 }
 
 async function salveazaCheckinClienta() {
   const f = checkinFormular;
-  const arata = (id, mesaj) => {
-    const el = document.getElementById('checkinQ_' + id);
-    el?.classList.add('inscriere-eroare');
-    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    showToast(mesaj, 'error');
-  };
-  document.querySelectorAll('.checkin-camp.inscriere-eroare').forEach(el => el.classList.remove('inscriere-eroare'));
+  const lipsa = lipsaCheckin(PASI_CHECKIN.map((p, i) => i));
+  if (lipsa) return aratLipsaCheckin(lipsa);
   const kg = parseFloat(String(f.greutate ?? '').replace(',', '.'));
-  if (!(kg >= 30 && kg <= 300)) return arata('greutate', tr('Scrie greutatea, între 30 și 300 kg.', 'Enter your weight, between 30 and 300 kg.'));
-  for (const q of INTREBARI_CHECKIN) {
-    const v = f[q.id];
-    const gol = Array.isArray(v) ? v.length === 0 : (q.tip === 'scala' ? typeof v !== 'number' : !String(v ?? '').trim());
-    if (q.ob && gol) return arata(q.id, tr('Completează câmpurile marcate cu *', 'Fill in the fields marked with *'));
-  }
   const raspunsuri = {};
   INTREBARI_CHECKIN.forEach(q => {
     const v = f[q.id];
@@ -9864,6 +9931,7 @@ async function salveazaCheckinClienta() {
     return;
   }
   showToast(tr('✓ Check-in trimis', '✓ Check-in sent'));
+  try { localStorage.removeItem(cheieCiornaCheckin()); } catch (e) {}
   if (!checkinLink && dateClienta.acasa) {
     Object.assign(dateClienta.acasa, { checkinFacut: true, checkinSaptamana: lunaSaptamaniiCurente() });
     salveazaCacheClienta();
@@ -9898,7 +9966,8 @@ async function initCheckinLink(token) {
   checkinLink = Object.assign({ token, trimis: false }, data);
   // Săptămâna deja trimisă: arată „Făcut” (cu opțiunea de a-l retrimite); altfel deschide direct formularul
   checkinuriClienta = data.facut_saptamana ? [{ saptamana: lunaSaptamaniiCurente() }] : [];
-  checkinFormular = data.facut_saptamana ? null : {};
+  checkinFormular = data.facut_saptamana ? null : (citesteCiornaCheckin() || {});
+  pasCheckin = 0;
   afiseazaCheckinLink();
 }
 
@@ -9918,7 +9987,7 @@ function afiseazaCheckinLink() {
         <div style="font-weight:800; font-size:1.05rem; color:var(--primary);">${tr('Mulțumesc', 'Thank you')}, ${escAttr(checkinLink.prenume || '')}!</div>
         <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px;">${tr('Check-in-ul a ajuns la antrenor. Săptămâna viitoare îl trimiți din același link.', 'Your check-in reached your trainer. Next week, send it from the same link.')}</div>
       </div>`
-    : `${salut}<div class="card checkin-card">${htmlCheckinClienta()}</div>`;
+    : `${salut}<div class="lista-sticla checkin-card">${htmlCheckinClienta()}</div>`;
 }
 
 function mesajRezervare(cod) {
@@ -10526,6 +10595,16 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 220, data: '2026-11-16',
+    client: [
+      ['Check-in-ul săptămânal e pe 3 pași scurți. Greutatea se completează singură din cântăririle săptămânii (o poți schimba), vezi lângă scoruri ce ai dat săptămâna trecută, iar ce scrii rămâne salvat până trimiți.', 'The weekly check-in now has 3 short steps. Your weight is filled in from this week’s weigh-ins (you can change it), you see last week’s scores next to each scale, and what you type stays saved until you send it.']
+    ],
+    antrenor: [
+      ['Mesajele gata scrise („Răspunde”, „Amintește-i”) se deschid direct în conversație dacă clientul are notificările pornite; dacă nu, îți propune „Distribuie”, ca mesajul să ajungă pe telefon. În conversație vezi când un client nu are notificările pornite și îl poți anunța cu „Anunță-l”.', 'Ready-made messages (“Reply”, “Nudge”) open straight in the conversation if the client has notifications on; if not, you get “Share” so it reaches their phone. In the conversation you see when a client has notifications off and can notify them with “Notify”.'],
+      ['Check-in-urile din fișă: „Săptămâna 9–15 nov.”, iar antrenamentul apare pe un rând: „↑ A progresat” sau „= Aceleași greutăți/repetări”.', 'Check-ins in the profile: “Week 9–15 Nov”, and training shows on one row: “↑ Progressed” or “= Same weights/reps”.'],
+      ['Formularul de înscriere are un aspect nou: arată cât mai durează, iar la final clientul își vede toate răspunsurile, cu „Modifică” pe fiecare secțiune, înainte să trimită.', 'The sign-up form has a new look: it shows how long is left, and at the end the client sees all their answers, with “Edit” on each section, before sending.']
+    ]
+  },
   { v: 219, data: '2026-11-15',
     client: [],
     antrenor: [
@@ -11576,15 +11655,26 @@ function trimiteMesajReactivare(nume) {
     `Hi ${prenume}! We’ve missed you at training. Shall I book you a spot this week?`), c.contConectat ? URL_APLICATIE : undefined);
 }
 
-// Clientul cu cont: alegi conversația din aplicație (textul e gata scris, se poate modifica) sau meniul de partajare.
-// Fără cont: direct meniul de partajare.
-function trimiteMesajClient(c, text, link) {
+// Are clientul notificările pornite pe cel puțin un dispozitiv? true / false; null = nu se știe (fără internet sau SQL nerulat)
+async function clientAreNotificari(clientId) {
+  const { data, error } = await supabaseClient.rpc('client_are_notificari', { p_client_id: clientId });
+  return error ? null : !!data;
+}
+
+// Clientul cu cont și notificări pornite: direct conversația din aplicație, cu textul în câmpul de scris (se poate modifica).
+// Cu cont, dar fără notificări (sql/2026-11-16_client_notificari.sql): alegerea, fiindcă mesajul din aplicație îl vede
+// doar când o deschide; „Distribuie” ajunge pe telefon (WhatsApp, SMS). Fără cont: direct meniul de partajare.
+async function trimiteMesajClient(c, text, link) {
   if (!c.contConectat) return partajeaza(text, link);
+  const areNotificari = await clientAreNotificari(c.id);
+  if (areNotificari) return deschideMesajeCuText(c, text);
+  const prenume = c.nume.trim().split(/\s+/)[0];
+  // Fără notificări, „Distribuie” ajunge sigur pe telefon: e butonul principal
   customConfirm(tr(`Mesaj către ${c.nume}`, `Message to ${c.nume}`),
-    tr('Textul e deja scris; îl poți modifica înainte să-l trimiți.', 'The text is ready; you can edit it before sending.'),
-    () => deschideMesajeCuText(c, text));
-  document.getElementById('modalBtnConfirm').innerText = tr('În aplicație', 'In the app');
-  aratButonAlternativModal(tr('Distribuie', 'Share'), () => partajeaza(text, link));
+    areNotificari === null ? '' : tr(`${prenume} nu are notificările pornite: mesajul din aplicație îl vede abia când o deschide.`, `${prenume} has notifications off: they only see an in-app message when they open the app.`),
+    () => partajeaza(text, link));
+  document.getElementById('modalBtnConfirm').innerText = tr('Distribuie', 'Share');
+  aratButonAlternativModal(tr('În aplicație', 'In the app'), () => deschideMesajeCuText(c, text));
 }
 
 function deschideMesajeCuText(c, text) {
@@ -14013,11 +14103,30 @@ async function deschideMesaje(clientId, userId, titlu) {
     avatarEl.innerHTML = avatarSlotHtml(persoana);
   }
   document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
+  document.getElementById('mesajeAviz').hidden = true;
+  if (rolUtilizator !== 'clienta') aratAvizNotificari(clientId);
   raspunsuriEditare = false;
   randeazaRaspunsuriRapide();
   document.getElementById('panouMesaje').classList.remove('auth-hidden');
   sincronizeazaIstoricInapoi();
   await incarcaConversatie();
+}
+
+// Clientul fără notificări vede mesajele abia când deschide aplicația: „Anunță-l” îi trimite pe telefon că are un mesaj
+async function aratAvizNotificari(clientId) {
+  const c = (DB.clienti || []).find(x => x && x.id === clientId);
+  if (!c || (await clientAreNotificari(clientId)) !== false || !conversatie || conversatie.clientId !== clientId) return;
+  const prenume = c.nume.trim().split(/\s+/)[0];
+  const aviz = document.getElementById('mesajeAviz');
+  aviz.innerHTML = `<span>${tr(`${escAttr(prenume)} nu are notificările pornite: vede mesajele când deschide aplicația.`, `${escAttr(prenume)} has notifications off: they see messages when they open the app.`)}</span>
+    <button type="button" class="istoric-toate" onclick="anuntaMesajPeTelefon('${clientId}')">${tr('Anunță-l', 'Notify')}</button>`;
+  aviz.hidden = false;
+}
+
+function anuntaMesajPeTelefon(clientId) {
+  const c = (DB.clienti || []).find(x => x && x.id === clientId);
+  const prenume = c ? c.nume.trim().split(/\s+/)[0] : '';
+  partajeaza(tr(`Bună, ${prenume}! Ți-am scris în aplicație:`, `Hi ${prenume}! I sent you a message in the app:`), URL_APLICATIE);
 }
 
 async function incarcaConversatie() {
@@ -14344,11 +14453,19 @@ async function trimiteMesajNou() {
   selectieMesaj = null;
   anuntMesaj = false;
   await incarcaConversatii();
-  // La un singur client, conversația se deschide direct
+  // La un singur client, conversația se deschide direct (cu avertismentul, dacă n-are notificări)
   if (ids.length === 1) {
     const c = (DB.clienti || []).find(x => x.id === ids[0]);
     if (c) deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+    return;
   }
+  // Cei fără notificări îl văd abia când deschid aplicația: îi poți anunța și pe telefon, cu același text
+  const fara = (await Promise.all(ids.map(async id => (await clientAreNotificari(id)) === false ? (DB.clienti || []).find(x => x.id === id) : null))).filter(Boolean);
+  if (!fara.length) return;
+  customConfirm(tr(`${fara.length} ${fara.length === 1 ? 'client nu are' : 'clienți nu au'} notificările pornite`, `${fara.length} ${fara.length === 1 ? 'client has' : 'clients have'} notifications off`),
+    tr(`${fara.map(c => c.nume).join(', ')}: văd anunțul abia când deschid aplicația. Trimite-l și pe telefon.`, `${fara.map(c => c.nume).join(', ')}: they see it only when they open the app. Send it to their phone too.`),
+    () => partajeaza(text, URL_APLICATIE));
+  document.getElementById('modalBtnConfirm').innerText = tr('Distribuie', 'Share');
 }
 
 function deschideConversatieDinLista(i) {
@@ -15038,6 +15155,11 @@ async function salveazaObiectiv() {
 
 const formatKg = kg => kg.toLocaleString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { maximumFractionDigits: 1 });
 const formatZiLuna = d => d.toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: 'short' });
+// Săptămâna (de luni) ca interval: „9–15 nov.”, sau „30 oct. – 5 nov.” când trece în luna următoare
+function intervalSaptamana(iso) {
+  const luni = dataDinIso(iso), duminica = new Date(luni.getTime() + 6 * 86400000);
+  return luni.getMonth() === duminica.getMonth() ? `${luni.getDate()}–${formatZiLuna(duminica)}` : `${formatZiLuna(luni)} – ${formatZiLuna(duminica)}`;
+}
 
 // Grafic cu o singură serie (fără legendă; titlul o numește): linie 2px, puncte cu inel de suprafață,
 // etichete doar pe primul și ultimul punct; atingerea unui punct îi arată valoarea dedesubt.
@@ -15120,7 +15242,7 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
       }
       const perf = (Array.isArray(r.performanta) ? r.performanta : []).map(id => {
         const o = OPTIUNI_PERFORMANTA.find(x => x.id === id);
-        return `<span class="checkin-scor">${escAttr(o ? (id === 'progres' ? tr('↑ Greutăți / repetări', '↑ Weights / reps') : textInscriere(o)) : id)}</span>`;
+        return `<span class="checkin-scor">${id === 'progres' ? '↑ ' : '= '}${escAttr(o ? textInscriere(o) : id)}</span>`;
       }).join('');
       const texte = ['mese', 'victorie', 'provocare', 'intrebari'].filter(id => r[id]).map(id => {
         const q = INTREBARI_CHECKIN.find(x => x.id === id);
@@ -15137,7 +15259,7 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
     html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Check-in-uri', 'Check-ins')}</div>` + lista.map(c => `
       <div class="checkin-rand">
         <div class="checkin-rand-sus">
-          <b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b>
+          <b>${tr('Săptămâna', 'Week')} ${intervalSaptamana(c.saptamana)}</b>
           <span class="checkin-rand-dreapta">${butonPoze(c.saptamana)}${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}</span>
         </div>
         ${corp(c)}
@@ -16072,10 +16194,9 @@ function htmlCheckinuriAntrenor(client, checkinuri) {
       if (v === null) return '';
       return `<div class="checkin-metru ${nivel(v)}"><span>${eticheta}</span><b>${v}<small>/10</small>${sageata(v, prec ? scor(prec, id) : null)}</b><i style="width:${v * 10}%"></i></div>`;
     };
-    const perf = (Array.isArray(r.performanta) ? r.performanta : []).map(id => {
-      const o = OPTIUNI_PERFORMANTA.find(x => x.id === id);
-      return `<span class="checkin-eticheta-mica${id === 'progres' ? ' sus' : ''}">${escAttr(o ? (id === 'progres' ? tr('↑ Greutăți / repetări', '↑ Weights / reps') : textInscriere(o)) : id)}</span>`;
-    }).join('');
+    // Antrenamentul: un rând lat sub energie și somn (verde = a progresat, portocaliu = a rămas la fel)
+    const perf = (Array.isArray(r.performanta) ? r.performanta : []).slice(0, 1).map(id => `<div class="checkin-metru checkin-metru-lat ${id === 'progres' ? 'bun' : 'mediu'}"><span>${tr('Antrenament', 'Training')}</span>
+        <b>${id === 'progres' ? tr('↑ A progresat', '↑ Progressed') : tr('= Aceleași greutăți/repetări', '= Same weights/reps')}</b><i style="width:100%"></i></div>`).join('');
     const raspuns = (id, cls) => {
       const q = INTREBARI_CHECKIN.find(x => x.id === id);
       return r[id] ? `<div class="checkin-raspuns ${cls}"><span>${escAttr(textInscriere(q))}</span><p>${escAttr(r[id])}</p>${id === 'intrebari'
@@ -16085,11 +16206,10 @@ function htmlCheckinuriAntrenor(client, checkinuri) {
     const nota = !c.raspunsuri && c.nota ? `<div class="checkin-raspuns"><p>${escAttr(c.nota)}</p></div>` : '';
     return `<div class="lista-sticla checkin-saptamana">
         <div class="checkin-saptamana-sus">
-          <div><b>${tr('Săpt.', 'Week of')} ${formatZiLuna(new Date(c.saptamana + 'T12:00:00'))}</b><small>${cand(c)}</small></div>
+          <div><b>${tr('Săptămâna', 'Week')} ${intervalSaptamana(c.saptamana)}</b><small>${cand(c)}</small></div>
           <span class="checkin-rand-dreapta">${butonPoze(c)}${kg !== null ? `<b class="checkin-kg">${formatKg(kg)} kg${difKg}</b>` : ''}</span>
         </div>
-        <div class="checkin-metri">${metru('energie', tr('Energie', 'Energy'))}${metru('somn', tr('Somn', 'Sleep'))}</div>
-        ${perf ? `<div class="checkin-etichete">${perf}</div>` : ''}
+        <div class="checkin-metri">${metru('energie', tr('Energie', 'Energy'))}${metru('somn', tr('Somn', 'Sleep'))}${perf}</div>
         ${raspuns('victorie', 'victorie')}${raspuns('provocare', 'provocare')}${raspuns('mese', '')}${raspuns('intrebari', 'intrebare')}${nota}
       </div>`;
   }).join('');
@@ -19543,18 +19663,21 @@ const raspunsuriActiveInscriere = () => editareFisa ? editareFisa.r : stareInscr
 function htmlIntrebareInscriere(q) {
   const v = raspunsuriActiveInscriere()[q.id];
   const eticheta = `<label class="inscriere-eticheta" for="insc_${q.id}">${escAttr(textInscriere(q))}${q.ob ? ' <span class="inscriere-obligatoriu">*</span>' : ''}</label>`;
-  const chip = (text, activ, onclick) => `<button type="button" class="inscriere-chip${activ ? ' active' : ''}" onclick="${onclick}">${escAttr(text)}</button>`;
+  const chip = (text, activ, onclick) => `<button type="button" class="istoric-toate${activ ? ' activ' : ''}" onclick="${onclick}">${escAttr(text)}</button>`;
   let camp = '';
   if (q.tip === 'paragraf') {
-    camp = `<textarea id="insc_${q.id}" class="form-control" rows="2" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">${escAttr(v || '')}</textarea>`;
+    camp = `<textarea id="insc_${q.id}" class="form-control" rows="2" placeholder="${escAttr(tr('Scrie aici', 'Type here'))}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">${escAttr(v || '')}</textarea>`;
   } else if (q.tip === 'alegere' || q.tip === 'multi' || q.tip === 'danu' || q.tip === 'scala') {
     let optiuni = q.tip === 'scala' ? OPTIUNI_SCALA : (q.optiuni || OPTIUNI_DA_NU);
     // „Alte obiective” nu repetă obiectivul principal
     if (q.id === 'obiective') optiuni = optiuni.filter(o => o.id !== raspunsuriActiveInscriere().obiectivPrincipal);
     const multi = q.tip === 'multi';
-    camp = `<div class="inscriere-chips${q.tip === 'scala' ? ' inscriere-scala' : ''}">${optiuni.map(o => chip(textInscriere(o),
-      multi ? (Array.isArray(v) ? v : []).includes(o.id) : v === o.id,
-      `alegeOptiuneInscriere('${q.id}', '${o.id}', ${multi})`)).join('')}</div>`;
+    // Scala 1–5: bucăți pe un rând (ca la check-in), cea aleasă colorată: 4–5 verde, 3 portocaliu, 1–2 roșu
+    camp = q.tip === 'scala'
+      ? `<div class="checkin-scala" style="grid-template-columns: repeat(${optiuni.length}, 1fr);">${optiuni.map(o => `<button type="button" class="checkin-scala-btn${v === o.id ? ` active ${o.id >= '4' ? 'bun' : o.id === '3' ? 'mediu' : 'slab'}` : ''}" onclick="alegeOptiuneInscriere('${q.id}', '${o.id}', false)">${escAttr(textInscriere(o))}</button>`).join('')}</div>`
+      : `<div class="pastile-alegere">${optiuni.map(o => chip(textInscriere(o),
+        multi ? (Array.isArray(v) ? v : []).includes(o.id) : v === o.id,
+        `alegeOptiuneInscriere('${q.id}', '${o.id}', ${multi})`)).join('')}</div>`;
     if (q.hint) camp += `<div class="inscriere-hint">${escAttr(textInscriere(q.hint))}</div>`;
     if (q.tip === 'danu' && v === 'da') {
       const det = raspunsuriActiveInscriere()[q.id + 'Detalii'] || '';
@@ -19562,7 +19685,10 @@ function htmlIntrebareInscriere(q) {
     }
   } else {
     const tipuri = { numar: 'number', tel: 'tel', email: 'email', data: 'date', text: 'text' };
-    const extra = q.tip === 'numar' ? ` inputmode="decimal" min="${q.min}" max="${q.max}" step="any"` : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '';
+    // Câmpul stă direct în card (fără chenar): exemplul arată unde se scrie
+    const exemplu = q.tip === 'numar' ? `${q.min}–${q.max}` : q.tip === 'tel' ? '07xx xxx xxx' : q.tip === 'email' ? tr('nume@exemplu.ro', 'name@example.com') : tr('Scrie aici', 'Type here');
+    const extra = (q.tip === 'numar' ? ` inputmode="decimal" min="${q.min}" max="${q.max}" step="any"` : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '')
+      + (q.tip === 'data' ? '' : ` placeholder="${escAttr(exemplu)}"`);
     camp = `<input id="insc_${q.id}" type="${tipuri[q.tip]}" class="form-control"${extra} value="${escAttr(v || '')}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">`;
     // Câmp de dată gol: eticheta „Alege data” în locul șablonului zz.ll.aaaa al browserului
     if (q.tip === 'data') camp = `<div class="camp-data">${camp.replace('<input ', '<input required onclick="deschideCalendarData(this)" ')}<span class="camp-data-eticheta">${tr('Alege data', 'Pick a date')}</span></div>`;
@@ -19573,27 +19699,31 @@ function htmlIntrebareInscriere(q) {
 function randeazaInscriere() {
   randeazaAntetInscriere();
   const continut = document.getElementById('inscriereContinut');
-  const total = SECTIUNI_INSCRIERE.length + 1; // ultimul pas: consimțământul
+  const total = SECTIUNI_INSCRIERE.length + 1; // ultimul pas: verificarea răspunsurilor și acordul
   const pas = stareInscriere.pas;
-
   if (pas === 'trimis') {
     continut.innerHTML = htmlFinalInscriere();
     if (!stareInscriere.areSesiune) pregatesteCaptcha().catch(() => {});
     return;
   }
 
-  const bara = `<div class="inscriere-progres">
-      <span>${tr('Pasul', 'Step')} ${pas + 1} ${tr('din', 'of')} ${total}</span>
-      <div class="progress-wrapper"><div class="progress-fill" style="width:${Math.round(((pas + 1) / total) * 100)}%"></div></div>
-    </div>`;
+  const ultim = pas === total - 1;
+  // Cât mai durează: ~12 secunde pe întrebare, din pasul curent până la final
+  const ramase = SECTIUNI_INSCRIERE.slice(pas).reduce((t, s) => t + s.intrebari.length, 0);
+  const minute = Math.max(1, Math.round(ramase * 12 / 60));
+  const titlu = ultim ? tr('Verifică și trimite', 'Review and send') : textInscriere(SECTIUNI_INSCRIERE[pas]);
+  const sus = `<div class="checkin-form-sus">
+      <div><b class="inscriere-sectiune">${escAttr(titlu)}</b><small>${ultim ? tr('Ultimul pas', 'Last step') : tr(`~${minute} min până la final`, `~${minute} min to go`)}</small></div>
+      <span>${pas + 1} / ${total}</span>
+    </div>
+    <div class="checkin-pasi" style="grid-template-columns: repeat(${total}, 1fr);">${Array.from({ length: total }, (x, i) => `<i${i <= pas ? ' class="gata"' : ''}></i>`).join('')}</div>`;
   let corp;
-  if (pas < SECTIUNI_INSCRIERE.length) {
-    const s = SECTIUNI_INSCRIERE[pas];
-    corp = `<div class="inscriere-sectiune">${escAttr(textInscriere(s))}</div>` + s.intrebari.map(htmlIntrebareInscriere).join('');
+  if (!ultim) {
+    corp = SECTIUNI_INSCRIERE[pas].intrebari.map(htmlIntrebareInscriere).join('');
   } else {
     const acord = !!stareInscriere.r.consimtamant;
-    corp = `<div class="inscriere-sectiune">${tr('Consimțământ', 'Consent')}</div>
-      <label class="inscriere-acord" id="inscQ_consimtamant">
+    corp = htmlVerificareInscriere() + `
+      <label class="checkin-camp inscriere-acord" id="inscQ_consimtamant">
         <input type="checkbox" ${acord ? 'checked' : ''} onchange="seteazaRaspunsInscriere('consimtamant', this.checked)">
         <span>${tr('Am cel puțin 16 ani, informațiile oferite sunt reale și îmi dau acordul explicit ca antrenorul să le prelucreze, inclusiv datele despre sănătate (afecțiuni, dureri, greutate, poze de progres), doar pentru antrenamentul meu personal. Pot retrage acordul oricând.',
           'I am at least 16, the information I gave is true and I explicitly agree to my trainer processing it, including health data (conditions, pain, weight, progress photos), only for my personal training. I can withdraw my consent at any time.')}
@@ -19601,12 +19731,38 @@ function randeazaInscriere() {
       </label>
       <input type="text" id="inscriereWebsite" class="inscriere-capcana" tabindex="-1" autocomplete="off" aria-hidden="true">`;
   }
-  const ultim = pas === total - 1;
-  const butoane = `<div class="inscriere-butoane">
-      ${pas > 0 ? `<button type="button" class="btn btn-clear" onclick="pasInscriere(-1)">${tr('Înapoi', 'Back')}</button>` : ''}
-      <button type="button" class="btn" id="btnInscriereUrmator" onclick="${ultim ? 'trimiteInscriere()' : 'pasInscriere(1)'}"${stareInscriere.trimitere ? ' disabled' : ''}>${ultim ? tr('Trimite', 'Send') : tr('Continuă', 'Continue')}</button>
+  // Venit din verificare („Modifică”): butonul duce înapoi la verificare
+  const inapoiLaVerificare = stareInscriere.dinVerificare && !ultim;
+  const butoane = `<div class="checkin-butoane">
+      ${pas > 0 ? `<button type="button" class="fisa-scurta-actiune" onclick="pasInscriere(-1)">${tr('Înapoi', 'Back')}</button>` : '<span></span>'}
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnInscriereUrmator" onclick="${ultim ? 'trimiteInscriere()' : 'pasInscriere(1)'}"${stareInscriere.trimitere ? ' disabled' : ''}>${ultim ? tr('Trimite', 'Send') : inapoiLaVerificare ? tr('Gata, la verificare', 'Done, back to review') : tr('Continuă', 'Continue')}</button>
     </div>`;
-  continut.innerHTML = `<div class="card">${bara}${corp}${butoane}</div>`;
+  continut.innerHTML = `<div class="lista-sticla checkin-card inscriere-card">${sus}${corp}${butoane}</div>`;
+}
+
+// Verificarea dinaintea trimiterii: răspunsurile pe secțiuni, fiecare cu „Modifică” (duce la pasul ei)
+function htmlVerificareInscriere() {
+  const r = stareInscriere.r;
+  const are = v => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : String(v).trim() !== '');
+  return SECTIUNI_INSCRIERE.map((s, i) => {
+    const randuri = s.intrebari.filter(q => are(r[q.id])).map(q => {
+      const valoare = q.tip === 'scala' ? `${r[q.id]}/5` : q.tip === 'data' ? formateazaDataRoLocal(dataDinIso(r[q.id])) : textValoareInscriere(q.id, r[q.id]);
+      const detalii = r[q.id + 'Detalii'] ? ` · ${r[q.id + 'Detalii']}` : '';
+      return `<div class="inscriere-verificare-rand"><span>${escAttr(etichetaCampInscriere(q.id))}</span><b>${escAttr(valoare + detalii)}</b></div>`;
+    }).join('');
+    return `<div class="checkin-camp inscriere-verificare">
+        <div class="inscriere-verificare-sus"><b>${escAttr(textInscriere(s))}</b><button type="button" class="istoric-toate" onclick="mergiLaPasInscriere(${i})">${tr('Modifică', 'Edit')}</button></div>
+        ${randuri || `<div class="inscriere-verificare-rand"><span>${tr('Nimic completat', 'Nothing filled in')}</span></div>`}
+      </div>`;
+  }).join('');
+}
+
+function mergiLaPasInscriere(i) {
+  stareInscriere.pas = i;
+  stareInscriere.dinVerificare = true;
+  salveazaCiornaInscriere();
+  randeazaInscriere();
+  document.getElementById('inscriereScreen').scrollTop = 0;
 }
 
 function seteazaRaspunsInscriere(id, valoare) {
@@ -19664,7 +19820,8 @@ function pasInscriere(directie) {
       return;
     }
   }
-  stareInscriere.pas = Math.max(0, stareInscriere.pas + directie);
+  stareInscriere.pas = directie > 0 && stareInscriere.dinVerificare ? SECTIUNI_INSCRIERE.length : Math.max(0, stareInscriere.pas + directie);
+  if (stareInscriere.pas === SECTIUNI_INSCRIERE.length) stareInscriere.dinVerificare = false;
   salveazaCiornaInscriere();
   randeazaInscriere();
   document.getElementById('inscriereScreen').scrollTop = 0;

@@ -1782,17 +1782,6 @@ html[data-rol="clienta"] #bottomNav {
   margin-bottom: 12px;
 }
 
-.inscriere-intrebare {
-  margin-bottom: 14px;
-  padding: 2px;
-  border-radius: 8px;
-}
-
-.inscriere-intrebare textarea {
-  font-family: inherit;
-  resize: vertical;
-}
-
 .inscriere-eticheta {
   display: block;
   font-size: 0.85rem;
@@ -1800,6 +1789,48 @@ html[data-rol="clienta"] #bottomNav {
   line-height: 1.3;
   margin-bottom: 6px;
   color: var(--text);
+}
+
+/* În formularul pe pași, titlul secțiunii stă în antetul cardului, lângă „Pasul x / n” */
+.checkin-form-sus .inscriere-sectiune {
+  display: block;
+  margin: 0;
+  color: var(--m-text);
+}
+
+/* Verificarea dinaintea trimiterii: un card pe secțiune, „Modifică” în dreapta, răspunsurile pe rânduri */
+.inscriere-verificare-sus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.inscriere-verificare-sus .istoric-toate {
+  height: 32px;
+  color: var(--m-accent-text);
+}
+
+.inscriere-verificare-rand {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid var(--m-divider);
+  font-size: 0.8rem;
+  color: var(--m-muted);
+}
+
+.inscriere-verificare-rand b {
+  min-width: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  color: var(--m-text);
 }
 
 .inscriere-obligatoriu {
@@ -3148,52 +3179,164 @@ select.poza-comp-data {
   color: var(--text-muted);
 }
 
-/* Formularul de check-in: câmpuri ca în formularul Google, scala 0–10 / 1–10 pe un rând */
-.checkin-camp {
-  margin-top: 12px;
-  padding: 2px;
-  border-radius: 8px;
+/* Check-in-ul (Fișa mea și linkul public): card de sticlă, pe 3 pași cu bara de progres; întrebările despărțite prin linii */
+.checkin-card {
+  --text: var(--m-text);
+  --text-muted: var(--m-muted);
+  margin-bottom: 12px;
+  padding: 16px;
+  scroll-margin-top: 80px;
+}
+
+.checkin-form-sus {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.checkin-form-sus small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.checkin-form-sus > span {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--m-muted);
+}
+
+.checkin-pasi {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 12px 0 4px;
+}
+
+.checkin-pasi i {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--m-divider);
+}
+
+.checkin-pasi i.gata {
+  background: var(--m-accent-text);
+}
+
+.checkin-pas-titlu {
+  margin: 14px 0 2px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+/* Fiecare întrebare e un card, ca câmpurile din Încasare nouă: eticheta sus, răspunsul în card, fără al doilea chenar */
+:is(.checkin-camp, .inscriere-intrebare) {
+  position: relative;
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--m-card);
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-float-sm);
+}
+
+[data-theme="dark"] :is(.checkin-camp, .inscriere-intrebare) {
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .checkin-eticheta {
-  font-size: 0.86rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--text);
+  color: var(--m-text);
+}
+
+/* Scorul de săptămâna trecută, în dreapta etichetei */
+.checkin-eticheta small {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--m-muted);
 }
 
 .checkin-detalii {
   font-size: 0.75rem;
   line-height: 1.35;
-  color: var(--text-muted);
-  margin: 2px 0 6px;
+  color: var(--m-muted);
+  margin: 2px 0 8px;
 }
 
+/* Scala 1–10: bucăți pe un rând; cea aleasă e verde (7–10), portocalie (5–6) sau roșie (1–4), ca în fișa antrenorului */
 .checkin-scala {
   display: grid;
-  gap: 3px;
-  margin-top: 6px;
+  gap: 4px;
+  margin-top: 8px;
 }
 
 .checkin-scala-btn {
-  aspect-ratio: 1;
+  height: 36px;
   min-width: 0;
   padding: 0;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--input-glass-bg);
-  color: var(--text);
+  border-radius: 10px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .checkin-scala-btn.active {
-  background: var(--primary);
-  border-color: var(--primary);
+  border-color: transparent;
   color: #fff;
 }
 
+.checkin-scala-btn.bun {
+  background: #15803d;
+}
+
+.checkin-scala-btn.mediu {
+  background: #f5b041;
+}
+
+.checkin-scala-btn.slab {
+  background: #b91c1c;
+}
+
+/* Performanța: două plăci (ca abonamentele din Încasare nouă), dedesubt ce înseamnă */
+.checkin-placi {
+  margin-top: 8px;
+}
+
+.checkin-placi .istoric-toate {
+  height: auto;
+  min-height: 56px;
+  padding: 8px 12px;
+  white-space: normal;
+}
+
+.checkin-placi span {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--m-muted);
+}
+
+/* Bifele (acordul de la ciclu, lista de cumpărături) */
 .checkin-bifa {
   display: flex;
   align-items: flex-start;
@@ -3207,11 +3350,6 @@ select.poza-comp-data {
 .checkin-bifa input {
   flex-shrink: 0;
   margin-top: 2px;
-}
-
-/* Cardul de check-in al clientei */
-.card.checkin-card {
-  border: 1.5px solid var(--accent-purple) !important;
 }
 
 .checkin-titlu {
@@ -3236,27 +3374,74 @@ select.poza-comp-data {
 }
 
 .checkin-btn {
+  display: flex;
   width: 100%;
-  padding: 9px;
-  font-weight: 800;
 }
 
-
+/* Greutatea: cifra mare, fără contur, cu „kg” lângă; sub ea, de unde vine valoarea completată */
 .checkin-greutate {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
 .checkin-greutate input {
-  width: 90px;
+  width: 110px;
+  height: 48px;
+  margin-left: -8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--m-text);
   font-family: inherit;
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-align: center;
 }
 
-.checkin-nota-text {
+.checkin-greutate span {
+  font-weight: 800;
+  color: var(--m-muted);
+}
+
+.checkin-sursa {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--m-accent-text);
+}
+
+/* Textul și greutatea se scriu direct în card; cât scrii, doar o nuanță slabă (ca în Încasare nouă) */
+:is(.checkin-camp .checkin-nota-text, .inscriere-intrebare .form-control) {
+  margin: 0 -8px;
+  width: calc(100% + 16px);
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--m-text);
   font-family: inherit;
-  resize: vertical;
+  font-size: 0.92rem;
+  resize: none;
+  overflow-y: auto;
+}
+
+:is(.checkin-camp :is(.checkin-nota-text, .checkin-greutate input), .inscriere-intrebare .form-control):focus {
+  background: rgba(var(--accent-rgb), 0.08);
+  box-shadow: none;
+}
+
+/* Înapoi / Renunță (pastilă) și Continuă / Trimite (butonul principal, mai lat) */
+.checkin-butoane {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.checkin-butoane > .fisa-scurta-actiune {
+  order: 0;
+  height: 46px;
 }
 
 /* Câmp de dată gol: în locul șablonului „zz.ll.aaaa” apare o etichetă (câmpul are `required`, deci gol = :invalid) */
@@ -4577,25 +4762,13 @@ select.form-control {
   color: var(--m-muted);
 }
 
-.checkin-etichete {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 10px;
+.checkin-metru-lat {
+  grid-column: 1 / -1;
 }
 
-.checkin-eticheta-mica {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--m-btn);
-  border: 1px solid var(--m-border);
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--m-text);
-}
-
-.checkin-eticheta-mica.sus {
-  color: #15803d;
+/* Textul lat („↑ A progresat”) nu e mai mare decât titlul săptămânii */
+.checkin-metru-lat b {
+  font-size: 0.88rem;
 }
 
 /* Răspunsurile: întrebarea mică, deasupra; victoria verde, provocarea portocalie, întrebarea clientului în accent, cu „Răspunde” */
@@ -6326,8 +6499,8 @@ html:not([data-theme="dark"]) .hold-header::after {
   height: 34px;
 }
 
-/* Pastilele din fereastră stau pe carduri albe: umbra mică de sticlă le desparte de card pe tema deschisă */
-.incasare-foaie .istoric-toate {
+/* Pastilele din fereastră și din formulare stau pe carduri albe: umbra mică de sticlă le desparte de card pe tema deschisă */
+:is(.incasare-foaie, .checkin-card) .istoric-toate {
   box-shadow: var(--m-float-sm);
 }
 
@@ -9001,6 +9174,37 @@ input.serie-camp {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* Avertismentul de sub antet: clientul nu are notificările pornite, cu „Anunță-l” */
+.mesaje-aviz {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 12px 6px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 16px;
+  background: var(--m-card);
+  border: 1px solid var(--m-border);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--m-muted);
+}
+
+.mesaje-aviz[hidden] {
+  display: none;
+}
+
+.mesaje-aviz span {
+  flex: 1;
+  min-width: 0;
+}
+
+.mesaje-aviz .istoric-toate {
+  flex-shrink: 0;
+  height: 32px;
+  color: var(--m-accent-text);
 }
 
 .panou-mesaje .clienta-body {
