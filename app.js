@@ -101,9 +101,9 @@ const i18n = {
     noPresenceFound: "Nici o prezență găsită.",
     addClientPlaceholder: "Adaugă client",
     activeSection: "Activ",
-    holdSection: "Hold",
+    holdSection: "În pauză",
     noRecords: "Nici o înregistrare",
-    noClientsHold: "Niciun client în Hold",
+    noClientsHold: "Niciun client în pauză",
     addNewClientTitle: "Client nou",
     clientNamePlaceholder: "Nume și prenume client",
     saveClientBtn: "Salvează Clientul",
@@ -166,8 +166,6 @@ const i18n = {
     toastSlotFreed: "✓ Slot golit!",
     toastHourAdded: "✓ Oră adăugată: ",
     toastAddedProg: "✓ Adăugată în programări!",
-    toastMovedHold: "✓ Mutată în Hold!",
-    toastDeletedRecord: "✓ Înregistrare ștearsă!",
     toastDataUpdated: "✓ Date actualizate!",
     toastClientAdded: "✓ Client adăugat!",
     toastReactivated: "✓ Client reactivat!",
@@ -252,9 +250,9 @@ const i18n = {
     noPresenceFound: "No attendance found.",
     addClientPlaceholder: "Add client",
     activeSection: "Active",
-    holdSection: "Hold",
+    holdSection: "Paused",
     noRecords: "No records",
-    noClientsHold: "No clients in Hold",
+    noClientsHold: "No paused clients",
     addNewClientTitle: "New client",
     clientNamePlaceholder: "Client Full Name",
     saveClientBtn: "Save Client",
@@ -317,8 +315,6 @@ const i18n = {
     toastSlotFreed: "✓ Slot cleared!",
     toastHourAdded: "✓ Hour added: ",
     toastAddedProg: "✓ Added to bookings!",
-    toastMovedHold: "✓ Moved to Hold!",
-    toastDeletedRecord: "✓ Record deleted!",
     toastDataUpdated: "✓ Data updated!",
     toastClientAdded: "✓ Client added!",
     toastReactivated: "✓ Client reactivated!",
@@ -433,6 +429,8 @@ function aplicaTraduceriAtribute() {
     }
     opt.textContent = currentLang === 'en' ? traduceValoare(opt.dataset.ro) : opt.dataset.ro;
   });
+  // Pastilele de dată: data în limba aleasă, iar cele goale cu textul lor (data-gol / data-gol-en)
+  document.querySelectorAll('.pastila-data[data-gol] input[type="date"]').forEach(actualizeazaPastilaData);
 }
 
 function comutaVizibilitateParola(inputId, btnEl) {
@@ -1410,7 +1408,7 @@ async function exportaDateleMele() {
         [90, 40, '*', '*', 90]);
       sectiune(tr('Confirmări', 'Check-in'), DB.progActive.length + DB.progHold.length);
       tabel([tr('Nume', 'Name'), tr('Secțiune', 'Section'), tr('Prezență', 'Attendance'), tr('Mențiuni', 'Notes')],
-        DB.progActive.map(p => [p.nume, tr('Activ', 'Active'), p.prezenta, p.mentiuni]).concat(DB.progHold.map(p => [p.nume, 'Hold', p.prezenta, p.mentiuni])),
+        DB.progActive.map(p => [p.nume, tr('Activ', 'Active'), p.prezenta, p.mentiuni]).concat(DB.progHold.map(p => [p.nume, tr('În pauză', 'Paused'), p.prezenta, p.mentiuni])),
         ['*', 60, 80, '*']);
       sectiune(tr('Încasări', 'Payments'), DB.incasari.length);
       tabel([tr('Data', 'Date'), tr('Client', 'Client'), tr('Sumă', 'Amount'), tr('Metodă', 'Method'), tr('Tip', 'Type'), tr('Luna', 'Month')],
@@ -1608,6 +1606,11 @@ function gasesteClientaValida(numeIntrodus) {
   window.addEventListener('scroll', () => {
     if (!derulareProgramata) { derulareProgramata = true; requestAnimationFrame(verificaDerularea); }
   }, { passive: true });
+  // Filtrele Orarului stau lipite chiar sub bara zilelor: poziția lor urmează înălțimea barei (5 sau 7 zile, rotunjiri)
+  const baraZile = document.getElementById('dayButtonsContainer');
+  if (baraZile && window.ResizeObserver) new ResizeObserver(() => {
+    if (baraZile.offsetHeight) document.getElementById('tabOrar')?.style.setProperty('--zile-h', baraZile.offsetHeight + 'px');
+  }).observe(baraZile);
   const ecranClienta = document.getElementById('clientaScreen');
   if (ecranClienta) urmareste(ecranClienta, 'clientaNav', () => ecranClienta.scrollTop);
 })();
@@ -2812,15 +2815,26 @@ function callBackend(actionName, payload, callback, peEroare) {
   if (peEroare) peEroare();
 }
 
-function showToast(mesaj, tip = 'success') {
+// `actiuni` (opțional): [{ text, fn }] ca butoane în toast (ex. „Anulează”); toastul rămâne atunci `durata` ms și se poate apăsa
+function showToast(mesaj, tip = 'success', actiuni = [], durata = 2600) {
   let tEl = document.getElementById('customToast');
   if (!tEl) return;
   // Punctul colorat din toast arată deja reușita / eroarea: fără „✓” / „✔” / „❌” în fața textului
   tEl.innerText = String(mesaj).replace(/^\s*[✓✔✅❌⚠️]+\s*/u, '');
-  tEl.className = 'show ' + (tip === 'error' ? 'error' : 'success');
+  // Butoanele stau împreună: dacă nu încap lângă text, trec amândouă dedesubt, la dreapta
+  if (actiuni.length) tEl.innerHTML = `<span class="toast-text">${tEl.innerHTML}</span><span class="toast-actiuni"></span>`;
+  actiuni.forEach(a => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'toast-actiune';
+    b.textContent = a.text;
+    b.onclick = () => { tEl.classList.remove('show'); clearTimeout(showToast.timer); a.fn(); };
+    tEl.querySelector('.toast-actiuni').append(b);
+  });
+  tEl.className = 'show ' + (tip === 'error' ? 'error' : 'success') + (actiuni.length ? ' cu-actiuni' : '');
   // La ascundere rămâne culoarea (altfel se face gri în timp ce dispare); un toast nou nu e închis de timer-ul celui vechi
   clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => { tEl.classList.remove('show'); }, 2600);
+  showToast.timer = setTimeout(() => { tEl.classList.remove('show'); }, durata);
 }
 
 // `camp` (opțional): { placeholder, valoare }. Afișează un câmp de text, iar onConfirm primește ce s-a scris.
@@ -2832,14 +2846,36 @@ function customConfirm(titlu, text, onConfirm, camp) {
   inp.style.display = camp ? 'block' : 'none';
   inp.value = camp ? (camp.valoare || '') : '';
   inp.placeholder = camp ? (camp.placeholder || '') : '';
-  document.getElementById('customModalBackdrop').style.display = 'flex';
+  const fundalModal = document.getElementById('customModalBackdrop');
+  modalIesire.forEach(a => a.cancel());
+  modalIesire = [];
+  fundalModal.style.pointerEvents = '';
+  fundalModal.style.display = 'flex';
   document.getElementById('modalBtnAlt').style.display = 'none';
   modalCallback = onConfirm;
   modalAltCallback = null;
 }
 
+let modalIesire = [];
 function closeCustomModal(confirmed) {
-  document.getElementById('customModalBackdrop').style.display = 'none';
+  const fundal = document.getElementById('customModalBackdrop');
+  const card = fundal.querySelector('.custom-modal-card');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !card) fundal.style.display = 'none';
+  else {
+    fundal.style.pointerEvents = 'none';
+    const durata = { duration: 180, easing: 'ease-in', fill: 'forwards' };
+    modalIesire = [
+      fundal.animate([{ opacity: 1 }, { opacity: 0 }], durata),
+      card.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(8px) scale(0.97)' }], durata)
+    ];
+    const iesire = modalIesire;
+    iesire[0].finished.then(() => {
+      fundal.style.display = 'none';
+      fundal.style.pointerEvents = '';
+      iesire.forEach(a => a.cancel());
+      modalIesire = [];
+    }).catch(() => {});
+  }
   const inp = document.getElementById('modalInput');
   if (confirmed && modalCallback) modalCallback(inp.value.trim());
   modalCallback = null;
@@ -2891,7 +2927,13 @@ function getTopOffsetSubZile() {
   let daySelector = document.getElementById('dayButtonsContainer');
   let hHeader = headerEl ? headerEl.getBoundingClientRect().height : 50;
   let hDays = daySelector ? daySelector.getBoundingClientRect().height : 45;
-  return hHeader + hDays + 5;
+  return hHeader + hDays + inaltimeFiltreOrar() + 5;
+}
+
+// Rândul de filtre (cifrele zilei) stă lipit sub bara zilelor: ce urcă sub bară urcă și sub el. Ascuns (săptămâna trecută) = 0
+function inaltimeFiltreOrar() {
+  const el = document.getElementById('orarCifre');
+  return el && !el.hidden && el.offsetParent ? el.getBoundingClientRect().height : 0;
 }
 
 function calibreazaLayoutEcran(oraCheie, closestBlock) {
@@ -2990,6 +3032,7 @@ function aratOraInOrar(ora, reaplicare = false) {
 }
 
 function autoScrollLaOraCurenta(faraHighlight = false) {
+  if (filtruOrar) aplicaFiltruOrar(null);
   scrollLaInchidereCalendar = false;
   // Saltul la ora curentă se calculează pentru bara de jos la mărime normală
   const navJos = document.getElementById('bottomNav');
@@ -3078,9 +3121,23 @@ const SPATIU_SUB_ISTORIC = 6;
 
 // Secțiunea deschisă urcă sub antet (`deasupra` = înălțimea ocupată sus). Cu puțin conținut sub ea pagina nu se poate derula
 // atât: un spațiu gol la finalul tab-ului face loc, cât e deschisă (la închidere dispare)
-function urcaSubAntet(el, deasupra) {
-  setTimeout(() => {
-    const tinta = Math.max(0, Math.round(el.getBoundingClientRect().top + window.pageYOffset - deasupra - SPATIU_SUB_ISTORIC));
+// Derularea pornește odată cu desfășurarea (o singură mișcare), după ce secțiunea și-a randat conținutul (ontoggle).
+// Browserul oprește derularea la capătul paginii de la pornire, iar secțiunea abia începe să crească: spațiul de la final
+// face loc cât ține animația, apoi rămâne doar cât trebuie (cu puțin conținut sub secțiune, pagina nu s-ar derula atât).
+// `doarCatTrebuie` (secțiunile mici din fișă, ca în aplicațiile de top): dacă secțiunea deschisă încape pe ecran, pagina
+// nu se mișcă; altfel urcă doar cât să se vadă toată (cel mult până la titlul sub antet). Înălțimea finală e scrollHeight:
+// cât ține animația, secțiunea are overflow: hidden.
+function urcaSubAntet(el, deasupra, doarCatTrebuie) {
+  requestAnimationFrame(() => {
+    const sus = el.getBoundingClientRect().top;
+    let tinta = Math.max(0, Math.round(sus + window.pageYOffset - deasupra - SPATIU_SUB_ISTORIC));
+    if (doarCatTrebuie) {
+      const nav = document.getElementById('bottomNav');
+      const josVizibil = nav && nav.offsetParent ? nav.getBoundingClientRect().top : window.innerHeight;
+      const lipsa = sus + el.scrollHeight + 12 - josVizibil;
+      if (lipsa <= 0) return;
+      tinta = Math.min(tinta, Math.round(window.pageYOffset + lipsa));
+    }
     const tab = el.closest('.tab-content');
     if (tab) {
       let spatiu = tab.querySelector(':scope > .spatiu-sub-antet');
@@ -3089,17 +3146,23 @@ function urcaSubAntet(el, deasupra) {
         spatiu.className = 'spatiu-sub-antet';
         tab.append(spatiu);
       }
-      spatiu.style.height = Math.max(0, tinta + window.innerHeight - (document.documentElement.scrollHeight - spatiu.offsetHeight)) + 'px';
+      const potriveste = () => { spatiu.style.height = Math.max(0, tinta + window.innerHeight - (document.documentElement.scrollHeight - spatiu.offsetHeight)) + 'px'; };
+      potriveste();
+      el._potriveste = () => { if (el.open) potriveste(); }; // la finalul fiecărei animații de înălțime (animaInaltime)
       el.addEventListener('toggle', () => { if (!el.open) spatiu.style.height = '0'; }, { once: true });
     }
     window.scrollTo({ top: tinta, behavior: 'smooth' });
-  }, 300); // după animația de deschidere (280 ms): cu pagina încă scurtă, derularea s-ar opri mai jos
+  });
 }
 
-// Secțiunile fișei (Plan, Progres, Fișa de obiective, Prezențe și plăți, Cont și contact) urcă sub antet la deschidere
+// La deschidere: Hold, Prezențe și plăți și Fișa de obiective (secțiuni mari) urcă sub antet; celelalte secțiuni ale fișei
+// (Plan, Progres, Cont și contact) se derulează doar cât să se vadă
 document.addEventListener('toggle', e => {
   const det = e.target;
-  if (det.open && det.classList && det.classList.contains('fisa-sectiune')) urcaSubAntet(det, document.getElementById('mainAppHeader')?.offsetHeight || 50);
+  if (!det.open || !det.classList) return;
+  const antet = document.getElementById('mainAppHeader')?.offsetHeight || 50;
+  if (det.classList.contains('prog-hold') || det.id === 'detailsIstoricFisa' || det.id === 'detailsFisaInscriere') urcaSubAntet(det, antet);
+  else if (det.classList.contains('fisa-sectiune')) urcaSubAntet(det, antet, true);
 }, true);
 
 function peComutareIstoricOrar(detailsEl) {
@@ -3108,37 +3171,70 @@ function peComutareIstoricOrar(detailsEl) {
     let headerEl = document.getElementById('mainAppHeader');
     let daySelector = document.getElementById('dayButtonsContainer');
     // Bara zilelor lipită stă cu 1px peste header (top: calc(var(--header-height) - 1px))
-    urcaSubAntet(detailsEl, (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45));
+    urcaSubAntet(detailsEl, (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45) + inaltimeFiltreOrar());
   }
   // La închidere pagina rămâne unde e (fără salt la ora curentă, care te scotea din locul în care erai)
 }
 
-// Secțiunile cu săgeată (istoricele, secțiunile din Fișă): se desfășoară / se strâng mereu la fel
+// Secțiunile cu săgeată (istoricele, Hold, secțiunile din Fișă): se desfășoară / se strâng mereu la fel
 document.addEventListener('click', (ev) => {
-  let summary = ev.target.closest('summary.summary-toggle-clean');
+  let summary = ev.target.closest('summary:is(.summary-toggle-clean, .hold-header)');
   let det = summary && summary.parentElement;
   if (!det || det.tagName !== 'DETAILS' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   ev.preventDefault();
   if (det.dataset.animatie) return;
-  det.dataset.animatie = '1';
   let cs = getComputedStyle(det);
-  let inchis = summary.offsetHeight + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
-  let anima = (de, la, laFinal) => {
-    det.style.overflow = 'hidden';
-    det.animate([{ height: de + 'px' }, { height: la + 'px' }], { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }).onfinish = () => {
-      if (laFinal) laFinal();
-      det.style.overflow = '';
-      delete det.dataset.animatie;
-    };
-  };
+  // Înălțimea închisă: până sub titlu (cu marginea lui, ca la Hold), plus spațiul de jos al secțiunii
+  let inchis = summary.getBoundingClientRect().bottom - det.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+  // Conținutul (tot ce e sub titlu) apare treptat la deschidere și dispare întâi la închidere, nu e „dezvelit” de margine
+  const continut = () => det.querySelectorAll(':scope > :not(summary)');
   if (det.open) {
-    anima(det.offsetHeight, inchis, () => { det.open = false; });
+    observatorSectiuni.unobserve(det);
+    const stingeri = [...continut()].map(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out', fill: 'forwards' }));
+    animaInaltime(det, det.offsetHeight, inchis, () => {
+      det.open = false;
+      stingeri.forEach(a => a.cancel());
+    });
+    // Spațiul lăsat la final pentru urcarea sub antet se strânge în aceeași mișcare (altfel, jos în pagină, totul sare la final)
+    const spatiu = det.closest('.tab-content')?.querySelector(':scope > .spatiu-sub-antet');
+    if (spatiu && spatiu.offsetHeight) {
+      spatiu.animate([{ height: spatiu.offsetHeight + 'px' }, { height: '0px' }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+      spatiu.style.height = '0';
+    }
   } else {
     // ontoggle-ul secțiunii (dacă are) randează întâi conținutul, apoi se măsoară înălțimea reală
-    det.addEventListener('toggle', () => anima(inchis, det.offsetHeight), { once: true });
+    det.addEventListener('toggle', () => {
+      animaInaltime(det, inchis, det.offsetHeight);
+      continut().forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 60, easing: 'ease-out', fill: 'backwards' }));
+      det._deschisLa = Date.now();
+      observatorSectiuni.observe(det);
+    }, { once: true });
+    det.dataset.animatie = '1'; // până la toggle: o a doua atingere nu mai pornește nimic
     det.open = true;
   }
 });
+
+function animaInaltime(det, de, la, laFinal) {
+  det.dataset.animatie = '1';
+  det.style.overflow = 'hidden';
+  det.animate([{ height: de + 'px' }, { height: la + 'px' }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }).onfinish = () => {
+    if (laFinal) laFinal();
+    det.style.overflow = '';
+    delete det.dataset.animatie;
+    det._inaltime = la; // dacă s-a schimbat conținutul între timp, observatorul vede diferența și continuă lin
+    det._potriveste?.();
+  };
+}
+
+// Conținutul care vine după deschidere (Progres, Fișa de obiective se încarcă din bază): secțiunea crește lin până
+// la noua înălțime, nu dintr-odată. Doar în primele secunde și nu cât se mișcă o secțiune din interiorul ei.
+const observatorSectiuni = new ResizeObserver(intrari => intrari.forEach(({ target: det }) => {
+  const h = det.offsetHeight, inainte = det._inaltime;
+  if (det.dataset.animatie) return;
+  det._inaltime = h;
+  if (!det.open || !inainte || Math.abs(h - inainte) < 2 || Date.now() - det._deschisLa > 4000 || det.querySelector('[data-animatie]')) return;
+  animaInaltime(det, inainte, h);
+}));
 
 // CONTROL HEADER STÂNGA / DREAPTA PE PLANUL DE ANTRENAMENT (BACK / CLOSE)
 function gestioneazaClickStangaHeader(event) {
@@ -3230,6 +3326,7 @@ function actualizeazaHeaderVisual(tipTab, titlu) {
       <button class="header-icon-bubble-btn header-icon-clickable" id="headerIconOrarBtn" onclick="gestioneazaClickStangaHeader(event)" title="${currentLang === 'en' ? 'Toggle week selector' : 'Comută selectorul de săptămână'}">
         <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="4.5"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="9" x2="21" y2="9"></line><text class="cal-zi" x="12" y="18.3" font-size="8.5" font-weight="900" font-family="-apple-system, sans-serif" text-anchor="middle" fill="currentColor" stroke="none">21</text></svg>
       </button>
+      <button type="button" class="header-icon-bubble-btn orar-cauta-antet" id="btnCautaClientAntet" onclick="deschideCautareClient()" title="${tr('Caută client', 'Find client')}" aria-label="${tr('Caută client', 'Find client')}"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
     `;
   } else if (tipTab === 'fisa') {
     // Butonul din stânga al tab-ului Clienți: + (client nou) pe listă, ⋯ (datele clientului) cu o fișă deschisă
@@ -3277,7 +3374,7 @@ function aplicaTraduceriInterfataStatic() {
   actualizeazaDataIconite();
   document.getElementById('historyOrarSummaryText').innerText = t('historyOrarTitle');
 
-  document.getElementById('holdHeaderTitle').innerText = t('holdSection').toUpperCase();
+  document.getElementById('holdHeaderTitle').innerText = t('holdSection');
 
   document.getElementById('addClientSummaryText').innerText = t('addNewClientTitle');
   document.getElementById('nouNumeClienta').placeholder = t('clientNamePlaceholder');
@@ -4930,7 +5027,7 @@ function htmlFormObiectiv(o) {
     : `<div class="antr-pers-campuri"><label>${tr('Exercițiu', 'Exercise')}<input type="text" id="obiectivExercitiu" class="plan-ex-input" maxlength="80" list="listaExercitiiObiectiv" value="${escAttr(o ? o.exercitiu : '')}" placeholder="${tr('Ex: Hip thrust', 'E.g. Hip thrust')}"></label>
         <datalist id="listaExercitiiObiectiv">${sugestii}</datalist></div>
       <div class="antr-pers-campuri"><label>${tr('Greutate țintă (kg)', 'Target weight (kg)')}<input type="text" inputmode="decimal" id="obiectivTinta" class="plan-ex-input" maxlength="6" value="${o ? formatKg(Number(o.tinta)) : ''}"></label>
-        <label>${tr('Termen (opțional)', 'Deadline (optional)')}<input type="date" id="obiectivTermen" class="plan-ex-input" value="${escAttr(o && o.termen ? o.termen : '')}"></label></div>`;
+        <label>${tr('Termen (opțional)', 'Deadline (optional)')}${htmlPastilaData('obiectivTermen', o && o.termen ? o.termen : '', tr('Alege data', 'Pick a date'))}</label></div>`;
   return `<div class="card obiectiv-form" data-tip="${tip}">${tipuri}${campuri}
     <div class="antr-pers-actiuni">
       <button type="button" class="btn" onclick="salveazaObiectivUI('${o ? o.id : ''}')">${tr('Salvează', 'Save')}</button>
@@ -9490,7 +9587,7 @@ function afiseazaFisaMeaClienta() {
   html += titlu(tr('Obiectivele mele', 'My goals')) + `<div id="obiectiveContinut">${htmlObiective()}</div>`;
   html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
   html += titlu(tr('Progres la exerciții', 'Exercise progress')) + htmlProgresExercitii(sursaProgresClient());
-  const butonFisa = `<button type="button" class="btn btn-clear fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', dateClienta.fisa.fisa_inscriere)">✎ ${r ? tr('Editează fișa', 'Edit my form') : tr('Completează fișa', 'Fill in my form')}</button>`;
+  const butonFisa = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', dateClienta.fisa.fisa_inscriere)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${r ? tr('Editează fișa', 'Edit my form') : tr('Completează fișa', 'Fill in my form')}</button>`;
   html += `<div id="fisaObiectiveClient"></div>` + titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
     ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}${htmlModificareFisa(r)}${butonFisa}</div>`
     : `<div class="card"><div style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. O poți completa acum, iar antrenorul o vede imediat.', 'You don’t have a goal-setting form yet. You can fill it in now and your trainer sees it right away.')}</div>${butonFisa}</div>`);
@@ -10595,6 +10692,18 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 221, data: '2026-11-16',
+    client: [
+      ['Fișa de obiective se completează într-o fereastră nouă, mai ușor de citit, iar data de început se alege direct din calendar.', 'The goal-setting form now opens in a new, easier-to-read window, and the start date is picked straight from the calendar.']
+    ],
+    antrenor: [
+      ['Orar: sub zile ai filtrele „programați · prezenți · libere”, care rămân la vedere când derulezi; căutarea urcă și ea în antet.', 'Schedule: under the days you have the “booked · present · free” filters, which stay in view as you scroll; search moves up to the header too.'],
+      ['Apăsând pe un client din Orar: „Adaugă antrenament” deschide biblioteca pe tipul ales (ex. Picioare), iar afecțiunile declarate apar ca alertă.', 'Tapping a client in the Schedule: “Add workout” opens the library on the chosen type (e.g. Legs), and declared health conditions show as an alert.'],
+      ['Confirmări: Hold se numește acum „În pauză”. Pui în pauză și readuci un client dintr-o atingere, cu „Anulează” câteva secunde, iar după revenire îl poți programa direct.', 'Check-in: Hold is now “Paused”. Pause and bring back a client in one tap, with “Undo” for a few seconds, and book them right after they return.'],
+      ['Fișa clientului: Fișa de obiective e pe grupe, cu „Modifică” pe fiecare; Progres se deschide instant; Prezențe și plăți e ultima secțiune.', 'Client profile: the goal-setting form is grouped, with “Edit” on each group; Progress opens instantly; Attendance and payments is the last section.'],
+      ['Datele (start, expirare, termene) se aleg din pastile cu calendar, iar codul QR se deschide într-o fereastră nouă.', 'Dates (start, expiry, deadlines) are picked from calendar pills, and the QR code opens in a new window.']
+    ]
+  },
   { v: 220, data: '2026-11-16',
     client: [
       ['Check-in-ul săptămânal e pe 3 pași scurți. Greutatea se completează singură din cântăririle săptămânii (o poți schimba), vezi lângă scoruri ce ai dat săptămâna trecută, iar ce scrii rămâne salvat până trimiți.', 'The weekly check-in now has 3 short steps. Your weight is filled in from this week’s weigh-ins (you can change it), you see last week’s scores next to each scale, and what you type stays saved until you send it.']
@@ -11206,7 +11315,8 @@ const MODALE_INAPOI = [
   ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
   ['modalSharePlanBackdrop', () => inchideModalSharePlan()],
   ['modalQrBackdrop', () => inchideModalQr()],
-  ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()]
+  ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()],
+  ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()]
 ];
 let ignoraPopstateGarda = false;
 
@@ -11716,6 +11826,7 @@ function apasaButonAntetFisa() {
 function deschideFoaieFisa(id) {
   inchideFoaieFisa();
   const foaie = document.getElementById(id);
+  opresteCoborarea(foaie);
   foaie.hidden = false;
   foaie.scrollTop = 0;
   const fundal = document.createElement('div');
@@ -11728,12 +11839,13 @@ function deschideFoaieFisa(id) {
 
 function inchideFoaieFisa() {
   progresDeschis = null;
-  ['foaieAbonament', 'detailsEditareFisa', 'foaieProgres'].forEach(id => {
-    const foaie = document.getElementById(id);
+  const fundal = document.getElementById('foaieFisaFundal');
+  const foaie = ['foaieAbonament', 'detailsEditareFisa', 'foaieProgres'].map(id => document.getElementById(id)).find(f => !f.hidden && !f._coborare);
+  if (!foaie) { fundal?.remove(); return; }
+  coboaraFereastra(foaie, fundal, () => {
     foaie.hidden = true;
     foaie.style.transform = foaie.style.animation = '';
   });
-  document.getElementById('foaieFisaFundal')?.remove();
 }
 
 // Filtrul „Arhivați” ține locul bifei „Arată și arhivate”: o bifează (și lista de nume din tot ecranul îi include, ca înainte),
@@ -11821,6 +11933,7 @@ function deschideClientNou() {
   const randFormular = document.getElementById('nouFormularRand');
   randFormular.hidden = !codInscriereAntrenor;
   if (!codInscriereAntrenor) incarcaCodInscriere().then(() => { randFormular.hidden = !codInscriereAntrenor; });
+  opresteCoborarea(foaie);
   foaie.hidden = false;
   foaie.scrollTop = 0;
   if (!document.getElementById('clientNouFundal')) {
@@ -11835,9 +11948,10 @@ function deschideClientNou() {
 
 function inchideClientNou() {
   const foaie = document.getElementById('detailsDetailsAdaugareClienta');
-  foaie.hidden = true;
-  foaie.style.transform = foaie.style.animation = '';
-  document.getElementById('clientNouFundal')?.remove();
+  coboaraFereastra(foaie, document.getElementById('clientNouFundal'), () => {
+    foaie.hidden = true;
+    foaie.style.transform = foaie.style.animation = '';
+  });
 }
 
 trageInJosCaSaInchizi(document.getElementById('detailsDetailsAdaugareClienta'), inchideClientNou, '.fisa-scurta-maner, .incasare-foaie-titlu');
@@ -12003,11 +12117,32 @@ function actualizeazaTitluOrar(cifre) {
   }
   if (!elCifre) return;
   elCifre.hidden = !cifre;
+  // Filtrul ține doar de ziua pe care a fost ales; altă zi / săptămână trecută / grup golit între timp: toată ziua
+  const ziFiltru = `${getSaptamanaCheie()}_${ziCurentaCheie}`;
+  if (filtruOrar && (!cifre || filtruOrarZi !== ziFiltru || !cifre[filtruOrar])) aplicaFiltruOrar(null);
   if (!cifre) return;
-  elCifre.innerHTML = `
-    <div class="orar-cifra"><b>${cifre.programati}</b><span>${tr('programați', 'booked')}</span></div>
-    <div class="orar-cifra orar-cifra-verde"><b>${cifre.prezenti}</b><span>${tr('prezenți', 'present')}</span></div>
-    <div class="orar-cifra orar-cifra-accent"><b>${cifre.libere}</b><span>${tr('locuri libere', 'spots free')}</span></div>`;
+  const cifra = (grup, nr, text, culoare) => `<button type="button" class="orar-cifra${culoare ? ' orar-cifra-' + culoare : ''}${filtruOrar === grup ? ' activ' : ''}" data-filtru="${grup}"${nr ? '' : ' disabled'} onclick="filtreazaOrar('${grup}')"><b>${nr}</b><span>${text}</span></button>`;
+  elCifre.innerHTML = cifra('programati', cifre.programati, tr('programați', 'booked'), '')
+    + cifra('prezenti', cifre.prezenti, tr('prezenți', 'present'), 'verde')
+    + cifra('libere', cifre.libere, tr('libere', 'free'), 'accent');
+}
+
+// Filtrele Orarului (cifrele zilei): Programați = locurile ocupate, Prezenți = cei bifați, Libere = locurile goale.
+// Doar ascund rânduri (CSS, după data-stare); a doua atingere arată iar toată ziua. Orele blocate nu intră în cifre, deci nici în filtre.
+let filtruOrar = null, filtruOrarZi = '';
+function filtreazaOrar(grup) {
+  aplicaFiltruOrar(filtruOrar === grup ? null : grup);
+  // Derulat mai jos de prima oră: lista filtrată se vede de la început, sub bara zilelor și filtre
+  const cont = document.getElementById('sloturiContainer');
+  const sus = cont ? cont.getBoundingClientRect().top + window.scrollY - getTopOffsetSubZile() : 0;
+  if (cont && window.scrollY > sus) window.scrollTo({ top: sus, behavior: 'smooth' });
+}
+function aplicaFiltruOrar(grup) {
+  filtruOrar = grup;
+  filtruOrarZi = grup ? `${getSaptamanaCheie()}_${ziCurentaCheie}` : '';
+  const cont = document.getElementById('sloturiContainer');
+  if (cont) cont.dataset.filtru = grup || '';
+  document.querySelectorAll('#orarCifre .orar-cifra').forEach(b => b.classList.toggle('activ', b.dataset.filtru === grup));
 }
 
 // Cercul unui loc ocupat: inițialele, cu poza de profil peste ele când clientul are cont și poză
@@ -12041,6 +12176,10 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
   const ultima = (DB.prezente || [])
     .filter(p => p && p.clienta && p.clienta.trim().toLowerCase() === numeMic)
     .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)))[0];
+  // Alerta de sănătate din fișa de obiective (ca în antetul fișei): ce are și detaliile, pe scurt
+  const fisa = c.fisaInscriere || {};
+  const probleme = problemeSanatate(fisa);
+  const alerta = probleme.length ? `<div class="fisa-scurta-alerta">⚠ ${escAttr(probleme.map(id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id]) + (fisa[id + 'Detalii'] ? `: ${fisa[id + 'Detalii']}` : '')).join(' · '))}</div>` : '';
   const ramaseText = c.incluse > 0 ? String(c.ramase) : '–';
   const ramaseCls = c.incluse > 0 && c.ramase <= 0 ? ' rosu' : (c.incluse > 0 && c.ramase === 1 ? ' portocaliu' : '');
 
@@ -12056,7 +12195,7 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
     <div class="fisa-scurta-antet">
       <div class="slot-num">${avatarSlotHtml(c)}</div>
       <b>${escAttr(c.nume)}</b>
-    </div>
+    </div>${alerta}
     <div class="fisa-scurta-grila">
       <div><b class="${ramaseCls.trim()}">${ramaseText}</b><span>${tr('Ședințe rămase', 'Sessions left')}</span></div>
       <div><b>${escAttr(traduceValoare(c.tipAbonament))}</b><span>${tr('Abonament', 'Membership')}</span></div>
@@ -12064,10 +12203,16 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
       <div><b>${escAttr(c.dataExpirare)}</b><span>${tr('Valabil până la', 'Valid until')}</span></div>
     </div>
     <div class="fisa-scurta-actiuni">
+      <button type="button" class="fisa-scurta-actiune" id="btnAdaugaAntrenament"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>${tr('Adaugă antrenament', 'Add workout')}</button>
       ${dinSlot ? `<button type="button" class="fisa-scurta-actiune" id="btnRepetaSaptamanal" title="${tr('Același loc în următoarele 4 săptămâni', 'Same spot for the next 4 weeks')}"><svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${tr('Repetă săptămânal', 'Repeat weekly')}</button>` : ''}
       <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnFisaCompleta">${tr('Fișa completă', 'Full profile')}<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>`;
   if (dinSlot) foaie.querySelector('#btnRepetaSaptamanal').onclick = () => { inchideFisaScurta(); repetaSaptamanal(c, zi, ora, slotIdx); };
+  foaie.querySelector('#btnAdaugaAntrenament').onclick = () => {
+    const antEl = dinSlot ? document.getElementById(`ant_${normalizeazaOraUi(ora).replace(':', '')}_${slotIdx}`) : null;
+    inchideFisaScurta();
+    adaugaAntrenamentPentru(c, antEl ? (antEl.dataset.valoare ?? antEl.value) : '');
+  };
   foaie.querySelector('#btnFisaCompleta').onclick = () => {
     inchideFisaScurta();
     comutaTab('tabFisa', 'Clienți', document.getElementById('navBtnFisa'), 'fisa', 2);
@@ -12076,6 +12221,38 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
   trageInJosCaSaInchizi(foaie, inchideFisaScurta); // de oriunde de pe fișă, nu doar de mâner
   document.body.append(fundal, foaie);
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+// Închiderea ferestrelor de jos: coboară lin de unde se află (și după ce a fost trasă cu degetul), fundalul se stinge,
+// apoi `gata` o ascunde sau o șterge. Fundalul își pierde id-ul pe loc, ca o redeschidere să-și facă unul nou;
+// o redeschidere în timpul coborârii o oprește cu opresteCoborarea (gata nu mai rulează).
+function coboaraFereastra(foaie, fundal, gata) {
+  fundal?.removeAttribute('id');
+  if (fundal) fundal.style.pointerEvents = 'none';
+  if (!foaie || foaie.hidden || !foaie.getClientRects().length || matchMedia('(prefers-reduced-motion: reduce)').matches) { fundal?.remove(); gata(); return; }
+  const de = getComputedStyle(foaie).transform;
+  foaie.style.animation = 'none';
+  foaie.style.pointerEvents = 'none';
+  const durata = { duration: 260, easing: 'cubic-bezier(0.4, 0, 0.9, 0.6)', fill: 'forwards' };
+  const a = foaie.animate([{ transform: de === 'none' ? 'translateY(0)' : de }, { transform: 'translateY(105%)' }], durata);
+  fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], durata);
+  foaie._coborare = a;
+  foaie._fundalIesire = fundal;
+  a.finished.then(() => {
+    foaie._coborare = foaie._fundalIesire = null;
+    fundal?.remove();
+    gata();
+    a.cancel();
+    foaie.style.pointerEvents = '';
+  }).catch(() => {});
+}
+
+function opresteCoborarea(foaie) {
+  if (!foaie || !foaie._coborare) return;
+  foaie._coborare.cancel();
+  foaie._fundalIesire?.remove();
+  foaie._coborare = foaie._fundalIesire = null;
+  foaie.style.pointerEvents = '';
 }
 
 // Fereastra de jos urmează degetul trasă în jos și se închide după 60px; butoanele și câmpurile rămân ale lor.
@@ -12198,9 +12375,15 @@ function deschideCautareClient() {
   const deseneaza = () => {
     const q = fara(camp.value.trim());
     if (!q) { rezultate.innerHTML = ''; return; }
+    // Întâi cei al căror nume începe cu literele scrise, apoi prenumele / alt cuvânt, apoi restul potrivirilor
+    const rang = n => n.startsWith(q) ? 0 : n.split(/[\s-]+/).some(w => w.startsWith(q)) ? 1 : n.includes(q) ? 2 : -1;
     const gasiti = (DB.clienti || [])
-      .filter(c => c && c.nume && !/^(arhivat|archived)$/i.test(c.status || '') && fara(c.nume).includes(q))
-      .slice(0, 6);
+      .filter(c => c && c.nume && !/^(arhivat|archived)$/i.test(c.status || ''))
+      .map(c => ({ c, r: rang(fara(c.nume)) }))
+      .filter(x => x.r >= 0)
+      .sort((a, b) => a.r - b.r || a.c.nume.localeCompare(b.c.nume, 'ro'))
+      .slice(0, 6)
+      .map(x => x.c);
     rezultate.innerHTML = gasiti.length ? gasiti.map(c => {
       const prog = zile.flatMap(z => sloturiZi(cheie, z.cheie)
         .filter(s => s.clienta && s.clienta.trim().toLowerCase() === c.nume.trim().toLowerCase())
@@ -12239,6 +12422,17 @@ function deschideCautareClient() {
   };
   camp.addEventListener('input', deseneaza);
   trageInJosCaSaInchizi(foaie, inchideFisaScurta, '.fisa-scurta-maner');
+  // Tastatura acoperă partea de jos a ecranului: fereastra urcă deasupra ei și se strânge pe spațiul rămas
+  const vv = window.visualViewport;
+  if (vv) {
+    const urca = () => {
+      if (!foaie.isConnected) { vv.removeEventListener('resize', urca); vv.removeEventListener('scroll', urca); return; }
+      foaie.style.bottom = `${Math.max(0, window.innerHeight - vv.height - vv.offsetTop)}px`;
+      foaie.style.maxHeight = `${Math.min(window.innerHeight * 0.8, vv.height - 24)}px`;
+    };
+    vv.addEventListener('resize', urca);
+    vv.addEventListener('scroll', urca);
+  }
   document.body.append(fundal, foaie);
   sincronizeazaIstoricInapoi();
   setTimeout(() => camp.focus(), 60);
@@ -12248,8 +12442,8 @@ function inchideFisaScurta() {
   // Un câmp din fișă care încă are cursorul își salvează textul (blur) înainte să dispară fereastra
   const foaie = document.getElementById('fisaScurta');
   if (foaie && foaie.contains(document.activeElement)) document.activeElement.blur();
-  document.getElementById('fisaScurtaFundal')?.remove();
-  document.getElementById('fisaScurta')?.remove();
+  foaie?.removeAttribute('id');
+  coboaraFereastra(foaie, document.getElementById('fisaScurtaFundal'), () => foaie?.remove());
 }
 
 // Fără internet: etichetă sus, pentru că modificările din Orar nu se salvează fără conexiune
@@ -12536,7 +12730,7 @@ function randeazaOrarInstant() {
       }
 
       html += `
-        <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}">
+        <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}" data-stare="${!clientaCurata ? 'liber' : slot.bifat ? 'prezent' : 'programat'}">
           ${slotNumHtml}
           <div class="slot-info">
             <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${escAttr(clientaCurata)}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
@@ -13259,6 +13453,12 @@ function anuleazaSlot(zi, ora, slotIdx) {
   // capture: și derularea din ferestrele de jos (plată, editare), nu doar a paginii; la fel după ce o fereastră termină de urcat
   document.addEventListener('scroll', () => { if (camp) pozitioneaza(); }, { passive: true, capture: true });
   document.addEventListener('animationend', () => { if (camp) pozitioneaza(); }, true);
+  // Fereastra trasă în jos (și revenirea ei) mută câmpul: X-ul îl urmează. Fără capture: fereastra s-a mutat deja
+  ['pointermove', 'touchmove'].forEach(ev => document.addEventListener(ev, () => { if (camp && !btn.hidden) pozitioneaza(); }, { passive: true }));
+  let cadru = 0;
+  const urmareste = () => { if (!camp || btn.hidden) return; pozitioneaza(); cadru = requestAnimationFrame(urmareste); };
+  document.addEventListener('transitionrun', () => { cancelAnimationFrame(cadru); urmareste(); });
+  ['transitionend', 'transitioncancel'].forEach(ev => document.addEventListener(ev, () => { cancelAnimationFrame(cadru); if (camp) pozitioneaza(); }));
   window.addEventListener('resize', () => { if (camp) pozitioneaza(); });
 
   // pointerdown + preventDefault: câmpul rămâne selectat, tastatura nu se închide
@@ -13542,7 +13742,7 @@ function randeazaProgramariInstant() {
             <span class="prog-name">${escAttr(r.nume)}</span>
             <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${mentionPlaceholder}" onblur="schimbaMentiuneSaptamana(${i}, this.value)">${escAttr(mentiune)}</textarea>
           </div>
-          <button type="button" class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Mută în Hold', 'Move to Hold')}" aria-label="${tr('Mută în Hold', 'Move to Hold')}">${SVG_PAUZA_HOLD}</button>
+          <button type="button" class="btn-trash-action prog-hold-btn" onclick="mutaInHoldSaptamana(${i})" title="${tr('Pune în pauză', 'Pause')}" aria-label="${tr('Pune în pauză', 'Pause')}">${SVG_PAUZA_HOLD}</button>
         </div>`;
       // Tot rândul deschide fișa pe scurt (ținta, mențiunea, Hold); pastila trimite reminderul
       return `
@@ -13563,21 +13763,34 @@ function randeazaProgramariInstant() {
     let holdHtml = '';
     let pausePlaceholder = currentLang === 'en' ? 'Pause reason...' : 'Motiv pauză...';
     // În Hold motivul pauzei e chiar rostul rândului, deci câmpul rămâne mereu vizibil
-    (DB.progHold || []).forEach(item => {
+    // Rândurile ca la Încasări › De reînnoit: avatar, nume, motivul dedesubt (se scrie direct pe rând), acțiunea ca pastilă
+    randuriHold().forEach(item => {
+      const c = (DB.clienti || []).find(x => randulClientei(item, x, item.nume)) || { nume: item.nume };
       holdHtml += `
         <div class="prog-row">
+          <div class="slot-num">${avatarSlotHtml(c)}</div>
           <div class="prog-info">
             <span class="prog-name">${escAttr(item.nume)}</span>
             <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
           </div>
-          <button type="button" class="btn-trash-action prog-din-hold-btn" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din Hold', 'Take out of Hold')}" aria-label="${tr('Scoate din Hold', 'Take out of Hold')}">${SVG_DIN_HOLD}</button>
+          <button type="button" class="istoric-toate hold-revine" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din pauză', 'Resume')}"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${tr('Revine', 'Resume')}</button>
+        </div>`;
+    });
+    // Puși în pauză acum: până se salvează (5 secunde, cu „Anulează”) rândul e doar de citit; după salvare vine din bază
+    pauzaIntrare.forEach((c, cheie) => {
+      if (randuriHold().some(p => cheieNume(p.nume) === cheie)) { pauzaIntrare.delete(cheie); return; }
+      holdHtml += `
+        <div class="prog-row">
+          <div class="slot-num">${avatarSlotHtml(c)}</div>
+          <div class="prog-info"><span class="prog-name">${escAttr(c.nume)}</span></div>
         </div>`;
     });
     // Abonamentele înghețate din fișă apar și ele aici (doar de citit; se reiau din fișă)
-    const inghetati = (DB.clienti || []).filter(c => esteInghetat(c) && !(DB.progHold || []).some(p => randulClientei(p, c, p.nume)));
+    const inghetati = (DB.clienti || []).filter(c => esteInghetat(c) && !randuriHold().some(p => randulClientei(p, c, p.nume)));
     inghetati.forEach(c => {
       holdHtml += `
         <div class="prog-row">
+          <div class="slot-num">${avatarSlotHtml(c)}</div>
           <div class="prog-info">
             <span class="prog-name">${escAttr(c.nume)}</span>
             <span class="prog-sub">⏸ ${escAttr(stareAbonamentClienta(c).text)}</span>
@@ -13586,7 +13799,7 @@ function randeazaProgramariInstant() {
     });
     holdContainer.innerHTML = holdHtml || `<div class="prog-gol">${t('noClientsHold')}</div>`;
     const elHoldNr = document.getElementById('progHoldNr');
-    const nrHold = (DB.progHold || []).length + inghetati.length;
+    const nrHold = randuriHold().length + pauzaIntrare.size + inghetati.length;
     if (elHoldNr) elHoldNr.textContent = nrHold ? `(${nrHold})` : '';
   }
 }
@@ -13597,7 +13810,6 @@ function randeazaProgramariInstant() {
 // Programat = programările clientului din orar în săptămâna curentă (făcute sau încă nu). Aceleași reguli ca reminderele din bază.
 let randuriSaptamana = [];
 const SVG_PAUZA_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>';
-const SVG_DIN_HOLD = '<svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
 
 // Grupul arătat de cifrele de sus (zero / partial / complet); null = toți
 let filtruConfirmari = null;
@@ -13630,7 +13842,7 @@ function arataFisaConfirmari(i, e) {
       <div>${ore.length ? ore.map(o => `<em class="${o.bifat ? 'bifat' : ''}">${o.bifat ? '✓ ' : ''}${zileNume[o.zi] || ''} ${o.ora}</em>`).join('') : `<small>${tr('Nicio oră încă', 'No sessions yet')}</small>`}</div>
     </div>
     ${r.tinta ? `<button type="button" class="fisa-scurta-rand" id="btnFisaTinta"><span>${tr('Ședințe pe săptămână', 'Sessions per week')}</span><b>${r.tinta}${r.c.sedinteSaptamana ? '' : ` <small>${tr('automat', 'auto')}</small>`}</b></button>` : ''}
-    <textarea rows="2" class="fisa-scurta-mentiune" placeholder="${tr('Mențiune (ex. vine doar seara)', 'Note (e.g. evenings only)')}">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>`;
+    <textarea rows="2" class="fisa-scurta-mentiune" placeholder="${tr('Mențiune', 'Note')}">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>`;
   const camp = bloc.querySelector('textarea');
   // Ultima valoare trimisă: a doua ieșire din câmp nu mai salvează (altfel prima mențiune ar crea două rânduri)
   let salvat = r.conf ? r.conf.mentiuni : '';
@@ -13642,7 +13854,7 @@ function arataFisaConfirmari(i, e) {
   };
   if (r.tinta) bloc.querySelector('#btnFisaTinta').onclick = () => { inchideFisaScurta(); seteazaTintaSaptamana(i); };
   actiuni.before(bloc);
-  actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaHold">${SVG_PAUZA_HOLD}${tr('Mută în Hold', 'Move to Hold')}</button>`);
+  actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaHold">${SVG_PAUZA_HOLD}${tr('Pune în pauză', 'Pause')}</button>`);
   actiuni.querySelector('#btnFisaHold').onclick = () => { inchideFisaScurta(); mutaInHoldSaptamana(i); };
 }
 
@@ -13661,7 +13873,7 @@ const tintaSaptamanaClient = (c, bifate) => c.sedinteSaptamana ? Math.min(c.sedi
 function randuriConfirmariSaptamana() {
   const prefix = `W_${isoDinData(dataReferintaLuniBaza).replace(/-/g, '_')}_`;
   // Rândurile din confirmari se leagă de client după client_id, iar fără legătură, după nume (randulClientei)
-  const inHold = c => (DB.progHold || []).some(p => randulClientei(p, c, p.nume));
+  const inHold = c => pauzaIntrare.has(cheieNume(c.nume)) || randuriHold().some(p => randulClientei(p, c, p.nume));
   const folosite = new Set();
   const randuri = (DB.clienti || []).filter(c => {
     const t = stareAbonamentClienta(c).tip;
@@ -13684,7 +13896,7 @@ function randuriConfirmariSaptamana() {
   // Rândurile vechi, adăugate de mână pentru nume care nu mai sunt în lista de clienți, rămân cu mențiunile lor
   (DB.progActive || []).forEach(p => {
     // Doar rândurile care nu sunt ale niciunui client din listă (și nici ale unuia arhivat, înghețat sau în Hold)
-    if (folosite.has(p) || (DB.clienti || []).some(c => randulClientei(p, c, p.nume))) return;
+    if (folosite.has(p) || pauzaIntrare.has(cheieNume(p.nume)) || (DB.clienti || []).some(c => randulClientei(p, c, p.nume))) return;
     randuri.push({ c: null, nume: p.nume, tinta: 0, stare: '', facute: 0, conf: p });
   });
   // Întâi cine n-a programat nimic, apoi cine e la jumătate, apoi cei compleți
@@ -13733,16 +13945,29 @@ function schimbaMentiuneSaptamana(i, val) {
   callBackend("adaugaRandProgramare", { nume: r.nume, prezenta: "", mentiuni: val, esteHold: false }, () => incarcaBazaDateSilencios());
 }
 
+// Pune în pauză: fără întrebare (se poate anula), ca „Revine”. Clientul trece pe loc în „În pauză”, iar salvarea se face
+// după 5 secunde, cât toastul oferă „Anulează”. Închisă aplicația în cele 5 secunde, clientul rămâne în lista săptămânii.
+const pauzaIntrare = new Map(); // cheieNume → client (sau { nume }) pus în pauză acum
+
 function mutaInHoldSaptamana(i) {
   const r = randuriSaptamana[i];
   if (!r) return;
-  if (r.conf) return mutaInHold(r.conf.row);
-  customConfirm(tr('Mutare în Hold', 'Move to Hold'), tr(`Muți ${r.nume} în Hold? Nu mai apare în lista săptămânii și nu mai primește remindere.`, `Move ${r.nume} to Hold? They leave this week’s list and get no reminders.`), function() {
-    callBackend("adaugaRandProgramare", { nume: r.nume, prezenta: "", mentiuni: "", esteHold: true }, function() {
-      showToast(t('toastMovedHold'));
-      incarcaBazaDateSilencios();
-    });
-  });
+  const cheie = cheieNume(r.nume);
+  if (pauzaIntrare.has(cheie)) return;
+  pauzaIntrare.set(cheie, r.c || { nume: r.nume });
+  randeazaProgramariInstant();
+  let gata = false;
+  const timer = setTimeout(() => {
+    gata = true;
+    // Eroare: clientul revine în lista săptămânii; după salvare rămâne în „În pauză” până vine rândul din bază
+    const eroare = () => { pauzaIntrare.delete(cheie); randeazaProgramariInstant(); };
+    if (r.conf) callBackend("mutaInHold", { row: r.conf.row }, () => incarcaBazaDateSilencios(), eroare);
+    else callBackend("adaugaRandProgramare", { nume: r.nume, prezenta: "", mentiuni: "", esteHold: true }, () => incarcaBazaDateSilencios(), eroare);
+  }, 5000);
+  const prenume = r.nume.trim().split(/\s+/)[0];
+  showToast(tr(`${prenume} e în pauză`, `${prenume} is paused`), 'success', [
+    { text: tr('Anulează', 'Undo'), fn: () => { if (gata) return; clearTimeout(timer); pauzaIntrare.delete(cheie); randeazaProgramariInstant(); } }
+  ], 5000);
 }
 
 function schimbaPrezenta(row, selectEl) {
@@ -13767,23 +13992,41 @@ function schimbaMentiune(row, val) {
   callBackend("actualizeazaCampProgramare", { row: row, col: 4, val: val }, function() {});
 }
 
-function mutaInHold(row) {
-  customConfirm(currentLang === 'en' ? "Move to Hold" : "Mutare în Hold", currentLang === 'en' ? "Move client to Hold section?" : "Mut clientul în secțiunea Hold?", function() {
-    callBackend("mutaInHold", { row: row }, function() {
-      showToast(t('toastMovedHold'));
-      incarcaBazaDateSilencios();
-    });
-  });
-}
+// Hold › „Revine”: fără întrebare (se poate anula). Rândul dispare pe loc, clientul apare în lista săptămânii, iar ștergerea
+// din bază se face după 5 secunde, cât toastul oferă „Anulează” (revine exact cum era, cu motivul pauzei) și „Programează”
+// (Orar, cu căutarea pe numele lui). Închisă aplicația în cele 5 secunde, clientul rămâne în Hold.
+const holdIesire = new Set();
+const randuriHold = () => (DB.progHold || []).filter(p => !holdIesire.has(p.row));
 
 function stergeProgramareDefinitiv(row) {
   const r = (DB.progHold || []).find(p => p.row === row);
-  customConfirm(tr('Scoate din Hold', 'Take out of Hold'), tr(`Scoți ${r ? r.nume : 'clientul'} din Hold? Revine în lista săptămânii (mențiunea de pauză se șterge).`, `Take ${r ? r.nume : 'the client'} out of Hold? They return to this week’s list (the pause note is removed).`), function() {
-    callBackend("stergeRandProgramare", { row: row }, function() {
-      showToast(t('toastDeletedRecord'));
+  if (!r || holdIesire.has(row)) return;
+  holdIesire.add(row);
+  randeazaProgramariInstant();
+  let gata = false;
+  const sterge = () => {
+    if (gata) return;
+    gata = true;
+    clearTimeout(timer);
+    callBackend("stergeRandProgramare", { row: row }, () => {
+      DB.progHold = (DB.progHold || []).filter(p => p.row !== row);
+      holdIesire.delete(row);
       incarcaBazaDateSilencios();
-    });
-  });
+    }, () => { holdIesire.delete(row); randeazaProgramariInstant(); }); // eroare: rândul rămâne în Hold
+  };
+  const timer = setTimeout(sterge, 5000);
+  const prenume = r.nume.trim().split(/\s+/)[0]; // scurt, ca toastul cu două butoane să încapă și pe 360px
+  showToast(tr(`${prenume} a revenit`, `${prenume} is back`), 'success', [
+    { text: tr('Anulează', 'Undo'), fn: () => { gata = true; clearTimeout(timer); holdIesire.delete(row); randeazaProgramariInstant(); } },
+    { text: tr('Programează', 'Book'), fn: () => {
+      sterge();
+      comutaTab('tabOrar', tr('Orar', 'Schedule'), document.getElementById('navBtnOrar'), 'orar', 0);
+      deschideCautareClient();
+      const camp = document.querySelector('.cautare-client-camp');
+      camp.value = r.nume;
+      camp.dispatchEvent(new Event('input'));
+    } }
+  ], 5000);
 }
 
 function afiseazaFisaClientaInstant() {
@@ -13879,6 +14122,8 @@ function afiseazaFisaClientaInstant() {
   seteazaTipAbonamentSelect(document.getElementById('editTip'), client.tipAbonament);
   document.getElementById('editDataStart').value = dataRoInIso(client.dataStart);
   document.getElementById('editDataExpirare').value = dataRoInIso(client.dataExpirare);
+  actualizeazaPastilaData(document.getElementById('editDataStart'));
+  actualizeazaPastilaData(document.getElementById('editDataExpirare'));
   document.getElementById('editIncluse').value = client.incluse;
   document.getElementById('editEfectuate').value = client.efectuate;
   document.getElementById('editRamase').value = client.ramase;
@@ -13899,7 +14144,9 @@ function afiseazaFisaClientaInstant() {
   randeazaPlanFisa(client);
   // Progresul apare la toți: check-in-urile pot fi și importate (ex. din Google Forms), fără cont sau fișă de obiective
   document.getElementById('detailsProgresClienta').hidden = false;
-  incarcaProgresFisa();
+  // Alt client: progresul se încarcă de la deschiderea fișei (închis), ca Progres să se deschidă instant, cu datele gata.
+  // La reîmprospătarea aceluiași client se reîncarcă doar dacă e deschis.
+  incarcaProgresFisa(document.getElementById('progresFisaContinut').dataset.client !== client.id);
   filtreazaIstoricFisaInstant();
 }
 
@@ -13943,6 +14190,22 @@ function adaugaPlanDinFisa() {
   const client = clientaFisaCurenta();
   if (!client) return;
   dupaConfirmareModificariPlan(() => {
+    planActiv = construiesteSablonPlanDefault();
+    retinePlanInitial();
+    deschideSectiunePlanAntrenamentDinMeniu(client.nume);
+  });
+}
+
+// Orar › fișa pe scurt › „Adaugă antrenament”: biblioteca pentru client, pe Antrenamente, filtrată pe tipul din slot
+// (Picioare / Fesieri → Lower body, Spate / Umeri / Piept → Upper body...). Fără potriviri, filtrul revine singur la „Toate”.
+function adaugaAntrenamentPentru(client, tipSlot) {
+  const t = cheieNume(tipSlot);
+  const tip = /picioar|fes|leg|glute/.test(t) ? 'lower'
+    : /spate|brat|umer|piept|back|arm|shoulder|chest/.test(t) ? 'upper'
+    : /full/.test(t) ? 'full'
+    : /cardio|abdom|core/.test(t) ? 'core' : '';
+  dupaConfirmareModificariPlan(() => {
+    filtruBiblioteca = { text: '', tab: 'antrenamente', filtru: tip ? 'tip:' + tip : 'toate' };
     planActiv = construiesteSablonPlanDefault();
     retinePlanInitial();
     deschideSectiunePlanAntrenamentDinMeniu(client.nume);
@@ -14884,24 +15147,28 @@ function textSchimbariFisa(schimbari, nr) {
   return randuri.join('; ') + ((nr || chei.length) > randuri.length ? ` ${tr(`și încă ${(nr || chei.length) - randuri.length}`, `and ${(nr || chei.length) - randuri.length} more`)}` : '');
 }
 
-function deschideEditorFisa(clientId, fisa) {
-  editareFisa = { clientId, r: JSON.parse(JSON.stringify(fisa || {})) };
+// `sectiune` (opțional, indicele din SECTIUNI_INSCRIERE): doar întrebările ei, cu numele ei ca titlu („Modifică” pe grupă)
+function deschideEditorFisa(clientId, fisa, sectiune = null) {
+  editareFisa = { clientId, r: JSON.parse(JSON.stringify(fisa || {})), sectiune };
+  document.getElementById('fisaObiectiveTitlu').textContent = sectiune === null
+    ? tr('Fișa de obiective', 'Goal-setting form') : textInscriere(SECTIUNI_INSCRIERE[sectiune]);
   randeazaEditorFisa();
-  document.getElementById('modalFisaObiectiveBackdrop').style.display = 'flex';
+  deschideFoaieCuFundal(document.getElementById('modalFisaObiectiveBackdrop'), document.getElementById('cardFisaObiective'));
 }
 
 function randeazaEditorFisa() {
-  const corp = document.getElementById('fisaObiectiveEditor');
+  const corp = document.getElementById('cardFisaObiective');
   const sus = corp.scrollTop;
-  corp.innerHTML = SECTIUNI_INSCRIERE.map(s => {
+  const doar = editareFisa && editareFisa.sectiune !== null ? [SECTIUNI_INSCRIERE[editareFisa.sectiune]] : SECTIUNI_INSCRIERE;
+  document.getElementById('fisaObiectiveEditor').innerHTML = doar.map(s => {
     const intrebari = s.intrebari.filter(q => !CAMPURI_FIXE_FISA.includes(q.id));
-    return intrebari.length ? `<div class="inscriere-sectiune">${escAttr(textInscriere(s))}</div>` + intrebari.map(htmlIntrebareInscriere).join('') : '';
+    return intrebari.length ? (doar.length > 1 ? `<div class="lista-titlu">${escAttr(textInscriere(s))}</div>` : '') + intrebari.map(htmlIntrebareInscriere).join('') : '';
   }).join('');
   corp.scrollTop = sus;
 }
 
 function inchideEditorFisa() {
-  document.getElementById('modalFisaObiectiveBackdrop').style.display = 'none';
+  inchideFoaieCuFundal(document.getElementById('modalFisaObiectiveBackdrop'), document.getElementById('cardFisaObiective'));
   editareFisa = null;
 }
 
@@ -15105,11 +15372,7 @@ function htmlControaleProgres(ob, greutati) {
         <label for="inputObiectivKg">${tr('Obiectiv: greutate și termen', 'Goal: weight and deadline')}</label>
         <div class="progres-control-rand">
           <input type="number" inputmode="decimal" step="0.1" min="30" max="300" id="inputObiectivKg" class="form-control obiectiv-kg" placeholder="kg" value="${ob ? ob.kg : ''}">
-          <div class="camp-data camp-data-cu-icona">
-            <input type="date" id="inputObiectivData" class="form-control" required onclick="deschideCalendarData(this)" value="${ob && ob.data ? ob.data : ''}">
-            <span class="camp-data-eticheta">${tr('Termen', 'Deadline')}</span>
-            <svg class="camp-data-icona" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
-          </div>
+          ${htmlPastilaData('inputObiectivData', ob && ob.data ? ob.data : '', tr('Termen', 'Deadline'))}
           <button type="button" class="btn" onclick="salveazaObiectiv()">${tr('Salvează', 'Save')}</button>
         </div>
       </div>
@@ -15430,7 +15693,8 @@ function partajeaza(text, url) {
 // Generatorul (qrcode-generator, ~20 KB) se încarcă doar la primul cod afișat
 let qrCurent = null;
 
-async function arataQr(url, titlu, eticheta, numeFisier) {
+// `distribuie`: butonul „Distribuie sau printează” (doar la codul care e același pentru toți, cel de înscriere)
+async function arataQr(url, titlu, eticheta, numeFisier, distribuie = false) {
   try {
     if (!window.qrcode) await incarcaScriptVerificat('https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js', 'sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1');
   } catch (e) {
@@ -15458,11 +15722,12 @@ async function arataQr(url, titlu, eticheta, numeFisier) {
   ctx.fillText(eticheta, latura / 2, latura + cel, latura - cel * 4);
   qrCurent = { titlu, numeFisier };
   document.getElementById('qrModalTitlu').textContent = titlu;
-  document.getElementById('modalQrBackdrop').style.display = 'flex';
+  document.getElementById('btnQrDistribuie').hidden = !distribuie;
+  deschideFoaieCuFundal(document.getElementById('modalQrBackdrop'), document.getElementById('cardQr'));
 }
 
 function inchideModalQr() {
-  document.getElementById('modalQrBackdrop').style.display = 'none';
+  inchideFoaieCuFundal(document.getElementById('modalQrBackdrop'), document.getElementById('cardQr'));
 }
 
 // Pe telefon: meniul nativ (Salvează în galerie, WhatsApp...); pe calculator: descărcare PNG
@@ -15487,7 +15752,7 @@ function salveazaImagineQr() {
 function arataQrInscriere() {
   if (!codInscriereAntrenor) return;
   arataQr(linkInscriere(codInscriereAntrenor), tr('Link de înscriere', 'Sign-up link'),
-    tr('Scanează și completează fișa de înscriere', 'Scan to fill in the sign-up form'), 'B-Fit QR inscriere.png');
+    tr('Scanează și completează fișa de înscriere', 'Scan to fill in the sign-up form'), 'B-Fit QR inscriere.png', true);
 }
 
 async function arataQrCheckin() {
@@ -15882,8 +16147,9 @@ function arataNotificariRapid() {
 }
 
 function inchideNotificariRapid() {
-  document.getElementById('notifRapidFundal')?.remove();
-  document.getElementById('notifRapid')?.remove();
+  const foaie = document.getElementById('notifRapid');
+  foaie?.removeAttribute('id');
+  coboaraFereastra(foaie, document.getElementById('notifRapidFundal'), () => foaie?.remove());
 }
 
 // Deschiderea (fereastra de jos sau pagina) le marchează pe toate ca citite (bulina dispare)
@@ -16095,12 +16361,18 @@ async function incarcaProgresFisa(forta) {
   const corp = document.getElementById('progresFisaContinut');
   const client = clientaFisaCurenta();
   const activ = () => det.open || progresDeschis || forta;
-  if (!activ() || !client) {
+  if (!client) {
     corp.innerHTML = '';
     return;
   }
-  // Fișa se redesenează și la reîmprospătarea datelor: fără „Se încarcă” peste un progres deja afișat
-  if (!corp.innerHTML) corp.innerHTML = `<div class="loader">${tr('Se încarcă...', 'Loading...')}</div>`;
+  // Alt client: plăcile lui de data trecută (din această sesiune) apar pe loc, apoi se actualizează din bază
+  if (corp.dataset.client !== client.id) {
+    corp.innerHTML = placiProgresSesiune.get(client.id) || '';
+    corp.dataset.client = client.id;
+  }
+  if (!activ()) return;
+  // Fără „Se încarcă”: plăci goale de aceeași mărime cât vin datele (prima deschidere a clientului în sesiune)
+  if (!corp.innerHTML) corp.innerHTML = `<div class="progres-placi">${'<div class="lista-sticla progres-placa schelet"></div>'.repeat(4)}</div>`;
   const [{ data, error }, resGreutati, , resAntrPers, resObiective] = await Promise.all([
     supabaseClient.from('checkin_saptamanal').select('*').eq('client_id', client.id),
     supabaseClient.from('greutati').select('*').eq('client_id', client.id),
@@ -16280,8 +16552,12 @@ function randeazaPlaciProgres(client) {
     const f = c && FAZE_CICLU[c.faza];
     placi.push(placa('ciclu', f ? tr(f[0], f[1]) : '–', c ? textEstimareCiclu(c) : tr('Nicio menstruație notată', 'No period logged')));
   }
-  document.getElementById('progresFisaContinut').innerHTML = `<div class="progres-placi">${placi.join('')}</div>`;
+  const html = `<div class="progres-placi">${placi.join('')}</div>`;
+  placiProgresSesiune.set(client.id, html);
+  document.getElementById('progresFisaContinut').innerHTML = html;
 }
+// Plăcile de progres ale fiecărui client deschis în sesiune: la redeschiderea fișei apar instant
+const placiProgresSesiune = new Map();
 
 // Deschide fereastra unei plăci; datele se încarcă la nevoie (ex. din placa de greutate de sus, cu Progres închis)
 async function deschideFoaieProgres(k) {
@@ -16317,10 +16593,25 @@ function randeazaFisaInscriereDeschisa() {
   const det = document.getElementById('detailsFisaInscriere');
   const client = clientaFisaCurenta();
   if (!det.open || !client) { document.getElementById('fisaInscriereContinut').innerHTML = ''; return; }
-  const buton = `<button type="button" class="btn btn-clear fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(client.id)}', (clientaFisaCurenta() || {}).fisaInscriere)">✎ ${client.fisaInscriere ? tr('Editează fișa', 'Edit the form') : tr('Completează fișa', 'Fill in the form')}</button>`;
+  const buton = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(client.id)}', null)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${tr('Completează fișa', 'Fill in the form')}</button>`;
   document.getElementById('fisaInscriereContinut').innerHTML = client.fisaInscriere
-    ? htmlRaspunsuriInscriere(client.fisaInscriere) + htmlModificareFisa(client.fisaInscriere) + buton
+    ? htmlFisaObiectiveAntrenor(client.fisaInscriere, client.id)
     : `<div class="progres-gol">${tr('Clientul n-a completat încă formularul. Îl poți completa tu, din ce știi.', 'The client hasn’t filled in the form yet. You can fill it in from what you know.')}</div>` + buton;
+}
+
+// Răspunsurile pe grupele formularului (cum le-a completat clientul), fiecare grupă un card cu rânduri „etichetă — răspuns”.
+// Numele, telefonul și emailul sunt în „Cont și contact”; răspunsurile la întrebările scoase din formular, la final.
+// Fiecare grupă are „Modifică” (doar întrebările ei); grupele necompletate apar și ele, ca să poată fi completate.
+function htmlFisaObiectiveAntrenor(r, clientId) {
+  const grupa = (s, randuri, i) => randuri || i !== undefined ? `<div class="lista-titlu fisa-obiective-titlu"><span>${escAttr(textInscriere(s))}</span>${i !== undefined
+      ? `<button type="button" class="istoric-toate" onclick="deschideEditorFisa('${escAttr(clientId)}', (clientaFisaCurenta() || {}).fisaInscriere, ${i})">${tr('Modifică', 'Edit')}</button>` : ''}</div>
+    <div class="lista-sticla fisa-obiective-grup">${randuri || `<div class="inscriere-verificare-rand"><span>${tr('Necompletat', 'Not filled in')}</span></div>`}</div>` : '';
+  const grupe = SECTIUNI_INSCRIERE.map((s, i) => grupa(s, randuriSectiuneInscriere(s, r, CAMPURI_FIXE_FISA, true), i)).join('');
+  const alte = { ro: 'Alte răspunsuri', en: 'Other answers', intrebari: INTREBARI_VECHI_INSCRIERE };
+  const cine = r.modificatDe === 'antrenor' ? tr('de antrenor', 'by the trainer') : tr('de client', 'by the client');
+  const cand = [r.data ? `${tr('Completată pe', 'Filled in on')} ${r.data}` : '',
+    r.modificatLa ? `${tr('actualizată', 'updated')} ${cine} ${tr('pe', 'on')} ${formatZiLuna(new Date(r.modificatLa))}` : ''].filter(Boolean).join(' · ');
+  return grupe + grupa(alte, randuriSectiuneInscriere(alte, r)) + (cand ? `<div class="fisa-obiective-cand">${escAttr(cand)}</div>` : '');
 }
 
 // Emailul cu link-ul de acces în aplicație (true = trimis)
@@ -16477,6 +16768,7 @@ function completeazaExpirareEditare() {
   const d = new Date(parseazaDataOraRo(start));
   d.setDate(d.getDate() + zileValabilitateAbonament(document.getElementById('editTip').value));
   elExp.value = dataRoInIso(formateazaDataRoLocal(d));
+  actualizeazaPastilaData(elExp);
 }
 
 function salveazaEditareClienta() {
@@ -16976,6 +17268,7 @@ function deschideIncasareNoua(pre) {
   arataClientIncasare();
   actualizeazaSumaIncasare();
   actualizeazaPastileDateIncasare();
+  opresteCoborarea(foaie);
   foaie.hidden = false;
   foaie.scrollTop = 0; // fereastra rămâne în pagină între deschideri: pornește mereu de sus, nu de unde a rămas
   if (!document.getElementById('incasareFundal')) {
@@ -17017,11 +17310,11 @@ function arataClientIncasare(ev, campDat) {
 
 function inchideIncasareNoua() {
   const foaie = document.getElementById('cardInregistrareIncasare');
-  if (foaie) {
+  coboaraFereastra(foaie, document.getElementById('incasareFundal'), () => {
+    if (!foaie) return;
     foaie.hidden = true;
     foaie.style.transform = foaie.style.animation = ''; // după tragere: la următoarea deschidere urcă iar de jos
-  }
-  document.getElementById('incasareFundal')?.remove();
+  });
 }
 
 // Fereastra rămâne în pagină (nu se recreează), deci tragerea se leagă o singură dată; restul ei derulează
@@ -17195,18 +17488,42 @@ function deschideModalEditareIncasare(itemEncoded) {
   construiestePastileIncasare('#cardEditareIncasare');
   arataClientIncasare(null, campClient);
   actualizeazaPastileDateIncasare();
-  document.getElementById('modalEditareIncasareBackdrop').style.display = 'flex';
-  document.getElementById('cardEditareIncasare').scrollTop = 0;
+  deschideFoaieCuFundal(document.getElementById('modalEditareIncasareBackdrop'), document.getElementById('cardEditareIncasare'));
 }
 
 // Închiderea înseamnă renunțare: la următoarea deschidere câmpurile se completează iar din plată
 function inchideModalEditareIncasare() {
-  document.getElementById('modalEditareIncasareBackdrop').style.display = 'none';
-  const foaie = document.getElementById('cardEditareIncasare');
-  foaie.style.transform = foaie.style.animation = ''; // după tragere: la următoarea deschidere urcă iar de jos
+  inchideFoaieCuFundal(document.getElementById('modalEditareIncasareBackdrop'), document.getElementById('cardEditareIncasare'));
+}
+
+// Fereastra de jos al cărei fundal e containerul ei (editarea încasării, fișa de obiective, codul QR): se arată de sus,
+// oprind o închidere încă în curs, și se închide cu „Înapoi” de pe telefon
+function deschideFoaieCuFundal(fundal, foaie) {
+  opresteCoborarea(foaie);
+  fundal.getAnimations().forEach(a => a.cancel());
+  fundal.style.pointerEvents = '';
+  fundal.style.display = 'flex';
+  foaie.scrollTop = 0;
+  sincronizeazaIstoricInapoi();
+}
+
+// Fereastra de jos coboară, iar fundalul (containerul ei) se stinge odată cu ea, apoi se ascunde
+function inchideFoaieCuFundal(fundal, foaie) {
+  if (foaie._coborare) return;
+  fundal.style.pointerEvents = 'none';
+  const durata = { duration: 260, fill: 'forwards' };
+  const stinge = fundal.style.display === 'flex' ? fundal.animate([{ opacity: 1 }, { opacity: 0 }], durata) : null;
+  coboaraFereastra(foaie, null, () => {
+    stinge?.cancel();
+    fundal.style.display = 'none';
+    fundal.style.pointerEvents = '';
+    foaie.style.transform = foaie.style.animation = ''; // după tragere: la următoarea deschidere urcă iar de jos
+  });
 }
 
 trageInJosCaSaInchizi(document.getElementById('cardEditareIncasare'), inchideModalEditareIncasare, '.fisa-scurta-maner, .incasare-foaie-titlu');
+trageInJosCaSaInchizi(document.getElementById('cardFisaObiective'), inchideEditorFisa, '.fisa-scurta-maner, .incasare-foaie-titlu');
+trageInJosCaSaInchizi(document.getElementById('cardQr'), inchideModalQr);
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
@@ -18481,7 +18798,7 @@ function randeazaPlanAntrenamentUI() {
     html += `
       <div class="plan-sus no-print">
         <button type="button" class="plan-inapoi-biblioteca" onclick="${planDeschisDinFisa ? 'gestioneazaClickStangaHeader(event)' : 'inapoiLaBiblioteca()'}">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> ${planDeschisDinFisa ? tr('Fișa clientului', 'Client profile') : tr('Biblioteca', 'Library')}
+          <svg class="plan-btn-svg" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg> ${!planDeschisDinFisa ? tr('Biblioteca', 'Library') : tabAnteriorPlan === 'orar' ? tr('Orar', 'Schedule') : tr('Fișa clientului', 'Client profile')}
         </button>
         ${(planActiv.clienta || '').trim() ? `<span class="plan-tag plan-pentru">${tr('Plan pentru', 'Plan for')}: ${escAttr(planActiv.clienta)}</span>` : ''}
       </div>
@@ -19690,8 +20007,12 @@ function htmlIntrebareInscriere(q) {
     const extra = (q.tip === 'numar' ? ` inputmode="decimal" min="${q.min}" max="${q.max}" step="any"` : q.id === 'nume' ? ' autocomplete="name"' : q.tip === 'tel' ? ' autocomplete="tel"' : q.tip === 'email' ? ' autocomplete="email"' : '')
       + (q.tip === 'data' ? '' : ` placeholder="${escAttr(exemplu)}"`);
     camp = `<input id="insc_${q.id}" type="${tipuri[q.tip]}" class="form-control"${extra} value="${escAttr(v || '')}" oninput="seteazaRaspunsInscriere('${q.id}', this.value)">`;
-    // Câmp de dată gol: eticheta „Alege data” în locul șablonului zz.ll.aaaa al browserului
-    if (q.tip === 'data') camp = `<div class="camp-data">${camp.replace('<input ', '<input required onclick="deschideCalendarData(this)" ')}<span class="camp-data-eticheta">${tr('Alege data', 'Pick a date')}</span></div>`;
+    // Data: o pastilă cu calendar, ca „Altă dată” din Încasare nouă („4 noiembrie 2026” / „Alege data”); câmpul de dată
+    // e invizibil peste ea și deschide calendarul telefonului (fără șablonul browserului „04-Nov-2026”)
+    if (q.tip === 'data') camp = `<div class="pastile-alegere"><span class="pastila-data">
+        <button type="button" class="istoric-toate${v ? ' activ' : ''}" tabindex="-1"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>${escAttr(textDataInscriere(v))}</span></button>
+        <input id="insc_${q.id}" type="date" value="${escAttr(v || '')}" onclick="deschideCalendarData(this)" onchange="alegeDataInscriere(this, '${q.id}')">
+      </span></div>`;
   }
   return `<div class="inscriere-intrebare" id="inscQ_${q.id}">${eticheta}${camp}</div>`;
 }
@@ -19741,15 +20062,28 @@ function randeazaInscriere() {
 }
 
 // Verificarea dinaintea trimiterii: răspunsurile pe secțiuni, fiecare cu „Modifică” (duce la pasul ei)
+// Rândurile unei secțiuni a formularului, „etichetă scurtă — răspuns”, doar pentru întrebările cu răspuns.
+// Comune: verificarea dinaintea trimiterii și Fișa de obiective a antrenorului (acolo, `cuAlerta`: problemele de sănătate în roșu)
+function randuriSectiuneInscriere(s, r, faraCampuri = [], cuAlerta = false) {
+  const are = v => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : String(v).trim() !== '');
+  const probleme = cuAlerta ? problemeSanatate(r) : [];
+  return s.intrebari.filter(q => !faraCampuri.includes(q.id) && are(r[q.id])).map(q => {
+    const v = r[q.id];
+    // Răspunsurile vechi pot fi scrise liber (ex. „Mediu” la o scală, „1 nov.” la o dată): se arată ca atare
+    const valoare = q.tip === 'scala' && /^[1-5]$/.test(String(v)) ? `${v}/5`
+      : q.tip === 'data' && /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? formateazaDataRoLocal(dataDinIso(v))
+      : textValoareInscriere(q.id, v) + ({ varsta: tr(' ani', ' yrs'), inaltime: ' cm', greutate: ' kg', greutateTinta: ' kg' }[q.id] || '');
+    const detalii = r[q.id + 'Detalii'] ? ` · ${r[q.id + 'Detalii']}` : '';
+    // Răspuns lung (peste ~28 de caractere): sub etichetă, nu înghesuit în dreapta
+    const lung = (valoare + detalii).length > 28 ? ' lung' : '';
+    return `<div class="inscriere-verificare-rand${probleme.includes(q.id) ? ' alerta' : ''}${lung}"><span>${escAttr(etichetaCampInscriere(q.id))}</span><b>${escAttr(valoare + detalii)}</b></div>`;
+  }).join('');
+}
+
 function htmlVerificareInscriere() {
   const r = stareInscriere.r;
-  const are = v => v !== undefined && v !== null && (Array.isArray(v) ? v.length > 0 : String(v).trim() !== '');
   return SECTIUNI_INSCRIERE.map((s, i) => {
-    const randuri = s.intrebari.filter(q => are(r[q.id])).map(q => {
-      const valoare = q.tip === 'scala' ? `${r[q.id]}/5` : q.tip === 'data' ? formateazaDataRoLocal(dataDinIso(r[q.id])) : textValoareInscriere(q.id, r[q.id]);
-      const detalii = r[q.id + 'Detalii'] ? ` · ${r[q.id + 'Detalii']}` : '';
-      return `<div class="inscriere-verificare-rand"><span>${escAttr(etichetaCampInscriere(q.id))}</span><b>${escAttr(valoare + detalii)}</b></div>`;
-    }).join('');
+    const randuri = randuriSectiuneInscriere(s, r);
     return `<div class="checkin-camp inscriere-verificare">
         <div class="inscriere-verificare-sus"><b>${escAttr(textInscriere(s))}</b><button type="button" class="istoric-toate" onclick="mergiLaPasInscriere(${i})">${tr('Modifică', 'Edit')}</button></div>
         ${randuri || `<div class="inscriere-verificare-rand"><span>${tr('Nimic completat', 'Nothing filled in')}</span></div>`}
@@ -19763,6 +20097,36 @@ function mergiLaPasInscriere(i) {
   salveazaCiornaInscriere();
   randeazaInscriere();
   document.getElementById('inscriereScreen').scrollTop = 0;
+}
+
+// „4 noiembrie 2026” (valorile vechi, scrise altfel, rămân ca atare); gol: „Alege data”
+// Pastila de dată generată din cod (aceeași ca în index.html): `gol` = textul fără dată; luna prescurtată, fiindcă stă
+// pe un rând cu alte câmpuri (greutatea și termenul)
+function htmlPastilaData(id, valoare, gol) {
+  return `<span class="pastila-data" data-scurt data-gol="${escAttr(gol)}" data-gol-en="${escAttr(gol)}"><button type="button" class="istoric-toate${valoare ? ' activ' : ''}" tabindex="-1"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>${escAttr(valoare ? textDataInscriere(valoare, true) : gol)}</span></button><input type="date" id="${id}" value="${escAttr(valoare)}" onclick="deschideCalendarData(this)" onchange="actualizeazaPastilaData(this)"></span>`;
+}
+
+// `scurt`: luna prescurtată („2 dec. 2026”), pentru pastilele așezate două pe rând
+function textDataInscriere(v, scurt = false) {
+  if (!v) return tr('Alege data', 'Pick a date');
+  return /^\d{4}-\d{2}-\d{2}$/.test(v)
+    ? new Date(`${v}T00:00`).toLocaleDateString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { day: 'numeric', month: scurt ? 'short' : 'long', year: 'numeric' }) : v;
+}
+
+function alegeDataInscriere(input, id) {
+  seteazaRaspunsInscriere(id, input.value);
+  actualizeazaPastilaData(input);
+}
+
+// Pastila de dată (calendar + „4 noiembrie 2026”) urmează câmpul de dată invizibil de peste ea; se cheamă și după ce
+// valoarea e pusă din cod. Gol: textul din data-gol (data-gol-en în engleză) sau „Alege data”.
+function actualizeazaPastilaData(input) {
+  const pastila = input && input.previousElementSibling;
+  if (!pastila) return;
+  const cutie = input.closest('.pastila-data');
+  const gol = cutie && (currentLang === 'en' ? cutie.dataset.golEn : cutie.dataset.gol);
+  pastila.classList.toggle('activ', !!input.value);
+  pastila.querySelector('span').textContent = input.value || !gol ? textDataInscriere(input.value, cutie && cutie.hasAttribute('data-scurt')) : gol;
 }
 
 function seteazaRaspunsInscriere(id, valoare) {
