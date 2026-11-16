@@ -16035,7 +16035,9 @@ if ('serviceWorker' in navigator) {
 
 function actualizeazaBulinaNotificari() {
   const necitite = notificari.filter(n => !n.citit).length;
-  document.querySelectorAll('.notificari-bulina').forEach(b => {
+  // Doar bulina clopoțelului: cea de pe Mesaje (antet) și cea de pe „Mesaj” din fișă au același aspect, dar numără mesajele
+  // (actualizeazaBulinaMesaje); altfel apărea o clipă numărul notificărilor pe chat, la deschiderea aplicației
+  document.querySelectorAll('.btn-notificari:not(.btn-mesaje) > .notificari-bulina').forEach(b => {
     b.hidden = necitite === 0;
     b.textContent = necitite > 9 ? '9+' : necitite;
   });
@@ -16341,15 +16343,21 @@ async function arataLipsaCheckin(n) {
   window.__lipsaCheckin = (DB.clienti || []).filter(c => (c.status || '').toLowerCase() === 'activ'
     && (c.contConectat || c.checkinToken) && !facut.has(c.id));
   const lista = window.__lipsaCheckin;
-  corp.innerHTML = `<button type="button" class="lista-inapoi" onclick="randeazaNotificari()">
-      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg><span>${tr('Notificări', 'Notifications')}</span>
+  // Pe stilul Notificărilor: înapoi la listă, titlul mare (săptămâna deasupra), apoi clienții într-un card de sticlă,
+  // rânduri ca la Încasări › De reînnoit (avatar, nume, cum trimite check-in-ul, „Memento” ca pastilă)
+  corp.innerHTML = `<button type="button" class="istoric-toate lipsa-checkin-inapoi" onclick="randeazaNotificari()">
+      <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>${tr('Notificări', 'Notifications')}
     </button>
-    <div class="checkin-titlu" style="margin:12px 2px 8px;">${tr('Fără check-in în săptămâna', 'No check-in for the week of')} ${formatZiLuna(new Date(saptamana + 'T12:00:00'))}</div>
-    ${lista.length ? lista.map((c, i) => `<div class="lista-clienta lipsa-checkin-rand">
-        <span class="lista-avatar">${avatarSlotHtml(c)}</span>
-        <span class="lista-info"><b>${escAttr(c.nume)}</b><small>${c.checkinToken ? tr('link de check-in', 'check-in link') : tr('cont în aplicație', 'app account')}</small></span>
-        <button type="button" class="btn lipsa-checkin-btn" onclick="trimiteMementoCheckin(${i})">${tr('Memento', 'Remind')}</button>
-      </div>`).join('') : `<div class="card notificari-gol">${tr('Toți au trimis check-in-ul. 🎉', 'Everyone sent their check-in. 🎉')}</div>`}`;
+    <div class="orar-titlu-mare"><div class="orar-titlu-text">
+      <span>${tr('Săptămâna', 'Week')} ${intervalSaptamana(saptamana)}</span>
+      <h1>${tr('Check-in-uri lipsă', 'Missing check-ins')}</h1></div></div>
+    ${lista.length ? `<div class="lista-titlu">${lista.length} ${lista.length === 1 ? tr('client n-a trimis check-in-ul', 'client didn’t send the check-in') : tr('clienți n-au trimis check-in-ul', 'clients didn’t send the check-in')}</div>
+    <div class="lista-sticla lipsa-checkin-lista">${lista.map((c, i) => `<div class="prog-row">
+        <div class="slot-num">${avatarSlotHtml(c)}</div>
+        <div class="prog-info"><span class="prog-name">${escAttr(c.nume)}</span><span class="prog-sub">${c.checkinToken ? tr('Link de check-in', 'Check-in link') : tr('Cont în aplicație', 'App account')}</span></div>
+        <button type="button" class="istoric-toate" onclick="trimiteMementoCheckin(${i})">${tr('Memento', 'Remind')}</button>
+      </div>`).join('')}</div>`
+    : `<div class="lista-sticla"><div class="notificari-gol">${tr('Toți au trimis check-in-ul. 🎉', 'Everyone sent their check-in. 🎉')}</div></div>`}`;
 }
 
 function trimiteMementoCheckin(i) {

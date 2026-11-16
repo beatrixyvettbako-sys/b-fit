@@ -2558,15 +2558,35 @@ html:not([data-theme="dark"]) .lista-sticla::before {
   opacity: 0.85;
 }
 
-.lipsa-checkin-rand {
-  cursor: default;
+/* Check-in-uri lipsă (din notificare): înapoi la Notificări ca pastilă, rândurile ca la Încasări › De reînnoit */
+.lipsa-checkin-inapoi {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 34px;
+  margin: 4px 0 2px;
+  padding-inline: 8px 14px;
 }
 
-.lipsa-checkin-btn {
+.lipsa-checkin-inapoi svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lipsa-checkin-lista .prog-row > .slot-num {
   flex-shrink: 0;
-  padding: 6px 12px;
-  font-size: 0.78rem;
-  font-weight: 800;
+  width: 40px;
+  height: 40px;
+  font-size: 0.8rem;
+}
+
+.lipsa-checkin-lista .istoric-toate {
+  flex-shrink: 0;
 }
 
 /* Cardul de reînnoire de pe Acasă la clientă: portocaliu (se termină), roșu (s-a terminat), neutru (fără abonament) */
