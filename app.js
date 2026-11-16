@@ -3133,7 +3133,7 @@ function urcaSubAntet(el, deasupra, doarCatTrebuie) {
     let tinta = Math.max(0, Math.round(sus + window.pageYOffset - deasupra - SPATIU_SUB_ISTORIC));
     if (doarCatTrebuie) {
       const nav = document.getElementById('bottomNav');
-      const josVizibil = nav && nav.offsetParent ? nav.getBoundingClientRect().top : window.innerHeight;
+      const josVizibil = nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : window.innerHeight;
       const lipsa = sus + el.scrollHeight + 12 - josVizibil;
       if (lipsa <= 0) return;
       tinta = Math.min(tinta, Math.round(window.pageYOffset + lipsa));
@@ -12179,7 +12179,8 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
   // Alerta de sănătate din fișa de obiective (ca în antetul fișei): ce are și detaliile, pe scurt
   const fisa = c.fisaInscriere || {};
   const probleme = problemeSanatate(fisa);
-  const alerta = probleme.length ? `<div class="fisa-scurta-alerta">⚠ ${escAttr(probleme.map(id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id]) + (fisa[id + 'Detalii'] ? `: ${fisa[id + 'Detalii']}` : '')).join(' · '))}</div>` : '';
+  // Câte un rând pe problemă, întreg (nu tăiat): ce are și detaliile scrise de client
+  const alerta = probleme.length ? `<div class="fisa-scurta-alerta">${probleme.map(id => `<div>⚠ <b>${escAttr(textInscriere(ETICHETE_SCURTE_INSCRIERE[id]))}</b>${fisa[id + 'Detalii'] ? `: ${escAttr(fisa[id + 'Detalii'])}` : ''}</div>`).join('')}</div>` : '';
   const ramaseText = c.incluse > 0 ? String(c.ramase) : '–';
   const ramaseCls = c.incluse > 0 && c.ramase <= 0 ? ' rosu' : (c.incluse > 0 && c.ramase === 1 ? ' portocaliu' : '');
 
@@ -12410,9 +12411,18 @@ function deschideCautareClient() {
         inchideFisaScurta();
         schimbaZiInstant(b.dataset.zi);
         setTimeout(() => {
+          if (filtruOrar) aplicaFiltruOrar(null); // un filtru activ ar putea ascunde rândul căutat
           const rand = document.getElementById(`cli_${b.dataset.ora.replace(':', '')}_${b.dataset.idx}`)?.closest('.slot-row');
           if (!rand) return;
-          window.scrollTo({ top: rand.getBoundingClientRect().top + window.scrollY - getTopOffsetSubZile() - 60, behavior: 'smooth' });
+          // Tot cardul orei (cu ora sus) sub bara zilelor și filtre; dacă așa clientul ar rămâne sub bara de jos
+          // (multe locuri, el printre ultimele), pagina urcă doar cât să se vadă rândul lui întreg
+          const bloc = rand.closest('.hour-block') || rand;
+          let tinta = bloc.getBoundingClientRect().top + window.scrollY - getTopOffsetSubZile();
+          const nav = document.getElementById('bottomNav');
+          const josVizibil = (nav && nav.getClientRects().length ? nav.getBoundingClientRect().top : window.innerHeight) - 10;
+          const josRand = rand.getBoundingClientRect().bottom + window.scrollY;
+          if (josRand - tinta > josVizibil) tinta = josRand - josVizibil;
+          window.scrollTo({ top: Math.max(0, tinta), behavior: 'smooth' });
           rand.classList.remove('slot-evidentiat');
           void rand.offsetWidth;
           rand.classList.add('slot-evidentiat');
