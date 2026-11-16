@@ -10693,6 +10693,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 225, data: '2026-11-16',
+    client: [
+      ['Poți trimite poze în conversația cu antrenorul: apasă pe aparatul foto de lângă câmpul de scris. Ce ai scris deja devine descrierea pozei, iar atingerea unei poze o deschide pe tot ecranul.', 'You can send photos in the conversation with your trainer: tap the camera next to the message field. Anything you’ve already typed becomes the caption, and tapping a photo opens it full screen.']
+    ],
+    antrenor: [
+      ['Poze în conversații: apasă pe aparatul foto de lângă câmpul de scris (și clientul poate trimite). Ce ai scris deja devine descrierea pozei; atingerea unei poze o deschide pe tot ecranul, iar ștergerea mesajului șterge și poza.', 'Photos in conversations: tap the camera next to the message field (clients can send them too). Anything you’ve already typed becomes the caption; tapping a photo opens it full screen, and deleting the message deletes the photo.']
+    ] },
   { v: 224, data: '2026-11-16',
     client: [
       ['Mesajele arată și merg ca în WhatsApp: ține apăsat pe un mesaj ca să reacționezi (👍 ❤️ 💪 🔥 👏 😂) sau să-l copiezi, iar glisat spre dreapta îi răspunzi direct. Enter trimite mesajul.', 'Messages look and work like WhatsApp: press and hold a message to react (👍 ❤️ 💪 🔥 👏 😂) or copy it, and swipe right to reply to it. Enter sends the message.']
@@ -14321,6 +14328,7 @@ function textScurtMesaj(m) {
   const ex = (m.context && (m.context.exercitiu || m.context.zi)) || '';
   if (m.tip === 'nota') return '📝 ' + (ex ? ex + ': ' : '') + m.text;
   if (m.tip === 'record') return '🏆 ' + tr('Record', 'Record') + (ex ? ' ' + ex : '') + ': ' + m.text;
+  if (m.tip === 'poza') return '📷 ' + (m.text === '📷' ? tr('Poză', 'Photo') : m.text);
   return m.text;
 }
 
@@ -14493,9 +14501,14 @@ function randeazaConversatie() {
     // Reacțiile (câte una de fiecare): sub bulă, ca o pastilă mică
     const reactii = Object.values(m.reactii || {});
     const reactiiHtml = reactii.length ? `<span class="mesaj-reactii">${[...new Set(reactii)].map(e => e + (reactii.filter(x => x === e).length > 1 ? '<i>2</i>' : '')).join('')}</span>` : '';
-    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
-    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}<div class="mesaj-text">${escAttr(m.text)}</div>${subsol}${reactiiHtml}</div>`;
+    // Poza: proporțiile vin din mesaj, ca lista să nu sară cât se încarcă; „📷” = poză fără descriere
+    const poza = m.tip === 'poza' && cx.poza
+      ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}" alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
+    const text = poza && m.text === '📷' ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
+    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
+    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${text}${subsol}${reactiiHtml}</div>`;
   }).join('');
+  umplePozeChat(lista);
   // „Văzut” sub ultimul mesaj trimis, după ce celălalt a deschis conversația
   const ultim = conversatie.mesaje[conversatie.mesaje.length - 1];
   if (ultim.autor === autorulMeu() && ultim.citit) lista.insertAdjacentHTML('beforeend', `<div class="mesaj-vazut">${tr('Văzut', 'Seen')}</div>`);
@@ -14549,6 +14562,20 @@ async function trimiteMesaj() {
 async function trimiteMesajTemporar(temp, conv) {
   const rand = { user_id: conv.userId, client_id: conv.clientId, autor: temp.autor, text: temp.text };
   if (temp.raspuns_la) rand.raspuns_la = temp.raspuns_la;
+  if (temp.tip === 'poza') {
+    // Întâi poza (o singură dată, și la retrimitere), apoi mesajul: celălalt o poate deschide din prima
+    if (temp._poza) {
+      const r = await cerePozeAntr('PUT', '/chat-poza', { client: conv.clientId, p: temp.context.poza }, temp._poza);
+      if (!r || !r.ok) {
+        temp._stare = 'eroare';
+        if (conversatie === conv) randeazaConversatie();
+        return;
+      }
+      delete temp._poza;
+    }
+    rand.tip = 'poza';
+    rand.context = temp.context;
+  }
   const { data, error } = await supabaseClient.from('mesaje').insert(rand).select('*').single();
   const lista = conv.mesaje;
   const i = lista.indexOf(temp);
@@ -14559,6 +14586,71 @@ async function trimiteMesajTemporar(temp, conv) {
     if (!lista.some(m => m.id === data.id)) lista.splice(i !== -1 ? i : lista.length, 0, data);
   }
   if (conversatie === conv) randeazaConversatie();
+}
+
+// ---- Poze în chat (Worker-ul bfit-poze, /chat-poza; sql/2026-11-16_mesaje_poze.sql): textul scris deja în câmp devine descrierea ----
+const cachePozeChat = new Map(); // uuid -> Promise<object URL>
+
+async function alegePozaMesaj(input) {
+  const fisier = input.files && input.files[0];
+  input.value = '';
+  if (!fisier || !conversatie) return;
+  let blob, bmp;
+  try {
+    blob = await micsoreazaPozaJpeg(fisier);
+    bmp = await createImageBitmap(blob);
+  } catch (e) {
+    return showToast(tr('Poza nu a putut fi citită. Încearcă alta.', 'The photo could not be read. Try another one.'), 'error');
+  }
+  if (mesajEditat) seteazaEditareMesaj(null);
+  const camp = document.getElementById('mesajText');
+  const text = camp.value.trim().slice(0, 2000) || '📷';
+  camp.value = '';
+  camp.style.height = '';
+  const p = crypto.randomUUID();
+  cachePozeChat.set(p, Promise.resolve(URL.createObjectURL(blob)));
+  const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text, created_at: new Date().toISOString(), citit: false, tip: 'poza',
+    context: { poza: p, w: bmp.width, h: bmp.height }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _poza: blob };
+  bmp.close();
+  conversatie.mesaje.push(temp);
+  seteazaRaspunsMesaj(null); // randează și conversația
+  trimiteMesajTemporar(temp, conversatie);
+}
+
+// Pozele <img data-poza-chat="uuid"> se aduc cu autentificare (nu pot fi link-uri publice)
+function umplePozeChat(radacina) {
+  const clientId = conversatie && conversatie.clientId;
+  radacina.querySelectorAll('img[data-poza-chat]').forEach(async img => {
+    const p = img.dataset.pozaChat;
+    if (!cachePozeChat.has(p)) {
+      cachePozeChat.set(p, cerePozeAntr('GET', '/chat-poza', { client: clientId, p })
+        .then(r => r && r.ok ? r.blob() : null)
+        .then(b => b ? URL.createObjectURL(b) : ''));
+    }
+    const src = await cachePozeChat.get(p);
+    if (src) img.src = src;
+    else {
+      cachePozeChat.delete(p);
+      img.classList.add('poza-lipsa');
+    }
+  });
+}
+
+// Atingerea pozei: pe tot ecranul; se închide cu o atingere, trasă în jos sau cu Înapoi
+function aratPozaMesaj(img) {
+  if (!img.src || document.querySelector('.mesaj-meniu')) return;
+  inchideFisaScurta();
+  const fundal = document.createElement('div');
+  fundal.className = 'poza-ecran-fundal';
+  fundal.id = 'fisaScurtaFundal';
+  const foaie = document.createElement('div');
+  foaie.className = 'poza-ecran';
+  foaie.id = 'fisaScurta';
+  foaie.innerHTML = `<img src="${img.src}" alt="">`;
+  foaie.onclick = inchideFisaScurta;
+  trageInJosCaSaInchizi(foaie, inchideFisaScurta);
+  document.body.append(fundal, foaie);
+  sincronizeazaIstoricInapoi();
 }
 
 function retrimiteMesaj(i) {
@@ -14625,7 +14717,7 @@ function actiuniMesaj(i) {
   grup.innerHTML = `<div class="mesaj-reactii-alege">${REACTII_MESAJ.map(e => `<button type="button" class="${aMea === e ? 'activ' : ''}" data-e="${e}">${e}</button>`).join('')}</div>
     <div class="mesaj-meniu-lista">
       ${rand('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', tr('Răspunde', 'Reply'), 'actiune-raspunde')}
-      ${rand('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', tr('Copiază', 'Copy'), 'actiune-copiaza')}
+      ${m.tip === 'poza' && m.text === '📷' ? '' : rand('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', tr('Copiază', 'Copy'), 'actiune-copiaza')}
       ${alMeu && m.tip === 'text' ? rand('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', tr('Editează', 'Edit'), 'actiune-editeaza') : ''}
       ${alMeu ? rand('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', tr('Șterge', 'Delete'), 'actiune-sterge rosu') : ''}
     </div>`;
@@ -14642,10 +14734,10 @@ function actiuniMesaj(i) {
   sincronizeazaIstoricInapoi();
   grup.querySelectorAll('.mesaj-reactii-alege button').forEach(b => { b.onclick = () => { inchideFisaScurta(); reactioneazaMesaj(m, b.dataset.e); }; });
   grup.querySelector('.actiune-raspunde').onclick = () => { inchideFisaScurta(); seteazaRaspunsMesaj(m); };
-  grup.querySelector('.actiune-copiaza').onclick = () => {
+  grup.querySelector('.actiune-copiaza')?.addEventListener('click', () => {
     inchideFisaScurta();
     navigator.clipboard?.writeText(m.text).then(() => showToast(tr('✓ Copiat', '✓ Copied')), () => {});
-  };
+  });
   grup.querySelector('.actiune-editeaza')?.addEventListener('click', () => { inchideFisaScurta(); seteazaEditareMesaj(m); });
   grup.querySelector('.actiune-sterge')?.addEventListener('click', () => { inchideFisaScurta(); confirmaStergereMesaj(m); });
 }
@@ -14740,6 +14832,11 @@ function confirmaStergereMesaj(m) {
 async function stergeMesaj(m) {
   const { data, error } = await supabaseClient.rpc('sterge_mesaj', { p_id: m.id });
   if (error || data !== 'ok') return showToast(tr('Mesajul nu s-a șters. Verifică internetul și reîncearcă.', 'The message was not deleted. Check your internet and try again.'), 'error');
+  // Poza mesajului se șterge și ea din R2 (Worker-ul o lasă doar după ce mesajul nu mai există)
+  if (m.tip === 'poza' && m.context && m.context.poza) {
+    cerePozeAntr('DELETE', '/chat-poza', { client: m.client_id, p: m.context.poza });
+    cachePozeChat.delete(m.context.poza);
+  }
   if (!conversatie) return;
   conversatie.mesaje = conversatie.mesaje.filter(x => x.id !== m.id);
   if (mesajEditat && mesajEditat.id === m.id) seteazaEditareMesaj(null);

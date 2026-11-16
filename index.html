@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal224">
+  <link rel="stylesheet" href="style.css?v=fitFinal225">
 </head>
 <body>
 
@@ -167,6 +167,11 @@
       <button type="button" class="mesaje-rapide-btn" id="btnRaspunsuriRapide" onclick="deschideRaspunsuriRapide()" title="Răspunsuri rapide" data-en-title="Quick replies" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
       </button>
+      <!-- Poză (cameră sau galerie): textul scris deja în câmp devine descrierea ei -->
+      <label class="mesaje-rapide-btn" title="Trimite o poză" data-en-title="Send a photo">
+        <input type="file" accept="image/*" hidden onchange="alegePozaMesaj(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+      </label>
       <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." enterkeyhint="send" oninput="potrivesteCampMesaj(this)" onkeydown="enterTrimite(event)"></textarea>
       <button type="submit" class="btn btn-trimite-mesaj" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
         <svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
@@ -2116,7 +2121,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal224"></script>
-  <script src="app.js?v=fitFinal224"></script>
+  <script src="sabloane.js?v=fitFinal225"></script>
+  <script src="app.js?v=fitFinal225"></script>
 </body>
 </html>
