@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal223">
+  <link rel="stylesheet" href="style.css?v=fitFinal224">
 </head>
 <body>
 
@@ -120,8 +120,8 @@
   </div>
 
   <!-- LISTA CONVERSAȚIILOR (antrenor): deschideConversatii; conversația se deschide peste ea -->
-  <div id="panouConversatii" class="clienta-app panou-notificari auth-hidden">
-    <header class="clienta-header">
+  <div id="panouConversatii" class="clienta-app panou-notificari stil-nou-ecran auth-hidden">
+    <header class="clienta-header stil-nou-antet">
       <button type="button" class="header-icon-bubble-btn" onclick="inchidePanouConversatii()" title="Înapoi" data-en-title="Back">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
@@ -134,12 +134,16 @@
   </div>
 
   <!-- MESAJELE dintre antrenor și client (tabelul mesaje); deschiderea: deschideMesaje -->
-  <div id="panouMesaje" class="clienta-app panou-notificari panou-mesaje auth-hidden">
-    <header class="clienta-header">
+  <!-- Antetul conversației e mereu sticlă, cu poza, numele și (la antrenor) abonamentul pe scurt: antet-fix -->
+  <div id="panouMesaje" class="clienta-app panou-notificari panou-mesaje stil-nou-ecran titlu-strans antet-fix auth-hidden">
+    <header class="clienta-header stil-nou-antet">
       <button type="button" class="header-icon-bubble-btn" onclick="inchidePanouMesaje()" title="Înapoi" data-en-title="Back">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
       </button>
-      <div class="clienta-title" id="panouMesajeTitlu"></div>
+      <div class="mesaje-antet-centru">
+        <span class="mesaje-avatar" id="panouMesajeAvatar"></span>
+        <span class="mesaje-antet-text"><span class="clienta-title" id="panouMesajeTitlu"></span><small id="panouMesajeDetalii" hidden></small></span>
+      </div>
       <span style="width:40px; display:flex; justify-content:flex-end;">
         <button type="button" class="header-icon-bubble-btn" id="btnStergeConversatia" onclick="stergeConversatia()" title="Șterge conversația" data-en-title="Delete conversation" hidden>
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>
@@ -149,14 +153,22 @@
     <!-- Antrenorul: clientul nu are notificările pornite (mesajele le vede când deschide aplicația) -->
     <div class="mesaje-aviz" id="mesajeAviz" hidden></div>
     <div class="clienta-body" id="mesajeLista"></div>
-    <div class="raspunsuri-rapide" id="raspunsuriRapide" hidden></div>
+    <!-- Răspunsul la un mesaj anume: citatul deasupra câmpului, cu × ca să renunți -->
+    <div class="mesaj-editare mesaj-raspuns-bara" id="mesajRaspuns" hidden>
+      <span class="mesaj-raspuns-citat"><b id="mesajRaspunsCui"></b><span id="mesajRaspunsText"></span></span>
+      <button type="button" class="istoric-toate" onclick="seteazaRaspunsMesaj(null)" aria-label="Renunță" data-en-aria="Cancel">×</button>
+    </div>
     <div class="mesaj-editare" id="mesajEditare" hidden>
       <span data-en="Editing message">Editezi mesajul</span>
-      <button type="button" class="btn btn-clear" onclick="anuleazaEditareMesaj()" data-en="Cancel">Renunță</button>
+      <button type="button" class="istoric-toate" onclick="anuleazaEditareMesaj()" data-en="Cancel">Renunță</button>
     </div>
     <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesaj();">
-      <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." oninput="potrivesteCampMesaj(this)"></textarea>
-      <button type="submit" class="btn" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
+      <!-- Răspunsuri rapide (antrenor): fereastra cu cele potrivite acum și cele salvate -->
+      <button type="button" class="mesaje-rapide-btn" id="btnRaspunsuriRapide" onclick="deschideRaspunsuriRapide()" title="Răspunsuri rapide" data-en-title="Quick replies" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>
+      </button>
+      <textarea id="mesajText" class="form-control" rows="1" maxlength="2000" placeholder="Scrie un mesaj..." data-en-placeholder="Write a message..." enterkeyhint="send" oninput="potrivesteCampMesaj(this)" onkeydown="enterTrimite(event)"></textarea>
+      <button type="submit" class="btn btn-trimite-mesaj" id="btnTrimiteMesaj" title="Trimite" data-en-title="Send" aria-label="Trimite">
         <svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
       </button>
     </form>
@@ -2104,7 +2116,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal223"></script>
-  <script src="app.js?v=fitFinal223"></script>
+  <script src="sabloane.js?v=fitFinal224"></script>
+  <script src="app.js?v=fitFinal224"></script>
 </body>
 </html>

@@ -1637,7 +1637,8 @@ function gasesteClientaValida(numeIntrodus) {
 document.addEventListener('scroll', e => {
   const el = e.target;
   const ecran = el.closest && el.closest('.stil-nou-ecran');
-  if (ecran) ecran.classList.toggle('titlu-strans', el.scrollTop > 60);
+  // antet-fix (conversația): antetul rămâne mereu sticlă, cu titlul, oricât ai derula
+  if (ecran && !ecran.classList.contains('antet-fix')) ecran.classList.toggle('titlu-strans', el.scrollTop > 60);
 }, { capture: true, passive: true });
 
 // Service worker: pagina se ia mereu de pe internet (versiunea nouă apare la deschidere), fișierele merg și offline
@@ -10692,6 +10693,17 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 224, data: '2026-11-16',
+    client: [
+      ['Mesajele arată și merg ca în WhatsApp: ține apăsat pe un mesaj ca să reacționezi (👍 ❤️ 💪 🔥 👏 😂) sau să-l copiezi, iar glisat spre dreapta îi răspunzi direct. Enter trimite mesajul.', 'Messages look and work like WhatsApp: press and hold a message to react (👍 ❤️ 💪 🔥 👏 😂) or copy it, and swipe right to reply to it. Enter sends the message.']
+    ],
+    antrenor: [
+      ['Mesajele, pe stilul nou: în listă vezi pozele clienților, iar în conversație, sub nume, abonamentul pe scurt (ședințe rămase, până când).', 'Messages in the new style: the list shows clients’ photos, and in a conversation you see their membership under the name (sessions left, until when).'],
+      ['Ca în WhatsApp: ține apăsat pe un mesaj pentru reacții, Copiază, Editează sau Șterge; glisează spre dreapta ca să răspunzi la el. Enter trimite.', 'Like WhatsApp: press and hold a message for reactions, Copy, Edit or Delete; swipe right to reply to it. Enter sends.'],
+      ['Răspunsurile rapide sunt la butonul ⚡: îți propune răspunsul potrivit la ultimul mesaj (ex. felicitări la record) și poți scrie {prenume} ca să apară numele clientului.', 'Quick replies are under the ⚡ button: it suggests the right reply to the last message (e.g. congrats on a record), and you can write {prenume} to insert the client’s name.'],
+      ['Un mesaj trimis fără internet nu se mai pierde: rămâne marcat „Netrimis” și îl retrimiți cu o atingere.', 'A message sent without internet is no longer lost: it stays marked “Not sent” and you resend it with one tap.']
+    ]
+  },
   { v: 221, data: '2026-11-16',
     client: [
       ['Fișa de obiective se completează într-o fereastră nouă, mai ușor de citit, iar data de început se alege direct din calendar.', 'The goal-setting form now opens in a new, easier-to-read window, and the start date is picked straight from the calendar.']
@@ -14361,28 +14373,44 @@ async function deschideMesaje(clientId, userId, titlu) {
   document.getElementById('btnStergeConversatia').hidden = true;
   document.getElementById('panouMesajeTitlu').textContent = titlu;
   // Poza celuilalt (clientul pentru antrenor, antrenorul pentru client), cu inițialele dacă nu are poză
-  const titluEl = document.getElementById('panouMesajeTitlu');
-  let avatarEl = document.getElementById('panouMesajeAvatar');
-  if (!avatarEl && titluEl) {
-    avatarEl = document.createElement('span');
-    avatarEl.id = 'panouMesajeAvatar';
-    avatarEl.className = 'mesaje-avatar';
-    titluEl.parentNode.insertBefore(avatarEl, titluEl);
-  }
-  if (avatarEl) {
-    const persoana = rolUtilizator === 'clienta'
-      ? { nume: titlu, authUserId: userId }
-      : ((DB.clienti || []).find(x => x && x.id === clientId) || { nume: titlu });
-    avatarEl.innerHTML = avatarSlotHtml(persoana);
-  }
-  document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const client = rolUtilizator === 'clienta' ? null : (DB.clienti || []).find(x => x && x.id === clientId);
+  document.getElementById('panouMesajeAvatar').innerHTML = avatarSlotHtml(rolUtilizator === 'clienta' ? { nume: titlu, authUserId: userId } : (client || { nume: titlu }));
+  // Antrenorul vede sub nume abonamentul pe scurt (ședințe rămase, până când), ca să răspundă fără să deschidă fișa
+  const detalii = document.getElementById('panouMesajeDetalii');
+  detalii.textContent = client ? detaliiClientConversatie(client) : '';
+  detalii.hidden = !detalii.textContent;
+  // Deschidere instant: mesajele de data trecută (din această sesiune) apar pe loc, apoi se actualizează din bază
+  const dinSesiune = mesajeSesiune.get(clientId);
+  if (dinSesiune) { conversatie.mesaje = dinSesiune; randeazaConversatie(); }
+  else document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
   document.getElementById('mesajeAviz').hidden = true;
   if (rolUtilizator !== 'clienta') aratAvizNotificari(clientId);
-  raspunsuriEditare = false;
-  randeazaRaspunsuriRapide();
+  seteazaRaspunsMesaj(null);
+  document.getElementById('btnRaspunsuriRapide').hidden = rolUtilizator === 'clienta';
   document.getElementById('panouMesaje').classList.remove('auth-hidden');
   sincronizeazaIstoricInapoi();
   await incarcaConversatie();
+}
+
+// Conversațiile deschise în sesiune (clientId → mesaje): la redeschidere apar instant, fără „Se încarcă”
+const mesajeSesiune = new Map();
+
+// Încărcate dinainte, în fundal (la pornire pentru client, la lista conversațiilor pentru cele mai recente ale antrenorului),
+// ca prima deschidere să fie și ea instant
+async function preincarcaConversatie(clientId) {
+  if (!clientId || mesajeSesiune.has(clientId) || !supabaseClient) return;
+  const { data, error } = await supabaseClient.from('mesaje').select('*').eq('client_id', clientId).order('created_at').limit(500);
+  if (!error && !mesajeSesiune.has(clientId)) mesajeSesiune.set(clientId, data || []);
+}
+
+// Sub numele din antetul conversației: „2 din 8 ședințe · până la 9 dec.” sau starea abonamentului
+function detaliiClientConversatie(c) {
+  const s = stareAbonamentClienta(c);
+  if (c.incluse > 0 && (s.tip === 'activ' || s.tip === 'curand')) {
+    const pana = parseazaDataOraRo(c.dataExpirare);
+    return tr(`${c.ramase} din ${c.incluse} ședințe`, `${c.ramase} of ${c.incluse} sessions`) + (pana ? ` · ${tr('până la', 'until')} ${formatZiLuna(new Date(pana))}` : '');
+  }
+  return s.text || '';
 }
 
 // Clientul fără notificări vede mesajele abia când deschide aplicația: „Anunță-l” îi trimite pe telefon că are un mesaj
@@ -14405,13 +14433,17 @@ function anuntaMesajPeTelefon(clientId) {
 async function incarcaConversatie() {
   if (!conversatie) return;
   const { clientId } = conversatie;
-  const { data, error } = await supabaseClient.from('mesaje').select('id, autor, text, created_at, citit, tip, context, editat_la').eq('client_id', clientId).order('created_at').limit(500);
+  // „*”: și coloanele adăugate în timp (răspuns, reacții), fără ca o bază încă neactualizată să strice conversația
+  const { data, error } = await supabaseClient.from('mesaje').select('*').eq('client_id', clientId).order('created_at').limit(500);
   if (!conversatie || conversatie.clientId !== clientId) return;
   if (error) {
-    document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
+    // Cu mesajele din sesiune deja afișate, ele rămân; altfel se spune că nu s-au putut încărca
+    if (!mesajeSesiune.has(clientId)) document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Mesajele nu s-au putut încărca. Verifică internetul și reîncearcă.', 'Messages could not be loaded. Check your internet and try again.')}</div>`;
     return;
   }
-  conversatie.mesaje = data || [];
+  // Mesajele încă netrimise (în curs sau eșuate) rămân la final, peste ce vine din bază
+  const netrimise = conversatie.mesaje.filter(m => m._stare);
+  conversatie.mesaje = (data || []).concat(netrimise);
   randeazaConversatie();
   if (conversatie.mesaje.some(m => !m.citit && m.autor !== autorulMeu())) {
     await supabaseClient.rpc('marcheaza_mesaje_citite', { p_client_id: clientId });
@@ -14420,6 +14452,7 @@ async function incarcaConversatie() {
 
 function randeazaConversatie() {
   const lista = document.getElementById('mesajeLista');
+  mesajeSesiune.set(conversatie.clientId, conversatie.mesaje);
   document.getElementById('btnStergeConversatia').hidden = !conversatie.mesaje.length;
   if (!conversatie.mesaje.length) {
     lista.innerHTML = `<div class="mesaje-gol">${rolUtilizator === 'clienta'
@@ -14428,11 +14461,18 @@ function randeazaConversatie() {
     return;
   }
   let ziAnterioara = '';
-  lista.innerHTML = conversatie.mesaje.map((m, i) => {
+  const azi = new Date().toDateString(), ieri = new Date(Date.now() - 86400000).toDateString();
+  const lista_ = conversatie.mesaje;
+  // Același autor, aceeași zi, la mai puțin de 5 minute de cel dinainte: mesajele se lipesc într-un grup (ora doar la ultimul)
+  const inGrup = (a, b) => a && b && a.autor === b.autor && !a._stare && !b._stare
+    && new Date(a.created_at).toDateString() === new Date(b.created_at).toDateString()
+    && Math.abs(new Date(b.created_at) - new Date(a.created_at)) < 5 * 60000;
+  lista.innerHTML = lista_.map((m, i) => {
     const d = new Date(m.created_at);
     const zi = d.toDateString();
-    const separator = zi !== ziAnterioara ? `<div class="mesaje-zi">${formatZiLuna(d)}</div>` : '';
+    const separator = zi !== ziAnterioara ? `<div class="mesaje-zi">${zi === azi ? tr('Azi', 'Today') : zi === ieri ? tr('Ieri', 'Yesterday') : formatZiLuna(d)}</div>` : '';
     ziAnterioara = zi;
+    const cuPrecedentul = !separator && inGrup(lista_[i - 1], m), cuUrmatorul = inGrup(m, lista_[i + 1]);
     const ora = d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' });
     // Notițele și recordurile din antrenament: card cu exercițiul și ziua deasupra textului
     const cx = m.context || {};
@@ -14442,12 +14482,31 @@ function randeazaConversatie() {
     // Mesajele proprii: atingerea deschide Editează / Șterge
     const alMeu = m.autor === autorulMeu();
     const editat = m.editat_la ? `${tr('editat', 'edited')} · ` : '';
-    return `${separator}<div class="mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}"${alMeu ? ` onclick="actiuniMesaj(${i})"` : ''}>${context}<div class="mesaj-text">${escAttr(m.text)}</div><small>${editat}${ora}</small></div>`;
+    // Netrimis: „Se trimite…”, apoi (la eroare) „Netrimis · Reîncearcă”, iar atingerea îl retrimite
+    const stare = m._stare === 'trimite' ? tr('Se trimite…', 'Sending…') : m._stare === 'eroare' ? tr('Netrimis · Reîncearcă', 'Not sent · Retry') : '';
+    const subsol = stare ? `<small class="mesaj-stare">${stare}</small>` : cuUrmatorul ? '' : `<small>${editat}${ora}</small>`;
+    // Reacțiile și acțiunile: ținut apăsat / glisat (gesturiMesaje); atingerea doar retrimite mesajul netrimis
+    const clic = m._stare === 'eroare' ? ` onclick="retrimiteMesaj(${i})"` : '';
+    // Răspuns la un mesaj: citatul lui deasupra (atingerea duce la el); mesajul șters între timp nu mai apare
+    const original = m.raspuns_la ? lista_.find(x => x.id === m.raspuns_la) : null;
+    const citat = original ? `<div class="mesaj-citat" onclick="event.stopPropagation(); aratMesajCitat(${original.id})"><b>${escAttr(numeAutorMesaj(original))}</b><span>${escAttr(textScurtMesaj(original))}</span></div>` : '';
+    // Reacțiile (câte una de fiecare): sub bulă, ca o pastilă mică
+    const reactii = Object.values(m.reactii || {});
+    const reactiiHtml = reactii.length ? `<span class="mesaj-reactii">${[...new Set(reactii)].map(e => e + (reactii.filter(x => x === e).length > 1 ? '<i>2</i>' : '')).join('')}</span>` : '';
+    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
+    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}<div class="mesaj-text">${escAttr(m.text)}</div>${subsol}${reactiiHtml}</div>`;
   }).join('');
   // „Văzut” sub ultimul mesaj trimis, după ce celălalt a deschis conversația
   const ultim = conversatie.mesaje[conversatie.mesaje.length - 1];
   if (ultim.autor === autorulMeu() && ultim.citit) lista.insertAdjacentHTML('beforeend', `<div class="mesaj-vazut">${tr('Văzut', 'Seen')}</div>`);
   lista.scrollTop = lista.scrollHeight;
+}
+
+// Enter trimite (ca în WhatsApp); Shift+Enter face rând nou. Nu în timpul scrierii cu diacritice / predicție (isComposing)
+function enterTrimite(e) {
+  if (e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+  e.preventDefault();
+  e.target.form.requestSubmit();
 }
 
 // Câmpul de scris crește cu textul (până la ~5 rânduri); bara de derulare apare doar peste înălțimea maximă
@@ -14462,9 +14521,9 @@ async function trimiteMesaj() {
   const camp = document.getElementById('mesajText');
   const text = camp.value.trim();
   if (!text || !conversatie) return;
-  const btn = document.getElementById('btnTrimiteMesaj');
-  btn.disabled = true;
   if (mesajEditat) {
+    const btn = document.getElementById('btnTrimiteMesaj');
+    btn.disabled = true;
     const m = mesajEditat;
     const { data: rez, error: err } = await supabaseClient.rpc('editeaza_mesaj', { p_id: m.id, p_text: text });
     btn.disabled = false;
@@ -14476,28 +14535,201 @@ async function trimiteMesaj() {
     seteazaEditareMesaj(null);
     return randeazaConversatie();
   }
-  const { data, error } = await supabaseClient.from('mesaje')
-    .insert({ user_id: conversatie.userId, client_id: conversatie.clientId, autor: autorulMeu(), text })
-    .select('id, autor, text, created_at, citit, tip, context, editat_la').single();
-  btn.disabled = false;
-  if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
+  // Mesajul apare pe loc („Se trimite…”), câmpul se golește; dacă nu pleacă, rămâne „Netrimis · Reîncearcă”
   camp.value = '';
   camp.style.height = '';
-  if (!conversatie) return;
-  conversatie.mesaje.push(data);
-  randeazaConversatie();
+  const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text, created_at: new Date().toISOString(), citit: false, tip: 'text', context: null,
+    raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite' };
+  conversatie.mesaje.push(temp);
+  seteazaRaspunsMesaj(null); // randează și conversația
+  trimiteMesajTemporar(temp, conversatie);
 }
 
-// ---- Editarea și ștergerea mesajelor proprii (pentru amândoi); conversația se șterge doar pentru cel care o șterge ----
+// Trimite un mesaj din conversație (nou sau retrimis): la reușită ia locul celui temporar, la eșec rămâne de retrimis
+async function trimiteMesajTemporar(temp, conv) {
+  const rand = { user_id: conv.userId, client_id: conv.clientId, autor: temp.autor, text: temp.text };
+  if (temp.raspuns_la) rand.raspuns_la = temp.raspuns_la;
+  const { data, error } = await supabaseClient.from('mesaje').insert(rand).select('*').single();
+  const lista = conv.mesaje;
+  const i = lista.indexOf(temp);
+  if (error) temp._stare = 'eroare';
+  else {
+    // Conversația se poate reîncărca între timp și să aibă deja mesajul din bază: fără dublură
+    if (i !== -1) lista.splice(i, 1);
+    if (!lista.some(m => m.id === data.id)) lista.splice(i !== -1 ? i : lista.length, 0, data);
+  }
+  if (conversatie === conv) randeazaConversatie();
+}
+
+function retrimiteMesaj(i) {
+  const m = conversatie && conversatie.mesaje[i];
+  if (!m || m._stare !== 'eroare') return;
+  m._stare = 'trimite';
+  randeazaConversatie();
+  trimiteMesajTemporar(m, conversatie);
+}
+
+// Cine a scris un mesaj, pentru citat: „Tu” sau numele celuilalt (titlul conversației)
+const numeAutorMesaj = m => m.autor === autorulMeu() ? tr('Tu', 'You') : document.getElementById('panouMesajeTitlu').textContent;
+
+// Citatul unui răspuns: conversația urcă la mesajul original, care se luminează scurt
+function aratMesajCitat(id) {
+  const el = document.querySelector(`#mesajeLista .mesaj[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.remove('mesaj-aratat');
+  void el.offsetWidth;
+  el.classList.add('mesaj-aratat');
+}
+
+// Fereastră de jos peste conversație (acțiunile unui mesaj, răspunsurile rapide): aceeași fișă pe scurt (se închide
+// cu inchideFisaScurta, trasă în jos sau cu Înapoi), ridicată deasupra panoului de mesaje
+function deschideFoaieChat(continut, clasa) {
+  inchideFisaScurta();
+  const fundal = document.createElement('div');
+  fundal.className = 'fisa-scurta-fundal fundal-peste-chat';
+  fundal.id = 'fisaScurtaFundal';
+  fundal.onclick = inchideFisaScurta;
+  const foaie = document.createElement('div');
+  foaie.className = `fisa-scurta foaie-peste-chat ${clasa}`;
+  foaie.id = 'fisaScurta';
+  foaie.innerHTML = `<div class="fisa-scurta-maner"><span></span></div>${continut}`;
+  trageInJosCaSaInchizi(foaie, inchideFisaScurta);
+  document.body.append(fundal, foaie);
+  sincronizeazaIstoricInapoi();
+  return foaie;
+}
+
+// ---- Ca în WhatsApp: ținut apăsat (clic dreapta pe calculator) pe un mesaj = reacțiile deasupra lui și meniul dedesubt,
+// restul conversației estompat; glisat spre dreapta = Răspunde ----
+const REACTII_MESAJ = ['👍', '❤️', '💪', '🔥', '👏', '😂'];
+
 function actiuniMesaj(i) {
   const m = conversatie && conversatie.mesaje[i];
-  if (!m || m.autor !== autorulMeu()) return;
-  if (String(window.getSelection ? window.getSelection() : '')) return; // pe calculator, selectarea textului nu deschide meniul
-  // Notițele și recordurile din antrenament nu se editează aici (rămân ca în plan): doar se pot șterge
-  if (m.tip !== 'text') return confirmaStergereMesaj(m);
-  customConfirm(tr('Mesajul tău', 'Your message'), m.text.length > 160 ? m.text.slice(0, 160) + '…' : m.text, () => seteazaEditareMesaj(m));
-  document.getElementById('modalBtnConfirm').innerText = tr('Editează', 'Edit');
-  aratButonAlternativModal(tr('Șterge', 'Delete'), () => confirmaStergereMesaj(m));
+  const bula = m && document.querySelector(`#mesajeLista .mesaj[data-id="${m.id}"]`);
+  if (!m || m._stare || !bula) return;
+  inchideFisaScurta();
+  if (navigator.vibrate) navigator.vibrate(12);
+  const alMeu = m.autor === autorulMeu();
+  const aMea = (m.reactii || {})[autorulMeu()];
+  const r = bula.getBoundingClientRect();
+  const rand = (svg, text, cls) => `<button type="button" class="${cls}"><span>${text}</span><svg viewBox="0 0 24 24">${svg}</svg></button>`;
+  // Fundalul (estompează conversația) și grupul: reacțiile, copia mesajului (rămâne clară), meniul
+  const fundal = document.createElement('div');
+  fundal.className = 'mesaj-meniu-fundal';
+  fundal.id = 'fisaScurtaFundal';
+  fundal.onclick = inchideFisaScurta;
+  const grup = document.createElement('div');
+  grup.className = `mesaj-meniu${alMeu ? ' al-meu' : ''}`;
+  grup.id = 'fisaScurta';
+  grup.innerHTML = `<div class="mesaj-reactii-alege">${REACTII_MESAJ.map(e => `<button type="button" class="${aMea === e ? 'activ' : ''}" data-e="${e}">${e}</button>`).join('')}</div>
+    <div class="mesaj-meniu-lista">
+      ${rand('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', tr('Răspunde', 'Reply'), 'actiune-raspunde')}
+      ${rand('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', tr('Copiază', 'Copy'), 'actiune-copiaza')}
+      ${alMeu && m.tip === 'text' ? rand('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', tr('Editează', 'Edit'), 'actiune-editeaza') : ''}
+      ${alMeu ? rand('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', tr('Șterge', 'Delete'), 'actiune-sterge rosu') : ''}
+    </div>`;
+  const copie = bula.cloneNode(true);
+  copie.removeAttribute('onclick');
+  copie.style.width = r.width + 'px';
+  copie.style.maxWidth = 'none';
+  grup.insertBefore(copie, grup.lastElementChild);
+  document.body.append(fundal, grup);
+  // Grupul stă pe locul mesajului (aliniat la marginea lui); urcă sau coboară doar cât să încapă tot pe ecran
+  const h = grup.offsetHeight, sus = grup.firstElementChild.offsetHeight + 8;
+  grup.style.top = Math.max(12, Math.min(r.top - sus, window.innerHeight - h - 12)) + 'px';
+  if (alMeu) grup.style.right = Math.max(8, window.innerWidth - r.right) + 'px'; else grup.style.left = Math.max(8, r.left) + 'px';
+  sincronizeazaIstoricInapoi();
+  grup.querySelectorAll('.mesaj-reactii-alege button').forEach(b => { b.onclick = () => { inchideFisaScurta(); reactioneazaMesaj(m, b.dataset.e); }; });
+  grup.querySelector('.actiune-raspunde').onclick = () => { inchideFisaScurta(); seteazaRaspunsMesaj(m); };
+  grup.querySelector('.actiune-copiaza').onclick = () => {
+    inchideFisaScurta();
+    navigator.clipboard?.writeText(m.text).then(() => showToast(tr('✓ Copiat', '✓ Copied')), () => {});
+  };
+  grup.querySelector('.actiune-editeaza')?.addEventListener('click', () => { inchideFisaScurta(); seteazaEditareMesaj(m); });
+  grup.querySelector('.actiune-sterge')?.addEventListener('click', () => { inchideFisaScurta(); confirmaStergereMesaj(m); });
+}
+
+// Gesturile pe mesaje (o singură dată, pe lista conversației): ținut apăsat ~0,4 s → meniul; glisat spre dreapta → Răspunde
+// (bula urmează degetul, iar săgeata de răspuns apare în stânga ei). Derularea în sus / jos rămâne a listei.
+(function gesturiMesaje() {
+  const lista = document.getElementById('mesajeLista');
+  if (!lista) return;
+  let start = null, timer = null, glisare = false;
+  const bulaDin = e => e.target.closest('.mesaj[data-id]');
+  const index = bula => conversatie ? conversatie.mesaje.findIndex(m => String(m.id) === bula.dataset.id) : -1;
+  const reseteaza = () => {
+    clearTimeout(timer);
+    if (start && start.bula) { start.bula.style.transform = ''; start.bula.classList.remove('se-gliseaza', 'gata-raspuns'); }
+    start = null; glisare = false;
+  };
+  lista.addEventListener('pointerdown', e => {
+    const bula = bulaDin(e);
+    if (!bula || e.button > 0 || e.target.closest('.mesaj-citat')) return;
+    start = { x: e.clientX, y: e.clientY, bula };
+    timer = setTimeout(() => { const i = index(bula); reseteaza(); if (i !== -1) actiuniMesaj(i); }, 420);
+  });
+  lista.addEventListener('pointermove', e => {
+    if (!start) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearTimeout(timer);
+    if (!glisare && dx > 12 && Math.abs(dx) > Math.abs(dy) * 1.5) glisare = true;
+    if (!glisare) { if (Math.abs(dy) > 10) reseteaza(); return; }
+    const d = Math.min(Math.max(0, dx), 90);
+    start.bula.classList.add('se-gliseaza');
+    start.bula.classList.toggle('gata-raspuns', d > 60);
+    start.bula.style.transform = `translateX(${d}px)`;
+  });
+  const gata = () => {
+    if (start && glisare && start.bula.classList.contains('gata-raspuns')) {
+      const i = index(start.bula);
+      if (navigator.vibrate) navigator.vibrate(10);
+      if (i !== -1 && !conversatie.mesaje[i]._stare) seteazaRaspunsMesaj(conversatie.mesaje[i]);
+    }
+    reseteaza();
+  };
+  lista.addEventListener('pointerup', gata);
+  lista.addEventListener('pointercancel', reseteaza);
+  // Clic dreapta (calculator) și apăsarea lungă din browser: același meniu, fără meniul sistemului
+  lista.addEventListener('contextmenu', e => {
+    const bula = bulaDin(e);
+    if (!bula) return;
+    e.preventDefault();
+    const i = index(bula);
+    reseteaza();
+    if (i !== -1 && !document.querySelector('.mesaj-meniu')) actiuniMesaj(i);
+  });
+})();
+
+// Reacția apare pe loc; dacă baza n-o salvează, revine cum era
+async function reactioneazaMesaj(m, emoji) {
+  const eu = autorulMeu(), inainte = Object.assign({}, m.reactii || {});
+  const dupa = Object.assign({}, inainte);
+  if (dupa[eu] === emoji) delete dupa[eu]; else dupa[eu] = emoji;
+  m.reactii = dupa;
+  randeazaConversatie();
+  const { data, error } = await supabaseClient.rpc('reactioneaza_mesaj', { p_id: m.id, p_emoji: emoji });
+  if (error || !data) {
+    m.reactii = inainte;
+    if (conversatie) randeazaConversatie();
+    return showToast(tr('Reacția nu s-a salvat. Verifică internetul și reîncearcă.', 'The reaction was not saved. Check your internet and try again.'), 'error');
+  }
+  m.reactii = data;
+  if (conversatie) randeazaConversatie();
+}
+
+// Răspunsul la un mesaj: bara de deasupra câmpului arată cui răspunzi; null = mesaj obișnuit
+let raspunsLa = null;
+function seteazaRaspunsMesaj(m) {
+  raspunsLa = m;
+  if (m && mesajEditat) seteazaEditareMesaj(null);
+  document.getElementById('mesajRaspuns').hidden = !m;
+  if (m) {
+    document.getElementById('mesajRaspunsCui').textContent = numeAutorMesaj(m);
+    document.getElementById('mesajRaspunsText').textContent = textScurtMesaj(m);
+    document.getElementById('mesajText').focus();
+  }
+  if (conversatie && conversatie.mesaje.length) randeazaConversatie();
 }
 
 function confirmaStergereMesaj(m) {
@@ -14517,6 +14749,7 @@ async function stergeMesaj(m) {
 // Editarea se face în câmpul de jos, cu bara „Editezi mesajul” deasupra; null = înapoi la mesaj nou
 function seteazaEditareMesaj(m) {
   mesajEditat = m;
+  if (m && raspunsLa) { raspunsLa = null; document.getElementById('mesajRaspuns').hidden = true; } // editarea înlocuiește răspunsul
   const camp = document.getElementById('mesajText');
   document.getElementById('mesajEditare').hidden = !m;
   camp.value = m ? m.text : '';
@@ -14590,7 +14823,7 @@ function inchidePanouConversatii() {
 
 async function incarcaConversatii() {
   const corp = document.getElementById('conversatiiContinut');
-  if (!conversatiiDate.length) corp.innerHTML = `<div class="mesaje-gol" style="padding-top:40px;">${tr('Se încarcă...', 'Loading...')}</div>`;
+  if (!conversatiiDate.length) corp.innerHTML = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><span>&nbsp;</span><h1>${tr('Mesaje', 'Messages')}</h1></div></div><div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
   const { data, error } = await supabaseClient.from('mesaje').select('client_id, autor, text, created_at, citit, tip, context').order('created_at', { ascending: false }).limit(2000);
   if (error) {
     if (selectieMesaj) return; // Mesaj nou rămâne deschis; lista se reîncearcă la următoarea deschidere
@@ -14605,6 +14838,10 @@ async function incarcaConversatii() {
   conversatiiDate = (DB.clienti || []).filter(c => c.contConectat || peClient.has(c.id))
     .map(c => ({ client: c, ...(peClient.get(c.id) || { ultim: null, necitite: 0 }) }));
   randeazaConversatii();
+  // Primele 5 conversații (necititele și cele mai recente) se încarcă dinainte: se deschid instant
+  conversatiiDate.filter(x => x.ultim)
+    .sort((a, b) => (b.necitite > 0) - (a.necitite > 0) || b.ultim.created_at.localeCompare(a.ultim.created_at))
+    .slice(0, 5).forEach(x => preincarcaConversatie(x.client.id));
 }
 
 // ---- Mesaj nou (antrenor): atingerea unui client îi deschide conversația; „Anunț” trimite același mesaj la mai mulți ----
@@ -14630,17 +14867,18 @@ function deschideMesajNou() {
   selectieMesaj = new Set();
   anuntMesaj = false;
   document.getElementById('conversatiiContinut').innerHTML = `<div class="mesaj-nou-antet"><b>${tr('Mesaj nou', 'New message')}</b>
-      <button type="button" class="btn btn-clear" onclick="anuleazaMesajNou()">${tr('Renunță', 'Cancel')}</button></div>
-    <input type="text" class="form-control" placeholder="${tr('Caută client...', 'Search client...')}" oninput="filtreazaMesajNou(this.value)" style="margin-bottom:8px;">
-    <div class="card conversatii-lista">
+      <button type="button" class="istoric-toate" onclick="anuleazaMesajNou()">${tr('Renunță', 'Cancel')}</button></div>
+    <input type="search" class="cautare-client-camp conversatii-cauta" placeholder="${tr('Caută client', 'Find client')}" oninput="filtreazaMesajNou(this.value)">
+    <div class="lista-sticla conversatii-lista">
       <button type="button" class="conversatie-rand" onclick="deschideAnuntMesaj()">
         <span class="conversatie-initiala">${SVG_ANUNT}</span>
         <span class="conversatie-text"><b>${tr('Anunț către mai mulți clienți', 'Message several clients')}</b><small>${tr('Același mesaj, fiecăruia în conversația lui', 'Same message, each in their own conversation')}</small></span>
       </button>
     </div>
-    <div class="card conversatii-lista" style="margin-top:10px;">
+    <div class="lista-titlu">${tr('Clienți cu cont', 'Clients with an account')}</div>
+    <div class="lista-sticla conversatii-lista">
       ${clienti.map(c => `<button type="button" class="conversatie-rand" data-nume="${escAttr(cheieNume(c.nume))}" onclick="alegeClientMesajNou('${escAttr(c.id)}')">
-        <span class="conversatie-initiala">${escAttr((c.nume || '?').trim().charAt(0).toUpperCase())}</span>
+        <span class="slot-num">${avatarSlotHtml(c)}</span>
         <span class="conversatie-text"><b>${escAttr(c.nume)}</b></span>
       </button>`).join('')}
     </div>`;
@@ -14660,20 +14898,25 @@ function deschideAnuntMesaj() {
   selectieMesaj = new Set();
   anuntMesaj = true;
   corp.innerHTML = `<div class="mesaj-nou-antet"><b>${tr('Anunț către mai mulți', 'Message several clients')}</b>
-      <button type="button" class="btn btn-clear" onclick="deschideMesajNou()">${tr('Înapoi', 'Back')}</button></div>
-    <input type="text" class="form-control" placeholder="${tr('Caută client...', 'Search client...')}" oninput="filtreazaMesajNou(this.value)" style="margin-bottom:8px;">
-    <div class="card trimite-plan-lista">
-      <label class="trimite-plan-rand"><input type="checkbox" id="mesajNouToti" onchange="selecteazaTotiMesajNou(this.checked)">
-        <span class="trimite-plan-text"><span class="trimite-plan-nume">${tr('Toți clienții', 'All clients')} (${clienti.length})</span></span></label>
-      ${clienti.map(c => `<label class="trimite-plan-rand" data-nume="${escAttr(cheieNume(c.nume))}">
-        <input type="checkbox" value="${escAttr(c.id)}" onchange="comutaClientMesajNou(this.value, this.checked)">
-        <span class="trimite-plan-text"><span class="trimite-plan-nume">${escAttr(c.nume)}</span></span></label>`).join('')}
+      <button type="button" class="istoric-toate" onclick="deschideMesajNou()">${tr('Înapoi', 'Back')}</button></div>
+    <input type="search" class="cautare-client-camp conversatii-cauta" placeholder="${tr('Caută client', 'Find client')}" oninput="filtreazaMesajNou(this.value)">
+    <div class="lista-sticla anunt-lista">
+      <label class="trimite-plan-rand anunt-rand"><span class="conversatie-initiala">${SVG_ANUNT}</span>
+        <span class="trimite-plan-text"><span class="trimite-plan-nume">${tr('Toți clienții', 'All clients')} (${clienti.length})</span></span>
+        <input type="checkbox" class="bifa-sticla" id="mesajNouToti" onchange="selecteazaTotiMesajNou(this.checked)"></label>
+    </div>
+    <div class="lista-titlu">${tr('Sau alege', 'Or choose')}</div>
+    <div class="lista-sticla anunt-lista">
+      ${clienti.map(c => `<label class="trimite-plan-rand anunt-rand" data-nume="${escAttr(cheieNume(c.nume))}">
+        <span class="slot-num">${avatarSlotHtml(c)}</span>
+        <span class="trimite-plan-text"><span class="trimite-plan-nume">${escAttr(c.nume)}</span></span>
+        <input type="checkbox" class="bifa-sticla" value="${escAttr(c.id)}" onchange="comutaClientMesajNou(this.value, this.checked)"></label>`).join('')}
     </div>
     <div class="mesaj-nou-scrie">
       <div class="mesaj-nou-info" id="mesajNouInfo">${tr('Alege cui trimiți. Fiecare îl primește în conversația lui.', 'Choose who gets it. Each client receives it in their own conversation.')}</div>
       <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesajNou();">
         <textarea id="mesajNouText" class="form-control" rows="1" maxlength="2000" placeholder="${tr('Scrie un mesaj...', 'Write a message...')}" oninput="potrivesteCampMesaj(this)"></textarea>
-        <button type="submit" class="btn" id="btnTrimiteMesajNou" aria-label="${tr('Trimite', 'Send')}"><svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>
+        <button type="submit" class="btn btn-trimite-mesaj" id="btnTrimiteMesajNou" aria-label="${tr('Trimite', 'Send')}"><svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>
       </form>
     </div>`;
   document.getElementById('panouConversatii').scrollTop = 0;
@@ -14764,26 +15007,34 @@ function randeazaConversatii() {
       ? d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' })
       : formatZiLuna(d);
   };
-  const rand = x => `<button type="button" class="conversatie-rand${x.necitite ? ' necitita' : ''}" onclick="deschideConversatieDinLista(${conversatiiDate.indexOf(x)})">
-      <span class="conversatie-initiala">${escAttr((x.client.nume || '?').trim().charAt(0).toUpperCase())}</span>
+  // Rândul: poza clientului, numele, ultimul mesaj (îngroșat cât e necitit), ora și câte sunt necitite
+  const rand = x => `<button type="button" class="conversatie-rand${x.necitite ? ' necitita' : ''}" data-nume="${escAttr(cheieNume(x.client.nume))}" onclick="deschideConversatieDinLista(${conversatiiDate.indexOf(x)})">
+      <span class="slot-num">${avatarSlotHtml(x.client)}</span>
       <span class="conversatie-text"><b>${escAttr(x.client.nume)}</b><small>${x.ultim ? escAttr((x.ultim.autor === 'antrenor' ? tr('Tu: ', 'You: ') : '') + textScurtMesaj(x.ultim)) : tr('Scrie primul mesaj', 'Write the first message')}</small></span>
       ${x.ultim ? `<span class="conversatie-meta"><small>${cand(x.ultim.created_at)}</small>${x.necitite ? `<span class="mesaje-bulina">${x.necitite}</span>` : ''}</span>` : ''}
     </button>`;
-  let html = `<div class="inscriere-chips conversatii-filtre">
-      <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? '' : ' active'}" onclick="comutaFiltruConversatii(false)">${tr('Toate', 'All')}</button>
-      <button type="button" class="inscriere-chip${conversatiiDoarNecitite ? ' active' : ''}" onclick="comutaFiltruConversatii(true)">${tr('Necitite', 'Unread')}${totalNecitite ? ` (${totalNecitite})` : ''}</button>
-    </div>`;
+  // Ca Notificările: titlul mare (cel mic apare în antet la derulare), deasupra câte sunt necitite
+  let html = `<div class="orar-titlu-mare"><div class="orar-titlu-text">
+      <span>${totalNecitite ? tr(`${totalNecitite} ${totalNecitite === 1 ? 'conversație necitită' : 'conversații necitite'}`, `${totalNecitite} unread`) : tr('Totul citit', 'All read')}</span>
+      <h1>${tr('Mesaje', 'Messages')}</h1></div></div>`;
+  if (cuMesaje.length > 1) html += `<div class="conversatii-sus">
+      ${cuMesaje.length > 5 ? `<input type="search" class="cautare-client-camp conversatii-cauta" placeholder="${tr('Caută client', 'Find client')}" oninput="filtreazaMesajNou(this.value)">` : ''}
+      <div class="pastile-alegere conversatii-filtre">
+        <button type="button" class="istoric-toate${conversatiiDoarNecitite ? '' : ' activ'}" onclick="comutaFiltruConversatii(false)">${tr('Toate', 'All')}</button>
+        <button type="button" class="istoric-toate${conversatiiDoarNecitite ? ' activ' : ''}" onclick="comutaFiltruConversatii(true)">${tr('Necitite', 'Unread')}${totalNecitite ? ` · ${totalNecitite}` : ''}</button>
+      </div></div>`;
   // Un client nou se alege din „Mesaj nou” (butonul din antet), nu dintr-o listă cu toți clienții
-  if (lista.length) html += `<div class="card conversatii-lista">${lista.map(rand).join('')}</div>`;
-  else html += `<div class="mesaje-gol" style="padding:24px 20px;">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.')
-    : tr(`Nicio conversație încă. Apasă ${SVG_MESAJ_NOU} ca să scrii unuia sau mai multor clienți.`, `No conversations yet. Tap ${SVG_MESAJ_NOU} to message one or more clients.`)}</div>`;
-  if (!conversatiiDate.length) html += `<div class="mesaje-gol" style="padding:0 20px;">${tr('Mesajele apar pentru clienții care au cont în aplicație.', 'Messages are available for clients with an app account.')}</div>`;
+  if (lista.length) html += `<div class="lista-sticla conversatii-lista">${lista.map(rand).join('')}</div>`;
+  else html += `<div class="lista-sticla"><div class="notificari-gol">${conversatiiDoarNecitite ? tr('Niciun mesaj necitit.', 'No unread messages.')
+    : tr(`Nicio conversație încă. Apasă ${SVG_MESAJ_NOU} ca să scrii unuia sau mai multor clienți.`, `No conversations yet. Tap ${SVG_MESAJ_NOU} to message one or more clients.`)}</div></div>`;
+  if (!conversatiiDate.length) html += `<div class="mesaje-gol conversatii-nota">${tr('Mesajele apar pentru clienții care au cont în aplicație.', 'Messages are available for clients with an app account.')}</div>`;
   corp.innerHTML = html;
 }
 
-// ---- Răspunsuri rapide (antrenor): o atingere pune textul în câmp; lista se poate modifica (user_metadata.raspunsuri_rapide) ----
+// ---- Răspunsuri rapide (antrenor): butonul ⚡ din câmpul de scris deschide o fereastră cu cele potrivite acum
+// (după ultimul mesaj al clientului) și cu cele salvate (user_metadata.raspunsuri_rapide). {prenume} = prenumele clientului.
 const RASPUNSURI_IMPLICITE = [
-  ['Bravo! 💪', 'Well done! 💪'],
+  ['Bravo, {prenume}! 💪', 'Well done, {prenume}! 💪'],
   ['Ne vedem mâine!', 'See you tomorrow!'],
   ['Cum te simți după antrenament?', 'How do you feel after the workout?'],
   ['Trimite-mi o poză, te rog.', 'Please send me a photo.']
@@ -14791,22 +15042,43 @@ const RASPUNSURI_IMPLICITE = [
 let raspunsuriEditare = false;
 const raspunsuriRapide = () => (utilizatorCurent && utilizatorCurent.user_metadata && utilizatorCurent.user_metadata.raspunsuri_rapide)
   || RASPUNSURI_IMPLICITE.map(r => tr(...r));
+const prenumeConversatie = () => (document.getElementById('panouMesajeTitlu').textContent || '').trim().split(/\s+/)[0];
+const cuPrenume = text => text.replace(/\{prenume\}/g, prenumeConversatie());
 
-function randeazaRaspunsuriRapide() {
-  const el = document.getElementById('raspunsuriRapide');
-  el.hidden = rolUtilizator === 'clienta';
-  if (el.hidden) return;
-  el.innerHTML = raspunsuriRapide().map((r, i) => raspunsuriEditare
-    ? `<button type="button" class="raspuns-rapid editare" onclick="stergeRaspunsRapid(${i})">${escAttr(r)} <b>×</b></button>`
-    : `<button type="button" class="raspuns-rapid" onclick="folosesteRaspunsRapid(${i})">${escAttr(r)}</button>`).join('')
-    + (raspunsuriEditare ? `<button type="button" class="raspuns-rapid adauga" onclick="adaugaRaspunsRapid()">+ ${tr('Adaugă', 'Add')}</button>` : '')
-    + `<button type="button" class="raspuns-rapid adauga" onclick="raspunsuriEditare = !raspunsuriEditare; randeazaRaspunsuriRapide()">${raspunsuriEditare ? tr('Gata', 'Done') : tr('Editează', 'Edit')}</button>`;
+// Potrivite acum: răspunsul firesc la ultimul mesaj primit (record, notiță din antrenament, întrebare)
+function raspunsuriPotrivite() {
+  const primit = conversatie && [...conversatie.mesaje].reverse().find(m => m.autor !== autorulMeu());
+  if (!primit) return [];
+  if (primit.tip === 'record') return [tr('Felicitări pentru record, {prenume}! 🏆', 'Congrats on the record, {prenume}! 🏆'), tr('Super progres! Data viitoare încercăm puțin mai mult.', 'Great progress! Next time we try a bit more.')];
+  if (primit.tip === 'nota') return [tr('Mersi că mi-ai scris, {prenume}. Mă uit și revin.', 'Thanks for writing, {prenume}. I’ll take a look and get back to you.'), tr('Data viitoare scădem puțin greutatea, să fie confortabil.', 'Next time we lower the weight a bit so it feels comfortable.')];
+  if (/\?\s*$/.test(primit.text || '')) return [tr('Bună întrebare! Revin imediat cu un răspuns.', 'Good question! I’ll get back to you shortly.')];
+  return [tr('Mersi, {prenume}! 🙏', 'Thanks, {prenume}! 🙏')];
 }
 
-function folosesteRaspunsRapid(i) {
+function deschideRaspunsuriRapide() {
+  const rand = (text, atr, extra = '') => `<button type="button" class="raspuns-rapid-rand" ${atr}><span>${escAttr(cuPrenume(text))}</span>${extra}</button>`;
+  const potrivite = raspunsuriPotrivite();
+  const ale = raspunsuriRapide();
+  const foaie = deschideFoaieChat(`
+    <h3 class="incasare-foaie-titlu">${tr('Răspunsuri rapide', 'Quick replies')}</h3>
+    ${potrivite.length && !raspunsuriEditare ? `<div class="lista-titlu">${tr('Potrivite acum', 'Suggested now')}</div>
+      <div class="lista-sticla">${potrivite.map((t, i) => rand(t, `data-potrivit="${i}"`)).join('')}</div>` : ''}
+    <div class="lista-titlu raspunsuri-titlu"><span>${tr('Ale tale', 'Yours')}</span>
+      <button type="button" class="istoric-toate" data-actiune="editeaza">${raspunsuriEditare ? tr('Gata', 'Done') : tr('Editează', 'Edit')}</button></div>
+    <div class="lista-sticla">${ale.map((t, i) => rand(t, `data-al="${i}"`, raspunsuriEditare ? '<b class="raspuns-rapid-sterge">×</b>' : '')).join('')}
+      ${raspunsuriEditare ? `<button type="button" class="raspuns-rapid-rand raspuns-rapid-adauga" data-actiune="adauga"><span>+ ${tr('Răspuns nou', 'New reply')}</span></button>` : ''}</div>
+    ${raspunsuriEditare ? `<div class="raspunsuri-nota">${tr('Scrie {prenume} unde vrei prenumele clientului.', 'Write {prenume} where you want the client’s first name.')}</div>` : ''}`, 'raspunsuri-rapide-foaie');
+  foaie.querySelectorAll('[data-potrivit]').forEach(b => { b.onclick = () => folosesteRaspunsRapid(potrivite[b.dataset.potrivit]); });
+  foaie.querySelectorAll('[data-al]').forEach(b => { b.onclick = () => raspunsuriEditare ? stergeRaspunsRapid(Number(b.dataset.al)) : folosesteRaspunsRapid(ale[b.dataset.al]); });
+  foaie.querySelector('[data-actiune="editeaza"]').onclick = () => { raspunsuriEditare = !raspunsuriEditare; deschideRaspunsuriRapide(); };
+  foaie.querySelector('[data-actiune="adauga"]')?.addEventListener('click', adaugaRaspunsRapid);
+}
+
+function folosesteRaspunsRapid(text) {
+  inchideFisaScurta();
   const camp = document.getElementById('mesajText');
-  const text = raspunsuriRapide()[i];
-  camp.value = camp.value.trim() ? camp.value.trim() + ' ' + text : text;
+  const t = cuPrenume(text);
+  camp.value = camp.value.trim() ? camp.value.trim() + ' ' + t : t;
   potrivesteCampMesaj(camp);
   camp.focus();
 }
@@ -14815,7 +15087,7 @@ async function salveazaRaspunsuriRapide(lista) {
   const { data, error } = await supabaseClient.auth.updateUser({ data: { raspunsuri_rapide: lista } });
   if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul și reîncearcă.', 'Could not save. Check your internet and try again.'), 'error');
   if (data && data.user) utilizatorCurent = data.user;
-  randeazaRaspunsuriRapide();
+  if (document.querySelector('.raspunsuri-rapide-foaie')) deschideRaspunsuriRapide();
 }
 
 function stergeRaspunsRapid(i) {
@@ -14823,9 +15095,10 @@ function stergeRaspunsRapid(i) {
 }
 
 function adaugaRaspunsRapid() {
-  customConfirm(tr('Răspuns rapid nou', 'New quick reply'), tr('Textul apare ca buton deasupra câmpului de scris.', 'The text appears as a button above the message box.'), text => {
-    if (text) salveazaRaspunsuriRapide(raspunsuriRapide().concat([text.slice(0, 80)]));
-  }, { placeholder: tr('Ex.: Felicitări pentru record!', 'E.g. Congrats on the record!') });
+  inchideFisaScurta();
+  customConfirm(tr('Răspuns rapid nou', 'New quick reply'), tr('Apare în „Ale tale”, la butonul ⚡ din conversație.', 'It appears under “Yours”, at the ⚡ button in the conversation.'), text => {
+    if (text) salveazaRaspunsuriRapide(raspunsuriRapide().concat([text.slice(0, 80)])).then(() => deschideRaspunsuriRapide());
+  }, { placeholder: tr('Ex.: Felicitări pentru record, {prenume}!', 'E.g. Congrats on the record, {prenume}!') });
 }
 
 // Acasă (client): conversația apare cu ultimul mesaj și bulina de necitite, de îndată ce există un mesaj
@@ -15790,6 +16063,9 @@ async function incarcaNotificari() {
   notificari = data || [];
   actualizeazaBulinaNotificari();
   actualizeazaBulinaMesaje();
+  // Mesajele se pregătesc în fundal, ca lista (antrenor) și conversația (client) să se deschidă instant
+  if (rolUtilizator === 'clienta') preincarcaConversatie(dateClienta.fisa && dateClienta.fisa.id);
+  else if (!conversatiiDate.length) incarcaConversatii();
   if (!canalNotificari) {
     canalNotificari = supabaseClient.channel('notificari-' + utilizatorCurent.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notificari', filter: `user_id=eq.${utilizatorCurent.id}` }, payload => {
