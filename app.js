@@ -2326,7 +2326,8 @@ async function executaActiuneSupabase(actionName, payload) {
     const aFostBifat = !!slot.bifat;
     const oraNorm = normalizeazaOraUi(payload.ora);
 
-    await sb.from('orar').update({
+    // doarPrezenta: anularea prezenței (bifa verde atinsă), clientul rămâne pe loc, nebifat
+    await sb.from('orar').update(payload.doarPrezenta ? { bifat: false } : {
       clienta: "",
       antrenament: "",
       bifat: false,
@@ -3583,21 +3584,20 @@ function randeazaHomeClienta() {
   antrPers.ecran = null;
   document.getElementById('clientaBtnInapoi').style.visibility = 'hidden';
   const prenume = (c.nume || '').trim().split(' ')[0];
-  document.getElementById('clientaTitlu').innerText = tr('Salut, ', 'Hi, ') + prenume + '!';
-  // Fiecare lucru o singură dată, în ordinea importanței: reînnoire, mesajul antrenorului, antrenamentul (cu planul),
-  // ședința la sală, check-in-ul, apoi cifrele (abonamentul complet și planurile vechi sunt în Fișa mea)
-  // Sus: ce e urgent (reînnoire, mesaje); apoi „Azi” (antrenamentul, ședința, ciclul), cele trei cifre, „De făcut”,
-  // scurtăturile și comunitatea. Un singur buton principal pe ecran: cel din „Azi”.
-  const html = `<div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div>` + htmlOnboardingClienta() + '<div id="cardPushAcasa"></div>'
-    + `<div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardMesajeAcasa"></div>`
-    + `<div class="card acasa-azi"><div class="acasa-azi-data">${escAttr(dataAziAcasa())}</div>${htmlAntrenamentAcasa()}${htmlSedintaAcasa()}${htmlCicluAcasa()}</div>`
-    + htmlCifreAcasa()
-    + `<div class="card acasa-de-facut"><div class="acasa-eticheta">${tr('De făcut', 'To do')}</div>${htmlCheckinAcasa()}${htmlMasaAcasa()}</div>`
+  const salut = tr('Salut, ', 'Hi, ') + prenume + '!';
+  document.getElementById('clientaTitlu').innerText = salut;
+  // Ca „Today” din aplicațiile de top, de sus în jos: titlul cu data; un singur card urgent (mesaj necitit > nota antrenorului >
+  // reînnoire > bun venit > notificări; restul își așteaptă rândul, CSS .acasa-urgente); „Azi” cu singurul buton principal;
+  // ce e de bifat azi; ritmul (inelele săptămânii, kcal, apă); scurtăturile care nu dublează nimic; comunitatea.
+  const html = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><span>${escAttr(dataAziAcasa())}</span><h1>${escAttr(salut)}</h1></div></div>`
+    + `<div class="acasa-urgente"><div id="cardMesajeAcasa"></div><div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div><div>${htmlOnboardingClienta()}</div><div id="cardPushAcasa"></div></div>`
+    + `<div class="card acasa-azi">${htmlAntrenamentAcasa()}${htmlSedintaAcasa()}${htmlCicluAcasa()}</div>`
+    + `<div class="card acasa-de-facut"><div class="acasa-eticheta">${tr('De făcut azi', 'To do today')}</div>${htmlCheckinAcasa()}${htmlMasaAcasa()}</div>`
+    + `<div class="lista-titlu">${tr('Ritmul tău', 'Your rhythm')}</div>` + htmlCifreAcasa()
     + `<div class="acasa-scurtaturi">
-        <button type="button" class="acasa-scurtatura" onclick="deschideAdaugaAliment(masaImplicita())"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="M12 11V5a2 2 0 0 1 2-2h2v1a2 2 0 0 1-2 2h-2"/><path d="M10 10.5c1.3.7 2.7.7 4 0"/></svg></span>${tr('Masă', 'Meal')}</button>
         ${htmlAntrPersAcasa()}
+        <button type="button" class="acasa-scurtatura" onclick="deschideAdaugaAliment(masaImplicita())"><span><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="M12 11V5a2 2 0 0 1 2-2h2v1a2 2 0 0 1-2 2h-2"/><path d="M10 10.5c1.3.7 2.7.7 4 0"/></svg></span>${tr('Masă', 'Meal')}</button>
         <button type="button" class="acasa-scurtatura" onclick="scaneazaDinAcasa()"><span><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg></span>${tr('Scanează', 'Scan')}</button>
-        <button type="button" class="acasa-scurtatura" onclick="clientaTab('orar')"><span><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4"/></svg></span>${tr('Programare', 'Book')}</button>
       </div>`
     + htmlComunitateAcasa();
   document.getElementById('clientaContinut').innerHTML = html;
@@ -3611,18 +3611,17 @@ function dataAziAcasa() {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// „De făcut”: masa probabilă după oră, dacă încă n-a notat nimic la ea azi (după ce se știe ce e notat)
+// „De făcut”: masa probabilă după oră (după ce se știe ce e notat); notată, rămâne bifată, ca progres al zilei
 function htmlMasaAcasa() {
   if (!nutritie.azi && nutritie.zi !== aziIsoAntrPers()) return '<div id="acasaMasa"></div>';
   const cod = masaImplicita();
   const notat = nutritie.zi === aziIsoAntrPers() && (nutritie.lista || []).some(x => x.masa === cod);
-  if (notat) return '<div id="acasaMasa"></div>';
   const masa = MESE_NUTRITIE.find(m => m[0] === cod);
-  return `<div class="acasa-rand" id="acasaMasa" onclick="deschideAdaugaAliment('${cod}')">
+  return `<div class="acasa-rand${notat ? ' facut' : ''}" id="acasaMasa" onclick="${notat ? 'deschideNutritie()' : `deschideAdaugaAliment('${cod}')`}">
     <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="M12 11V5a2 2 0 0 1 2-2h2v1a2 2 0 0 1-2 2h-2"/><path d="M10 10.5c1.3.7 2.7.7 4 0"/></svg></span>
-    <div class="acasa-rand-text"><b>${tr(`Notează ${masa[1].toLowerCase()}`, `Log ${masa[2].toLowerCase()}`)}</b>
-    <div class="acasa-antrenament-detalii">${tr('Scanezi codul de bare sau cauți produsul.', 'Scan the barcode or search the product.')}</div></div>
-    <div class="drawer-nav-arrow">›</div>
+    <div class="acasa-rand-text"><b>${notat ? tr(`${masa[1]}: notat`, `${masa[2]}: logged`) : tr(`Notează ${masa[1].toLowerCase()}`, `Log ${masa[2].toLowerCase()}`)}</b>
+    <div class="acasa-antrenament-detalii">${notat ? tr('Vezi ce ai mâncat azi.', 'See what you ate today.') : tr('Scanezi codul de bare sau cauți produsul.', 'Scan the barcode or search the product.')}</div></div>
+    <span class="acasa-bifa"></span>
   </div>`;
 }
 
@@ -3685,17 +3684,17 @@ function htmlAntrenamentAcasa() {
   </div>`;
 }
 
-// Check-in-ul săptămânii: apare doar cât nu e făcut; formularul rămâne în Fișa mea
+// Check-in-ul săptămânii: de făcut sau bifat (după ce se știe); formularul rămâne în Fișa mea
 function htmlCheckinAcasa() {
   const a = dateClienta.acasa;
   // Datele salvate pot fi din săptămâna trecută: de luni, check-in-ul e din nou de făcut
   const facut = a && (a.checkinSaptamana === lunaSaptamaniiCurente() ? a.checkinFacut : false);
-  if (!a || facut !== false) return '<div id="acasaCheckin"></div>';
-  return `<div class="acasa-rand" id="acasaCheckin" onclick="deschideCheckinDinAcasa()">
+  if (!a || (facut !== false && facut !== true)) return '<div id="acasaCheckin"></div>';
+  return `<div class="acasa-rand${facut ? ' facut' : ''}" id="acasaCheckin" onclick="${facut ? "clientaTab('fisa')" : 'deschideCheckinDinAcasa()'}">
     <span class="acasa-rand-icon"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></svg></span>
-    <div class="acasa-rand-text"><b>${tr('Check-in-ul săptămânii', 'This week’s check-in')}</b>
-    <div class="acasa-antrenament-detalii">${tr('2 minute. Antrenorul tău îl vede în fișa ta.', '2 minutes. Your trainer sees it in your profile.')}</div></div>
-    <div class="drawer-nav-arrow">›</div>
+    <div class="acasa-rand-text"><b>${facut ? tr('Check-in-ul săptămânii: trimis', 'This week’s check-in: sent') : tr('Check-in-ul săptămânii', 'This week’s check-in')}</b>
+    <div class="acasa-antrenament-detalii">${facut ? tr('Antrenorul tău îl vede în fișa ta.', 'Your trainer sees it in your profile.') : tr('2 minute. Antrenorul tău îl vede în fișa ta.', '2 minutes. Your trainer sees it in your profile.')}</div></div>
+    <span class="acasa-bifa"></span>
   </div>`;
 }
 
@@ -3784,7 +3783,7 @@ function htmlOnboardingClienta() {
         : tr('Meniul ⋮ al browserului → „Instalează aplicația” sau „Adaugă pe ecranul principal”.', 'Browser menu ⋮ → "Install app" or "Add to Home screen".')}
     </div>`;
   return `<div class="card" id="clientaOnboarding">
-    <div style="font-weight:800; color:var(--primary);">${tr('Bine ai venit!', 'Welcome!')}</div>
+    <div style="font-weight:800; font-size:1.05rem; color:var(--m-text);">${tr('Bine ai venit!', 'Welcome!')}</div>
     ${parola}
     ${instalare}
     <button type="button" class="btn btn-clear" style="width:100%; margin-top:12px;" onclick="inchideOnboardingClienta()">${tr('Gata', 'Done')}</button>
@@ -4621,6 +4620,7 @@ function inapoiAntrPers() {
   if (String(antrPers.ecran).startsWith('nutritie')) return inapoiNutritie();
   if (antrPers.ecran === 'ciclu' || antrPers.ecran === 'comunitate') { antrPers.ecran = null; return randeazaHomeClienta(); }
   if (antrPers.ecran === 'istoric') return clientaTab('fisa');
+  if (antrPers.ecran === 'cont') return clientaTab(clientaTabCurent);
   if (antrPers.ecran === 'editor') {
     if (antrPers.curent && antrPers.curent.id) stergeCiornaAntrPers();
     else if (antrPers.curent && antrPers.curent.fel === 'rutina') stergeCiornaAntrPers();
@@ -5195,9 +5195,11 @@ function htmlNutritieAcasa() {
   const tinta = s && s.kcal ? Number(s.kcal) : 0;
   const kcal = t ? Math.round(t.kcal) : 0;
   const procent = tinta ? Math.min(100, Math.round(kcal / tinta * 100)) : 0;
-  return `<div class="acasa-tila" id="cardNutritieAcasa" onclick="deschideNutritie()" role="button">
-    <b>${kcal}${tinta ? `<small>/${tinta}</small>` : ''}</b><span>${tr('kcal azi', 'kcal today')}</span>
-    ${tinta ? `<div class="progress-wrapper nutritie-bara-mica"><div class="progress-fill" style="width:${procent}%"></div></div>` : ''}
+  // Inel ca la săptămână: procentul din țintă (fără țintă, doar caloriile); fără verde la țintă, nu e un record de bătut
+  return `<div class="acasa-tila acasa-tila-inel" id="cardNutritieAcasa" onclick="deschideNutritie()" role="button">
+    ${htmlInelProgres(procent, tinta ? procent + '%' : String(kcal))}
+    <span>${tr('kcal azi', 'kcal today')}</span>
+    ${tinta ? `<small class="acasa-tila-serie">${kcal} ${tr('din', 'of')} ${tinta}</small>` : ''}
   </div>`;
 }
 
@@ -5231,8 +5233,10 @@ function htmlApaAcasa() {
   const azi = aziIsoAntrPers();
   if (!nutritie.apa || nutritie.apa[azi] === undefined) return '<div id="cardApaAcasa"></div>';
   const p = nutritie.apa[azi], t = tintaApa();
-  return `<div class="acasa-tila${p >= t ? ' atins' : ''}" id="cardApaAcasa" onclick="deschideNutritie()" role="button">
-    <b>${p}<small>/${t}</small></b><span>${tr('pahare de apă', 'glasses of water')}</span>
+  return `<div class="acasa-tila acasa-tila-inel${p >= t ? ' atins' : ''}" id="cardApaAcasa" onclick="deschideNutritie()" role="button">
+    ${htmlInelProgres(p / t * 100, `${p}/${t}`, p >= t)}
+    <span>${tr('pahare de apă', 'glasses of water')}</span>
+    <small class="acasa-tila-serie">${formatKg(p * 0.25)} ${tr('l din', 'l of')} ${formatKg(t * 0.25)}</small>
     <button type="button" class="acasa-tila-plus" onclick="event.stopPropagation(); adaugaPahar(1)" aria-label="${tr('Un pahar de apă', 'One glass of water')}">+</button>
   </div>`;
 }
@@ -9478,7 +9482,7 @@ function lunaSaptamaniiCurente() {
 }
 
 async function randeazaFisaMeaClienta() {
-  document.getElementById('clientaTitlu').innerText = tr('Fișa mea', 'My profile');
+  document.getElementById('clientaTitlu').innerText = tr('Progres', 'Progress');
   const corp = document.getElementById('clientaContinut');
   corp.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">${tr('Se încarcă...', 'Loading...')}</div>`;
   const [{ data, error }, resGreutati] = await Promise.all([
@@ -9539,17 +9543,42 @@ function htmlAbonamentClienta(c) {
   </div>`;
 }
 
-function deschideAbonamentDinAcasa() {
-  clientaTab('fisa');
-  // După ce s-a desenat Fișa mea, se derulează la secțiunea abonamentului
-  const asteapta = setInterval(() => {
-    const card = document.querySelector('#clientaContinut .abonament-card');
-    if (card || clientaTabCurent !== 'fisa') {
-      clearInterval(asteapta);
-      if (card) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
-  }, 100);
-  setTimeout(() => clearInterval(asteapta), 5000);
+// „Contul meu” (din meniu și din Progres): abonamentul, fișa de obiective, planurile anterioare; Înapoi duce la tab-ul de dinainte
+function deschideContulMeuClienta() {
+  salveazaProgresClienta();
+  opresteTimerPauza();
+  opresteScanare();
+  antrPers.curent = null;
+  dateClienta.planCurent = null;
+  antrPers.ecran = 'cont';
+  arataInapoiAntrPers();
+  randeazaContulMeuClienta();
+  document.getElementById('clientaScreen')?.scrollTo({ top: 0, behavior: 'auto' });
+}
+
+function randeazaContulMeuClienta() {
+  document.getElementById('clientaTitlu').innerText = tr('Contul meu', 'My account');
+  const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
+  const titlu = text => `<div class="lista-titlu">${text}</div>`;
+  let html = titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
+  const butonFisa = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', dateClienta.fisa.fisa_inscriere)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${r ? tr('Editează fișa', 'Edit my form') : tr('Completează fișa', 'Fill in my form')}</button>`;
+  html += `<div id="fisaObiectiveClient"></div>` + titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
+    ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}${htmlModificareFisa(r)}${butonFisa}</div>`
+    : `<div class="card"><div style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. O poți completa acum, iar antrenorul o vede imediat.', 'You don’t have a goal-setting form yet. You can fill it in now and your trainer sees it right away.')}</div>${butonFisa}</div>`);
+  // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
+  if ((dateClienta.planuri || []).length > 1) {
+    html += titlu(tr('Planuri anterioare', 'Earlier plans')) + `<div class="plan-fisa-lista">` + dateClienta.planuri.slice(1).map((p, i) => {
+      const ex = (p.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim()));
+      return `<button type="button" class="plan-zi-card" onclick="antrPers.ecran = null; deschidePlanClienta(${i + 1})">
+        <span class="plan-zi-card-text">
+          <span class="plan-zi-card-titlu">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</span>
+          <span class="plan-zi-card-detalii">${(p.continut_json?.sesiuni || []).length} ${tr('zile', 'days')} · ${ex.length} ${tr('exerciții', 'exercises')}</span>
+        </span>
+        <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </button>`;
+    }).join('') + `</div>`;
+  }
+  document.getElementById('clientaContinut').innerHTML = `<div class="client-sticla">${html}</div>`;
 }
 
 // Scurtătura de pe Acasă spre formularul de check-in din Fișa mea
@@ -9559,40 +9588,37 @@ function deschideCheckinDinAcasa() {
   clientaTab('fisa');
 }
 
+// Rândul de listă de sticlă (ca în meniu): iconița în bulă, titlu, descriere, ›
+function htmlRandSticla(onclick, svg, titlu, desc) {
+  return `<div class="drawer-nav-card" onclick="${onclick}">
+      <div class="drawer-nav-card-left"><div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg></div>
+      <div><div class="drawer-nav-title">${titlu}</div><div class="drawer-nav-desc">${desc}</div></div></div>
+      <div class="drawer-nav-arrow">›</div>
+    </div>`;
+}
+
+// „Progres”: doar ce motivează (cifrele, săptămâna, obiectivele, greutatea, recordurile); abonamentul, fișa de obiective
+// și planurile vechi stau în „Contul meu” (meniu și rândul de jos)
 function afiseazaFisaMeaClienta() {
   if (checkinLink) return afiseazaCheckinLink();
+  if (antrPers.ecran === 'cont') return randeazaContulMeuClienta();
   const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
-  const titlu = text => `<div style="font-weight:800; color:var(--primary); margin:14px 2px 8px;">${text}</div>`;
-  let html = `<button type="button" class="plan-zi-card fisa-istoric-btn" onclick="deschideIstoricClienta()">
-      <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${tr('Istoric', 'History')}</span>
-      <span class="plan-zi-card-detalii">${tr('Calendarul, seria de săptămâni și insignele', 'Calendar, weekly streak and badges')}</span></span>
-      <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-    </button>`;
-  html += `<div class="lista-sticla checkin-card">${htmlCheckinClienta()}</div>`;
-  html += titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
-  // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
-  if ((dateClienta.planuri || []).length > 1) {
-    html += titlu(tr('Planuri anterioare', 'Earlier plans')) + `<div class="plan-fisa-lista">` + dateClienta.planuri.slice(1).map((p, i) => {
-      const ex = (p.continut_json?.sesiuni || []).flatMap(s => (s.exercitii || []).filter(x => (x.exercitiu || '').trim()));
-      return `<button type="button" class="plan-zi-card" onclick="deschidePlanClienta(${i + 1})">
-        <span class="plan-zi-card-text">
-          <span class="plan-zi-card-titlu">${escAttr(p.titlu || tr('Plan de antrenament', 'Workout plan'))}</span>
-          <span class="plan-zi-card-detalii">${(p.continut_json?.sesiuni || []).length} ${tr('zile', 'days')} · ${ex.length} ${tr('exerciții', 'exercises')}</span>
-        </span>
-        <svg class="plan-btn-svg plan-zi-card-sageata" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
-      </button>`;
-    }).join('') + `</div>`;
-  }
+  const a = dateClienta.acasa || {};
+  const titlu = text => `<div class="lista-titlu">${text}</div>`;
+  const nr = v => v === undefined || v === null ? '–' : v;
+  let html = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><span>${tr('Ce ai construit până acum', 'What you’ve built so far')}</span><h1>${tr('Progres', 'Progress')}</h1></div></div>
+    <div class="orar-cifre progres-cifre" role="button" onclick="deschideIstoricClienta()">${htmlCifra(`🔥 ${nr(a.serie)}`, tr('săpt. la rând', 'weeks in a row'), 'accent')}${htmlCifra(nr(a.nrSedinte), tr('ședințe', 'sessions'))}${htmlCifra(checkinuriClienta.length, tr('check-in-uri', 'check-ins'))}</div>
+    <div class="lista-sticla">${htmlRandSticla('deschideIstoricClienta()', '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="m9 15 2 2 4-4"/>', tr('Istoric și insigne', 'History and badges'), tr('Calendarul, seria de săptămâni și insignele', 'Calendar, weekly streak and badges'))}</div>`;
+  html += titlu(tr('Săptămâna asta', 'This week')) + `<div class="lista-sticla checkin-card">${htmlCheckinClienta()}</div>`;
   obiectiveUI = { rol: 'client', clientId: dateClienta.fisa.id, userId: dateClienta.fisa.user_id, lista: (dateClienta.obiective || []).slice(),
     sursa: sursaProgresClient(), zileSapt: zileActiveSaptamanaClient(), editare: null };
   html += titlu(tr('Obiectivele mele', 'My goals')) + `<div id="obiectiveContinut">${htmlObiective()}</div>`;
-  html += titlu(tr('Progresul meu', 'My progress')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
-  html += titlu(tr('Progres la exerciții', 'Exercise progress')) + htmlProgresExercitii(sursaProgresClient());
-  const butonFisa = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', dateClienta.fisa.fisa_inscriere)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${r ? tr('Editează fișa', 'Edit my form') : tr('Completează fișa', 'Fill in my form')}</button>`;
-  html += `<div id="fisaObiectiveClient"></div>` + titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
-    ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}${htmlModificareFisa(r)}${butonFisa}</div>`
-    : `<div class="card"><div style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. O poți completa acum, iar antrenorul o vede imediat.', 'You don’t have a goal-setting form yet. You can fill it in now and your trainer sees it right away.')}</div>${butonFisa}</div>`);
-  document.getElementById('clientaContinut').innerHTML = html;
+  html += titlu(tr('Greutate', 'Weight')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
+  html += titlu(tr('Recorduri la exerciții', 'Exercise records')) + htmlProgresExercitii(sursaProgresClient());
+  // Ultimele 8 check-in-uri, ca în fișa antrenorului (tendința energiei și a somnului, câte un card pe săptămână)
+  if (checkinuriClienta.length) html += titlu(tr('Check-in-uri', 'Check-ins')) + htmlCheckinuri(checkinuriClienta.slice().sort((x, y) => y.saptamana.localeCompare(x.saptamana)).slice(0, 8));
+  html += `<div class="lista-sticla progres-cont">${htmlRandSticla('deschideContulMeuClienta()', '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>', tr('Abonament și fișă', 'Subscription and form'), tr('Abonamentul, fișa, planurile vechi', 'Subscription, goals form, past plans'))}</div>`;
+  document.getElementById('clientaContinut').innerHTML = `<div class="client-sticla">${html}</div>`;
   umplePoze(document.getElementById('clientaContinut'));
   verificaObiectiveAtinse().then(() => { if (obiectiveUI && obiectiveUI.rol === 'client') { obiectiveUI.lista = (dateClienta.obiective || []).slice(); randeazaObiective(); } });
   // Venit de pe Acasă („Obiective”): direct la secțiunea de obiective
@@ -9903,7 +9929,7 @@ function umplePoze(radacina) {
 }
 
 function deschidePanouPoze(saptamana) {
-  document.getElementById('panouPozeTitlu').textContent = `${tr('Săptămâna', 'Week')} ${intervalSaptamana(saptamana)}`;
+  document.getElementById('panouPozeTitlu').textContent = intervalSaptamana(saptamana);
   document.getElementById('panouPoze').dataset.s = saptamana;
   document.getElementById('panouPoze').classList.remove('auth-hidden');
   randeazaPanouPoze();
@@ -9917,15 +9943,17 @@ function randeazaPanouPoze() {
   const s = document.getElementById('panouPoze').dataset.s;
   const corp = document.getElementById('panouPozeContinut');
   const poze = UNGHIURI_POZE.map(o => ({ o, p: pozeCurente.lista.find(p => p.s === s && p.u === o.id) })).filter(x => x.p);
-  corp.innerHTML = poze.length ? poze.map(({ o, p }) => `
-    <div class="poza-mare">
-      <div class="poza-mare-sus">
-        <b>${tr(o.ro, o.en)}</b>
-        <button type="button" class="btn btn-clear" onclick="stergePozaProgres('${s}', '${o.id}')">${tr('Șterge', 'Delete')}</button>
-      </div>
-      <img data-poza="${escAttr(pozeCurente.client)}|${p.s}|${p.u}|${p.t}" alt="${tr(o.ro, o.en)}">
+  // Stilul nou: titlul mare (săptămâna), apoi câte un card de sticlă pe unghi; atingerea pozei o deschide pe tot ecranul
+  const titlu = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><span>${tr('Poze de progres', 'Progress photos')}</span><h1>${intervalSaptamana(s)}</h1></div></div>`;
+  corp.innerHTML = titlu + (poze.length ? poze.map(({ o, p }) => `
+    <div class="lista-titlu poza-mare-sus">
+      <span>${tr(o.ro, o.en)}</span>
+      <button type="button" class="poza-sterge" onclick="stergePozaProgres('${s}', '${o.id}')" aria-label="${tr('Șterge poza', 'Delete photo')}"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+    </div>
+    <div class="lista-sticla poza-mare">
+      <img data-poza="${escAttr(pozeCurente.client)}|${p.s}|${p.u}|${p.t}" alt="${tr(o.ro, o.en)}" onclick="aratPozaMesaj(this)">
     </div>`).join('')
-    : `<div class="notificari-gol">${tr('Nicio poză în această săptămână.', 'No photos this week.')}</div>`;
+    : `<div class="notificari-gol">${tr('Nicio poză în această săptămână.', 'No photos this week.')}</div>`);
   umplePoze(corp);
 }
 
@@ -9951,7 +9979,7 @@ function htmlComparatiePoze(checkinuri) {
   if (c.client !== pozeCurente.client) Object.assign(c, { client: pozeCurente.client, u: null, st: null, dr: null });
   c.greutati = {};
   (checkinuri || []).forEach(x => { if (x.greutate != null) c.greutati[x.saptamana] = Number(x.greutate); });
-  return `<div class="poze-comparatie">${htmlCorpComparatie()}</div>`;
+  return `<div class="lista-sticla poze-comparatie">${htmlCorpComparatie()}</div>`;
 }
 
 function htmlCorpComparatie() {
@@ -9967,7 +9995,7 @@ function htmlCorpComparatie() {
   const coloana = (latura, s) => {
     const p = poze.find(x => x.s === s);
     const eticheta = s === prima ? tr('Început', 'Start') : s === ultima ? tr('Acum', 'Now') : tr('Săptămâna', 'Week');
-    const optiuni = poze.map(x => `<option value="${x.s}"${x.s === s ? ' selected' : ''}>${tr('Săptămâna', 'Week')} ${intervalSaptamana(x.s)}</option>`).join('');
+    const optiuni = poze.map(x => `<option value="${x.s}"${x.s === s ? ' selected' : ''}>${intervalSaptamana(x.s)}</option>`).join('');
     const kg = comparatiePoze.greutati[s];
     return `<div class="poza-comp">
         <div class="poza-comp-eticheta">${eticheta}</div>
@@ -10693,6 +10721,19 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 226, data: '2026-11-17',
+    client: [
+      ['Mesaje vocale: când câmpul de scris e gol, atinge microfonul, vorbește, apoi trimite (sau „Anulează”).', 'Voice messages: when the message field is empty, tap the microphone, speak, then send (or “Cancel”).'],
+      ['În câmpul de scris: 😊 pentru emoticoane, agrafa pentru o poză din galerie și camera pentru o poză nouă.', 'In the message field: 😊 for emoji, the paperclip for a photo from your gallery and the camera for a new photo.'],
+      ['La reacții, „+” deschide mai multe emoticoane. Lângă ora mesajelor tale, ✓ înseamnă trimis, iar ✓✓ colorat înseamnă citit.', 'In reactions, “+” opens more emoji. Next to the time of your messages, ✓ means sent and a coloured ✓✓ means read.']
+    ],
+    antrenor: [
+      ['Mesaje vocale în conversații: când câmpul e gol, atinge microfonul, vorbește, apoi trimite (sau „Anulează”). Și clientul poate trimite.', 'Voice messages in conversations: when the field is empty, tap the microphone, speak, then send (or “Cancel”). Clients can send them too.'],
+      ['În câmpul de scris: 😊 pentru emoticoane, ⚡ răspunsuri rapide, agrafa și camera pentru poze. ⚡ și camera dispar cât scrii.', 'In the message field: 😊 for emoji, ⚡ quick replies, the paperclip and camera for photos. ⚡ and the camera hide while you type.'],
+      ['La reacții, „+” deschide mai multe emoticoane. Lângă ora mesajelor tale, ✓ înseamnă trimis, iar ✓✓ colorat înseamnă citit.', 'In reactions, “+” opens more emoji. Next to the time of your messages, ✓ means sent and a coloured ✓✓ means read.'],
+      ['Orar: prezența nu se mai poate bifa pe zilele care n-au venit încă. O prezență bifată din greșeală se anulează atingând bifa verde: ședința se întoarce în abonament, clientul rămâne în oră.', 'Schedule: attendance can no longer be marked on days that haven’t come yet. To undo attendance marked by mistake, tap the green tick: the session goes back to the membership and the client stays booked.'],
+      ['Orar: filtrul ales (programați / prezenți / libere) rămâne și după ce bifezi o prezență.', 'Schedule: the chosen filter (booked / present / free) now stays after you mark attendance.']
+    ] },
   { v: 225, data: '2026-11-16',
     client: [
       ['Poți trimite poze în conversația cu antrenorul: apasă pe aparatul foto de lângă câmpul de scris. Ce ai scris deja devine descrierea pozei, iar atingerea unei poze o deschide pe tot ecranul.', 'You can send photos in the conversation with your trainer: tap the camera next to the message field. Anything you’ve already typed becomes the caption, and tapping a photo opens it full screen.']
@@ -10702,11 +10743,11 @@ const NOUTATI = [
     ] },
   { v: 224, data: '2026-11-16',
     client: [
-      ['Mesajele arată și merg ca în WhatsApp: ține apăsat pe un mesaj ca să reacționezi (👍 ❤️ 💪 🔥 👏 😂) sau să-l copiezi, iar glisat spre dreapta îi răspunzi direct. Enter trimite mesajul.', 'Messages look and work like WhatsApp: press and hold a message to react (👍 ❤️ 💪 🔥 👏 😂) or copy it, and swipe right to reply to it. Enter sends the message.']
+      ['Mesaje noi: ține apăsat pe un mesaj ca să reacționezi (👍 ❤️ 💪 🔥 👏 😂) sau să-l copiezi, iar glisat spre dreapta îi răspunzi direct. Enter trimite mesajul.', 'New messages: press and hold a message to react (👍 ❤️ 💪 🔥 👏 😂) or copy it, and swipe right to reply to it. Enter sends the message.']
     ],
     antrenor: [
       ['Mesajele, pe stilul nou: în listă vezi pozele clienților, iar în conversație, sub nume, abonamentul pe scurt (ședințe rămase, până când).', 'Messages in the new style: the list shows clients’ photos, and in a conversation you see their membership under the name (sessions left, until when).'],
-      ['Ca în WhatsApp: ține apăsat pe un mesaj pentru reacții, Copiază, Editează sau Șterge; glisează spre dreapta ca să răspunzi la el. Enter trimite.', 'Like WhatsApp: press and hold a message for reactions, Copy, Edit or Delete; swipe right to reply to it. Enter sends.'],
+      ['Ține apăsat pe un mesaj pentru reacții, Copiază, Editează sau Șterge; glisează spre dreapta ca să răspunzi la el. Enter trimite.', 'Press and hold a message for reactions, Copy, Edit or Delete; swipe right to reply to it. Enter sends.'],
       ['Răspunsurile rapide sunt la butonul ⚡: îți propune răspunsul potrivit la ultimul mesaj (ex. felicitări la record) și poți scrie {prenume} ca să apară numele clientului.', 'Quick replies are under the ⚡ button: it suggests the right reply to the last message (e.g. congrats on a record), and you can write {prenume} to insert the client’s name.'],
       ['Un mesaj trimis fără internet nu se mai pierde: rămâne marcat „Netrimis” și îl retrimiți cu o atingere.', 'A message sent without internet is no longer lost: it stays marked “Not sent” and you resend it with one tap.']
     ]
@@ -10921,7 +10962,7 @@ const NOUTATI = [
     antrenor: [
       ['Confirmări se completează singur: apar toți clienții (fără cei arhivați), iar bara de adăugare de sus a dispărut. Coloana „Săptămâna” arată câte ședințe are fiecare programate săptămâna asta din câte trebuie: verde ✓ complet, portocaliu ◐ parțial, roșu ○ niciuna. Sus vezi câți sunt compleți. Cei neprogramați sunt primii; cei fără abonament activ apar la final, cu „Expirat” sau „Fără abonament”.', 'Confirmations now fill in by themselves: every client appears (except archived ones), and the add bar at the top is gone. The “This week” column shows how many sessions each one has booked this week out of how many they should: green ✓ complete, orange ◐ partial, red ○ none. At the top you see how many are complete. Those not booked come first; those without an active subscription are at the end, marked “Expired” or “No subscription”.'],
       ['Câte ședințe pe săptămână se calculează singur: ședințele rămase împărțite la săptămânile rămase până la expirare (la un abonament nou de 8: 2 pe săptămână). Dacă clientul vine mai des, ținta scade în săptămânile următoare; dacă rămâne în urmă, crește, ca să-și folosească abonamentul înainte să expire. O fixezi manual pentru un client atingând „2 pe săpt.” de sub nume (apare cu ✎).', 'Sessions per week are worked out automatically: sessions left divided by the weeks left until expiry (2 a week on a new 8-session plan). If the client comes more often, the target drops in the following weeks; if they fall behind, it rises, so they use the plan before it expires. Fix it by hand for a client by tapping “2 a week” under their name (shown with ✎).'],
-      ['Atingi pastila unui client rămas în urmă și îi trimiți un reminder gata scris (în aplicație, WhatsApp sau SMS). Statusul pus de mână (Confirmată / În așteptare / Absentă) a fost înlocuit de acest calcul.', 'Tap the pill of a client who is behind to send a ready-made reminder (in the app, WhatsApp or SMS). The manual status (Confirmed / Pending / Absent) is replaced by this count.'],
+      ['Atingi pastila unui client rămas în urmă și îi trimiți un reminder gata scris (în aplicație sau prin mesaj). Statusul pus de mână (Confirmată / În așteptare / Absentă) a fost înlocuit de acest calcul.', 'Tap the pill of a client who is behind to send a ready-made reminder (in the app or by message). The manual status (Confirmed / Pending / Absent) is replaced by this count.'],
       ['Clienții tăi cu cont primesc reminder automat luni și miercuri seara. Tu primești marți și joi dimineața lista celor încă neprogramați. Mențiunile rămân. Butonul ⏸ de pe rând mută clientul în Hold (nu mai primește remindere), iar ↩ din Hold îl readuce în listă; abonamentele înghețate apar automat la Hold.', 'Your clients with an account get an automatic reminder on Monday and Wednesday evening. On Tuesday and Thursday morning you get the list of those still not booked. Notes stay. The ⏸ button on a row moves the client to Hold (no more reminders), and ↩ in Hold brings them back; frozen subscriptions show up under Hold automatically.']
     ] },
   { v: 180, data: '2026-11-06',
@@ -11042,13 +11083,12 @@ function noutatiPentruRol() {
   return NOUTATI.filter(n => n.v <= curenta && n[rol] && n[rol].length).map(n => ({ v: n.v, data: n.data, texte: n[rol] }));
 }
 
+// Pe stilul nou: data versiunii ca eticheta grupului (.lista-titlu), noutățile ca rânduri într-un card de sticlă
 function htmlNoutati(lista, cuVersiune) {
   if (!lista.length) return `<div class="noutati-gol">${tr('Nicio noutate deocamdată.', 'Nothing new yet.')}</div>`;
   return lista.map(n => `
-    <div class="noutati-versiune">
-      ${cuVersiune ? `<div class="noutati-meta">${tr('Versiunea', 'Version')} ${n.v} · ${formateazaDataNoutati(n.data)}</div>` : ''}
-      <ul>${n.texte.map(([ro, en]) => `<li>${tr(ro, en)}</li>`).join('')}</ul>
-    </div>`).join('');
+    ${cuVersiune ? `<div class="lista-titlu">${formateazaDataNoutati(n.data)} · ${tr('versiunea', 'version')} ${n.v}</div>` : ''}
+    <div class="lista-sticla noutati-grup">${n.texte.map(([ro, en]) => `<div class="noutati-rand"><i></i><span>${tr(ro, en)}</span></div>`).join('')}</div>`).join('');
 }
 
 function formateazaDataNoutati(iso) {
@@ -11059,18 +11099,19 @@ function formateazaDataNoutati(iso) {
 // Prima deschidere cu noutăți nevăzute: cel mult ultimele 3 versiuni. Fără cheie salvată, se pornește de la v167 (ultima fără Noutăți).
 function arataNoutatiNevazute() {
   if (!utilizatorCurent || document.getElementById('modalNoutatiBackdrop').style.display === 'flex') return;
+  const fundal = document.getElementById('modalNoutatiBackdrop'), foaie = document.getElementById('cardNoutati');
   let vazut = 167;
   try { vazut = Number(localStorage.getItem(NOUTATI_CHEIE)) || 167; } catch (e) {}
   const lista = noutatiPentruRol();
   const nevazute = lista.filter(n => n.v > vazut).slice(0, 3);
   if (!nevazute.length) return;
   document.getElementById('noutatiPopupLista').innerHTML = htmlNoutati(nevazute, nevazute.length > 1);
-  document.getElementById('modalNoutatiBackdrop').style.display = 'flex';
+  deschideFoaieCuFundal(fundal, foaie);
   try { localStorage.setItem(NOUTATI_CHEIE, String(lista[0].v)); } catch (e) {}
 }
 
 function inchideNoutati() {
-  document.getElementById('modalNoutatiBackdrop').style.display = 'none';
+  inchideFoaieCuFundal(document.getElementById('modalNoutatiBackdrop'), document.getElementById('cardNoutati'));
 }
 
 // Linkurile din emailuri duc la adresa aplicației (?token_hash=...&type=...), nu la supabase.co (filtrele anti-spam penalizează
@@ -11335,7 +11376,8 @@ const MODALE_INAPOI = [
   ['modalSharePlanBackdrop', () => inchideModalSharePlan()],
   ['modalQrBackdrop', () => inchideModalQr()],
   ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()],
-  ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()]
+  ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()],
+  ['modalNoutatiBackdrop', () => inchideNoutati()]
 ];
 let ignoraPopstateGarda = false;
 
@@ -11621,6 +11663,19 @@ function getDataCalendaristicaCurenta() {
   let zCfg = getZileConfig().find(z => z.cheie === ziCurentaCheie);
   return zCfg ? zCfg.dataStrRo : "";
 }
+
+// Ziua aleasă în Orar e după azi: prezența nu se bifează încă (zilele trecute rămân deschise, pentru bifările uitate)
+function ziAleasaInViitor() {
+  const z = getZileConfig().find(x => x.cheie === ziCurentaCheie);
+  if (!z) return false;
+  const azi = new Date();
+  azi.setHours(0, 0, 0, 0);
+  const d = new Date(z.dataDate);
+  d.setHours(0, 0, 0, 0);
+  return d > azi;
+}
+
+const avizBifareViitor = () => showToast(tr('Prezența se bifează din ziua ședinței.', 'Attendance can be marked from the day of the session.'));
 
 function actualizeazaBaraZile() {
   let zile = getZileConfig();
@@ -12253,7 +12308,9 @@ function coboaraFereastra(foaie, fundal, gata) {
   const de = getComputedStyle(foaie).transform;
   foaie.style.animation = 'none';
   foaie.style.pointerEvents = 'none';
-  const durata = { duration: 260, easing: 'cubic-bezier(0.4, 0, 0.9, 0.6)', fill: 'forwards' };
+  // Aceeași curbă ca la urcare (fisaIntra): pornește repede, încetinește doar când e deja aproape ieșită din ecran.
+  // Cu o curbă care pornea încet, ferestrele scurte (fișa pe scurt) păreau că abia se mișcă la început
+  const durata = { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
   const a = foaie.animate([{ transform: de === 'none' ? 'translateY(0)' : de }, { transform: 'translateY(105%)' }], durata);
   fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], durata);
   foaie._coborare = a;
@@ -12499,7 +12556,9 @@ function randeazaOrarInstant() {
   let eTrecuta = esteSaptamanaTrecuta();
   // Săptămâna trecută e doar de citit: fără „Oră suplimentară” și fără cardul de final (vezi style.css)
   document.getElementById('tabOrar')?.classList.toggle('saptamana-trecuta', eTrecuta);
-  actualizeazaTitluOrar(null);
+  // Săptămâna trecută: titlul fără cifre (și fără filtru). Celelalte primesc titlul cu cifrele la final; un apel
+  // fără cifre aici anula filtrul ales la fiecare redesenare (de ex. la bifarea prezenței)
+  if (eTrecuta) actualizeazaTitluOrar(null);
 
   let oreStandard = ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
 
@@ -12726,8 +12785,13 @@ function randeazaOrarInstant() {
       });
       selectAntHtml += `</select>`;
 
-      let saveBtnDisabledAttr = (!isOccupied || slot.bifat) ? 'disabled' : '';
-      let saveBtnClass = (!isOccupied || slot.bifat) ? 'btn btn-save-check btn-save-check-disabled' : 'btn btn-save-check';
+      // Bifa verde (prezent) rămâne apăsabilă: atingerea ei anulează prezența, după confirmare
+      let prezent = isOccupied && slot.bifat;
+      let saveBtnDisabledAttr = !isOccupied ? 'disabled' : '';
+      let saveBtnClass = prezent ? 'btn btn-save-check btn-save-check-disabled btn-save-check-bifat'
+        : !isOccupied ? 'btn btn-save-check btn-save-check-disabled' : 'btn btn-save-check';
+      let saveBtnTitlu = prezent ? tr('Prezent (atinge ca să anulezi prezența)', 'Present (tap to undo attendance)') : tr('Bifează prezența și scade ședința', 'Mark attendance and deduct a session');
+      let saveBtnClic = prezent ? `anuleazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})` : `bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})`;
 
       let slotEsteCompletGol = !clientaCurata && !antVal;
       let clearBtnDisabledAttr = slotEsteCompletGol ? 'disabled' : '';
@@ -12766,7 +12830,7 @@ function randeazaOrarInstant() {
             <div class="slot-etichete">${selectAntHtml}${eticheteSlot}</div>
           </div>
           <div style="display:flex; gap:4px;">
-            <button id="btn_save_${slotDomKey}" class="${saveBtnClass}" ${saveBtnDisabledAttr} title="${tr('Bifează prezența și scade ședința', 'Mark attendance and deduct a session')}" aria-label="${tr('Bifează prezența și scade ședința', 'Mark attendance and deduct a session')}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✓</button>
+            <button id="btn_save_${slotDomKey}" class="${saveBtnClass}" ${saveBtnDisabledAttr} title="${saveBtnTitlu}" aria-label="${saveBtnTitlu}" onclick="${saveBtnClic}">✓</button>
             <button id="btn_clear_${slotDomKey}" class="${clearBtnClass}" ${clearBtnDisabledAttr} title="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" aria-label="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
           </div>
         </div>
@@ -12774,7 +12838,7 @@ function randeazaOrarInstant() {
     });
 
     // Oră cu cel puțin doi clienți, din care măcar unul nebifat: un singur buton pentru toată ora (cu confirmare)
-    if (!esteBlocat && ocupate >= 2 && nebifati >= 1) {
+    if (!esteBlocat && ocupate >= 2 && nebifati >= 1 && !ziAleasaInViitor()) {
       html += `<button type="button" class="btn-bifeaza-ora" onclick="bifeazaToataOra('${ziCurentaCheie}', '${ora}')">
         <span class="btn-bifeaza-ora-bifa">✓</span>${tr('Bifează toți clienții', 'Mark all clients')} (${nebifati})</button>`;
     }
@@ -13147,6 +13211,7 @@ async function actualizeazaAntrenamentPrezenta(data, ora, clienta, antrenament) 
 
 // ✓ pe un loc: se trimite imediat (ca înainte), cu o vibrație scurtă pe telefoanele care o permit
 function bifeazaPrezentaSlot(zi, ora, slotIdx) {
+  if (ziAleasaInViitor()) return avizBifareViitor();
   let d = pregatesteBifare(zi, ora, slotIdx);
   if (!d) {
     showToast(currentLang === 'en' ? "Choose a valid client from the list!" : "Alege un client valid din listă!", "error");
@@ -13197,10 +13262,11 @@ function pregatesteBifare(zi, ora, slotIdx) {
 
 // „Bifează toată ora”: toți clienții nebifați ai orei, după confirmare; fiecare bifare e cea de la ✓
 function bifeazaToataOra(zi, ora) {
+  if (ziAleasaInViitor()) return avizBifareViitor();
   let bloc = document.querySelector(`#sloturiContainer .hour-block[data-ora="${ora}"]`);
   if (!bloc) return;
   let lista = [];
-  bloc.querySelectorAll('.btn-save-check:not(:disabled)').forEach(btn => {
+  bloc.querySelectorAll('.btn-save-check:not(:disabled):not(.btn-save-check-bifat)').forEach(btn => {
     let idx = Number(btn.id.split('_').pop());
     let d = pregatesteBifare(zi, ora, idx);
     if (d) lista.push(d);
@@ -13247,7 +13313,7 @@ function bifeazaToataOra(zi, ora) {
     if (e.pointerType === 'touch' && (e.clientX < 28 || e.clientX > window.innerWidth - 28)) return;
     const save = row.querySelector('.btn-save-check');
     const clear = row.querySelector('.btn-clear');
-    const poateBifa = !!(save && !save.disabled);
+    const poateBifa = !!(save && !save.disabled && !save.classList.contains('btn-save-check-bifat') && !ziAleasaInViitor());
     const poateElibera = !!(clear && !clear.disabled);
     if (!poateBifa && !poateElibera) return;
     g = { row, save, clear, poateBifa, poateElibera, x: e.clientX, y: e.clientY, id: e.pointerId, activ: false, dx: 0 };
@@ -13443,6 +13509,34 @@ function anuleazaSlot(zi, ora, slotIdx) {
       incarcaBazaDateSilencios();
     });
   });
+}
+
+// Bifa verde atinsă: anularea prezenței (bifată din greșeală), după confirmare. Clientul rămâne pe loc, nebifat;
+// prezența se șterge din istoric și ședința se întoarce în abonament (calea golirii locului, fără golire)
+function anuleazaPrezentaSlot(zi, ora, slotIdx) {
+  const saptamanaCheie = getSaptamanaCheie();
+  const oraNorm = normalizeazaOraUi(ora);
+  const slotDomKey = `${oraNorm.replace(':', '')}_${slotIdx}`;
+  const tagZi = saptamanaCheie + "_" + zi;
+  const slot = (DB.orarSloturi || []).find(s => s && s.ziRaw && (s.ziRaw === tagZi || (zi === "Marti" && s.ziRaw === saptamanaCheie + "_Marți"))
+    && normalizeazaOraUi(s.ora) === oraNorm && Number(s.slotIndex) === Number(slotIdx));
+  const elCli = document.getElementById('cli_' + slotDomKey);
+  const nume = slot ? (slot.clienta || '').trim() : '';
+  // Între timp s-a scris alt nume în loc: ✓ e din nou bifarea lui
+  if (!slot || !slot.bifat || (elCli && elCli.value.trim().toLowerCase() !== nume.toLowerCase())) return bifeazaPrezentaSlot(zi, ora, slotIdx);
+  customConfirm(tr('Anulezi prezența?', 'Undo attendance?'),
+    tr(`${nume}: prezența se șterge din istoric și ședința se întoarce în abonament. Locul din orar rămâne rezervat.`,
+      `${nume}’s attendance is removed from history and the session goes back to the membership. The spot stays booked.`), () => {
+      bifariTrimise.forEach(k => { if (k.startsWith(`${saptamanaCheie}|${zi}|${slotDomKey}|`)) bifariTrimise.delete(k); });
+      slot.bifat = false;
+      try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch (e) {}
+      randeazaOrarInstant();
+      showToast(tr('Prezența a fost anulată', 'Attendance undone'));
+      callBackend("anuleazaSlot", {
+        row: slot.row, saptamanaCheie, dataCalendar: getDataCalendaristicaCurenta(), zi, ora: oraNorm, slotIndex: slotIdx, doarPrezenta: true
+      }, () => incarcaBazaDateSilencios());
+    });
+  document.getElementById('modalBtnConfirm').innerText = tr('Anulează', 'Undo');
 }
 
 // X de golire: apare în dreapta câmpului de text cât timp scrii în el (nume client, căutări, liste)
@@ -13790,7 +13884,7 @@ function randeazaProgramariInstant() {
 
   if (holdContainer) {
     let holdHtml = '';
-    let pausePlaceholder = currentLang === 'en' ? 'Pause reason...' : 'Motiv pauză...';
+    let pausePlaceholder = currentLang === 'en' ? 'Pause reason' : 'Motiv pauză';
     // În Hold motivul pauzei e chiar rostul rândului, deci câmpul rămâne mereu vizibil
     // Rândurile ca la Încasări › De reînnoit: avatar, nume, motivul dedesubt (se scrie direct pe rând), acțiunea ca pastilă
     randuriHold().forEach(item => {
@@ -14329,6 +14423,7 @@ function textScurtMesaj(m) {
   if (m.tip === 'nota') return '📝 ' + (ex ? ex + ': ' : '') + m.text;
   if (m.tip === 'record') return '🏆 ' + tr('Record', 'Record') + (ex ? ' ' + ex : '') + ': ' + m.text;
   if (m.tip === 'poza') return '📷 ' + (m.text === '📷' ? tr('Poză', 'Photo') : m.text);
+  if (m.tip === 'voce') return `🎤 ${tr('Mesaj vocal', 'Voice message')} (${durataVocal((m.context || {}).durata)})`;
   return m.text;
 }
 
@@ -14408,7 +14503,10 @@ const mesajeSesiune = new Map();
 async function preincarcaConversatie(clientId) {
   if (!clientId || mesajeSesiune.has(clientId) || !supabaseClient) return;
   const { data, error } = await supabaseClient.from('mesaje').select('*').eq('client_id', clientId).order('created_at').limit(500);
-  if (!error && !mesajeSesiune.has(clientId)) mesajeSesiune.set(clientId, data || []);
+  if (!error && !mesajeSesiune.has(clientId)) {
+    mesajeSesiune.set(clientId, data || []);
+    preincarcaPozeChat(clientId, data);
+  }
 }
 
 // Sub numele din antetul conversației: „2 din 8 ședințe · până la 9 dec.” sau starea abonamentului
@@ -14492,7 +14590,11 @@ function randeazaConversatie() {
     const editat = m.editat_la ? `${tr('editat', 'edited')} · ` : '';
     // Netrimis: „Se trimite…”, apoi (la eroare) „Netrimis · Reîncearcă”, iar atingerea îl retrimite
     const stare = m._stare === 'trimite' ? tr('Se trimite…', 'Sending…') : m._stare === 'eroare' ? tr('Netrimis · Reîncearcă', 'Not sent · Retry') : '';
-    const subsol = stare ? `<small class="mesaj-stare">${stare}</small>` : cuUrmatorul ? '' : `<small>${editat}${ora}</small>`;
+    // Ale tale, lângă oră (ca în Telegram): ✓ trimis, ✓✓ în accent = citit. În grup doar la ultimul (citirea le prinde pe toate)
+    const bife = alMeu ? (m.citit
+      ? `<i class="mesaj-bife citit" title="${tr('Văzut', 'Seen')}"><svg viewBox="0 0 24 16"><path d="M1.5 8.5l4.5 4.5L15 3.5"/><path d="M9.5 12l1 1L19.5 3.5"/></svg></i>`
+      : `<i class="mesaj-bife" title="${tr('Trimis', 'Sent')}"><svg viewBox="0 0 24 16"><path d="M4.5 8.5l4.5 4.5L18.5 3.5"/></svg></i>`) : '';
+    const subsol = stare ? `<small class="mesaj-stare">${stare}</small>` : cuUrmatorul ? '' : `<small>${editat}${ora}${bife}</small>`;
     // Reacțiile și acțiunile: ținut apăsat / glisat (gesturiMesaje); atingerea doar retrimite mesajul netrimis
     const clic = m._stare === 'eroare' ? ` onclick="retrimiteMesaj(${i})"` : '';
     // Răspuns la un mesaj: citatul lui deasupra (atingerea duce la el); mesajul șters între timp nu mai apare
@@ -14503,15 +14605,18 @@ function randeazaConversatie() {
     const reactiiHtml = reactii.length ? `<span class="mesaj-reactii">${[...new Set(reactii)].map(e => e + (reactii.filter(x => x === e).length > 1 ? '<i>2</i>' : '')).join('')}</span>` : '';
     // Poza: proporțiile vin din mesaj, ca lista să nu sară cât se încarcă; „📷” = poză fără descriere
     const poza = m.tip === 'poza' && cx.poza
-      ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}" alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
-    const text = poza && m.text === '📷' ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
+      ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}"${pozeChatGata.has(cx.poza) ? ` src="${pozeChatGata.get(cx.poza)}"` : ''} alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
+    // Vocal: ▶ / ⏸, bara de progres și durata (redaVocal)
+    const vocal = m.tip === 'voce' && cx.voce
+      ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-bara"><i></i></span><span class="vocal-durata">${durataVocal(cx.durata)}</span></div>` : '';
+    const text = (poza && m.text === '📷') || vocal ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
     const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
-    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${text}${subsol}${reactiiHtml}</div>`;
+    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${vocal}${text}${subsol}${reactiiHtml}</div>`;
   }).join('');
   umplePozeChat(lista);
-  // „Văzut” sub ultimul mesaj trimis, după ce celălalt a deschis conversația
-  const ultim = conversatie.mesaje[conversatie.mesaje.length - 1];
-  if (ultim.autor === autorulMeu() && ultim.citit) lista.insertAdjacentHTML('beforeend', `<div class="mesaj-vazut">${tr('Văzut', 'Seen')}</div>`);
+  // Un vocal care se aude rămâne legat de bula lui și după redesenare
+  const vocalNou = vocalActiv && lista.querySelector(`.mesaj-vocal[data-voce="${vocalActiv.dataset.voce}"]`);
+  if (vocalNou) { vocalNou.className = vocalActiv.className; vocalActiv = vocalNou; }
   lista.scrollTop = lista.scrollHeight;
 }
 
@@ -14531,6 +14636,7 @@ function potrivesteCampMesaj(camp) {
 }
 
 async function trimiteMesaj() {
+  if (inregistrare) return opresteVocal(true); // Trimite, în timpul înregistrării: vocalul pleacă
   const camp = document.getElementById('mesajText');
   const text = camp.value.trim();
   if (!text || !conversatie) return;
@@ -14562,18 +14668,18 @@ async function trimiteMesaj() {
 async function trimiteMesajTemporar(temp, conv) {
   const rand = { user_id: conv.userId, client_id: conv.clientId, autor: temp.autor, text: temp.text };
   if (temp.raspuns_la) rand.raspuns_la = temp.raspuns_la;
-  if (temp.tip === 'poza') {
-    // Întâi poza (o singură dată, și la retrimitere), apoi mesajul: celălalt o poate deschide din prima
-    if (temp._poza) {
-      const r = await cerePozeAntr('PUT', '/chat-poza', { client: conv.clientId, p: temp.context.poza }, temp._poza);
+  if (temp.tip === 'poza' || temp.tip === 'voce') {
+    // Întâi fișierul (o singură dată, și la retrimitere), apoi mesajul: celălalt îl poate deschide din prima
+    if (temp._fisier) {
+      const r = await cerePozeAntr('PUT', '/chat-poza', parametriFisierChat(conv.clientId, temp), temp._fisier);
       if (!r || !r.ok) {
         temp._stare = 'eroare';
         if (conversatie === conv) randeazaConversatie();
         return;
       }
-      delete temp._poza;
+      delete temp._fisier;
     }
-    rand.tip = 'poza';
+    rand.tip = temp.tip;
     rand.context = temp.context;
   }
   const { data, error } = await supabaseClient.from('mesaje').insert(rand).select('*').single();
@@ -14590,6 +14696,31 @@ async function trimiteMesajTemporar(temp, conv) {
 
 // ---- Poze în chat (Worker-ul bfit-poze, /chat-poza; sql/2026-11-16_mesaje_poze.sql): textul scris deja în câmp devine descrierea ----
 const cachePozeChat = new Map(); // uuid -> Promise<object URL>
+const pozeChatGata = new Map(); // uuid -> object URL deja încărcat: intră direct în HTML, fără pâlpâire la redesenare
+
+// Parametrii fișierului unui mesaj (poză sau vocal) pentru ruta /chat-poza a Worker-ului
+const parametriFisierChat = (clientId, m) => m.tip === 'voce'
+  ? { client: clientId, p: m.context.voce, f: 'voce' }
+  : { client: clientId, p: m.context.poza };
+
+function cerePozaChat(clientId, p, voce) {
+  if (!cachePozeChat.has(p)) {
+    cachePozeChat.set(p, cerePozeAntr('GET', '/chat-poza', voce ? { client: clientId, p, f: 'voce' } : { client: clientId, p })
+      .then(r => r && r.ok ? r.blob() : null)
+      .then(b => {
+        const url = b ? URL.createObjectURL(b) : '';
+        if (url) pozeChatGata.set(p, url); else cachePozeChat.delete(p);
+        return url;
+      }));
+  }
+  return cachePozeChat.get(p);
+}
+
+// Odată cu mesajele preîncărcate: și ultimele poze, ca prima deschidere a conversației să fie instant
+function preincarcaPozeChat(clientId, mesaje) {
+  (mesaje || []).filter(m => m.tip === 'poza' && m.context && m.context.poza).slice(-12)
+    .forEach(m => cerePozaChat(clientId, m.context.poza));
+}
 
 async function alegePozaMesaj(input) {
   const fisier = input.files && input.files[0];
@@ -14608,31 +14739,136 @@ async function alegePozaMesaj(input) {
   camp.value = '';
   camp.style.height = '';
   const p = crypto.randomUUID();
-  cachePozeChat.set(p, Promise.resolve(URL.createObjectURL(blob)));
+  const url = URL.createObjectURL(blob);
+  cachePozeChat.set(p, Promise.resolve(url));
+  pozeChatGata.set(p, url);
   const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text, created_at: new Date().toISOString(), citit: false, tip: 'poza',
-    context: { poza: p, w: bmp.width, h: bmp.height }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _poza: blob };
+    context: { poza: p, w: bmp.width, h: bmp.height }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _fisier: blob };
   bmp.close();
   conversatie.mesaje.push(temp);
   seteazaRaspunsMesaj(null); // randează și conversația
   trimiteMesajTemporar(temp, conversatie);
 }
 
+// ---- Mesaje vocale (sql/2026-11-17_mesaje_vocale.sql): microfonul ia locul lui Trimite cât câmpul e gol (ca în WhatsApp).
+// O atingere pornește înregistrarea (bara cu ceasul, „Anulează”), Trimite o oprește și o trimite; maxim 5 minute.
+// Formatul: AAC în MP4 unde se poate (merge pe iPhone și Android), altfel Opus în WebM
+const MAX_VOCAL_SEC = 300;
+let inregistrare = null; // { rec, flux, bucati, tip, start, timer }
+const durataVocal = s => `${Math.floor((Number(s) || 0) / 60)}:${String((Number(s) || 0) % 60).padStart(2, '0')}`;
+
+async function pornesteVocal() {
+  if (!conversatie || inregistrare) return;
+  const tip = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
+    .find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
+  if (!tip || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return showToast(tr('Telefonul nu poate înregistra din aplicație.', 'This phone cannot record in the app.'), 'error');
+  }
+  let flux;
+  try {
+    flux = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    return showToast(tr('Aplicația nu are acces la microfon. Permite-l din setările telefonului.', 'The app has no microphone access. Allow it in your phone settings.'), 'error');
+  }
+  if (!conversatie) { flux.getTracks().forEach(t => t.stop()); return; }
+  const rec = new MediaRecorder(flux, { mimeType: tip, audioBitsPerSecond: 32000 });
+  const r = inregistrare = { rec, flux, bucati: [], tip: tip.split(';')[0], start: Date.now() };
+  rec.ondataavailable = e => { if (e.data && e.data.size) r.bucati.push(e.data); };
+  rec.start(1000);
+  if (mesajEditat) seteazaEditareMesaj(null);
+  document.querySelector('.mesaje-scrie').classList.add('inregistreaza');
+  const ceas = document.getElementById('mesajVocalTimp');
+  const tick = () => {
+    const s = Math.floor((Date.now() - r.start) / 1000);
+    ceas.textContent = durataVocal(s);
+    if (s >= MAX_VOCAL_SEC) opresteVocal(true);
+  };
+  tick();
+  r.timer = setInterval(tick, 250);
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+
+// trimite = false: „Anulează” (sau conversația închisă), nimic nu pleacă
+function opresteVocal(trimite) {
+  const r = inregistrare;
+  if (!r) return;
+  inregistrare = null;
+  clearInterval(r.timer);
+  document.querySelector('.mesaje-scrie').classList.remove('inregistreaza');
+  const durata = Math.round((Date.now() - r.start) / 1000);
+  const conv = conversatie;
+  r.rec.onstop = () => {
+    r.flux.getTracks().forEach(t => t.stop());
+    if (!trimite || durata < 1 || !conv || conversatie !== conv) return;
+    trimiteVocal(new Blob(r.bucati, { type: r.tip }), durata);
+  };
+  r.rec.stop();
+}
+
+function trimiteVocal(blob, durata) {
+  const p = crypto.randomUUID();
+  const url = URL.createObjectURL(blob);
+  cachePozeChat.set(p, Promise.resolve(url));
+  pozeChatGata.set(p, url);
+  const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text: '🎤', created_at: new Date().toISOString(), citit: false, tip: 'voce',
+    context: { voce: p, durata: Math.min(durata, MAX_VOCAL_SEC) }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _fisier: blob };
+  conversatie.mesaje.push(temp);
+  seteazaRaspunsMesaj(null); // randează și conversația
+  trimiteMesajTemporar(temp, conversatie);
+}
+
+// Redarea: un singur vocal odată; bara se umple cât se ascultă, durata arată cât a mai rămas
+const vocalAudio = new Audio();
+let vocalActiv = null; // elementul .mesaj-vocal care se aude
+
+function opresteRedareVocal() {
+  vocalAudio.pause();
+  if (vocalActiv) {
+    vocalActiv.classList.remove('reda');
+    vocalActiv.querySelector('.vocal-bara i').style.width = '0';
+    const m = conversatie && conversatie.mesaje.find(x => x.context && x.context.voce === vocalActiv.dataset.voce);
+    vocalActiv.querySelector('.vocal-durata').textContent = durataVocal(m && m.context.durata);
+  }
+  vocalActiv = null;
+}
+
+async function redaVocal(btn) {
+  const el = btn.closest('.mesaj-vocal');
+  if (vocalActiv === el) {
+    if (vocalAudio.paused) { vocalAudio.play().catch(() => {}); el.classList.add('reda'); }
+    else { vocalAudio.pause(); el.classList.remove('reda'); }
+    return;
+  }
+  opresteRedareVocal();
+  vocalActiv = el;
+  el.classList.add('reda', 'se-incarca');
+  const src = await cerePozaChat(conversatie && conversatie.clientId, el.dataset.voce, true);
+  el.classList.remove('se-incarca');
+  if (vocalActiv !== el) return;
+  if (!src) {
+    opresteRedareVocal();
+    return showToast(tr('Mesajul vocal nu s-a putut încărca.', 'The voice message could not be loaded.'), 'error');
+  }
+  vocalAudio.src = src;
+  vocalAudio.play().catch(() => opresteRedareVocal());
+}
+
+vocalAudio.addEventListener('timeupdate', () => {
+  if (!vocalActiv) return;
+  const m = conversatie && conversatie.mesaje.find(x => x.context && x.context.voce === vocalActiv.dataset.voce);
+  const total = (m && Number(m.context.durata)) || vocalAudio.duration || 1;
+  vocalActiv.querySelector('.vocal-bara i').style.width = Math.min(100, vocalAudio.currentTime / total * 100) + '%';
+  vocalActiv.querySelector('.vocal-durata').textContent = durataVocal(Math.max(0, Math.round(total - vocalAudio.currentTime)));
+});
+vocalAudio.addEventListener('ended', opresteRedareVocal);
+
 // Pozele <img data-poza-chat="uuid"> se aduc cu autentificare (nu pot fi link-uri publice)
 function umplePozeChat(radacina) {
   const clientId = conversatie && conversatie.clientId;
-  radacina.querySelectorAll('img[data-poza-chat]').forEach(async img => {
-    const p = img.dataset.pozaChat;
-    if (!cachePozeChat.has(p)) {
-      cachePozeChat.set(p, cerePozeAntr('GET', '/chat-poza', { client: clientId, p })
-        .then(r => r && r.ok ? r.blob() : null)
-        .then(b => b ? URL.createObjectURL(b) : ''));
-    }
-    const src = await cachePozeChat.get(p);
+  radacina.querySelectorAll('img[data-poza-chat]:not([src])').forEach(async img => {
+    const src = await cerePozaChat(clientId, img.dataset.pozaChat);
     if (src) img.src = src;
-    else {
-      cachePozeChat.delete(p);
-      img.classList.add('poza-lipsa');
-    }
+    else img.classList.add('poza-lipsa');
   });
 }
 
@@ -14714,10 +14950,12 @@ function actiuniMesaj(i) {
   const grup = document.createElement('div');
   grup.className = `mesaj-meniu${alMeu ? ' al-meu' : ''}`;
   grup.id = 'fisaScurta';
-  grup.innerHTML = `<div class="mesaj-reactii-alege">${REACTII_MESAJ.map(e => `<button type="button" class="${aMea === e ? 'activ' : ''}" data-e="${e}">${e}</button>`).join('')}</div>
+  // Cele 6 rapide, reacția ta aleasă din „+” (dacă e alta) și „+” pentru restul emoticoanelor
+  const rapide = aMea && !REACTII_MESAJ.includes(aMea) ? REACTII_MESAJ.concat(aMea) : REACTII_MESAJ;
+  grup.innerHTML = `<div class="mesaj-reactii-alege">${rapide.map(e => `<button type="button" class="${aMea === e ? 'activ' : ''}" data-e="${e}">${e}</button>`).join('')}<button type="button" class="reactie-plus" aria-label="${tr('Alte reacții', 'More reactions')}">+</button></div>
     <div class="mesaj-meniu-lista">
       ${rand('<path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/>', tr('Răspunde', 'Reply'), 'actiune-raspunde')}
-      ${m.tip === 'poza' && m.text === '📷' ? '' : rand('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', tr('Copiază', 'Copy'), 'actiune-copiaza')}
+      ${(m.tip === 'poza' && m.text === '📷') || m.tip === 'voce' ? '' : rand('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>', tr('Copiază', 'Copy'), 'actiune-copiaza')}
       ${alMeu && m.tip === 'text' ? rand('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>', tr('Editează', 'Edit'), 'actiune-editeaza') : ''}
       ${alMeu ? rand('<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>', tr('Șterge', 'Delete'), 'actiune-sterge rosu') : ''}
     </div>`;
@@ -14732,7 +14970,8 @@ function actiuniMesaj(i) {
   grup.style.top = Math.max(12, Math.min(r.top - sus, window.innerHeight - h - 12)) + 'px';
   if (alMeu) grup.style.right = Math.max(8, window.innerWidth - r.right) + 'px'; else grup.style.left = Math.max(8, r.left) + 'px';
   sincronizeazaIstoricInapoi();
-  grup.querySelectorAll('.mesaj-reactii-alege button').forEach(b => { b.onclick = () => { inchideFisaScurta(); reactioneazaMesaj(m, b.dataset.e); }; });
+  grup.querySelectorAll('.mesaj-reactii-alege button[data-e]').forEach(b => { b.onclick = () => { inchideFisaScurta(); reactioneazaMesaj(m, b.dataset.e); }; });
+  grup.querySelector('.reactie-plus').onclick = () => alegeReactie(m);
   grup.querySelector('.actiune-raspunde').onclick = () => { inchideFisaScurta(); seteazaRaspunsMesaj(m); };
   grup.querySelector('.actiune-copiaza')?.addEventListener('click', () => {
     inchideFisaScurta();
@@ -14793,6 +15032,33 @@ function actiuniMesaj(i) {
   });
 })();
 
+// Emoticoanele din fereastra de jos: „+” din bara de reacții (cea aleasă înlocuiește reacția ta) și 😊 din câmpul de scris
+const EMOJI_CHAT = ['😀', '😁', '😂', '🤣', '😊', '😍', '🥰', '😘', '😎', '🤩', '🥳', '😅', '😉', '🙂', '🤔', '😮', '😢', '😭', '😤', '😴',
+  '🙏', '👍', '👎', '👌', '✌️', '🤞', '💪', '🙌', '👏', '🫶', '❤️', '🧡', '💛', '💚', '💙', '💜', '🔥', '⭐', '✨', '🎉',
+  '💯', '✅', '⚡', '🏋️', '🏃', '🧘', '🥗', '💧'];
+
+function alegeReactie(m) {
+  const aMea = (m.reactii || {})[autorulMeu()];
+  const foaie = deschideFoaieChat(`<div class="lista-titlu">${tr('Reacții', 'Reactions')}</div>
+    <div class="reactii-grila">${EMOJI_CHAT.map(e => `<button type="button" class="${aMea === e ? 'activ' : ''}" data-e="${e}">${e}</button>`).join('')}</div>`, 'foaie-reactii');
+  foaie.querySelectorAll('.reactii-grila button').forEach(b => { b.onclick = () => { inchideFisaScurta(); reactioneazaMesaj(m, b.dataset.e); }; });
+}
+
+// 😊 din câmpul de scris: emoticonul ales intră în text, unde era cursorul (fereastra se închide, ca textul să se vadă)
+function deschideEmojiMesaj() {
+  const camp = document.getElementById('mesajText');
+  const de = camp.selectionStart ?? camp.value.length, pana = camp.selectionEnd ?? camp.value.length;
+  const foaie = deschideFoaieChat(`<div class="lista-titlu">${tr('Emoticoane', 'Emoji')}</div>
+    <div class="reactii-grila">${EMOJI_CHAT.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>`, 'foaie-reactii');
+  foaie.querySelectorAll('.reactii-grila button').forEach(b => {
+    b.onclick = () => {
+      inchideFisaScurta();
+      camp.setRangeText(b.dataset.e, de, pana, 'end');
+      potrivesteCampMesaj(camp);
+    };
+  });
+}
+
 // Reacția apare pe loc; dacă baza n-o salvează, revine cum era
 async function reactioneazaMesaj(m, emoji) {
   const eu = autorulMeu(), inainte = Object.assign({}, m.reactii || {});
@@ -14832,10 +15098,12 @@ function confirmaStergereMesaj(m) {
 async function stergeMesaj(m) {
   const { data, error } = await supabaseClient.rpc('sterge_mesaj', { p_id: m.id });
   if (error || data !== 'ok') return showToast(tr('Mesajul nu s-a șters. Verifică internetul și reîncearcă.', 'The message was not deleted. Check your internet and try again.'), 'error');
-  // Poza mesajului se șterge și ea din R2 (Worker-ul o lasă doar după ce mesajul nu mai există)
-  if (m.tip === 'poza' && m.context && m.context.poza) {
-    cerePozeAntr('DELETE', '/chat-poza', { client: m.client_id, p: m.context.poza });
-    cachePozeChat.delete(m.context.poza);
+  // Poza / vocalul mesajului se șterge și el din R2 (Worker-ul îl lasă doar după ce mesajul nu mai există)
+  const fisier = m.context && (m.context.poza || m.context.voce);
+  if ((m.tip === 'poza' || m.tip === 'voce') && fisier) {
+    cerePozeAntr('DELETE', '/chat-poza', parametriFisierChat(m.client_id, m));
+    cachePozeChat.delete(fisier);
+    pozeChatGata.delete(fisier);
   }
   if (!conversatie) return;
   conversatie.mesaje = conversatie.mesaje.filter(x => x.id !== m.id);
@@ -14875,6 +15143,8 @@ function stergeConversatia() {
 
 function inchidePanouMesaje() {
   document.getElementById('panouMesaje').classList.add('auth-hidden');
+  opresteVocal(false); // o înregistrare începută nu pleacă singură
+  opresteRedareVocal();
   conversatie = null;
   mesajEditat = null;
   // Necititele s-au citit: se actualizează bulina din antet, cardul de pe Acasă, blocul din fișă și lista conversațiilor
@@ -15852,9 +16122,8 @@ function arataPunctGrafic(el) {
   svg.nextElementSibling.textContent = el.getAttribute('data-text');
 }
 
-// Greutatea curentă + diferența față de început, graficul și ultimele check-in-uri
-// extra: { greutati (cântăriri la sală), obiectiv (cliente.obiectiv), antrenor (arată controalele de editare),
-//          parte: 'greutate' = fără poze și check-in-uri (fișa antrenorului le arată în fereastra Check-in, htmlCheckinuriAntrenor) }
+// Greutatea curentă + diferența față de început și graficul (check-in-urile și pozele: htmlCheckinuri)
+// extra: { greutati (cântăriri la sală), obiectiv (cliente.obiectiv), antrenor (arată controalele de editare) }
 function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   const greutati = extra.greutati || [];
   const puncte = puncteGreutate(fisaInscriere, checkinuri, greutati);
@@ -15869,45 +16138,6 @@ function htmlProgres(fisaInscriere, checkinuri, extra = {}) {
   html += htmlObiectiv(ob, puncte);
   html += htmlGraficGreutate(puncte);
   if (extra.antrenor) html += htmlControaleProgres(ob, greutati);
-  if (extra.parte === 'greutate') return html;
-  const comparatie = htmlComparatiePoze(checkinuri);
-  if (comparatie) html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Poze de progres', 'Progress photos')}</div>${comparatie}`;
-
-  const lista = (checkinuri || []).slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana)).slice(0, 8);
-  if (lista.length) {
-    const scor = (eticheta, v, max) => (v || v === 0) ? `<span class="checkin-scor"><span>${eticheta}</span><b>${v}</b>/${max}</span>` : '';
-    // Formatul nou (răspunsuri ca în formularul Google) sau cel vechi (energie / somn / stare 1–5 + notă)
-    const corp = c => {
-      const r = c.raspunsuri;
-      if (!r) {
-        return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), c.energie, 5)}${scor(tr('Somn', 'Sleep'), c.somn, 5)}${scor(tr('Stare', 'Mood'), c.stare, 5)}</div>
-          ${c.nota ? `<div class="checkin-nota">${escAttr(c.nota)}</div>` : ''}`;
-      }
-      const perf = (Array.isArray(r.performanta) ? r.performanta : []).map(id => {
-        const o = OPTIUNI_PERFORMANTA.find(x => x.id === id);
-        return `<span class="checkin-scor">${id === 'progres' ? '↑ ' : '= '}${escAttr(o ? textInscriere(o) : id)}</span>`;
-      }).join('');
-      const texte = ['mese', 'victorie', 'provocare', 'intrebari'].filter(id => r[id]).map(id => {
-        const q = INTREBARI_CHECKIN.find(x => x.id === id);
-        return `<div class="checkin-text"><span>${escAttr(textInscriere(q))}</span><div class="checkin-nota">${escAttr(r[id])}</div></div>`;
-      }).join('');
-      return `<div class="checkin-scoruri">${scor(tr('Energie', 'Energy'), r.energie, 10)}${scor(tr('Somn', 'Sleep'), r.somn, 10)}${perf}</div>${texte}`;
-    };
-    // Pozele din R2 ale săptămânii (pozeCurente e încărcat de cel care afișează progresul)
-    const butonPoze = s => {
-      const n = pozeCurente.lista.filter(p => p.s === s).length;
-      return n ? `<button type="button" class="checkin-poze-btn" onclick="deschidePanouPoze('${s}')">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>${n}</button>` : '';
-    };
-    html += `<div class="obiective-grup-titlu" style="margin-top:14px;">${tr('Check-in-uri', 'Check-ins')}</div>` + lista.map(c => `
-      <div class="checkin-rand">
-        <div class="checkin-rand-sus">
-          <b>${tr('Săptămâna', 'Week')} ${intervalSaptamana(c.saptamana)}</b>
-          <span class="checkin-rand-dreapta">${butonPoze(c.saptamana)}${c.greutate != null ? `<span>${formatKg(Number(c.greutate))} kg</span>` : ''}</span>
-        </div>
-        ${corp(c)}
-      </div>`).join('');
-  }
   return html;
 }
 
@@ -16646,11 +16876,7 @@ function deschideNotificare(id) {
   inchidePanouNotificari();
   if (rolUtilizator === 'clienta') {
     if (n.tip === 'checkin_memento') { clientaTab('fisa'); return; }
-    if (n.tip === 'fisa_modificata') {
-      clientaTab('fisa');
-      setTimeout(() => { const el = document.getElementById('fisaObiectiveClient'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: 'smooth' }); }, 400);
-      return;
-    }
+    if (n.tip === 'fisa_modificata') { deschideContulMeuClienta(); return; }
     if (n.tip === 'mesaj_nou') { clientaTab('acasa'); deschideMesajeClienta(); return; }
     if (n.tip === 'plan_alimentar_nou') { nutritie.deschidePlanAlim = true; deschideNutritie(); return; }
     if (n.tip === 'masa_nenotata') { deschideAdaugaAliment((n.date || {}).masa === 'cina' ? 'cina' : masaImplicita()); return; }
@@ -16794,8 +17020,8 @@ async function incarcaProgresFisa(forta) {
     : tr('Check-in-ul săptămânal apare după ce clientul își face cont.', 'Weekly check-ins appear once the client creates an account.')}</div>`;
   const extra = { greutati: greutatiFisa, obiectiv: client.obiectiv, antrenor: true };
   progresParti = { id: client.id, checkinuri, antrenamente: antrenamenteClient, desen: {
-    greutate: () => htmlProgres(client.fisaInscriere, checkinuri, { ...extra, parte: 'greutate' }),
-    checkin: () => checkinuri.length ? htmlCheckinuriAntrenor(client, checkinuri) : faraCheckin,
+    greutate: () => htmlProgres(client.fisaInscriere, checkinuri, extra),
+    checkin: () => checkinuri.length ? htmlCheckinuri(checkinuri) : faraCheckin,
     exercitii: () => htmlProgresExercitii(sursaEx) + htmlAntrPersAntrenor(antrenamenteClient.slice(0, 20)),
     nutritie: () => htmlNutritieAntrenor(),
     obiective: () => obiectiveUI ? `<div id="obiectiveContinut">${htmlObiective()}</div>` : '',
@@ -16807,10 +17033,10 @@ async function incarcaProgresFisa(forta) {
   if (progresDeschis) deseneazaFoaieProgres();
 }
 
-// Check-in-urile în fișa antrenorului: sus tendința energiei și a somnului, apoi câte un card pe săptămână, cu scorurile
-// colorate și schimbarea față de săptămâna dinainte, greutatea, performanța și răspunsurile; la întrebări, „Răspunde”.
-// (Ecranul clientului își păstrează lista lui, din htmlProgres.)
-function htmlCheckinuriAntrenor(client, checkinuri) {
+// Check-in-urile (fișa antrenorului și Progres la client): sus tendința energiei și a somnului, apoi câte un card pe săptămână,
+// cu scorurile colorate și schimbarea față de săptămâna dinainte, greutatea, performanța și răspunsurile; la întrebări,
+// antrenorul are „Răspunde”.
+function htmlCheckinuri(checkinuri) {
   const lista = checkinuri.slice().sort((a, b) => b.saptamana.localeCompare(a.saptamana));
   // Scorurile pe 10 (formatul vechi era pe 5)
   const scor = (c, id) => { const r = c.raspunsuri; const v = r ? r[id] : c[id]; return v || v === 0 ? Number(v) * (r ? 1 : 2) : null; };
@@ -16862,7 +17088,7 @@ function htmlCheckinuriAntrenor(client, checkinuri) {
         <b>${id === 'progres' ? tr('↑ A progresat', '↑ Progressed') : tr('= Aceleași greutăți/repetări', '= Same weights/reps')}</b><i style="width:100%"></i></div>`).join('');
     const raspuns = (id, cls) => {
       const q = INTREBARI_CHECKIN.find(x => x.id === id);
-      return r[id] ? `<div class="checkin-raspuns ${cls}"><span>${escAttr(textInscriere(q))}</span><p>${escAttr(r[id])}</p>${id === 'intrebari'
+      return r[id] ? `<div class="checkin-raspuns ${cls}"><span>${escAttr(textInscriere(q))}</span><p>${escAttr(r[id])}</p>${id === 'intrebari' && rolUtilizator !== 'clienta'
         ? `<button type="button" class="istoric-toate" onclick="raspundeCheckin('${escAttr(c.saptamana)}')">${tr('Răspunde', 'Reply')}</button>` : ''}</div>` : '';
     };
     // Formatul vechi: o notă liberă în loc de răspunsuri
@@ -17915,6 +18141,7 @@ function inchideFoaieCuFundal(fundal, foaie) {
 trageInJosCaSaInchizi(document.getElementById('cardEditareIncasare'), inchideModalEditareIncasare, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardFisaObiective'), inchideEditorFisa, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardQr'), inchideModalQr);
+trageInJosCaSaInchizi(document.getElementById('cardNoutati'), inchideNoutati, '.fisa-scurta-maner, .incasare-foaie-titlu');
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
