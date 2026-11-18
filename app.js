@@ -9772,36 +9772,35 @@ function numeAbonamentClienta(tip) {
   return r.charAt(0).toUpperCase() + r.slice(1);
 }
 
-// Abonamentul complet, în Fișa mea: stare, ședințe folosite din total, perioada de valabilitate.
-// Butoanele de reînnoire (Sună / WhatsApp) rămân pe Acasă, pe cardul care apare când se apropie finalul.
+// Abonamentul clientului („Abonament și fișă”), ca în fișa antrenorului: inelul cu ședințele rămase, tipul și starea,
+// valabilitatea și începutul. Butoanele de reînnoire (Sună / WhatsApp) rămân pe Acasă, pe cardul de reînnoire.
 function htmlAbonamentClienta(c) {
   if (!c) return '';
-  const incluse = Number(c.incluse) || 0, ramase = Number(c.ramase) || 0, efectuate = Number(c.efectuate) || 0;
+  const incluse = Number(c.incluse) || 0, ramase = Number(c.ramase) || 0;
   const s = stareAbonamentClienta(Object.assign({}, c, { incluse, ramase }));
   if (s.tip === 'nou') {
-    return `<div class="card" style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai un abonament activ. După prima plată, aici îți vezi ședințele și valabilitatea.', 'You don’t have an active subscription yet. After your first payment, your sessions and validity show up here.')}</div>`;
+    return `<div class="lista-sticla programare-gol">${tr('Încă nu ai un abonament activ. După prima plată, aici îți vezi ședințele și valabilitatea.', 'You don’t have an active subscription yet. After your first payment, your sessions and validity show up here.')}</div>`;
   }
   const eticheta = { activ: ['badge-activ', tr('Activ', 'Active')], curand: ['badge-curand', s.text], expirat: ['badge-expirat', s.text], arhivat: ['badge-arhivat', s.text] }[s.tip] || ['badge-arhivat', s.text];
-  const procent = incluse ? Math.min(100, Math.round(efectuate / incluse * 100)) : 0;
   const fara = v => !v || v === '-';
   const exp = parseazaDataOraRo(c.dataExpirare);
   const azi = new Date(); azi.setHours(0, 0, 0, 0);
   const zile = exp ? Math.round((new Date(exp).setHours(0, 0, 0, 0) - azi) / 86400000) : null;
-  const rand = (e, v) => `<div class="abonament-rand"><span>${e}</span><b>${v}</b></div>`;
-  return `<div class="card abonament-card">
-    <div class="abonament-antet"><b>${escAttr(numeAbonamentClienta(c.tipAbonament))}</b><span class="badge ${eticheta[0]}">${escAttr(eticheta[1])}</span></div>
-    <div class="abonament-bara"><span style="width:${procent}%"></span></div>
-    <div class="abonament-sub">${tr(`${efectuate} din ${incluse} ședințe folosite`, `${efectuate} of ${incluse} sessions used`)} · <b>${ramase} ${ramase === 1 ? tr('rămasă', 'left') : tr('rămase', 'left')}</b></div>
-    ${rand(tr('Început', 'Started'), fara(c.dataStart) ? '-' : escAttr(c.dataStart))}
-    ${rand(tr('Valabil până la', 'Valid until'), s.tip === 'inghetat'
-      ? tr('în pauză (zilele sunt oprite)', 'paused (days on hold)')
-      : fara(c.dataExpirare)
-      ? tr('Începe la prima ședință', 'Starts at your first session')
-      : `${escAttr(c.dataExpirare)}${zile !== null && zile >= 0 ? ` <span class="abonament-zile">· ${zile === 0 ? tr('azi', 'today') : tr(`încă ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `${zile} ${zile === 1 ? 'day' : 'days'} left`)}</span>` : ''}`)}
+  const valabil = s.tip === 'inghetat' ? tr('în pauză (zilele sunt oprite)', 'paused (days on hold)')
+    : fara(c.dataExpirare) ? tr('la prima ședință', 'from your first session')
+    : `${escAttr(c.dataExpirare)}${zile !== null && zile >= 0 ? ` · ${zile === 0 ? tr('azi', 'today') : tr(`încă ${zile} ${zile === 1 ? 'zi' : 'zile'}`, `${zile} ${zile === 1 ? 'day' : 'days'} left`)}` : ''}`;
+  return `<div class="lista-sticla fisa-abonament abonament-client">
+    <span class="inel-abonament inel-${s.tip}">${htmlInelProgres(incluse ? Math.max(0, ramase) / incluse * 100 : 0, incluse ? ramase : '–')}</span>
+    <div class="fisa-abonament-text">
+      <div class="fisa-abonament-sus"><span>${escAttr(numeAbonamentClienta(c.tipAbonament))}</span><span class="badge ${eticheta[0]}">${escAttr(eticheta[1])}</span></div>
+      <span>${tr(`${ramase} din ${incluse} ședințe rămase`, `${ramase} of ${incluse} sessions left`)}</span>
+      <span>${tr('Valabil', 'Valid')} <b>${valabil}</b></span>
+      ${fara(c.dataStart) ? '' : `<span>${tr('Început pe', 'Started on')} <b>${escAttr(c.dataStart)}</b></span>`}
+    </div>
   </div>`;
 }
 
-// „Contul meu” (din meniu și din Progres): abonamentul, fișa de obiective, planurile anterioare; Înapoi duce la tab-ul de dinainte
+// „Abonament și fișă” (din meniu): abonamentul, fișa de obiective, planurile anterioare; Înapoi duce la tab-ul de dinainte
 function deschideContulMeuClienta() {
   salveazaProgresClienta();
   opresteTimerPauza();
@@ -9819,10 +9818,11 @@ function randeazaContulMeuClienta() {
   const r = dateClienta.fisa && dateClienta.fisa.fisa_inscriere;
   const titlu = text => `<div class="lista-titlu">${text}</div>`;
   let html = titlu(tr('Abonamentul meu', 'My subscription')) + htmlAbonamentClienta(dateClienta.fisa);
-  const butonFisa = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', dateClienta.fisa.fisa_inscriere)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${r ? tr('Editează fișa', 'Edit my form') : tr('Completează fișa', 'Fill in my form')}</button>`;
-  html += `<div id="fisaObiectiveClient"></div>` + titlu(tr('Fișa de obiective', 'Goal-setting form')) + (r
-    ? `<div class="card">${htmlRaspunsuriInscriere(r, true)}${htmlModificareFisa(r)}${butonFisa}</div>`
-    : `<div class="card"><div style="color:var(--text-muted); font-size:0.85rem;">${tr('Încă nu ai o fișă de obiective. O poți completa acum, iar antrenorul o vede imediat.', 'You don’t have a goal-setting form yet. You can fill it in now and your trainer sees it right away.')}</div>${butonFisa}</div>`);
+  const butonFisa = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(dateClienta.fisa.id)}', null)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${tr('Completează fișa', 'Fill in my form')}</button>`;
+  // Fișa de obiective ca la antrenor: pe grupe, fiecare cu „Modifică”; fără fișă, invitația de a o completa
+  html += `<div id="fisaObiectiveClient"></div>` + (r
+    ? htmlFisaObiective(r, dateClienta.fisa.id, 'dateClienta.fisa.fisa_inscriere')
+    : titlu(tr('Fișa de obiective', 'Goal-setting form')) + `<div class="lista-sticla programare-gol">${tr('Încă nu ai o fișă de obiective. O poți completa acum, iar antrenorul o vede imediat.', 'You don’t have a goal-setting form yet. You can fill it in now and your trainer sees it right away.')}</div>${butonFisa}`);
   // Planurile mai vechi (cel curent e pe Acasă, la Următorul antrenament)
   if ((dateClienta.planuri || []).length > 1) {
     html += titlu(tr('Planuri anterioare', 'Earlier plans')) + `<div class="plan-fisa-lista">` + dateClienta.planuri.slice(1).map((p, i) => {
@@ -9856,7 +9856,7 @@ function htmlRandSticla(onclick, svg, titlu, desc) {
 }
 
 // „Progres”: doar ce motivează (cifrele, săptămâna, obiectivele, greutatea, recordurile); abonamentul, fișa de obiective
-// și planurile vechi stau în „Contul meu” (meniu și rândul de jos)
+// și planurile vechi stau în „Abonament și fișă”, din meniu
 function afiseazaFisaMeaClienta() {
   if (checkinLink) return afiseazaCheckinLink();
   if (antrPers.ecran === 'cont') return randeazaContulMeuClienta();
@@ -9877,7 +9877,6 @@ function afiseazaFisaMeaClienta() {
   html += titlu(tr('Recorduri la exerciții', 'Exercise records')) + htmlProgresExercitii(sursaProgresClient());
   // Ultimele 8 check-in-uri, ca în fișa antrenorului (tendința energiei și a somnului, câte un card pe săptămână)
   if (checkinuriClienta.length) html += titlu(tr('Check-in-uri', 'Check-ins')) + htmlCheckinuri(checkinuriClienta.slice().sort((x, y) => y.saptamana.localeCompare(x.saptamana)).slice(0, 8));
-  html += `<div class="lista-sticla progres-cont">${htmlRandSticla('deschideContulMeuClienta()', '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>', tr('Abonament și fișă', 'Subscription and form'), tr('Abonamentul, fișa, planurile vechi', 'Subscription, goals form, past plans'))}</div>`;
   document.getElementById('clientaContinut').innerHTML = `<div class="client-sticla">${html}</div>`;
   umplePoze(document.getElementById('clientaContinut'));
   verificaObiectiveAtinse().then(() => { if (obiectiveUI && obiectiveUI.rol === 'client') { obiectiveUI.lista = (dateClienta.obiective || []).slice(); randeazaObiective(); } });
@@ -11023,6 +11022,11 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 229, data: '2026-11-18',
+    client: [
+      ['Meniu › Abonament și fișă are aspectul nou: abonamentul cu inelul ședințelor rămase și fișa de obiective pe grupe, cu „Modifică” la fiecare.', 'Menu › Subscription and form has the new look: your subscription with a ring of sessions left and your goal-setting form in groups, each with “Edit”.']
+    ],
+    antrenor: [] },
   { v: 227, data: '2026-11-18',
     client: [
       ['Aplicația are un aspect nou. Acasă arată ce ai de făcut azi, cu inele pentru săptămână, calorii și apă. Programări și Nutriție sunt și ele refăcute.', 'The app has a new look. Home shows what to do today, with rings for your week, calories and water. Bookings and Nutrition are redesigned too.'],
@@ -14694,13 +14698,6 @@ const ETICHETE_SCURTE_INSCRIERE = {
   asteptari: { ro: 'Așteptări de la antrenor', en: 'Expectations from the trainer' },
   deStiut: { ro: 'De știut înainte de început', en: 'Good to know before starting' }
 };
-// În „Fișa mea” clienta își citește propriile răspunsuri: titlurile la persoana I
-const ETICHETE_CLIENTA_INSCRIERE = {
-  consecventa: { ro: 'Ce mă ajută să nu renunț', en: 'What keeps me going' },
-  dataStart: { ro: 'Încep din', en: 'Starting from' },
-  deUnde: { ro: 'Am aflat din', en: 'I heard from' }
-};
-
 // Fișa de obiective ca rezumat: cifre, alertă medicală, etichete, apoi textele libere.
 // Numele, telefonul și emailul nu se repetă (sunt deja în fișă / în antetul cererii).
 // ---- Notița antrenorului pentru client (cliente.nota_client): clientul o vede pe Acasă ----
@@ -16169,13 +16166,7 @@ async function salveazaEditorFisa() {
 }
 
 // „Actualizată de antrenor pe 7 nov.” sub fișă
-function htmlModificareFisa(r) {
-  if (!r || !r.modificatLa) return '';
-  const cine = r.modificatDe === 'antrenor' ? tr('de antrenor', 'by the trainer') : tr('de client', 'by the client');
-  return `<div class="fisa-modificata">${tr('Actualizată', 'Updated')} ${cine} ${tr('pe', 'on')} ${formatZiLuna(new Date(r.modificatLa))}</div>`;
-}
-
-function htmlRaspunsuriInscriere(r, pentruClienta = false) {
+function htmlRaspunsuriInscriere(r) {
   if (!r) return '';
   const intrebari = {};
   SECTIUNI_INSCRIERE.forEach(s => s.intrebari.forEach(q => { intrebari[q.id] = q; }));
@@ -16187,7 +16178,7 @@ function htmlRaspunsuriInscriere(r, pentruClienta = false) {
     return o ? textInscriere(o) : val;
   };
   const esteScala = v => /^[1-5]$/.test(String(v || ''));
-  const eticheta = id => textInscriere((pentruClienta && ETICHETE_CLIENTA_INSCRIERE[id]) || ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
+  const eticheta = id => textInscriere(ETICHETE_SCURTE_INSCRIERE[id] || intrebari[id]);
   const afisate = new Set(['nume', 'telefon', 'email']);
   let html = '';
 
@@ -16237,7 +16228,7 @@ function htmlRaspunsuriInscriere(r, pentruClienta = false) {
   html += grup(tr('Stil preferat', 'Preferred style'), r.stilAntrenor ? chip(textOptiune('stilAntrenor', r.stilAntrenor)) : '');
   html += grup(tr('Activitate zilnică', 'Daily activity'), r.activitate ? chip(textOptiune('activitate', r.activitate)) : '');
   const dataStart = /^\d{4}-\d{2}-\d{2}$/.test(r.dataStart || '') ? r.dataStart.split('-').reverse().join('.') : r.dataStart;
-  html += grup(pentruClienta ? eticheta('dataStart') : tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
+  html += grup(tr('Poate începe din', 'Can start from'), dataStart ? chip(dataStart) : '');
   // Disponibilitatea ca etichete doar în formatul nou (butoane); textele vechi rămân mai jos
   const disponibil = [];
   if (intrebari.frecventa.optiuni.some(o => o.id === r.frecventa)) { afisate.add('frecventa'); disponibil.push(chip(`${textOptiune('frecventa', r.frecventa)} ${tr('pe săptămână', 'per week')}`)); }
@@ -17529,16 +17520,17 @@ function randeazaFisaInscriereDeschisa() {
   if (!det.open || !client) { document.getElementById('fisaInscriereContinut').innerHTML = ''; return; }
   const buton = `<button type="button" class="fisa-scurta-actiune fisa-obiective-editeaza" onclick="deschideEditorFisa('${escAttr(client.id)}', null)"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>${tr('Completează fișa', 'Fill in the form')}</button>`;
   document.getElementById('fisaInscriereContinut').innerHTML = client.fisaInscriere
-    ? htmlFisaObiectiveAntrenor(client.fisaInscriere, client.id)
+    ? htmlFisaObiective(client.fisaInscriere, client.id, '(clientaFisaCurenta() || {}).fisaInscriere')
     : `<div class="progres-gol">${tr('Clientul n-a completat încă formularul. Îl poți completa tu, din ce știi.', 'The client hasn’t filled in the form yet. You can fill it in from what you know.')}</div>` + buton;
 }
 
 // Răspunsurile pe grupele formularului (cum le-a completat clientul), fiecare grupă un card cu rânduri „etichetă — răspuns”.
 // Numele, telefonul și emailul sunt în „Cont și contact”; răspunsurile la întrebările scoase din formular, la final.
 // Fiecare grupă are „Modifică” (doar întrebările ei); grupele necompletate apar și ele, ca să poată fi completate.
-function htmlFisaObiectiveAntrenor(r, clientId) {
+// Comună: fișa antrenorului și „Abonament și fișă” la client; `sursa` = expresia cu fișa de deschis în editor
+function htmlFisaObiective(r, clientId, sursa) {
   const grupa = (s, randuri, i) => randuri || i !== undefined ? `<div class="lista-titlu fisa-obiective-titlu"><span>${escAttr(textInscriere(s))}</span>${i !== undefined
-      ? `<button type="button" class="istoric-toate" onclick="deschideEditorFisa('${escAttr(clientId)}', (clientaFisaCurenta() || {}).fisaInscriere, ${i})">${tr('Modifică', 'Edit')}</button>` : ''}</div>
+      ? `<button type="button" class="istoric-toate" onclick="deschideEditorFisa('${escAttr(clientId)}', ${sursa}, ${i})">${tr('Modifică', 'Edit')}</button>` : ''}</div>
     <div class="lista-sticla fisa-obiective-grup">${randuri || `<div class="inscriere-verificare-rand"><span>${tr('Necompletat', 'Not filled in')}</span></div>`}</div>` : '';
   const grupe = SECTIUNI_INSCRIERE.map((s, i) => grupa(s, randuriSectiuneInscriere(s, r, CAMPURI_FIXE_FISA, true), i)).join('');
   const alte = { ro: 'Alte răspunsuri', en: 'Other answers', intrebari: INTREBARI_VECHI_INSCRIERE };

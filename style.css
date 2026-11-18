@@ -8013,67 +8013,8 @@ details[open] > summary .summary-sageata {
   min-width: 0;
 }
 
-/* Fișa mea: abonamentul complet */
+/* Starea „se termină curând” (abonamentul în fișă și la client) */
 .badge-curand { background: rgba(245, 176, 65, 0.22); color: #9a5b00; }
-
-.abonament-antet {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.abonament-antet b {
-  font-size: 0.95rem;
-  color: var(--primary);
-}
-
-.abonament-bara {
-  height: 8px;
-  margin: 10px 0 6px;
-  border-radius: 4px;
-  background: rgba(var(--primary-rgb), 0.1);
-  overflow: hidden;
-}
-
-.abonament-bara span {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-  background: var(--primary);
-}
-
-.abonament-sub {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.abonament-sub b {
-  color: var(--primary);
-}
-
-.abonament-rand {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 0;
-  border-top: 1px solid var(--border);
-  font-size: 0.85rem;
-}
-
-.abonament-rand span {
-  color: var(--text-muted);
-}
-
-.abonament-rand b {
-  text-align: right;
-}
-
-.abonament-zile {
-  font-weight: 600;
-  color: var(--text-muted);
-}
 
 /* Planul clientului: începe săptămâna nouă */
 .saptamana-noua {
@@ -8820,27 +8761,33 @@ input.serie-camp {
   cursor: pointer;
 }
 
-#fisaInelAbonament {
+/* La client abonamentul doar se citește (fără fereastră) */
+.abonament-client {
+  margin-top: 0;
+  cursor: default;
+}
+
+:is(#fisaInelAbonament, .inel-abonament) {
   display: flex;
 }
 
-#fisaInelAbonament .inel-fundal {
+:is(#fisaInelAbonament, .inel-abonament) .inel-fundal {
   stroke: var(--m-divider);
 }
 
-#fisaInelAbonament .inel-valoare {
+:is(#fisaInelAbonament, .inel-abonament) .inel-valoare {
   stroke: var(--m-accent-text);
 }
 
-#fisaInelAbonament .inel-text {
+:is(#fisaInelAbonament, .inel-abonament) .inel-text {
   fill: var(--m-text);
 }
 
-#fisaInelAbonament.inel-curand .inel-valoare {
+:is(#fisaInelAbonament, .inel-abonament).inel-curand .inel-valoare {
   stroke: #f5b041;
 }
 
-#fisaInelAbonament.inel-expirat .inel-valoare {
+:is(#fisaInelAbonament, .inel-abonament).inel-expirat .inel-valoare {
   stroke: #b91c1c;
 }
 
@@ -11578,9 +11525,8 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .programare-rezerva { padding: 9px 16px; border-radius: 12px; font-weight: 800; white-space: nowrap; }
 .programare-gol { padding: 14px 16px; font-size: 0.85rem; color: var(--m-muted); }
 .programare-subsol { margin-top: 14px; font-size: 0.72rem; line-height: 1.4; text-align: center; color: var(--m-muted); }
-/* Progres (client): cifrele duc la Istoric; „Abonament și fișă” la final, despărțit de secțiuni */
+/* Progres (client): cifrele duc la Istoric */
 .progres-cifre { cursor: pointer; }
-.progres-cont { margin: 22px 0 10px; }
 /* Săptămâna de pauză: rândul care o pune (sub cifre) sau mențiunea că e pusă */
 .progres-pauza-rand { margin-bottom: 10px; }
 .progres-pauza { margin: -4px 4px 12px; font-size: 0.8rem; font-weight: 700; color: var(--m-accent-text); }
@@ -11770,7 +11716,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-weight: 800;
 }
 [data-theme="dark"] .fisa-scurta-alerta { color: #ef4444; background: rgba(220, 38, 38, 0.16); border-color: rgba(239, 68, 68, 0.45); }
-.fisa-modificata { margin-top: 8px; font-size: 0.72rem; color: var(--text-muted); text-align: right; }
 
 /* Planuri alimentare: editorul antrenorului (meniu), vederea clientului (Nutriție) și linkul fără cont */
 .plan-alim-actiuni { margin: 0; }
