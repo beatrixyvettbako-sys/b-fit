@@ -4796,8 +4796,13 @@ function htmlProgresExercitii(sursa) {
 function htmlCorpProgresEx() {
   const stari = listaProgresEx.map(stareProgresEx);
   const nr = { toate: stari.length, cresc: stari.filter(s => s.sch.sus).length, stagneaza: stari.filter(s => s.stagneaza).length };
-  if (!nr[filtruProgresEx]) filtruProgresEx = 'toate';
-  const filtru = (id, text, culoare) => `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruProgresEx === id ? ' activ' : ''}"${nr[id] ? '' : ' disabled'} onclick="alegeFiltruProgresEx('${id}')"><b>${nr[id]}</b><span>${text}</span></button>`;
+  // Un filtru apare doar dacă chiar separă lista (are exerciții, dar nu pe toate); altfel atingerea lui n-ar schimba nimic
+  const separa = id => nr[id] > 0 && nr[id] < nr.toate;
+  if (filtruProgresEx !== 'toate' && !separa(filtruProgresEx)) filtruProgresEx = 'toate';
+  const filtru = (id, text, culoare) => id !== 'toate' && !separa(id) ? ''
+    : `<button type="button" class="orar-cifra orar-cifra-${culoare}${filtruProgresEx === id ? ' activ' : ''}" onclick="alegeFiltruProgresEx('${id}')"><b>${nr[id]}</b><span>${text}</span></button>`;
+  const filtre = separa('cresc') || separa('stagneaza')
+    ? `<div class="orar-cifre progres-ex-filtre">${filtru('toate', tr('exerciții', 'exercises'), 'accent')}${filtru('cresc', tr('cresc', 'improving'), 'verde')}${filtru('stagneaza', tr('stagnează', 'plateau'), 'portocaliu')}</div>` : '';
   const randuri = stari.map((s, i) => ({ s, i, o: listaProgresEx[i] }))
     .filter(x => filtruProgresEx === 'toate' || (filtruProgresEx === 'cresc' ? x.s.sch.sus : x.s.stagneaza))
     .map(({ s, i, o }) => {
@@ -4811,8 +4816,7 @@ function htmlCorpProgresEx() {
         <span class="progres-ex-dif${s.sch.sus ? ' sus' : ''}">${s.sch.text}</span>
       </button>`;
     }).join('');
-  return `<div class="orar-cifre progres-ex-filtre">${filtru('toate', tr('exerciții', 'exercises'), 'accent')}${filtru('cresc', tr('cresc', 'improving'), 'verde')}${filtru('stagneaza', tr('stagnează', 'plateau'), 'portocaliu')}</div>
-    <div class="lista-sticla progres-ex-lista">${randuri}</div>`;
+  return `${filtre}<div class="lista-sticla progres-ex-lista">${randuri}</div>`;
 }
 
 function alegeFiltruProgresEx(f) {
