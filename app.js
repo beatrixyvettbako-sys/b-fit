@@ -13554,8 +13554,9 @@ function reaplicaBifariTrimise() {
     // Doar dacă în loc e tot același client (altul nou pus în locul lui se poate bifa)
     const cli = document.getElementById('cli_' + slotDomKey);
     if (!cli || cli.value.trim().toLowerCase() !== nume) return;
+    // Bifa verde rămâne apăsabilă (atingerea anulează prezența); a doua trimitere o oprește bifeazaPrezentaSlot
     const btn = document.getElementById('btn_save_' + slotDomKey);
-    if (btn) { btn.disabled = true; btn.classList.add('btn-save-check-disabled'); }
+    if (btn) btn.classList.add('btn-save-check-disabled', 'btn-save-check-bifat');
   });
 }
 
@@ -13744,10 +13745,7 @@ function trimiteBifarePrezenta(d) {
   // altfel schimbarea apărea cu întârziere și părea că apăsările repetate mai bifează o dată
   if (slotExistent) randeazaOrarInstant();
   let btnSave = document.getElementById('btn_save_' + slotDomKey);
-  if (btnSave) {
-    btnSave.disabled = true;
-    btnSave.classList.add('btn-save-check-disabled', 'bifa-acum');
-  }
+  if (btnSave) btnSave.classList.add('btn-save-check-disabled', 'btn-save-check-bifat', 'bifa-acum');
 
   callBackend("bifeazaPrezenta", {
     row: rowNum, saptamanaCheie: saptamanaCheie, dataCalendar: dataCalendar, zi: zi, ora: oraNorm, clienta: numeExact, antrenament: antrenament, slotIndex: slotIdx
