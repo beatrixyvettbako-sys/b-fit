@@ -6873,7 +6873,8 @@ details[open] > summary .summary-sageata {
 #modalFisaObiectiveBackdrop,
 #modalQrBackdrop,
 #modalFinalBackdrop,
-#modalNoutatiBackdrop {
+#modalNoutatiBackdrop,
+#modalProgresExBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
@@ -7603,7 +7604,8 @@ details[open] > summary .summary-sageata {
    Stă după regulile lor, ca să le suprascrie culorile; mărimea fiecăruia rămâne a lui. */
 .lista-filtru,
 .plan-chip,
-.poze-comp-unghiuri .inscriere-chip {
+.poze-comp-unghiuri .inscriere-chip,
+.progres-ex-masuri button {
   border-radius: 16px;
   border: 1px solid var(--glass-border);
   background: var(--card-bg);
@@ -7616,13 +7618,15 @@ details[open] > summary .summary-sageata {
 
 .lista-filtru:active,
 .plan-chip:active,
-.poze-comp-unghiuri .inscriere-chip:active {
+.poze-comp-unghiuri .inscriere-chip:active,
+.progres-ex-masuri button:active {
   transform: scale(0.96);
 }
 
 .lista-filtru.active,
 .plan-chip.is-activ,
-.poze-comp-unghiuri .inscriere-chip.active {
+.poze-comp-unghiuri .inscriere-chip.active,
+.progres-ex-masuri button.active {
   background: rgba(var(--accent-rgb), 0.26);
   color: var(--primary);
   font-weight: 800;
@@ -7637,7 +7641,8 @@ details[open] > summary .summary-sageata {
 
 [data-theme="dark"] .lista-filtru,
 [data-theme="dark"] .plan-chip,
-[data-theme="dark"] .poze-comp-unghiuri .inscriere-chip {
+[data-theme="dark"] .poze-comp-unghiuri .inscriere-chip,
+[data-theme="dark"] .progres-ex-masuri button {
   color: rgba(255, 255, 255, 0.52);
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
@@ -7647,7 +7652,8 @@ details[open] > summary .summary-sageata {
 
 [data-theme="dark"] .lista-filtru.active,
 [data-theme="dark"] .plan-chip.is-activ,
-[data-theme="dark"] .poze-comp-unghiuri .inscriere-chip.active {
+[data-theme="dark"] .poze-comp-unghiuri .inscriere-chip.active,
+[data-theme="dark"] .progres-ex-masuri button.active {
   background: rgba(var(--accent-rgb), 0.24);
   color: var(--accent-purple-light);
   border-color: rgba(var(--accent-pale-rgb), 0.35);
@@ -10821,85 +10827,230 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   color: #15803d;
 }
 
-.progres-ex-toate {
-  margin-top: 2px;
-  overflow: hidden;
+[data-theme="dark"] :is(.progres-ex-dif.sus, .progres-ex-erou em.sus) {
+  color: #4ade80;
 }
 
-.progres-ex-toate summary {
+/* Exerciții (Progres): pastilele-filtru, apoi rânduri de sticlă cu numele, mini-graficul și schimbarea de la început */
+.progres-ex-filtre {
+  margin-bottom: 10px;
+}
+
+.progres-ex-rand {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--m-text);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  list-style: none;
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--primary);
-  padding: 11px 12px;
 }
 
-.progres-ex-toate summary::-webkit-details-marker {
-  display: none;
+.progres-ex-rand + .progres-ex-rand {
+  border-top: 1px solid var(--m-divider);
 }
 
-.progres-ex-toate summary::after {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-2px) rotate(45deg);
-  transition: transform 0.2s ease;
+.progres-ex-rand:active {
+  background: var(--m-btn);
 }
 
-.progres-ex-toate[open] summary::after {
-  transform: translateY(2px) rotate(-135deg);
-}
-
-.progres-ex-toate > .plan-fisa-lista {
-  padding: 0 10px 2px;
-}
-
-.progres-ex-card {
-  max-height: calc(100vh - 32px);
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-}
-
-.progres-ex-card .metric-grid {
-  margin-bottom: 8px;
-}
-
-.progres-ex-card .metric-val small {
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.progres-ex-istoric {
-  margin-top: 10px;
+.progres-ex-text {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.78rem;
+  gap: 2px;
+}
+
+.progres-ex-text b {
+  font-size: 0.92rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.progres-ex-text small {
+  font-size: 0.74rem;
+  color: var(--m-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progres-ex-eticheta {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--m-btn);
+  color: var(--m-muted);
+  font-style: normal;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.progres-ex-eticheta.record {
+  background: rgba(245, 176, 65, 0.18);
+  color: #b45309;
+}
+
+[data-theme="dark"] .progres-ex-eticheta.record {
+  color: #fcd38d;
+}
+
+.progres-ex-spark {
+  flex-shrink: 0;
+  width: 56px;
+  height: 22px;
+}
+
+.progres-ex-spark polyline {
+  fill: none;
+  stroke: rgb(var(--accent-rgb));
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.progres-ex-spark circle {
+  fill: rgb(var(--accent-rgb));
+}
+
+/* Fereastra exercițiului: recordul în cifră mare, pastilele de măsură, graficul, recordurile, istoricul */
+.progres-ex-foaie {
+  max-height: 88dvh;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.progres-ex-erou {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 2px 14px;
+}
+
+.progres-ex-erou span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--m-muted);
+}
+
+.progres-ex-erou b {
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  color: var(--m-text);
+}
+
+.progres-ex-erou b small {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--m-muted);
+}
+
+.progres-ex-erou em {
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.progres-ex-erou em.sus {
+  color: #15803d;
+}
+
+.progres-ex-masuri {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.progres-ex-masuri button {
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.progres-ex-recorduri {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+}
+
+.progres-ex-recorduri > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 12px;
+  min-width: 0;
+}
+
+.progres-ex-recorduri > div + div {
+  border-left: 1px solid var(--m-divider);
+}
+
+.progres-ex-recorduri span,
+.progres-ex-recorduri small {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.progres-ex-recorduri b {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.progres-ex-recorduri b small {
+  font-size: 0.75rem;
 }
 
 .progres-ex-istoric > div {
   display: flex;
-  gap: 10px;
-  padding: 5px 2px;
-  border-top: 1px solid var(--border);
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 14px;
+  font-size: 0.82rem;
+}
+
+.progres-ex-istoric > div + div {
+  border-top: 1px solid var(--m-divider);
 }
 
 .progres-ex-istoric b {
   flex-shrink: 0;
-  width: 54px;
-  color: var(--primary);
+  width: 56px;
+  font-weight: 800;
+  color: var(--m-accent-text);
 }
 
 .progres-ex-istoric span {
+  flex: 1;
   min-width: 0;
-  color: var(--text-muted);
+  color: var(--m-text);
+}
+
+.progres-ex-istoric i {
+  font-style: normal;
+}
+
+.progres-ex-mai-mult {
+  display: block;
+  margin: 10px auto 4px;
+}
+
+/* Recordurile pe graficul exercițiului */
+.grafic-punct.record .grafic-marca {
+  fill: #f5b041;
 }
 
 /* Pozele antrenamentelor proprii: grilă de 3; atingerea mărește poza pe tot rândul */

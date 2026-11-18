@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal229">
+  <link rel="stylesheet" href="style.css?v=fitFinal230">
 </head>
 <body>
 
@@ -397,14 +397,11 @@
   </div>
 
   <!-- MODAL PROGRES PE EXERCIȚIU: kg / repetări / volum în timp (client și antrenor) -->
-  <div id="modalProgresExBackdrop" class="modal-share-backdrop" style="display:none;" onclick="if (event.target === this) inchideProgresExercitiu()">
-    <div class="modal-edit-card progres-ex-card">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom: 10px;">
-        <div style="font-weight: 800; font-size: 1.02rem; color: var(--primary); min-width:0;" id="progresExTitlu"></div>
-        <button type="button" onclick="inchideProgresExercitiu()" style="background:none; border:none; cursor:pointer; color:#64748b; display:flex; padding:2px; flex-shrink:0;" title="Închide" data-en-title="Close">
-          <svg class="plan-btn-svg" viewBox="0 0 24 24" style="width:18px; height:18px;"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>
+  <!-- Progresul unui exercițiu: fereastră de jos (recordul, graficul, recordurile, istoricul) -->
+  <div id="modalProgresExBackdrop" onclick="if (event.target === this) inchideProgresExercitiu()">
+    <div class="fisa-scurta incasare-foaie progres-ex-foaie" id="cardProgresEx">
+      <div class="fisa-scurta-maner"><span></span></div>
+      <h3 class="incasare-foaie-titlu" id="progresExTitlu"></h3>
       <div id="progresExContinut"></div>
     </div>
   </div>
@@ -2172,7 +2169,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal229"></script>
-  <script src="app.js?v=fitFinal229"></script>
+  <script src="sabloane.js?v=fitFinal230"></script>
+  <script src="app.js?v=fitFinal230"></script>
 </body>
 </html>
