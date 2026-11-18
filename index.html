@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal226">
+  <link rel="stylesheet" href="style.css?v=fitFinal227">
 </head>
 <body>
 
@@ -61,7 +61,7 @@
         <b class="notificari-bulina" hidden></b>
       </button>
       <button type="button" class="header-icon-bubble-btn" onclick="deschideMeniuLateral()" title="Meniu" data-en-title="Menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="14" y2="17"></line></svg>
       </button>
       </div>
     </header>
@@ -464,6 +464,18 @@
       <!-- Doar la linkul de înscriere (același pentru toți: se printează în sală sau se pune într-o postare); codul de check-in e
            personal și se scanează de pe ecran, iar linkul lui se trimite cu „Trimite link-ul” -->
       <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnQrDistribuie" onclick="salveazaImagineQr()" hidden><svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg><span data-en="Share or print">Distribuie sau printează</span></button>
+    </div>
+  </div>
+
+  <!-- FINALUL ANTRENAMENTULUI (client): ce ai făcut, recordurile noi, seria; „Trimite” face o imagine pentru meniul de partajare -->
+  <div id="modalFinalBackdrop" onclick="if (event.target === this) inchideFinalAntrenament()">
+    <div class="fisa-scurta incasare-foaie final-foaie" id="cardFinal">
+      <div class="fisa-scurta-maner"><span></span></div>
+      <div id="finalContinut"></div>
+      <div class="fisa-scurta-actiuni">
+        <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="trimiteFinalAntrenament()"><svg viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg><span data-en="Share">Trimite</span></button>
+        <button type="button" class="fisa-scurta-actiune" onclick="inchideFinalAntrenament()"><span data-en="Done">Gata</span></button>
+      </div>
     </div>
   </div>
 
@@ -2160,7 +2172,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal226"></script>
-  <script src="app.js?v=fitFinal226"></script>
+  <script src="sabloane.js?v=fitFinal227"></script>
+  <script src="app.js?v=fitFinal227"></script>
 </body>
 </html>
