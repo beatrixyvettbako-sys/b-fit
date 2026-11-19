@@ -2049,15 +2049,17 @@ if ('serviceWorker' in navigator) {
   }
 })();
 
-// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau nuanța header-ului din tema curentă (--status-bar-color)
+// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea fundalului (--bg), ca să pară parte din ecran,
+// ca antetul transparent; cât e splash-ul (html.app-pornire) rămân albastre ca el (meta theme-color din index.html)
 (function () {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
   const actualizeaza = () => {
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--status-bar-color').trim();
+    if (document.documentElement.classList.contains('app-pornire')) return;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
     if (bg) meta.setAttribute('content', bg);
   };
-  new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-accent'] });
+  new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-accent', 'class'] });
   actualizeaza();
 })();
 
@@ -11538,7 +11540,7 @@ function inchideSplash() {
   if (!splash || splash.dataset.inchis) return;
   splash.dataset.inchis = '1';
   const logo = splash.querySelector('.splash-logo');
-  const tinta = document.getElementById('authLogoImg').parentElement;
+  const tinta = document.getElementById('authLogoImg');
   const peLogin = !document.getElementById('authScreenOverlay').classList.contains('auth-hidden');
   const miscare = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const curba = { duration: 460, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
@@ -11547,8 +11549,9 @@ function inchideSplash() {
     const a = logo.getBoundingClientRect(), b = tinta.getBoundingClientRect();
     const s = b.width / a.width;
     tinta.style.visibility = 'hidden';
-    logo.animate([{ transform: 'none' }, {
-      transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(${s})`
+    logo.animate([{ transform: 'none', borderRadius: '0' }, {
+      transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(${s})`,
+      borderRadius: `${17 / s}px`
     }], curba);
     splash.querySelector('.splash-inel').remove();
     gata = splash.querySelector('.splash-fundal').animate([{ opacity: 1 }, { opacity: 0 }], curba).finished
@@ -11575,12 +11578,10 @@ function terminaPornirea() {
 const NOUTATI = [
   { v: 234, data: '2026-11-19',
     client: [
-      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o vede și antrenorul.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your trainer sees it too.'],
-      ['Pornirea aplicației arată nou, pe tema ta (deschisă sau întunecată).', 'The app start screen has a new look that follows your theme (light or dark).']
+      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o vede și antrenorul.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your trainer sees it too.']
     ],
     antrenor: [
-      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o văd și clienții.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your clients see it too.'],
-      ['Pornirea aplicației arată nou, pe tema ta (deschisă sau întunecată).', 'The app start screen has a new look that follows your theme (light or dark).']
+      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o văd și clienții.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your clients see it too.']
     ] },
   { v: 233, data: '2026-11-19',
     client: [

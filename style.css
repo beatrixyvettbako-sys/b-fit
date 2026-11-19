@@ -32,7 +32,6 @@
   --accent-purple-light: #99e2e5;
   /* Include zona camerei din fullscreen (env = 0 în browser și în modul normal) */
   --header-height: calc(50px + env(safe-area-inset-top, 0px));
-  --status-bar-color: #0f5e63;
   /* Paleta implicită: petrol (aceeași culoare ca iconița și manifest.json); celelalte palete (data-accent) o înlocuiesc mai jos */
   --primary-rgb: 15, 94, 99;
   --primary-dark-rgb: 10, 69, 73;
@@ -75,7 +74,6 @@
   --border: rgba(255, 255, 255, 0.11);
   --placeholder-fade: #64748b;
   --accent-purple-light: #7fd6da;
-  --status-bar-color: #0f5e63;
 }
 
 /* Paleta mov (fosta culoare implicită, acum la alegere din Setări): aceeași structură ca celelalte */
@@ -97,7 +95,6 @@
   --print-head-text: #43355d;
   --print-border: #c4bcd6;
   --accent-purple: #8b5cf6;
-  --status-bar-color: #5c4d7d;
 }
 
 :root[data-accent="mov"]:not([data-theme="dark"]) {
@@ -151,7 +148,6 @@
   --print-head-text: #234670;
   --print-border: #b8c8de;
   --accent-purple: #3b82f6;
-  --status-bar-color: #335c8f;
 }
 
 :root[data-accent="blue"]:not([data-theme="dark"]) {
@@ -206,7 +202,6 @@
   --print-head-text: #6e1c28;
   --print-border: #e0bcc2;
   --accent-purple: #e11d48;
-  --status-bar-color: #9f2a3a;
 }
 
 :root[data-accent="red"]:not([data-theme="dark"]) {
@@ -261,7 +256,6 @@
   --print-head-text: #184e32;
   --print-border: #b7d3c2;
   --accent-purple: #10b981;
-  --status-bar-color: #267048;
 }
 
 :root[data-accent="green"]:not([data-theme="dark"]) {
@@ -316,7 +310,6 @@
   --print-head-text: #1f2329;
   --print-border: #c9ced4;
   --accent-purple: #6b7280;
-  --status-bar-color: #343a43;
 }
 
 :root[data-accent="graphite"]:not([data-theme="dark"]) {
@@ -455,11 +448,11 @@ html.app-pornire body {
   height: 100dvh;
 }
 
-/* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: fundalul stilului nou (ca pe login),
-   cu iconița aplicației în rama albă din mijloc */
+/* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: același albastru ca în manifest
+   (background_color), pe orice temă și orice paletă, ca să nu pară două splash-uri */
 html.app-pornire,
 html.app-pornire body {
-  background: var(--bg);
+  background: #335c8f;
 }
 
 #splashPornire,
@@ -473,55 +466,41 @@ html.app-pornire body {
   pointer-events: none;
 }
 
-/* Petele de lumină vin din .stil-nou-ecran (aceleași ca pe login, deci trecerea nu schimbă fundalul) */
 #splashPornire .splash-fundal {
-  background-color: var(--bg);
+  background: #335c8f;
 }
 
-/* Rama e cea de pe login (.auth-app-icon-wrap) mărită exact de 4/3: la final se micșorează în ea (inchideSplash).
-   Sigla e vectorială (icon.svg), clară pe orice ecran; culorile vin din paletă. */
+/* Sigla e vectorială (icon.svg), clară pe orice ecran, în culorile iconiței albastre: fundalul ei e chiar fundalul
+   splash-ului, deci se vede doar sigla. La final zboară în logoul de pe login (inchideSplash). */
 #splashPornire .splash-logo {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 112px;
-  height: 112px;
-  margin: -56px 0 0 -56px;
-  padding: 4px;
-  border-radius: 26.67px;
+  width: 128px;
+  height: 128px;
+  margin: -64px 0 0 -64px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.38),
-              0 2px 6px rgba(var(--accent-rgb), 0.25);
-  --splash-accent: #93c5fd;
 }
 
 #splashPornire .splash-logo svg {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 22.67px;
 }
 
-#splashPornire .splash-fond { fill: var(--status-bar-color); }
-#splashPornire .splash-accent { fill: var(--splash-accent); }
-html:not([data-accent]) #splashPornire .splash-logo { --splash-accent: #5ec8cd; }
-html[data-accent="mov"] #splashPornire .splash-logo { --splash-accent: #c4b5fd; }
-html[data-accent="red"] #splashPornire .splash-logo { --splash-accent: #fda4af; }
-html[data-accent="green"] #splashPornire .splash-logo { --splash-accent: #6ee7b7; }
-html[data-accent="graphite"] #splashPornire .splash-logo { --splash-accent: #d1d5db; }
+#splashPornire .splash-fond { fill: #335c8f; }
+#splashPornire .splash-accent { fill: #93c5fd; }
 
 /* Rețea lentă: după 1,5 secunde un inel subțire pulsează sub siglă (aplicația lucrează, nu s-a blocat) */
 #splashPornire .splash-inel {
   position: absolute;
   left: 50%;
-  top: calc(50% + 84px);
+  top: calc(50% + 92px);
   width: 30px;
   height: 30px;
   margin-left: -15px;
   border-radius: 50%;
-  border: 2px solid rgba(var(--accent-rgb), 0.7);
+  border: 2px solid rgba(255, 255, 255, 0.85);
   opacity: 0;
   animation: splash-puls 1.3s ease-out 1.5s infinite;
 }

@@ -16,27 +16,20 @@
   <!-- Culoarea implicită e albastrul (data-accent="blue" pe <html>). Petrolul, singura paletă fără bloc propriu în CSS
        (valorile lui sunt în :root), apare doar dacă a fost ales în Setări: atributul se scoate înainte de prima afișare,
        ca să nu pâlpâie albastru. „beatrix_paleta_v96” = migrarea de la petrolul implicit a fost făcută (vezi app.js). -->
-  <!-- Paleta aleasă și culoarea barei de stare (--status-bar-color din style.css) se aplică înainte de prima afișare,
-       ca pornirea (continuarea splash-ului) să nu schimbe culoarea după încărcarea app.js -->
+  <!-- Paleta aleasă se aplică înainte de prima afișare. Bara de stare rămâne albastră cât e splash-ul (tot albastru);
+       apoi ia culoarea fundalului (app.js) -->
   <script>try {
-    // Tema (aceeași regulă ca seteazaTema din app.js), ca splash-ul să fie din prima pe tema aleasă
-    const tema = localStorage.getItem('beatrix_theme');
-    const intunecat = tema === 'dark' || (tema !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
-    document.documentElement.setAttribute('data-theme', intunecat ? 'dark' : 'light');
     const p = localStorage.getItem('beatrix_paleta_v96') && localStorage.getItem('beatrix_accent');
-    const bara = { petrol: '#0f5e63', mov: '#5c4d7d', red: '#9f2a3a', green: '#267048', graphite: '#343a43' }[p];
-    if (bara) {
+    if (['petrol', 'mov', 'red', 'green', 'graphite'].includes(p)) {
       if (p === 'petrol') document.documentElement.removeAttribute('data-accent');
       else document.documentElement.setAttribute('data-accent', p);
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', bara);
     }
   } catch (e) {}</script>
 
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
   <!-- iPhone instalat: imaginea de pornire (altfel ecran alb). Mărimea trebuie să fie exact cea a ecranului.
-       Sunt capturi ale lui #splashPornire (paleta albastră implicită), deschise și, după ele, cele închise pentru tema
-       întunecată a telefonului -->
+       Sunt capturi ale lui #splashPornire (paleta albastră implicită), aceleași pe orice temă -->
   <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iphone-640-1136.png">
   <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iphone-750-1334.png">
   <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1242-2208.png">
@@ -50,31 +43,18 @@
   <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1206-2622.png">
   <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1320-2868.png">
   <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1260-2736.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-640-1136-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-750-1334-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1242-2208-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1125-2436-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-828-1792-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1242-2688-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1170-2532-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1284-2778-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1179-2556-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1290-2796-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1206-2622-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1320-2868-dark.png">
-  <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/iphone-1260-2736-dark.png">
   <link rel="manifest" href="manifest.json">
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal234">
+  <link rel="stylesheet" href="style.css?v=fitFinal235">
 </head>
 <body>
-  <!-- Pornirea: continuă splash-ul telefonului (fundalul login-ului, aceeași siglă); la final sigla trece în logoul de pe login
+  <!-- Pornirea: continuă splash-ul telefonului (același albastru, aceeași siglă, pe orice temă și paletă); la final sigla trece în logoul de pe login
        sau se estompează peste aplicație (inchideSplash). Inelul apare doar dacă pornirea durează peste 1,5 secunde. -->
-  <div id="splashPornire" aria-hidden="true"><div class="splash-fundal stil-nou-ecran"></div><div class="splash-logo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" class="splash-fond"/><path class="splash-accent" d="M68.5,242.5 H69.5 Q75.5,242.5 75.5,248.5 V277.5 Q75.5,283.5 69.5,283.5 H68.5 Q62.5,283.5 62.5,277.5 V248.5 Q62.5,242.5 68.5,242.5 Z M94.5,208.5 H106.5 Q109.5,208.5 109.5,211.5 V311.5 Q109.5,314.5 106.5,314.5 H94.5 Q82.5,314.5 82.5,302.5 V220.5 Q82.5,208.5 94.5,208.5 Z M128.5,190.5 H146 Q150,190.5 150,194.5 V330.5 Q150,334.5 146,334.5 H128.5 Q116.5,334.5 116.5,322.5 V202.5 Q116.5,190.5 128.5,190.5 Z M445.5,242.5 H446.5 Q452.5,242.5 452.5,248.5 V277.5 Q452.5,283.5 446.5,283.5 H445.5 Q439.5,283.5 439.5,277.5 V248.5 Q439.5,242.5 445.5,242.5 Z M408.5,208.5 H420.5 Q432.5,208.5 432.5,220.5 V302.5 Q432.5,314.5 420.5,314.5 H408.5 Q405.5,314.5 405.5,311.5 V211.5 Q405.5,208.5 408.5,208.5 Z M369,190.5 H386.5 Q398.5,190.5 398.5,202.5 V322.5 Q398.5,334.5 386.5,334.5 H369 Q365,334.5 365,330.5 V194.5 Q365,190.5 369,190.5 Z M337.37,244.5 L336.35,245.5 L335.29,246.5 L334.17,247.5 L332.99,248.5 L331.76,249.5 L330.45,250.5 L329.07,251.5 L329.1,252.5 L330.71,253.5 L332.15,254.5 L333.45,255.5 L334.63,256.5 L335.72,257.5 L336.71,258.5 L337.63,259.5 L338.49,260.5 L339.28,261.5 L340.02,262.5 L340.71,263.5 L341.34,264.5 L341.94,265.5 L342.49,266.5 L343.01,267.5 L343.49,268.5 L343.94,269.5 L344.35,270.5 L344.73,271.5 L345.08,272.5 L358.5,272.5 L358.5,244.5 Z"/><path fill="#fff" fill-rule="evenodd" d="M200.46,166.5 L304.46,166.5 C327.19,166.5 341.75,183.39 341.75,205 C341.75,224.54 330.52,240.71 315.35,252 C328.34,260.72 334.38,271.25 334.38,287 C334.38,316.55 308.1,346.5 277.9,346.5 L165.9,346.5 Z"/><path class="splash-fond" d="M230.17,204.5 L290.17,204.5 L292.05,204.67 L293.8,205.16 L295.39,205.97 L296.74,207.07 L297.84,208.43 L298.64,210 L299.11,211.74 L299.26,213.59 L299.06,215.5 L296.66,228 L275.85,244.5 L241.4,272.5 L154.11,272.5 L161.79,232.5 L224.79,232.5 Z M154.11,272.5 L280.11,272.5 L280.11,272.5 L282.77,272.69 L285.27,273.25 L287.54,274.17 L289.51,275.42 L291.13,276.97 L292.34,278.75 L293.1,280.72 L293.39,282.83 L293.21,285 L290.52,299 L290.52,299 L290.09,300.56 L289.39,302.08 L288.45,303.5 L287.31,304.79 L285.99,305.89 L284.53,306.79 L282.98,307.46 L281.39,307.86 L279.8,308 L211.3,308 L216.48,281 L152.48,281 Z"/><path class="splash-accent" d="M157,244.5 L275.85,244.5 L241.4,272.5 L157,272.5 Z"/></svg></div><div class="splash-inel"></div></div>
+  <div id="splashPornire" aria-hidden="true"><div class="splash-fundal"></div><div class="splash-logo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" class="splash-fond"/><path class="splash-accent" d="M68.5,242.5 H69.5 Q75.5,242.5 75.5,248.5 V277.5 Q75.5,283.5 69.5,283.5 H68.5 Q62.5,283.5 62.5,277.5 V248.5 Q62.5,242.5 68.5,242.5 Z M94.5,208.5 H106.5 Q109.5,208.5 109.5,211.5 V311.5 Q109.5,314.5 106.5,314.5 H94.5 Q82.5,314.5 82.5,302.5 V220.5 Q82.5,208.5 94.5,208.5 Z M128.5,190.5 H146 Q150,190.5 150,194.5 V330.5 Q150,334.5 146,334.5 H128.5 Q116.5,334.5 116.5,322.5 V202.5 Q116.5,190.5 128.5,190.5 Z M445.5,242.5 H446.5 Q452.5,242.5 452.5,248.5 V277.5 Q452.5,283.5 446.5,283.5 H445.5 Q439.5,283.5 439.5,277.5 V248.5 Q439.5,242.5 445.5,242.5 Z M408.5,208.5 H420.5 Q432.5,208.5 432.5,220.5 V302.5 Q432.5,314.5 420.5,314.5 H408.5 Q405.5,314.5 405.5,311.5 V211.5 Q405.5,208.5 408.5,208.5 Z M369,190.5 H386.5 Q398.5,190.5 398.5,202.5 V322.5 Q398.5,334.5 386.5,334.5 H369 Q365,334.5 365,330.5 V194.5 Q365,190.5 369,190.5 Z M337.37,244.5 L336.35,245.5 L335.29,246.5 L334.17,247.5 L332.99,248.5 L331.76,249.5 L330.45,250.5 L329.07,251.5 L329.1,252.5 L330.71,253.5 L332.15,254.5 L333.45,255.5 L334.63,256.5 L335.72,257.5 L336.71,258.5 L337.63,259.5 L338.49,260.5 L339.28,261.5 L340.02,262.5 L340.71,263.5 L341.34,264.5 L341.94,265.5 L342.49,266.5 L343.01,267.5 L343.49,268.5 L343.94,269.5 L344.35,270.5 L344.73,271.5 L345.08,272.5 L358.5,272.5 L358.5,244.5 Z"/><path fill="#fff" fill-rule="evenodd" d="M200.46,166.5 L304.46,166.5 C327.19,166.5 341.75,183.39 341.75,205 C341.75,224.54 330.52,240.71 315.35,252 C328.34,260.72 334.38,271.25 334.38,287 C334.38,316.55 308.1,346.5 277.9,346.5 L165.9,346.5 Z"/><path class="splash-fond" d="M230.17,204.5 L290.17,204.5 L292.05,204.67 L293.8,205.16 L295.39,205.97 L296.74,207.07 L297.84,208.43 L298.64,210 L299.11,211.74 L299.26,213.59 L299.06,215.5 L296.66,228 L275.85,244.5 L241.4,272.5 L154.11,272.5 L161.79,232.5 L224.79,232.5 Z M154.11,272.5 L280.11,272.5 L280.11,272.5 L282.77,272.69 L285.27,273.25 L287.54,274.17 L289.51,275.42 L291.13,276.97 L292.34,278.75 L293.1,280.72 L293.39,282.83 L293.21,285 L290.52,299 L290.52,299 L290.09,300.56 L289.39,302.08 L288.45,303.5 L287.31,304.79 L285.99,305.89 L284.53,306.79 L282.98,307.46 L281.39,307.86 L279.8,308 L211.3,308 L216.48,281 L152.48,281 Z"/><path class="splash-accent" d="M157,244.5 L275.85,244.5 L241.4,272.5 L157,272.5 Z"/></svg></div><div class="splash-inel"></div></div>
 
   <!-- TOAST NOTIFICĂRI -->
   <div id="customToast">✓ Mesaj</div>
@@ -2223,7 +2203,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal234"></script>
-  <script src="app.js?v=fitFinal234"></script>
+  <script src="sabloane.js?v=fitFinal235"></script>
+  <script src="app.js?v=fitFinal235"></script>
 </body>
 </html>
