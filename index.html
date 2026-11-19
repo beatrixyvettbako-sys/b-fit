@@ -30,15 +30,33 @@
 
   <link rel="icon" type="image/png" href="icon-blue.png">
   <link rel="apple-touch-icon" href="apple-blue.png">
+  <!-- iPhone instalat: imaginea de pornire (altfel ecran alb). Mărimea trebuie să fie exact cea a ecranului;
+       sigla stă unde o pune și #splashPornire (centrul ecranului, 128px), pe albastrul implicit -->
+  <link rel="apple-touch-startup-image" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iphone-640-1136.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iphone-750-1334.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1242-2208.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1125-2436.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="splash/iphone-828-1792.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1242-2688.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1170-2532.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1284-2778.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1179-2556.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1290-2796.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 402px) and (device-height: 874px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1206-2622.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 440px) and (device-height: 956px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1320-2868.png">
+  <link rel="apple-touch-startup-image" media="(device-width: 420px) and (device-height: 912px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="splash/iphone-1260-2736.png">
   <link rel="manifest" href="manifest.json">
   <!-- Conexiunile spre server și spre verificarea anti-robot se deschid de la încărcare, nu abia la login -->
   <link rel="preconnect" href="https://qfnhluyczxugyqkbyvmc.supabase.co" crossorigin>
   <link rel="preconnect" href="https://challenges.cloudflare.com">
   <link rel="preconnect" href="https://images.openfoodfacts.org" crossorigin>
   <link rel="preconnect" href="https://world.openfoodfacts.org" crossorigin>
-  <link rel="stylesheet" href="style.css?v=fitFinal232">
+  <link rel="stylesheet" href="style.css?v=fitFinal233">
 </head>
 <body>
+  <!-- Pornirea: continuă splash-ul telefonului (aceeași culoare, aceeași siglă); la final sigla trece în logoul de pe login
+       sau se estompează peste aplicație (inchideSplash). Inelul apare doar dacă pornirea durează peste 1,5 secunde. -->
+  <div id="splashPornire" aria-hidden="true"><div class="splash-fundal"></div><div class="splash-logo"></div><div class="splash-inel"></div></div>
 
   <!-- TOAST NOTIFICĂRI -->
   <div id="customToast">✓ Mesaj</div>
@@ -420,6 +438,30 @@
   </div>
 
   <!-- MODAL PROGRES PE EXERCIȚIU: kg / repetări / volum în timp (client și antrenor) -->
+  <!-- Poza de profil: selfie, galerie, poza de la Google, ștergere (Profil › atingi poza) -->
+  <div id="modalPozaProfilBackdrop" onclick="if (event.target === this) inchideFoaiePoza()">
+    <div class="fisa-scurta incasare-foaie" id="cardPozaProfil">
+      <div class="fisa-scurta-maner"><span></span></div>
+      <h3 class="incasare-foaie-titlu" data-en="Profile picture">Poza de profil</h3>
+      <div class="lista-sticla">
+        <label for="avatarInputSelfie" class="profil-rand" id="pozaRandSelfie">
+          <span class="profil-rand-eticheta" data-en="Take a selfie">Fă un selfie</span>
+        </label>
+        <label for="avatarInputFile" class="profil-rand">
+          <span class="profil-rand-eticheta" data-en="Choose from gallery">Alege din galerie</span>
+        </label>
+        <button type="button" class="profil-rand" id="pozaRandGoogle" onclick="folosestePozaGoogle()">
+          <span class="profil-rand-eticheta" data-en="Use my Google photo">Folosește poza de la Google</span>
+        </button>
+        <button type="button" class="profil-rand profil-rand-rosu" id="pozaRandSterge" onclick="stergePozaProfil()">
+          <span class="profil-rand-eticheta" data-en="Remove photo">Șterge poza</span>
+        </button>
+      </div>
+      <input type="file" id="avatarInputSelfie" accept="image/*" capture="user" hidden onchange="proceseazaSiUploadeazaAvatar(this)">
+      <input type="file" id="avatarInputFile" accept="image/*" hidden onchange="proceseazaSiUploadeazaAvatar(this)">
+    </div>
+  </div>
+
   <!-- Un obiectiv (nou sau de modificat): fereastră de jos; conținutul îl scrie htmlFormObiectiv -->
   <div id="modalObiectivBackdrop" onclick="if (event.target === this) inchideFoaieObiectiv()">
     <div class="fisa-scurta incasare-foaie obiectiv-foaie" id="cardObiectiv">
@@ -750,12 +792,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" id="drawerSubSettingsHeaderTitle" data-en="Settings">Setări</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -887,12 +924,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Notifications">Notificări</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body" id="setariNotificariContinut"></div>
@@ -907,12 +939,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Sign-up link">Link de înscriere</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -947,12 +974,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Appearance">Aspect</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1006,12 +1028,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Language">Limbă</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1038,12 +1055,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Schedule">Orar</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1075,12 +1087,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Workout types">Tipuri de antrenament</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1101,12 +1108,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Payments">Plăți</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1133,12 +1135,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Subscriptions">Abonamente</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1152,116 +1149,146 @@
 
     <!-- STRATUL 3: SUB-MENIU PROFIL & CONT -->
     <div id="drawerProfileView" class="drawer-view-layer">
-      <div class="drawer-header">
+      <div class="drawer-header stil-nou-antet">
         <button class="header-icon-bubble-btn" onclick="navigheazaSubMeniu('main')" title="Înapoi" data-en-title="Back">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
-        <div style="font-weight:800; font-size:1.05rem;" id="drawerSubProfileHeaderTitle" data-en="Profile & Security">Profil & Securitate</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <!-- Stilul nou: în pagină poza și numele mare; la derulare apare titlul mic -->
+        <span class="clienta-title" data-en="Profile">Profil</span>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
-      <div class="drawer-body">
+      <div class="drawer-body profil-corp">
+        <!-- Sus: poza (atinsă deschide Selfie / Galerie / Google / Șterge), numele și emailul -->
         <div class="profile-avatar-center">
-          <div class="profile-avatar-badge-wrap">
-            <div class="profile-avatar-big" id="profileBigAvatarWrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
+          <button type="button" class="profile-avatar-badge-wrap" onclick="deschideFoaiePoza()" title="Schimbă poza de profil" data-en-title="Change profile picture">
+            <span class="profile-avatar-big" id="profileBigAvatarWrap"></span>
+            <span class="profile-avatar-pencil-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </span>
+          </button>
+          <h1 class="profil-nume" id="profilNumeMare"></h1>
+        </div>
+
+        <!-- Date personale: fiecare rând se deschide pe loc, cu „Salvează” doar pentru el (salveazaProfil trimite doar ce s-a schimbat) -->
+        <div class="lista-titlu" data-en="Personal details">Date personale</div>
+        <div class="lista-sticla">
+          <div class="profil-detalii" id="profilRandNume">
+            <button type="button" class="profil-rand" onclick="comutaRandProfil(this)">
+              <span class="profil-rand-eticheta" data-en="Name">Nume</span>
+              <span class="profil-rand-valoare" id="profilValNume"></span>
+              <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <div class="profil-editare">
+              <input type="text" id="profileInputNume" class="form-control" placeholder="Nume și prenume" data-en-placeholder="Full name" autocomplete="name">
+              <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnSalveazaProfil" onclick="salveazaProfil()" data-en="Save">Salvează</button>
             </div>
-            <label for="avatarInputFile" class="profile-avatar-pencil-btn" title="Schimbă poza de profil" data-en-title="Change profile picture">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9"></path>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-              </svg>
-            </label>
-            <input type="file" id="avatarInputFile" accept="image/*" style="display:none;" onchange="proceseazaSiUploadeazaAvatar(this)">
           </div>
-        </div>
-
-        <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
-          <label id="profileNameLabel" data-en="Full Name">Nume și Prenume</label>
-          <input type="text" id="profileInputNume" class="form-control" placeholder="Nume și prenume" data-en-placeholder="Full name">
-        </div>
-
-        <div class="form-group" style="margin-top:8px; margin-bottom:6px;">
-          <label data-en="Email">Email</label>
-          <input type="email" id="profileInputEmail" class="form-control" readonly autocomplete="email">
-        </div>
-
-        <!-- Telefonul clientului, din fișa lui; îl poate modifica și el -->
-        <div class="form-group doar-clienta" style="margin-top:8px; margin-bottom:6px;">
-          <label data-en="Phone">Telefon</label>
-          <input type="tel" id="profileInputTelefonClient" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
-        </div>
-
-        <!-- Telefonul pe care îl văd clientele (Sună / WhatsApp pe cardul de reînnoire) -->
-        <div class="form-group doar-antrenor" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:6px;">
-          <label data-en="Phone for clients">Telefon pentru clienți</label>
-          <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
-          <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;" data-en="Clients can call you or message you on WhatsApp when their subscription runs out.">Clienții te pot suna sau îți pot scrie pe WhatsApp când li se termină abonamentul.</div>
-        </div>
-
-        <button type="button" class="btn profile-save-btn" id="btnSalveazaProfil" onclick="salveazaProfil()" data-en="Save">Salvează</button>
-
-        <div class="form-group" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;">
-          <label id="profilePassLabel" data-en="Change Password">Schimbă Parola</label>
-          <div class="password-field-wrap">
-            <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 8 caractere)" data-en-placeholder="New password (min. 8 characters)" autocomplete="new-password">
-            <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaNoua', this)" tabindex="-1" aria-label="Arată/Ascunde parola" data-en-aria="Show/Hide password">
-              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-              </svg>
+          <!-- Emailul se schimbă abia după linkul trimis pe noua adresă (Supabase, șablonul „Change email address”) -->
+          <div class="profil-detalii" id="profilRandEmail">
+            <button type="button" class="profil-rand" onclick="comutaRandProfil(this)">
+              <span class="profil-rand-eticheta">Email</span>
+              <span class="profil-rand-valoare" id="profilValEmail"></span>
+              <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
+            <div class="profil-editare">
+              <input type="email" id="profileInputEmailNou" class="form-control" placeholder="Noul email" data-en-placeholder="New email" autocomplete="email" inputmode="email">
+              <div class="profil-nota" id="profilNotaEmail"></div>
+              <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnSchimbaEmail" onclick="schimbaEmailProfil()" data-en="Send link">Trimite linkul</button>
+            </div>
           </div>
-          <div class="password-field-wrap" style="margin-top:6px;">
-            <input type="password" id="profileInputParolaConfirma" class="form-control" placeholder="Confirmă parola nouă" data-en-placeholder="Confirm new password" autocomplete="new-password">
-            <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaConfirma', this)" tabindex="-1" aria-label="Arată/Ascunde parola" data-en-aria="Show/Hide password">
-              <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-              </svg>
+          <div class="profil-detalii doar-clienta" id="profilRandTelefonClient">
+            <button type="button" class="profil-rand" onclick="comutaRandProfil(this)">
+              <span class="profil-rand-eticheta" data-en="Phone">Telefon</span>
+              <span class="profil-rand-valoare" id="profilValTelefonClient"></span>
+              <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
             </button>
+            <div class="profil-editare">
+              <input type="tel" id="profileInputTelefonClient" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
+              <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="salveazaProfil()" data-en="Save">Salvează</button>
+            </div>
           </div>
-          <button type="button" class="btn profile-save-btn" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()" data-en="Update Password">Actualizează parola</button>
+          <div class="profil-detalii doar-antrenor" id="profilRandTelefon">
+            <button type="button" class="profil-rand" onclick="comutaRandProfil(this)">
+              <span class="profil-rand-eticheta" data-en="Phone">Telefon</span>
+              <span class="profil-rand-valoare" id="profilValTelefon"></span>
+              <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <div class="profil-editare">
+              <input type="tel" id="profileInputTelefon" class="form-control" placeholder="07xx xxx xxx" autocomplete="tel" inputmode="tel" maxlength="20">
+              <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="salveazaProfil()" data-en="Save">Salvează</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Amprentă / Face ID pe acest telefon (passkey); ascuns unde browserul nu le are -->
-        <div class="form-group" id="profileAmprenta" style="margin-top:8px; padding-top:10px; border-top:1px solid var(--border); margin-bottom:0;" hidden>
-          <label data-en="Fingerprint / Face ID">Amprentă / Face ID</label>
-          <div id="profileAmprentaText" style="font-size:0.72rem; color:var(--text-muted); margin-bottom:6px;"></div>
-          <button type="button" class="btn profile-save-btn" id="btnAmprenta" onclick="comutaAmprenta()"></button>
+        <!-- Conectare și securitate -->
+        <div class="lista-titlu" data-en="Sign-in & security">Conectare și securitate</div>
+        <div class="lista-sticla">
+          <!-- Amprentă / Face ID pe acest telefon (passkey); ascuns unde browserul nu le are -->
+          <label class="profil-rand" id="profileAmprenta" hidden>
+            <span class="profil-rand-eticheta" data-en="Face ID / fingerprint">Face ID / amprentă</span>
+            <input type="checkbox" class="comutator" id="profileAmprentaComutator" onchange="comutaAmprenta()">
+          </label>
+          <div class="profil-detalii" id="profilRandParola">
+            <button type="button" class="profil-rand" onclick="comutaRandProfil(this)">
+              <span class="profil-rand-eticheta" data-en="Password">Parola</span>
+              <span class="profil-rand-valoare" id="profilValParola"></span>
+              <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <div class="profil-editare">
+              <!-- Parola de acum: doar când contul are deja parolă (la clientul invitat fără parolă, doar cea nouă) -->
+              <div id="profilParolaVeche">
+              <div class="password-field-wrap">
+                <input type="password" id="profileInputParolaVeche" class="form-control" placeholder="Parola de acum" data-en-placeholder="Current password" autocomplete="current-password">
+              <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaVeche', this)" tabindex="-1" aria-label="Arată/Ascunde parola" data-en-aria="Show/Hide password">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+              </div>
+              <button type="button" class="profil-link" onclick="trimiteResetareParolaProfil()" data-en="Forgot it? Get a link by email">Ai uitat-o? Primești un link pe email</button>
+              </div>
+              <div class="password-field-wrap">
+                <input type="password" id="profileInputParolaNoua" class="form-control" placeholder="Parolă nouă (minim 8 caractere)" data-en-placeholder="New password (min. 8 characters)" autocomplete="new-password">
+              <button type="button" class="password-toggle-btn" onclick="comutaVizibilitateParola('profileInputParolaNoua', this)" tabindex="-1" aria-label="Arată/Ascunde parola" data-en-aria="Show/Hide password">
+                <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <svg class="eye-closed" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+              </button>
+              </div>
+              <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnSchimbaParolaProfil" onclick="schimbaParolaProfil()" data-en="Save password">Salvează parola</button>
+            </div>
+          </div>
+          <!-- Contul legat de Google (din identitățile contului Supabase) -->
+          <div class="profil-rand" id="profilRandGoogle" hidden>
+            <span class="profil-rand-eticheta">Google</span>
+            <span class="profil-rand-valoare" data-en="Connected">Conectat</span>
+          </div>
+          <button type="button" class="profil-rand" onclick="deconectareUtilizator(true)">
+            <span class="profil-rand-eticheta" data-en="Log out all devices">Deconectează toate dispozitivele</span>
+            <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
         </div>
 
-        <!-- Datele tale (GDPR): copie a datelor și ștergerea contului -->
-        <div class="form-group profile-date-tale">
-          <label data-en="Your data">Datele tale</label>
-          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDate" onclick="exportaDateleMele()" data-en="Download my data (PDF)">Descarcă datele mele (PDF)</button>
-          <button type="button" class="btn btn-clear profile-date-btn" id="btnExportaDateJson" onclick="exportaDateleMeleJson()" data-en="Technical export (JSON)">Export tehnic (JSON)</button>
-          <button type="button" class="btn btn-clear profile-date-btn profile-sterge-cont" id="btnStergeCont" onclick="stergeContulMeu()" data-en="Delete account">Șterge contul</button>
+        <!-- Datele tale (GDPR): copie a datelor -->
+        <div class="lista-titlu" data-en="Your data">Datele tale</div>
+        <div class="lista-sticla">
+          <button type="button" class="profil-rand" id="btnExportaDate" onclick="exportaDateleMele()">
+            <span class="profil-rand-eticheta" data-en="Download my data (PDF)">Descarcă datele mele (PDF)</span>
+            <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+          <button type="button" class="profil-rand" id="btnExportaDateJson" onclick="exportaDateleMeleJson()">
+            <span class="profil-rand-eticheta" data-en="Technical export (JSON)">Export tehnic (JSON)</span>
+            <svg class="summary-sageata" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
         </div>
 
-        <!-- Ieșirea din cont: ultima în Profil (acolo e tot ce ține de cont), separată, cu text roșu -->
+        <!-- Ieșirea din cont, apoi ștergerea contului: separate, jos de tot, cu text roșu -->
         <button type="button" class="meniu-iesire lista-sticla" onclick="deconectareUtilizator()">
           <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
           <span id="drawerLogoutBtnText" data-en="Log out">Ieși din cont</span>
         </button>
+        <button type="button" class="profil-sterge-cont" id="btnStergeCont" onclick="stergeContulMeu()" data-en="Delete account">Șterge contul</button>
       </div>
     </div>
 
@@ -1274,12 +1301,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Feedback">Feedback</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
 
       <div class="drawer-body">
@@ -1317,12 +1339,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Community">Comunitate</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
       <div class="drawer-body">
         <div class="comunitate-antrenor" id="comunitateAntrenor"></div>
@@ -1338,12 +1355,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Check a product">Verifică un produs</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
       <div class="drawer-body">
         <div class="comunitate-antrenor" id="verificaProdusContinut"></div>
@@ -1359,12 +1371,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Recipes">Rețete</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
       <div class="drawer-body">
         <div class="comunitate-antrenor" id="reteteAntrenor"></div>
@@ -1379,12 +1386,7 @@
           </svg>
         </button>
         <div style="font-weight:800; font-size:1.05rem;" data-en="Meal plans">Planuri alimentare</div>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
       <div class="drawer-body">
         <div class="comunitate-antrenor" id="planuriAlimAntrenor"></div>
@@ -1401,12 +1403,7 @@
         </button>
         <!-- Stilul nou: titlul mare în pagină, cel mic apare în antet la derulare -->
         <span class="clienta-title" data-en="What's new">Noutăți</span>
-        <button class="header-icon-bubble-btn" onclick="inchideMeniuLateral()" title="Închide meniul" data-en-title="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <span class="header-icon-bubble-btn meniu-antet-loc" aria-hidden="true"></span>
       </div>
       <div class="drawer-body">
         <div class="orar-titlu-mare"><div class="orar-titlu-text"><h1 data-en="What's new">Noutăți</h1></div></div>
@@ -2208,7 +2205,7 @@
   </nav>
 
   <script src="vendor/supabase-2.118.0.js"></script>
-  <script src="sabloane.js?v=fitFinal232"></script>
-  <script src="app.js?v=fitFinal232"></script>
+  <script src="sabloane.js?v=fitFinal233"></script>
+  <script src="app.js?v=fitFinal233"></script>
 </body>
 </html>

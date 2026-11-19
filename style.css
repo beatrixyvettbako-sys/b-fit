@@ -457,19 +457,70 @@ html.app-pornire body {
 
 /* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: culoarea barei de stare și sigla
    (iconița paletei are exact fundalul ei, deci se vede doar sigla). Login-ul și ecranul clientului au fundal propriu. */
-html.app-pornire {
+html.app-pornire,
+html.app-pornire body {
   background: var(--status-bar-color);
 }
 
-html.app-pornire body {
-  background: var(--status-bar-color) url('icon-blue.png') center / 128px no-repeat;
+#splashPornire,
+#splashPornire .splash-fundal {
+  position: fixed;
+  inset: 0;
 }
 
-html.app-pornire:not([data-accent]) body { background-image: url('icon-petrol.png'); }
-html.app-pornire[data-accent="mov"] body { background-image: url('icon-mov.png'); }
-html.app-pornire[data-accent="red"] body { background-image: url('icon-red.png'); }
-html.app-pornire[data-accent="green"] body { background-image: url('icon-green.png'); }
-html.app-pornire[data-accent="graphite"] body { background-image: url('icon-graphite.png'); }
+#splashPornire {
+  z-index: 30000;
+  pointer-events: none;
+}
+
+#splashPornire .splash-fundal {
+  background: var(--status-bar-color);
+}
+
+#splashPornire .splash-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 128px;
+  height: 128px;
+  margin: -64px 0 0 -64px;
+  background: url('icon-blue.png') center / cover;
+}
+
+html:not([data-accent]) #splashPornire .splash-logo { background-image: url('icon-petrol.png'); }
+html[data-accent="mov"] #splashPornire .splash-logo { background-image: url('icon-mov.png'); }
+html[data-accent="red"] #splashPornire .splash-logo { background-image: url('icon-red.png'); }
+html[data-accent="green"] #splashPornire .splash-logo { background-image: url('icon-green.png'); }
+html[data-accent="graphite"] #splashPornire .splash-logo { background-image: url('icon-graphite.png'); }
+
+/* Rețea lentă: după 1,5 secunde un inel subțire pulsează sub siglă (aplicația lucrează, nu s-a blocat) */
+#splashPornire .splash-inel {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 92px);
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  animation: splash-puls 1.3s ease-out 1.5s infinite;
+}
+
+@keyframes splash-puls {
+  0% { transform: scale(0.5); opacity: 0.9; }
+  100% { transform: scale(1.3); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #splashPornire .splash-inel {
+    animation: splash-apare 0.3s ease 1.5s forwards;
+  }
+}
+
+@keyframes splash-apare {
+  to { opacity: 0.6; }
+}
 
 /* Deconectare: ecranul curent se estompează și rămâne neschimbat până la reîncărcare (fără scrollbar temporar) */
 html.deconectare {
@@ -750,6 +801,12 @@ header {
   stroke: #fff;
   flex-shrink: 0;
   display: block;
+}
+
+/* Submeniurile au doar „Înapoi” (X e numai în meniul principal); în dreapta, un loc gol cât bula, ca titlul să stea la mijloc */
+.meniu-antet-loc {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .header-icon-bubble-btn {
@@ -1411,12 +1468,154 @@ header {
   stroke-linejoin: round;
 }
 
+/* Profil (stilul nou): sus poza mare, numele și emailul; dedesubt grupuri de rânduri în .lista-sticla */
 .profile-avatar-center {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 4px 0 2px;
+  padding: 6px 0 4px;
+}
+
+/* Corpul derulează: grupurile își păstrează înălțimea întreagă (ca în Meniu) */
+.profil-corp > * {
+  flex-shrink: 0;
+}
+
+.profil-nume {
+  margin: 12px 0 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--m-text);
+}
+
+/* Un rând: eticheta, valoarea în dreapta, săgeata sau comutatorul */
+.profil-rand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  color: var(--m-text);
+  cursor: pointer;
+}
+
+.profil-rand[hidden] {
+  display: none;
+}
+
+.lista-sticla > :last-child,
+.lista-sticla > :last-child > .profil-rand {
+  border-bottom: 0;
+}
+
+.profil-rand:active {
+  background: var(--m-btn);
+}
+
+.profil-rand-eticheta {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.profil-rand-valoare {
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.86rem;
+  color: var(--m-muted);
+}
+
+.profil-rand-valoare.gol {
+  color: var(--m-accent-text);
+  font-weight: 700;
+}
+
+.profil-rand-rosu {
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .profil-rand-rosu {
+  color: #f87171;
+}
+
+/* Rândul deschis: câmpul și „Salvează”, sub el */
+.profil-detalii {
+  position: relative;
+  border-bottom: 1px solid var(--m-divider);
+}
+
+.profil-detalii > .profil-rand {
+  border-bottom: 0;
+}
+
+.profil-detalii.deschis .summary-sageata {
+  transform: rotate(90deg);
+}
+
+.profil-editare {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.profil-detalii:not(.deschis) .profil-editare {
+  display: none;
+}
+
+/* „Salvează”: butonul principal al stilului nou, pe toată lățimea, după câmp (cel principal are altfel order: -1) */
+.profil-editare .fisa-scurta-actiune {
+  order: 0;
+  justify-content: center;
+  width: 100%;
+}
+
+.profil-link {
+  align-self: flex-start;
+  margin: -2px 0 2px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--m-accent-text);
+  cursor: pointer;
+}
+
+.profil-nota {
+  font-size: 0.74rem;
+  color: var(--m-muted);
+}
+
+/* „Șterge contul”: sub „Ieși din cont”, doar text roșu (nu se apasă din greșeală) */
+.profil-sterge-cont {
+  display: block;
+  margin: 14px auto 6px;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .profil-sterge-cont {
+  color: #f87171;
 }
 
 /* Profil: „Salvează” (nume + telefon) și „Actualizează parola”, același stil, cât textul */
@@ -1497,16 +1696,20 @@ header {
 
 .profile-avatar-badge-wrap {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 96px;
+  height: 96px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 
 .profile-avatar-big {
-  width: 76px;
-  height: 76px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.22) 0%, rgba(var(--accent-rgb), 0.18) 100%);
   border: 1.5px solid var(--accent-purple);
@@ -1526,17 +1729,17 @@ header {
 }
 
 .profile-avatar-big svg {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   stroke: var(--primary);
 }
 
 .profile-avatar-pencil-btn {
   position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 20px;
-  height: 20px;
+  bottom: 3px;
+  right: 3px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--accent-purple);
   color: #fff;
@@ -1550,38 +1753,14 @@ header {
 }
 
 .profile-avatar-pencil-btn svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   stroke: #ffffff;
 }
 
-.profile-avatar-pencil-btn:active {
+.profile-avatar-badge-wrap:active .profile-avatar-pencil-btn {
   transform: scale(0.88);
   opacity: 0.9;
-}
-
-
-/* Profil → Datele tale: export și ștergere cont */
-.profile-date-tale {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
-  margin-bottom: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.btn.profile-date-btn {
-  width: 100%;
-  justify-content: center;
-  padding: 9px;
-  font-size: 0.85rem;
-}
-
-.btn.profile-sterge-cont {
-  color: var(--color-absenta);
-  border-color: rgba(185, 28, 28, 0.3);
 }
 
 .drawer-section {
@@ -7078,7 +7257,8 @@ details[open] > summary .summary-sageata {
 #modalFinalBackdrop,
 #modalNoutatiBackdrop,
 #modalProgresExBackdrop,
-#modalObiectivBackdrop {
+#modalObiectivBackdrop,
+#modalPozaProfilBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
@@ -11537,6 +11717,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .obiectiv-urmator {
   align-self: flex-start;
   margin-top: 6px;
+}
+
+/* Poza de profil se deschide din meniu: deasupra lui */
+#modalPozaProfilBackdrop {
+  z-index: 10002;
 }
 
 /* Fereastra unui obiectiv: câmpurile, recordul de acum cu țintele gata, pastilele 1–7, avertismentul de ritm */

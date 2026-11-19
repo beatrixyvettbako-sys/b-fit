@@ -639,6 +639,10 @@ function aratAmprentaAuth(porneste) {
   document.getElementById('authScreenOverlay').classList.toggle('cu-amprenta', activa);
   document.getElementById('authAmprentaZona').hidden = !activa;
   document.getElementById('authAmprentaEmail').innerText = document.getElementById('authEmail').value;
+  if (sessionStorage.getItem('BFIT_IESIRE')) {
+    sessionStorage.removeItem('BFIT_IESIRE');
+    porneste = false;
+  }
   if (activa && porneste && !amprentaPornitaAutomat) {
     amprentaPornitaAutomat = true;
     intraCuAmprenta();
@@ -667,16 +671,11 @@ async function intraCuAmprenta() {
 function actualizeazaProfilAmprenta() {
   document.getElementById('profileAmprenta').hidden = !AMPRENTA_POSIBILA;
   const activa = !!amprentaAici();
-  document.getElementById('profileAmprentaText').innerText = activa
-    ? tr('Activă pe acest telefon: intri fără parolă.', 'On for this phone: you sign in without a password.')
-    : tr('Intri în aplicație cu amprenta sau Face ID, fără parolă și fără cod.', 'Sign in with your fingerprint or Face ID, no password or code.');
-  const btn = document.getElementById('btnAmprenta');
-  btn.innerText = activa ? tr('Dezactivează', 'Turn off') : tr('Activează amprenta', 'Turn on fingerprint');
-  btn.classList.toggle('btn-clear', activa);
+  document.getElementById('profileAmprentaComutator').checked = activa;
 }
 
 async function comutaAmprenta() {
-  const btn = document.getElementById('btnAmprenta');
+  const btn = document.getElementById('profileAmprentaComutator');
   const id = amprentaAici();
   btn.disabled = true;
   if (id) {
@@ -992,18 +991,21 @@ async function loginCuGoogle() {
   }
 }
 
-async function deconectareUtilizator() {
-  customConfirm(t('authLogoutConfirmTitle'), t('authLogoutConfirmText'), async function() {
+// peToate: închide sesiunea pe toate dispozitivele (telefon pierdut), nu doar pe acesta
+async function deconectareUtilizator(peToate) {
+  customConfirm(peToate ? tr('Deconectezi toate dispozitivele?', 'Log out all devices?') : t('authLogoutConfirmTitle'),
+    peToate ? tr('Contul se închide pe toate telefoanele și calculatoarele unde ești conectat, inclusiv aici.', 'You will be logged out on every phone and computer where you are signed in, including this one.') : t('authLogoutConfirmText'), async function() {
     deconectareInCurs = true;
     document.documentElement.classList.add('deconectare');
     if (supabaseClient) {
       // Bifele notate fără internet pleacă înainte de ieșire (după ieșire nu mai pot fi trimise)
       if (rolUtilizator === 'clienta' && Object.keys(progresNetrimis()).length) await trimiteProgresNetrimis();
       await dezaboneazaPush();
-      await supabaseClient.auth.signOut();
+      await supabaseClient.auth.signOut(peToate ? { scope: 'global' } : undefined);
     }
     localStorage.removeItem('BFIT_DB_LOCAL');
     stergeCacheClienti();
+    sessionStorage.setItem('BFIT_IESIRE', '1');
     window.location.reload();
   });
 }
@@ -1015,7 +1017,7 @@ function actualizeazaDateProfilUI(user) {
   const meta = user.user_metadata || {};
   const numeComplet = meta.full_name || meta.name || user.email?.split('@')[0] || 'B-Fit';
   const prenume = numeComplet.trim().split(' ')[0] || 'B-Fit';
-  const avatarUrl = meta.avatar_url || meta.picture || '';
+  const avatarUrl = pozaProfil(user);
 
   // Setările orarului din cont au prioritate față de copia locală (ex. schimbate pe alt dispozitiv)
   if (meta.setari_orar && !salvareSetariOrarInCurs && JSON.stringify(meta.setari_orar) !== JSON.stringify(setariOrar)) {
@@ -1030,15 +1032,75 @@ function actualizeazaDateProfilUI(user) {
 
   const elInpNume = document.getElementById('profileInputNume');
   if (elInpNume) elInpNume.value = elInpNume.dataset.initial = numeComplet;
-
-  const elInpEmail = document.getElementById('profileInputEmail');
-  if (elInpEmail) elInpEmail.value = user.email || '';
+  document.getElementById('profilNumeMare').innerText = numeComplet;
+  // Schimbare de email în curs (new_email): rândul arată că așteaptă confirmarea pe noua adresă
+  const elEmail = document.getElementById('profilValEmail');
+  elEmail.innerText = user.new_email ? tr('În așteptare', 'Pending') : user.email || '';
+  elEmail.classList.toggle('gol', !!user.new_email);
+  document.getElementById('profilNotaEmail').innerText = user.new_email
+    ? tr(`Link de verificare trimis la ${user.new_email}. Până îl confirmi, intri tot cu ${user.email}.`, `Verification link sent to ${user.new_email}. Until you confirm it, you still sign in with ${user.email}.`)
+    : tr('Îți trimitem un link de verificare pe noua adresă. Emailul se schimbă doar după ce îl confirmi.', 'We’ll send a verification link to the new address. Your email changes only after you confirm it.');
+  actualizeazaRezumatProfil();
 
   const avatarInner = avatarUrl
     ? `<img src="${avatarUrl}" alt="${prenume}">`
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 
   document.querySelectorAll('#drawerUserAvatar, #profileBigAvatarWrap, .meniu-antet-avatar').forEach(el => { el.innerHTML = avatarInner; });
+}
+
+// Poza din cont: cea pusă în aplicație (poza_proprie) are prioritate; avatar_url / picture le pune Google la conectare.
+// poza_stearsa = utilizatorul a ales avatarul neutru (Google nu o mai readuce)
+function pozaProfil(user) {
+  const m = user.user_metadata || {};
+  return m.poza_stearsa ? '' : (m.poza_proprie || m.avatar_url || m.picture || '');
+}
+
+// Poza contului Google, dacă e legat de Google
+function pozaGoogle(user) {
+  const id = (user.identities || []).find(i => i.provider === 'google');
+  const d = (id && id.identity_data) || {};
+  return d.avatar_url || d.picture || '';
+}
+
+// Rândurile din Profil: valorile din dreapta (nume, telefon, parolă)
+function actualizeazaRezumatProfil() {
+  const val = (id, inp) => {
+    const v = (document.getElementById(inp).value || '').trim();
+    const el = document.getElementById(id);
+    el.innerText = v || tr('Adaugă', 'Add');
+    el.classList.toggle('gol', !v);
+  };
+  val('profilValNume', 'profileInputNume');
+  val('profilValTelefonClient', 'profileInputTelefonClient');
+  val('profilValTelefon', 'profileInputTelefon');
+}
+
+// Un rând se deschide pe loc (câmpul și „Salvează”); celelalte se închid
+function comutaRandProfil(btn) {
+  const rand = btn.parentNode;
+  const deschide = !rand.classList.contains('deschis');
+  document.querySelectorAll('#drawerProfileView .profil-detalii.deschis').forEach(r => r.classList.remove('deschis'));
+  rand.classList.toggle('deschis', deschide);
+  if (deschide) [...rand.querySelectorAll('input')].find(i => i.offsetParent)?.focus();
+}
+
+function inchideRanduriProfil() {
+  document.querySelectorAll('#drawerProfileView .profil-detalii.deschis').forEach(r => r.classList.remove('deschis'));
+}
+
+// Conectare și securitate: parola (setată sau nu) și Google, la fiecare deschidere a Profilului
+async function actualizeazaSecuritateProfil() {
+  if (!utilizatorCurent) return;
+  document.getElementById('profilRandGoogle').hidden = !(utilizatorCurent.identities || []).some(i => i.provider === 'google');
+  // Supabase nu spune dacă există parolă: o știm doar din parola_setata / login cu parolă. Antrenorul își face contul
+  // cu parolă, deci la el, fără semn, nu scriem „Nesetată”; clientul invitat chiar n-are, până și-o alege
+  const are = await verificaParolaClienta();
+  const lipsa = !are && rolUtilizator === 'clienta';
+  const el = document.getElementById('profilValParola');
+  el.innerText = are ? tr('Setată', 'Set') : lipsa ? tr('Nesetată', 'Not set') : '';
+  el.classList.toggle('gol', lipsa);
+  document.getElementById('profilParolaVeche').hidden = lipsa;
 }
 
 function navigheazaSubMeniu(strat) {
@@ -1076,11 +1138,16 @@ function navigheazaSubMeniu(strat) {
   if (strat === 'settings') actualizeazaRezumatNotificari();
   if (strat === 'noutati') document.getElementById('noutatiLista').innerHTML = htmlNoutati(noutatiPentruRol(), true);
   if (strat === 'settingsNotifications') randeazaSetariNotificari();
-  if (strat === 'profile') actualizeazaProfilAmprenta();
+  if (strat === 'profile') {
+    inchideRanduriProfil();
+    actualizeazaProfilAmprenta();
+    actualizeazaSecuritateProfil();
+  }
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
   if (strat === 'profile' && rolUtilizator === 'clienta') {
     const inp = document.getElementById('profileInputTelefonClient');
     if (inp && document.activeElement !== inp) inp.value = inp.dataset.initial = (dateClienta.fisa && dateClienta.fisa.telefon) || '';
+    actualizeazaRezumatProfil();
   }
 }
 
@@ -1191,6 +1258,7 @@ async function incarcaTelefonContact() {
   if (!supabaseClient || !utilizatorCurent || !inp || document.activeElement === inp) return;
   const { data, error } = await supabaseClient.from('profiles').select('telefon_contact').eq('id', utilizatorCurent.id).maybeSingle();
   if (!error) inp.value = inp.dataset.initial = (data && data.telefon_contact) || '';
+  actualizeazaRezumatProfil();
 }
 
 // Telefon fără spații / cratime / puncte / paranteze, 00 → +: gol, 0 + 9 cifre (RO) sau + și 8-15 cifre. null = invalid
@@ -1233,6 +1301,8 @@ async function salveazaProfil() {
       if (esteClienta && dateClienta.fisa) dateClienta.fisa.telefon = tel;
     }
     inpTel.value = inpTel.dataset.initial = tel;
+    actualizeazaRezumatProfil();
+    inchideRanduriProfil();
     showToast(tr('✓ Salvat', '✓ Saved'));
   } catch (err) {
     showToast(err.message || tr('Nu s-a putut salva.', 'Could not save.'), 'error');
@@ -1307,6 +1377,44 @@ function distribuieLinkInscriere() {
   }
 }
 
+function deschideFoaiePoza() {
+  const u = utilizatorCurent;
+  if (!u) return;
+  const google = pozaGoogle(u);
+  // Selfie doar pe telefon (pe calculator „capture” deschide tot alegerea de fișier)
+  document.getElementById('pozaRandSelfie').hidden = !matchMedia('(pointer: coarse)').matches;
+  // „Folosește poza de la Google”: doar dacă poza de acum nu e deja cea de la Google
+  document.getElementById('pozaRandGoogle').hidden = !google || (!!pozaProfil(u) && (u.user_metadata || {}).poza_sursa === 'google');
+  document.getElementById('pozaRandSterge').hidden = !pozaProfil(u);
+  deschideFoaieCuFundal(document.getElementById('modalPozaProfilBackdrop'), document.getElementById('cardPozaProfil'));
+}
+
+function inchideFoaiePoza() {
+  inchideFoaieCuFundal(document.getElementById('modalPozaProfilBackdrop'), document.getElementById('cardPozaProfil'));
+}
+
+// Poza contului Google: o vezi tu (din avatar_url). Google nu lasă copierea ei din browser, deci în Storage nu ajunge;
+// poza veche pusă în aplicație se șterge, ca antrenorul / clienții să nu vadă alta (văd inițialele)
+async function folosestePozaGoogle() {
+  inchideFoaiePoza();
+  await supabaseClient.storage.from('avatars').remove([`${utilizatorCurent.id}/avatar.webp`]).catch(() => {});
+  const { data, error } = await supabaseClient.auth.updateUser({ data: { poza_proprie: null, poza_stearsa: false, avatar_url: pozaGoogle(utilizatorCurent), poza_sursa: 'google' } });
+  if (error) return showToast(localizeazaEroareAuth(error.message), 'error');
+  avatareLipsa.add(utilizatorCurent.id);
+  actualizeazaDateProfilUI(data.user);
+  showToast(tr('✓ Poza de la Google e pusă', '✓ Google photo set'));
+}
+
+async function stergePozaProfil() {
+  inchideFoaiePoza();
+  await supabaseClient.storage.from('avatars').remove([`${utilizatorCurent.id}/avatar.webp`]).catch(() => {});
+  const { data, error } = await supabaseClient.auth.updateUser({ data: { poza_proprie: null, avatar_url: null, poza_stearsa: true, poza_sursa: null } });
+  if (error) return showToast(localizeazaEroareAuth(error.message), 'error');
+  avatareLipsa.add(utilizatorCurent.id);
+  actualizeazaDateProfilUI(data.user);
+  showToast(tr('Poza a fost ștearsă', 'Photo removed'));
+}
+
 async function proceseazaSiUploadeazaAvatar(inputEl) {
   if (!inputEl || !inputEl.files || !inputEl.files[0]) return;
   if (!supabaseClient || !utilizatorCurent) {
@@ -1315,75 +1423,97 @@ async function proceseazaSiUploadeazaAvatar(inputEl) {
   }
 
   const file = inputEl.files[0];
+  inchideFoaiePoza();
   showToast(currentLang === 'en' ? '⏳ Optimizing and uploading photo...' : '⏳ Se optimizează și încarcă poza...');
 
   try {
-    const imgBitmap = await createImageBitmap(file);
-    const canvas = document.createElement('canvas');
-    const targetSize = 256;
-    canvas.width = targetSize;
-    canvas.height = targetSize;
-    const ctx = canvas.getContext('2d');
-
-    const srcSize = Math.min(imgBitmap.width, imgBitmap.height);
-    const srcX = (imgBitmap.width - srcSize) / 2;
-    const srcY = (imgBitmap.height - srcSize) / 2;
-
-    ctx.drawImage(imgBitmap, srcX, srcY, srcSize, srcSize, 0, 0, targetSize, targetSize);
-
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        showToast(currentLang === 'en' ? 'Image processing error' : 'Eroare la procesarea imaginii', 'error');
-        return;
-      }
-
-      const filePath = `${utilizatorCurent.id}/avatar.webp`;
-      const { error: uploadError } = await supabaseClient.storage
-        .from('avatars')
-        .upload(filePath, blob, {
-          contentType: 'image/webp',
-          upsert: true
-        });
-
-      if (uploadError) {
-        console.error('Upload avatar error:', uploadError);
-        showToast((currentLang === 'en' ? 'Storage upload error: ' : 'Eroare la încărcarea în storage: ') + uploadError.message, 'error');
-        return;
-      }
-
-      const { data: pubData } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
-      const publicUrl = pubData.publicUrl + '?v=' + Date.now();
-
-      const { data: updData, error: metaError } = await supabaseClient.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      });
-
-      if (metaError) throw metaError;
-
-      actualizeazaDateProfilUI(updData.user);
-      showToast(currentLang === 'en' ? '✓ Profile picture updated!' : '✓ Poză de profil actualizată!');
-    }, 'image/webp', 0.82);
-
+    await incarcaPozaProfil(await createImageBitmap(file));
+    showToast(currentLang === 'en' ? '✓ Profile picture updated!' : '✓ Poză de profil actualizată!');
   } catch (err) {
     console.error('Procesare foto eroare:', err);
-    showToast(currentLang === 'en' ? 'Photo processing error!' : 'Eroare la procesarea pozei!', 'error');
+    showToast(err.message || (currentLang === 'en' ? 'Photo processing error!' : 'Eroare la procesarea pozei!'), 'error');
   } finally {
     inputEl.value = '';
   }
 }
 
+// Pătrat din mijloc, 256 px, webp → avatars/<id>/avatar.webp (de acolo o văd și ceilalți); în cont: poza_proprie
+// (Google pune avatar_url la fiecare conectare, deci poza aleasă aici stă separat) + avatar_url, ca până acum
+async function incarcaPozaProfil(imgBitmap) {
+  const canvas = document.createElement('canvas');
+  const targetSize = 256;
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+  const ctx = canvas.getContext('2d');
+
+  const srcSize = Math.min(imgBitmap.width, imgBitmap.height);
+  const srcX = (imgBitmap.width - srcSize) / 2;
+  const srcY = (imgBitmap.height - srcSize) / 2;
+
+  ctx.drawImage(imgBitmap, srcX, srcY, srcSize, srcSize, 0, 0, targetSize, targetSize);
+
+  const blob = await new Promise(rez => canvas.toBlob(rez, 'image/webp', 0.82));
+  if (!blob) throw new Error(tr('Eroare la procesarea imaginii', 'Image processing error'));
+
+  const filePath = `${utilizatorCurent.id}/avatar.webp`;
+  const { error: uploadError } = await supabaseClient.storage
+    .from('avatars')
+    .upload(filePath, blob, {
+      contentType: 'image/webp',
+      upsert: true
+    });
+
+  if (uploadError) {
+    console.error('Upload avatar error:', uploadError);
+    throw new Error((currentLang === 'en' ? 'Storage upload error: ' : 'Eroare la încărcarea în storage: ') + uploadError.message);
+  }
+
+  const { data: pubData } = supabaseClient.storage.from('avatars').getPublicUrl(filePath);
+  const publicUrl = pubData.publicUrl + '?v=' + Date.now();
+
+  const { data: updData, error: metaError } = await supabaseClient.auth.updateUser({
+    data: { avatar_url: publicUrl, poza_proprie: publicUrl, poza_stearsa: false, poza_sursa: 'proprie' }
+  });
+
+  if (metaError) throw metaError;
+
+  avatareLipsa.delete(utilizatorCurent.id);
+  actualizeazaDateProfilUI(updData.user);
+}
+
+async function schimbaEmailProfil() {
+  const inp = document.getElementById('profileInputEmailNou');
+  const email = (inp.value || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showToast(t('authInvalidEmailFormat'), 'error');
+  if (email === (utilizatorCurent.email || '').toLowerCase()) return inchideRanduriProfil();
+  const btn = document.getElementById('btnSchimbaEmail');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.auth.updateUser({ email }, { emailRedirectTo: URL_APLICATIE });
+  btn.disabled = false;
+  if (error) return showToast(localizeazaEroareAuth(error.message), 'error');
+  inp.value = '';
+  inchideRanduriProfil();
+  actualizeazaDateProfilUI(data.user);
+  showToast(tr(`✓ Verifică ${email}: emailul se schimbă după ce apeși linkul.`, `✓ Check ${email}: your email changes once you tap the link.`));
+}
+
+async function trimiteResetareParolaProfil() {
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(utilizatorCurent.email, { redirectTo: window.location.origin + window.location.pathname });
+  showToast(error ? localizeazaEroareAuth(error.message) : tr(`Ți-am trimis pe ${utilizatorCurent.email} un link pentru parolă nouă.`, `We sent a new-password link to ${utilizatorCurent.email}.`), error ? 'error' : undefined);
+}
+
 async function schimbaParolaProfil() {
   if (!supabaseClient || !utilizatorCurent) return;
   const nouaParola = document.getElementById('profileInputParolaNoua')?.value || '';
-  const confirmaParola = document.getElementById('profileInputParolaConfirma')?.value || '';
+  const cuVeche = !document.getElementById('profilParolaVeche').hidden;
+  const veche = document.getElementById('profileInputParolaVeche').value || '';
 
-  if (!nouaParola || nouaParola.length < 8) {
-    showToast(currentLang === 'en' ? 'Password must be at least 8 characters!' : 'Parola trebuie să aibă minim 8 caractere!', 'error');
+  if (cuVeche && !veche) {
+    showToast(tr('Scrie parola de acum.', 'Enter your current password.'), 'error');
     return;
   }
-
-  if (nouaParola !== confirmaParola) {
-    showToast(currentLang === 'en' ? 'Passwords do not match!' : 'Parolele introduse nu coincid!', 'error');
+  if (!nouaParola || nouaParola.length < 8) {
+    showToast(currentLang === 'en' ? 'Password must be at least 8 characters!' : 'Parola trebuie să aibă minim 8 caractere!', 'error');
     return;
   }
 
@@ -1391,11 +1521,19 @@ async function schimbaParolaProfil() {
   if (btn) btn.disabled = true;
 
   try {
+    // Parola de acum se verifică printr-o conectare cu ea (Supabase nu o cere la schimbare)
+    if (cuVeche) {
+      const { error: gresita } = await supabaseClient.auth.signInWithPassword({ email: utilizatorCurent.email, password: veche });
+      if (gresita) return showToast(gresita.code === 'invalid_credentials'
+        ? tr('Parola de acum nu e corectă.', 'Your current password is wrong.') : localizeazaEroareAuth(gresita.message), 'error');
+    }
     const { error } = await supabaseClient.auth.updateUser({ password: nouaParola, data: { parola_setata: true } });
     if (error) throw error;
     showToast(currentLang === 'en' ? '✓ Password updated successfully!' : '✓ Parola a fost actualizată!');
     document.getElementById('profileInputParolaNoua').value = '';
-    document.getElementById('profileInputParolaConfirma').value = '';
+    document.getElementById('profileInputParolaVeche').value = '';
+    inchideRanduriProfil();
+    actualizeazaSecuritateProfil();
   } catch (err) {
     showToast(localizeazaEroareAuth(err.message), 'error');
   } finally {
@@ -11379,9 +11517,41 @@ function textLinkExpirat() {
   return tr('Linkul a expirat sau a fost deja folosit. Conectează-te cu email și parolă, sau cere un link nou pe email.', 'The link has expired or was already used. Sign in with email and password, or request a new link by email.');
 }
 
+// Splash-ul din pagină (#splashPornire), când știm ce ecran urmează: spre login, sigla urcă și se micșorează exact în
+// logoul de pe login (iconița e aceeași), cât fundalul se estompează; spre aplicație se mărește ușor și dispare.
+// Fără așteptare în plus; cu „Reducere mișcare” din telefon doar se estompează.
+function inchideSplash() {
+  const splash = document.getElementById('splashPornire');
+  if (!splash || splash.dataset.inchis) return;
+  splash.dataset.inchis = '1';
+  const logo = splash.querySelector('.splash-logo');
+  const tinta = document.getElementById('authLogoImg');
+  const peLogin = !document.getElementById('authScreenOverlay').classList.contains('auth-hidden');
+  const miscare = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const curba = { duration: 460, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
+  let gata;
+  if (peLogin && miscare) {
+    const a = logo.getBoundingClientRect(), b = tinta.getBoundingClientRect();
+    const s = b.width / a.width;
+    tinta.style.visibility = 'hidden';
+    logo.animate([{ transform: 'none', borderRadius: '0' }, {
+      transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(${s})`,
+      borderRadius: `${17 / s}px`
+    }], curba);
+    splash.querySelector('.splash-inel').remove();
+    gata = splash.querySelector('.splash-fundal').animate([{ opacity: 1 }, { opacity: 0 }], curba).finished
+      .then(() => { tinta.style.visibility = ''; });
+  } else {
+    if (miscare) logo.animate([{ transform: 'none' }, { transform: 'scale(1.15)' }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+    gata = splash.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished;
+  }
+  gata.then(() => splash.remove());
+}
+
 // Aplicația antrenorului devine vizibilă doar după ce știm ce ecran urmează (vezi html.app-pornire în CSS)
 function terminaPornirea() {
   document.documentElement.classList.remove('app-pornire');
+  inchideSplash();
   if (utilizatorCurent) setTimeout(arataNoutatiNevazute, 1200);
 }
 
@@ -11391,6 +11561,15 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 233, data: '2026-11-19',
+    client: [
+      ['Profilul arată nou: schimbi numele, emailul, telefonul sau parola direct din rândul lor. Poți ieși din cont de pe toate dispozitivele odată.', 'Your profile has a new look: change your name, email, phone or password right from their row. You can log out of all devices at once.'],
+      ['Poza de profil: îți faci un selfie, alegi una din galerie, folosești poza de la Google sau o ștergi.', 'Profile photo: take a selfie, pick one from your gallery, use your Google photo or remove it.']
+    ],
+    antrenor: [
+      ['Profilul arată nou: schimbi numele, emailul, telefonul sau parola direct din rândul lor. Poți ieși din cont de pe toate dispozitivele odată.', 'Your profile has a new look: change your name, email, phone or password right from their row. You can log out of all devices at once.'],
+      ['Poza de profil: îți faci un selfie, alegi una din galerie, folosești poza de la Google sau o ștergi.', 'Profile photo: take a selfie, pick one from your gallery, use your Google photo or remove it.']
+    ] },
   { v: 232, data: '2026-11-19',
     client: [
       ['Intri cu amprenta sau Face ID: o activezi o dată din Meniu › Profil, apoi aplicația te întreabă singură la deschidere.', 'Sign in with your fingerprint or Face ID: turn it on once in Menu › Profile, then the app asks for it on its own when it opens.'],
@@ -11872,12 +12051,15 @@ async function verificaSesiuneSupabase() {
       afiseazaMesajAuthFeedback(tr('Contul tău a fost șters.', 'Your account has been deleted.'), 'success');
     }
     aratAmprentaAuth(!eroareLink);
+    inchideSplash();
     actualizeazaStareNoScrollBody();
     return false;
   }
 }
 
 window.onload = async function() {
+  // Siguranță: dacă pornirea se blochează undeva, splash-ul nu rămâne peste ecran
+  setTimeout(inchideSplash, 10000);
   reseteazaDateIncasariAzi();
   leagaAscultatoriCuratareErori();
   aplicaTraduceriInterfataStatic();
@@ -12096,7 +12278,8 @@ const MODALE_INAPOI = [
   ['modalFinalBackdrop', () => inchideFinalAntrenament()],
   ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()],
   ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()],
-  ['modalNoutatiBackdrop', () => inchideNoutati()]
+  ['modalNoutatiBackdrop', () => inchideNoutati()],
+  ['modalPozaProfilBackdrop', () => inchideFoaiePoza()]
 ];
 let ignoraPopstateGarda = false;
 
@@ -18858,6 +19041,7 @@ trageInJosCaSaInchizi(document.getElementById('cardFinal'), inchideFinalAntrenam
 trageInJosCaSaInchizi(document.getElementById('cardNoutati'), inchideNoutati, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardProgresEx'), inchideProgresExercitiu, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardObiectiv'), inchideFoaieObiectiv, '.fisa-scurta-maner, .incasare-foaie-titlu');
+trageInJosCaSaInchizi(document.getElementById('cardPozaProfil'), inchideFoaiePoza);
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
