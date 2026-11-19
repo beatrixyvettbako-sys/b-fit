@@ -202,7 +202,7 @@ const i18n = {
     authPasswordLabel: "Parolă",
     authSubmitBtnLogin: "Intră în cont",
     authSubmitBtnSignup: "Creează cont",
-    authMagicLinkBtn: "Ai primit o invitație? Intră cu un cod pe email",
+    authMagicLinkBtn: "Intră fără parolă",
     authDividerOr: "sau",
     authGoogleBtn: "Conectare cu Google",
     authProcessing: "Se procesează...",
@@ -351,7 +351,7 @@ const i18n = {
     authPasswordLabel: "Password",
     authSubmitBtnLogin: "Log In",
     authSubmitBtnSignup: "Create Account",
-    authMagicLinkBtn: "Got an invitation? Sign in with an email code",
+    authMagicLinkBtn: "Sign in without a password",
     authDividerOr: "or",
     authGoogleBtn: "Sign in with Google",
     authProcessing: "Processing...",
@@ -1047,6 +1047,7 @@ function actualizeazaDateProfilUI(user) {
     : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`;
 
   document.querySelectorAll('#drawerUserAvatar, #profileBigAvatarWrap, .meniu-antet-avatar').forEach(el => { el.innerHTML = avatarInner; });
+  preiaPozaGoogle(user);
 }
 
 // Poza din cont: cea pusă în aplicație (poza_proprie) are prioritate; avatar_url / picture le pune Google la conectare.
@@ -1393,16 +1394,28 @@ function inchideFoaiePoza() {
   inchideFoaieCuFundal(document.getElementById('modalPozaProfilBackdrop'), document.getElementById('cardPozaProfil'));
 }
 
-// Poza contului Google: o vezi tu (din avatar_url). Google nu lasă copierea ei din browser, deci în Storage nu ajunge;
-// poza veche pusă în aplicație se șterge, ca antrenorul / clienții să nu vadă alta (văd inițialele)
-async function folosestePozaGoogle() {
-  inchideFoaiePoza();
-  await supabaseClient.storage.from('avatars').remove([`${utilizatorCurent.id}/avatar.webp`]).catch(() => {});
-  const { data, error } = await supabaseClient.auth.updateUser({ data: { poza_proprie: null, poza_stearsa: false, avatar_url: pozaGoogle(utilizatorCurent), poza_sursa: 'google' } });
-  if (error) return showToast(localizeazaEroareAuth(error.message), 'error');
-  avatareLipsa.add(utilizatorCurent.id);
-  actualizeazaDateProfilUI(data.user);
-  showToast(tr('✓ Poza de la Google e pusă', '✓ Google photo set'));
+// Poza contului Google, adusă de Worker (browserul n-o poate copia) și pusă în Storage ca orice poză de profil,
+// ca s-o vadă și antrenorul / clienții. tacut = preluarea automată la conectare (fără mesaje, o singură încercare)
+async function folosestePozaGoogle(tacut) {
+  if (!tacut) inchideFoaiePoza();
+  try {
+    const r = await cerePozeAntr('GET', '/poza-google', {});
+    if (!r || !r.ok) throw new Error(tr('Poza de la Google nu s-a putut lua. Reîncearcă.', 'Couldn’t get your Google photo. Try again.'));
+    await incarcaPozaProfil(await createImageBitmap(await r.blob()), 'google');
+    if (!tacut) showToast(tr('✓ Poza de la Google e pusă', '✓ Google photo set'));
+  } catch (e) {
+    if (!tacut) showToast(e.message, 'error');
+  }
+}
+
+// Cont Google cu poză, fără poză aleasă sau ștearsă în aplicație: o dată, la conectare, poza Google intră în Storage.
+// O poză urcată înainte de v234 (avatar_url din Storage, fără poza_sursa) rămâne.
+let pozaGoogleIncercata = false;
+function preiaPozaGoogle(user) {
+  const m = user.user_metadata || {};
+  if (pozaGoogleIncercata || m.poza_sursa || m.poza_stearsa || /\/avatars\//.test(m.avatar_url || '') || !pozaGoogle(user)) return;
+  pozaGoogleIncercata = true;
+  folosestePozaGoogle(true);
 }
 
 async function stergePozaProfil() {
@@ -1439,7 +1452,7 @@ async function proceseazaSiUploadeazaAvatar(inputEl) {
 
 // Pătrat din mijloc, 256 px, webp → avatars/<id>/avatar.webp (de acolo o văd și ceilalți); în cont: poza_proprie
 // (Google pune avatar_url la fiecare conectare, deci poza aleasă aici stă separat) + avatar_url, ca până acum
-async function incarcaPozaProfil(imgBitmap) {
+async function incarcaPozaProfil(imgBitmap, sursa = 'proprie') {
   const canvas = document.createElement('canvas');
   const targetSize = 256;
   canvas.width = targetSize;
@@ -1472,7 +1485,7 @@ async function incarcaPozaProfil(imgBitmap) {
   const publicUrl = pubData.publicUrl + '?v=' + Date.now();
 
   const { data: updData, error: metaError } = await supabaseClient.auth.updateUser({
-    data: { avatar_url: publicUrl, poza_proprie: publicUrl, poza_stearsa: false, poza_sursa: 'proprie' }
+    data: { avatar_url: publicUrl, poza_proprie: publicUrl, poza_stearsa: false, poza_sursa: sursa }
   });
 
   if (metaError) throw metaError;
@@ -11525,7 +11538,7 @@ function inchideSplash() {
   if (!splash || splash.dataset.inchis) return;
   splash.dataset.inchis = '1';
   const logo = splash.querySelector('.splash-logo');
-  const tinta = document.getElementById('authLogoImg');
+  const tinta = document.getElementById('authLogoImg').parentElement;
   const peLogin = !document.getElementById('authScreenOverlay').classList.contains('auth-hidden');
   const miscare = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const curba = { duration: 460, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
@@ -11534,9 +11547,8 @@ function inchideSplash() {
     const a = logo.getBoundingClientRect(), b = tinta.getBoundingClientRect();
     const s = b.width / a.width;
     tinta.style.visibility = 'hidden';
-    logo.animate([{ transform: 'none', borderRadius: '0' }, {
-      transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(${s})`,
-      borderRadius: `${17 / s}px`
+    logo.animate([{ transform: 'none' }, {
+      transform: `translate(${b.left + b.width / 2 - a.left - a.width / 2}px, ${b.top + b.height / 2 - a.top - a.height / 2}px) scale(${s})`
     }], curba);
     splash.querySelector('.splash-inel').remove();
     gata = splash.querySelector('.splash-fundal').animate([{ opacity: 1 }, { opacity: 0 }], curba).finished
@@ -11561,6 +11573,15 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 234, data: '2026-11-19',
+    client: [
+      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o vede și antrenorul.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your trainer sees it too.'],
+      ['Pornirea aplicației arată nou, pe tema ta (deschisă sau întunecată).', 'The app start screen has a new look that follows your theme (light or dark).']
+    ],
+    antrenor: [
+      ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o văd și clienții.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your clients see it too.'],
+      ['Pornirea aplicației arată nou, pe tema ta (deschisă sau întunecată).', 'The app start screen has a new look that follows your theme (light or dark).']
+    ] },
   { v: 233, data: '2026-11-19',
     client: [
       ['Profilul arată nou: schimbi numele, emailul, telefonul sau parola direct din rândul lor. Poți ieși din cont de pe toate dispozitivele odată.', 'Your profile has a new look: change your name, email, phone or password right from their row. You can log out of all devices at once.'],

@@ -455,11 +455,11 @@ html.app-pornire body {
   height: 100dvh;
 }
 
-/* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: culoarea barei de stare și sigla
-   (iconița paletei are exact fundalul ei, deci se vede doar sigla). Login-ul și ecranul clientului au fundal propriu. */
+/* Până apare login-ul sau aplicația, pagina continuă splash-ul telefonului: fundalul stilului nou (ca pe login),
+   cu iconița aplicației în rama albă din mijloc */
 html.app-pornire,
 html.app-pornire body {
-  background: var(--status-bar-color);
+  background: var(--bg);
 }
 
 #splashPornire,
@@ -473,36 +473,55 @@ html.app-pornire body {
   pointer-events: none;
 }
 
+/* Petele de lumină vin din .stil-nou-ecran (aceleași ca pe login, deci trecerea nu schimbă fundalul) */
 #splashPornire .splash-fundal {
-  background: var(--status-bar-color);
+  background-color: var(--bg);
 }
 
+/* Rama e cea de pe login (.auth-app-icon-wrap) mărită exact de 4/3: la final se micșorează în ea (inchideSplash).
+   Sigla e vectorială (icon.svg), clară pe orice ecran; culorile vin din paletă. */
 #splashPornire .splash-logo {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 128px;
-  height: 128px;
-  margin: -64px 0 0 -64px;
-  background: url('icon-blue.png') center / cover;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  padding: 4px;
+  border-radius: 26.67px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 10px 24px rgba(var(--primary-rgb), 0.38),
+              0 2px 6px rgba(var(--accent-rgb), 0.25);
+  --splash-accent: #93c5fd;
 }
 
-html:not([data-accent]) #splashPornire .splash-logo { background-image: url('icon-petrol.png'); }
-html[data-accent="mov"] #splashPornire .splash-logo { background-image: url('icon-mov.png'); }
-html[data-accent="red"] #splashPornire .splash-logo { background-image: url('icon-red.png'); }
-html[data-accent="green"] #splashPornire .splash-logo { background-image: url('icon-green.png'); }
-html[data-accent="graphite"] #splashPornire .splash-logo { background-image: url('icon-graphite.png'); }
+#splashPornire .splash-logo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 22.67px;
+}
+
+#splashPornire .splash-fond { fill: var(--status-bar-color); }
+#splashPornire .splash-accent { fill: var(--splash-accent); }
+html:not([data-accent]) #splashPornire .splash-logo { --splash-accent: #5ec8cd; }
+html[data-accent="mov"] #splashPornire .splash-logo { --splash-accent: #c4b5fd; }
+html[data-accent="red"] #splashPornire .splash-logo { --splash-accent: #fda4af; }
+html[data-accent="green"] #splashPornire .splash-logo { --splash-accent: #6ee7b7; }
+html[data-accent="graphite"] #splashPornire .splash-logo { --splash-accent: #d1d5db; }
 
 /* Rețea lentă: după 1,5 secunde un inel subțire pulsează sub siglă (aplicația lucrează, nu s-a blocat) */
 #splashPornire .splash-inel {
   position: absolute;
   left: 50%;
-  top: calc(50% + 92px);
+  top: calc(50% + 84px);
   width: 30px;
   height: 30px;
   margin-left: -15px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  border: 2px solid rgba(var(--accent-rgb), 0.7);
   opacity: 0;
   animation: splash-puls 1.3s ease-out 1.5s infinite;
 }
