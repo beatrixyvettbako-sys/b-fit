@@ -291,6 +291,60 @@
   --accent-purple-light: #6ee7b7;
 }
 
+/* Paleta portocalie (roșu-portocaliu aprins; mai roșiatică decât portocaliul de Hold #f5b041, ca să nu se confunde) */
+:root[data-accent="orange"] {
+  --primary-rgb: 194, 65, 12;
+  --primary-dark-rgb: 154, 52, 18;
+  --accent-rgb: 252, 76, 2;
+  --accent-light-rgb: 251, 146, 60;
+  --brand: #c2410c;
+  --brand-mid: #e0621f;
+  --brand-mid2: #d4561a;
+  --accent-pale-rgb: 253, 186, 116;
+  --primary-soft-rgb: 240, 140, 90;
+  --text-soft: #ffedd5;
+  --text-soft2: #fed7aa;
+  --brand-deep: #7c2d12;
+  --print-bg: #fdf4ee;
+  --print-head-bg: #fbe5d6;
+  --print-head-text: #7c2d12;
+  --print-border: #f0c6a8;
+  --accent-purple: #fc4c02;
+}
+
+:root[data-accent="orange"]:not([data-theme="dark"]) {
+  --primary: #c2410c;
+  --primary-dark: #9a3412;
+  --primary-light: rgba(253, 236, 224, 0.78);
+  --bg: #fbf3ee;
+  --bg-gradient: radial-gradient(circle at 12% 8%, rgba(var(--accent-rgb), 0.11) 0%, transparent 45%),
+                 radial-gradient(circle at 88% 30%, rgba(var(--primary-rgb), 0.1) 0%, transparent 50%),
+                 radial-gradient(circle at 50% 92%, rgba(var(--accent-light-rgb), 0.1) 0%, transparent 50%),
+                 linear-gradient(180deg, #fcf6f2 0%, #f5e6dc 100%);
+  --glass-border-subtle: rgba(var(--primary-rgb), 0.16);
+  --header-glass-bg: rgba(250, 232, 220, 0.8);
+  --day-bar-glass: rgba(250, 232, 220, 0.8);
+  --border: rgba(226, 198, 180, 0.55);
+  --accent-purple-light: #fed7aa;
+}
+
+:root[data-accent="orange"][data-theme="dark"] {
+  --primary: #fb8a4c;
+  --primary-dark: #fdba8c;
+  --primary-light: rgba(84, 38, 18, 0.65);
+  --bg: #140d0a;
+  --bg-gradient: radial-gradient(circle at 15% 10%, rgba(var(--accent-rgb), 0.16) 0%, transparent 45%),
+                 radial-gradient(circle at 85% 35%, rgba(var(--primary-rgb), 0.2) 0%, transparent 50%),
+                 linear-gradient(180deg, #1a110d 0%, #0e0907 100%);
+  --card-bg: rgba(38, 27, 22, 0.86);
+  --card-bg-solid: #261b16;
+  --glass-border-subtle: rgba(240, 140, 90, 0.22);
+  --input-glass-bg: rgba(26, 18, 14, 0.82);
+  --header-glass-bg: rgba(32, 20, 15, 0.8);
+  --day-bar-glass: rgba(32, 20, 15, 0.8);
+  --accent-purple-light: #fdba74;
+}
+
 /* Paleta grafit (negru-gri neutru) */
 :root[data-accent="graphite"] {
   --primary-rgb: 52, 58, 67;
@@ -1408,6 +1462,14 @@ header {
   border-bottom: 0;
 }
 
+/* Rând de meniu ca buton (ex. „Scanează codul de bare”): ca rândurile div, pe toată lățimea */
+button.drawer-nav-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
 .lista-sticla .drawer-nav-card:active {
   transform: none;
   background: var(--m-btn);
@@ -1475,8 +1537,8 @@ header {
   padding: 6px 0 4px;
 }
 
-/* Corpul derulează: grupurile își păstrează înălțimea întreagă (ca în Meniu) */
-.profil-corp > * {
+/* Corpul submeniurilor derulează: grupurile își păstrează înălțimea întreagă (ca în Meniu), nu se strivesc pe ecran mic */
+.drawer-body > * {
   flex-shrink: 0;
 }
 
@@ -1574,7 +1636,10 @@ header {
 }
 
 /* „Salvează”: butonul principal al stilului nou, pe toată lățimea, după câmp (cel principal are altfel order: -1) */
-.profil-editare .fisa-scurta-actiune {
+.profil-editare .fisa-scurta-actiune,
+.feedback-corp .fisa-scurta-actiune,
+.verifica-continut .fisa-scurta-actiune,
+.produs-nou .fisa-scurta-actiune {
   order: 0;
   justify-content: center;
   width: 100%;
@@ -1628,68 +1693,144 @@ header {
   white-space: nowrap;
 }
 
-/* Feedback (meniu › Raportează o problemă) */
-.feedback-tip-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.feedback-tip-grid .theme-option-btn {
-  padding: 9px 4px;
-  font-size: 0.82rem;
-}
-
-.form-control.feedback-text {
-  resize: vertical;
-  min-height: 120px;
-  font-family: inherit;
-}
-
-.btn.feedback-ataseaza-btn {
+/* Feedback (meniu › Raportează o problemă), pe stilul nou: tipul ca pastile de filtru, textul și atașarea
+   într-un card de sticlă (.lista-sticla), după trimitere o confirmare în locul formularului */
+.feedback-formular {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 9px 10px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feedback-text {
+  display: block;
+  width: 100%;
+  min-height: 140px;
+  padding: 14px;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  border-radius: 0;
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  outline: none;
+}
+
+.feedback-text::placeholder {
+  color: var(--m-muted);
 }
 
 .feedback-fisier-ales {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.76rem;
-  color: var(--text);
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--m-divider);
 }
 
 .feedback-fisier-ales[hidden] {
   display: none;
 }
 
-.feedback-fisier-ales span {
+.feedback-miniatura > * {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--m-btn);
+  border: 1px solid var(--m-border);
+}
+
+.feedback-fisier-nume {
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--m-muted);
 }
 
 .feedback-fisier-sterge {
-  background: none;
-  border: none;
-  color: #b91c1c;
-  font-size: 0.9rem;
-  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
   cursor: pointer;
-  padding: 2px 6px;
 }
 
-.feedback-nota {
-  font-size: 0.72rem;
-  color: var(--text-muted);
+.feedback-fisier-sterge svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: var(--m-text);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+/* După trimitere: bifa verde, mulțumirea și întoarcerea în meniu */
+.feedback-trimis {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 36px 8px 0;
+  text-align: center;
+  color: var(--m-text);
+}
+
+.feedback-formular[hidden],
+.feedback-trimis[hidden] {
+  display: none;
+}
+
+.feedback-trimis-bifa {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  background: rgba(21, 128, 61, 0.14);
+  border: 1px solid rgba(21, 128, 61, 0.3);
+  box-shadow: var(--m-float-sm);
+}
+
+.feedback-trimis-bifa svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: #15803d;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-theme="dark"] .feedback-trimis-bifa svg {
+  stroke: #4ade80;
+}
+
+.feedback-trimis h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.feedback-trimis p {
+  margin: 0 0 14px;
+  font-size: 0.88rem;
+  color: var(--m-muted);
 }
 
 .profile-avatar-badge-wrap {
@@ -1761,27 +1902,7 @@ header {
   opacity: 0.9;
 }
 
-.drawer-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.drawer-section-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.theme-selector-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-}
-
-.theme-option-btn, .lang-option-btn {
+.theme-option-btn {
   background: var(--input-glass-bg);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-shadow);
@@ -1798,7 +1919,7 @@ header {
   transition: all 0.18s ease;
 }
 
-.theme-option-btn.active, .lang-option-btn.active {
+.theme-option-btn.active {
   background: linear-gradient(135deg, var(--brand) 0%, var(--brand-mid) 100%);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.45);
@@ -1806,63 +1927,237 @@ header {
               inset 0 1px 1px rgba(255, 255, 255, 0.45);
 }
 
-/* 5 palete: 3 pe primul rând, 2 centrate dedesubt (grilă pe 6 coloane, fiecare buton ocupă 2) */
-.accent-grid {
-  grid-template-columns: repeat(6, 1fr);
+/* Alegeri pe stilul nou (Feedback, Setări › Aspect / Orar): pastile de filtru egale, pe un rând */
+.pastile-egale {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
 }
 
-.accent-grid > .theme-option-btn {
-  grid-column: span 2;
+.pastile-egale button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.84rem;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-/* Setări › Tipuri de antrenament / Plăți: rânduri editabile (culoare, nume, șterge) */
+.pastile-egale .plan-btn-svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+/* Setări › Aspect: culorile ca cercuri, patru pe rând (restul centrate dedesubt); cea aleasă cu inel și bifă */
+.setari-culori {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  row-gap: 14px;
+  padding: 16px 4px;
+}
+
+.setari-culoare {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 25%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--m-muted);
+  cursor: pointer;
+}
+
+.setari-culoare-cerc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: var(--m-float-sm);
+  transition: transform 0.12s ease;
+}
+
+.setari-culoare:active .setari-culoare-cerc {
+  transform: scale(0.92);
+}
+
+.setari-culoare.active {
+  color: var(--m-text);
+  font-weight: 800;
+}
+
+/* Cea aleasă: inel în culoarea ei (ca la culorile tipurilor de antrenament) */
+.setari-culoare.active .setari-culoare-cerc {
+  box-shadow: 0 0 0 3px var(--m-card), 0 0 0 5px var(--c);
+}
+
+.setari-bifa {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.setari-culoare:not(.active) .setari-bifa,
+.setari-optiune:not(.active) .setari-bifa {
+  visibility: hidden;
+}
+
+/* Setări › Limbă: rândul ales are bifa în culoarea accentului */
+.setari-optiune .setari-bifa {
+  stroke: var(--m-accent-text);
+}
+
+.setari-steag {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Setări › Orar: „Locuri pe oră” cu − N + în rând (rândul nu se apasă, doar butoanele) */
+.profil-rand.setari-pas {
+  cursor: default;
+}
+
+.profil-rand.setari-pas:active {
+  background: transparent;
+}
+
+.setari-pas-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.setari-pas-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.setari-pas-valoare {
+  min-width: 28px;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+/* Setări › Tipuri de antrenament / Plăți / Abonamente: rânduri în cardul de sticlă, despărțite de linii;
+   „Adaugă” e ultimul rând, în culoarea accentului */
 .setari-lista {
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 
-.setari-lista-rand {
-  display: flex;
+/* Tipul de antrenament în rând: bulina și numele în culoarea lui, ca în Orar (text colorat, fără fundal).
+   Culorile vin din clasele ant-* ale .slot-input (cu !important), de aici anulările de fundal și chenar. */
+.setari-abonament-rand > span.tip-rand:first-child {
+  flex-direction: row;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
 }
 
-.setari-lista .setari-lista-input {
-  flex: 1;
-  min-width: 0;
-  padding: 8px 10px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 10px;
-}
-
-.setari-lista .setari-lista-culoare.slot-input {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
+.tip-rand .tip-bulina.slot-input {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
   padding: 0;
+  border: 0 !important;
   border-radius: 50%;
-  border-width: 3px;
-  cursor: pointer;
-  /* Bulina plină în culoarea textului tipului (clasele ant-* au fundal deschis cu !important) */
   background-color: currentColor !important;
 }
 
-/* Tip fără culoare: bulină goală, tăiată */
-.setari-lista .setari-lista-culoare.slot-input.fara-culoare,
-.culoare-tip-fara::before {
-  background: linear-gradient(135deg, transparent 44%, #94a3b8 44%, #94a3b8 56%, transparent 56%), var(--card-bg) !important;
-  border-color: #cbd5e1 !important;
+.tip-rand .tip-bulina.slot-input.fara-culoare {
+  border: 1.5px solid var(--m-muted) !important;
+  background-color: transparent !important;
 }
 
-/* Fereastra de culori a unui tip de antrenament */
+.tip-rand .tip-text.slot-input,
+.incasare-foaie .form-group .form-control.tip-text.slot-input {
+  background-color: transparent !important;
+  border: 0 !important;
+  font-weight: 700;
+}
+
+/* Numele tipului / metodei în fereastră: mare, ca titlul a ceea ce modifici */
+.incasare-foaie .form-group #elementSetariNume {
+  height: 52px;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.tip-rand b.tip-text.slot-input {
+  width: auto;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+
+.tip-rand b.tip-text.slot-input:not([class*="ant-"]) {
+  color: var(--m-text);
+}
+
+/* Tema întunecată: culorile ant-* sunt închise (gândite pe fundal deschis); în Setări, numele, bulina și cercurile
+   folosesc nuanța luminoasă a aceleiași culori, ca să se vadă pe sticla închisă */
+[data-theme="dark"] .ant-orange { --tip-luminos: #fb923c; }
+[data-theme="dark"] .ant-yellow { --tip-luminos: #facc15; }
+[data-theme="dark"] .ant-red { --tip-luminos: #f87171; }
+[data-theme="dark"] .ant-burgundy { --tip-luminos: #fb7185; }
+[data-theme="dark"] .ant-pink { --tip-luminos: #f472b6; }
+[data-theme="dark"] .ant-purple { --tip-luminos: #c084fc; }
+[data-theme="dark"] .ant-darkblue { --tip-luminos: #818cf8; }
+[data-theme="dark"] .ant-lightblue { --tip-luminos: #38bdf8; }
+[data-theme="dark"] .ant-turquoise { --tip-luminos: #2dd4bf; }
+[data-theme="dark"] .ant-lightgreen { --tip-luminos: #4ade80; }
+[data-theme="dark"] .ant-fuchsia { --tip-luminos: #e879f9; }
+[data-theme="dark"] .ant-blue { --tip-luminos: #60a5fa; }
+[data-theme="dark"] .ant-lime { --tip-luminos: #a3e635; }
+[data-theme="dark"] .ant-brown { --tip-luminos: #d6a26b; }
+[data-theme="dark"] .ant-slate { --tip-luminos: #94a3b8; }
+
+[data-theme="dark"] .tip-rand .slot-input[class*="ant-"],
+[data-theme="dark"] .incasare-foaie .form-group .form-control.tip-text.slot-input[class*="ant-"],
+[data-theme="dark"] .culori-tip-grila .culoare-tip-optiune.slot-input {
+  color: var(--tip-luminos) !important;
+}
+
+/* Culorile unui tip de antrenament (în fereastra de jos din Setări) */
 .culori-tip-grila {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 12px;
   justify-items: center;
-  margin-bottom: 14px;
+  margin: 4px 0 8px;
 }
 
 .culori-tip-grila .culoare-tip-optiune.slot-input {
@@ -1870,80 +2165,93 @@ header {
   height: 44px;
   padding: 0;
   border-radius: 50%;
-  border-width: 3px;
+  border-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   background-color: currentColor !important;
 }
 
+/* Cea aleasă: inel în culoarea ei și bifă, ca la Aspect */
 .culori-tip-grila .culoare-tip-optiune.activ {
-  box-shadow: 0 0 0 3px var(--card-bg), 0 0 0 5px var(--primary);
+  box-shadow: 0 0 0 3px var(--m-card), 0 0 0 5px currentColor;
 }
 
-.culoare-tip-fara {
-  width: 100%;
-  flex-direction: row;
-  padding: 10px;
-  font-size: 0.85rem;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+.culoare-tip-optiune:not(.activ) .setari-bifa {
+  visibility: hidden;
 }
 
+/* „Fără culoare”: bulină goală, tăiată */
 .culoare-tip-fara::before {
   content: '';
+  flex-shrink: 0;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid;
+  border: 2px solid #cbd5e1;
   box-sizing: border-box;
-}
-
-.setari-lista-sterge {
-  flex: 0 0 auto;
-  width: 34px;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--input-glass-bg);
-  cursor: pointer;
-}
-
-.setari-lista-sterge svg {
-  width: 16px;
-  height: 16px;
-  stroke: #b91c1c;
+  background: linear-gradient(135deg, transparent 44%, #94a3b8 44%, #94a3b8 56%, transparent 56%);
 }
 
 .setari-lista-adauga {
-  margin-top: 2px;
-  font-size: 0.85rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--m-accent-text);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.setari-lista-adauga:active {
+  background: var(--m-btn);
+}
+
+.setari-lista-adauga svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
 .setari-lista-nota {
   font-size: 0.78rem;
-  color: var(--text-muted);
+  color: var(--m-muted);
   line-height: 1.4;
 }
 
-/* Setări › Abonamente: rânduri (nume + rezumat) și formularul de editare */
+/* Setări › Abonamente: rânduri (nume + rezumat) în card; abonamentul se modifică în fereastra de jos */
 .setari-abonament-rand {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  color: var(--text);
-  font-family: inherit;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.setari-abonament-rand:active {
+  background: var(--m-btn);
 }
 
 .setari-abonament-rand > span:first-child {
@@ -1959,34 +2267,28 @@ header {
 
 .setari-abonament-rand small {
   font-size: 0.76rem;
-  color: var(--text-muted);
-}
-
-.setari-abonament-form {
-  background: var(--card-bg);
-  border: 1px solid var(--glass-border);
-  border-radius: 14px;
-  padding: 12px;
+  color: var(--m-muted);
 }
 
 .setari-abonament-campuri {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-  gap: 0 8px;
+  gap: 8px;
 }
 
-.setari-abonament-campuri .form-group[hidden],
-.setari-lista-adauga[hidden] {
+.setari-abonament-campuri .form-group[hidden] {
   display: none;
 }
 
-.setari-abonament-bifa {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 0.85rem;
-  font-weight: 600;
+/* „O singură dată per client”: card cu comutator, ca rândurile din Notificări */
+.incasare-foaie .form-group.setari-abonament-bifa {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -1994,31 +2296,74 @@ header {
   display: none;
 }
 
-.setari-abonament-bifa input {
-  width: 18px;
-  height: 18px;
-  margin: 1px 0 0;
-  flex: 0 0 auto;
-  accent-color: var(--primary);
-}
-
 .setari-abonament-bifa small {
   display: block;
   font-size: 0.76rem;
-  font-weight: 400;
-  color: var(--text-muted);
+  font-weight: 500;
+  color: var(--m-muted);
 }
 
-.setari-abonament-butoane {
+#formAbFel button {
+  font-size: 0.8rem;
+}
+
+/* Setări › Link de înscriere: numele cu „Salvează” în același card, link-ul în card, dedesubt pastilele */
+.setari-cod-rand {
+  position: relative;
   display: flex;
-  gap: 6px;
-  margin: 4px 0 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 8px 14px;
 }
 
-.setari-abonament-butoane .btn {
+.setari-cod-camp {
   flex: 1;
   min-width: 0;
-  white-space: nowrap;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+}
+
+.setari-cod-salveaza {
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--accent-light-rgb), 0.38);
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--m-accent-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.setari-link-bloc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setari-link-bloc[hidden] {
+  display: none;
+}
+
+.setari-link-bloc .lista-titlu {
+  margin-bottom: -2px;
+}
+
+.setari-link-text {
+  position: relative;
+  padding: 14px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--m-accent-text);
+  word-break: break-all;
 }
 
 /* ECRANUL CLIENTEI (rol „clienta”): ecran propriu peste aplicație, sertarul (z-index 10001) rămâne deasupra */
@@ -2694,6 +3039,75 @@ html[data-rol="clienta"] #bottomNav {
   padding: 4px 14px;
 }
 
+/* Notificări blocate / indisponibile: un card cu clopoțelul tăiat, ce pierzi și pașii (deschiși direct) */
+.setari-notif-ajutor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0 12px;
+}
+
+.setari-notif-sus {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.setari-notif-sus > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 0.88rem;
+}
+
+.setari-notif-sus small {
+  font-size: 0.78rem;
+  color: var(--m-muted);
+  line-height: 1.35;
+}
+
+.setari-notif-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(185, 28, 28, 0.12);
+  border: 1px solid rgba(185, 28, 28, 0.25);
+}
+
+.setari-notif-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #b91c1c;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-theme="dark"] .setari-notif-icon svg {
+  stroke: #f87171;
+}
+
+.setari-pasi {
+  position: relative;
+  margin: 0;
+  padding: 10px 0 0 20px;
+  border-top: 1px solid var(--m-divider);
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--m-text);
+}
+
+.setari-pasi li + li {
+  margin-top: 6px;
+}
+
 .setare-notificare {
   display: flex;
   align-items: center;
@@ -2704,7 +3118,7 @@ html[data-rol="clienta"] #bottomNav {
 }
 
 .setare-notificare + .setare-notificare {
-  border-top: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+  border-top: 1px solid var(--m-divider);
 }
 
 .setare-notificare > span {
@@ -2717,44 +3131,53 @@ html[data-rol="clienta"] #bottomNav {
 
 .setare-notificare small {
   font-size: 0.74rem;
-  color: var(--text-muted);
+  color: var(--m-muted);
   line-height: 1.3;
 }
 
+/* Comutatorul (singurul din aplicație), de sticlă: oprit = sticlă cu cerc alb în relief,
+   pornit = exact nuanțele pastilei alese (e în aceeași regulă cu .pastile-egale button.active) */
 .comutator {
   appearance: none;
   -webkit-appearance: none;
   flex-shrink: 0;
   position: relative;
-  width: 42px;
-  height: 24px;
+  width: 48px;
+  height: 28px;
   margin: 0;
-  border-radius: 12px;
-  background: var(--text-muted);
-  opacity: 0.45;
+  border-radius: 999px;
+  border: 1px solid var(--m-border);
+  background: rgba(120, 120, 128, 0.16);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .comutator::after {
   content: '';
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #fff;
-  transition: transform 0.2s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.comutator:checked {
-  background: var(--primary);
-  opacity: 1;
+[data-theme="dark"] .comutator {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .comutator:checked::after {
-  transform: translateX(18px);
+  transform: translateX(20px);
+}
+
+.comutator:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .notificari-gol {
@@ -3897,16 +4320,6 @@ select.poza-comp-data {
   }
 }
 
-.inscriere-link-afisat {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--primary);
-  word-break: break-all;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: var(--primary-light);
-}
-
 .auth-nota-antrenor {
   font-size: 0.82rem;
   line-height: 1.4;
@@ -3927,6 +4340,19 @@ select.poza-comp-data {
   border-radius: 50%;
   border: 2px solid #fff;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Subsolul doar în meniul principal: în submeniuri dispare, iar ecranul ocupă și locul lui (până jos, peste bara telefonului) */
+.app-drawer.in-submeniu .drawer-footer {
+  display: none;
+}
+
+.app-drawer.in-submeniu .drawer-view-layer:not(#drawerMainView) {
+  bottom: 0;
+}
+
+.app-drawer.in-submeniu .drawer-view-layer:not(#drawerMainView) .drawer-body {
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }
 
 .drawer-footer {
@@ -4746,6 +5172,11 @@ select.form-control {
 .slot-select-type.ant-lightgreen, .slot-input.ant-lightgreen { background-color: rgba(220, 252, 231, 0.92) !important; color: #15803d !important; border-color: #86efac !important; }
 .slot-select-type.ant-yellow, .slot-input.ant-yellow { background-color: rgba(254, 249, 195, 0.92) !important; color: #a16207 !important; border-color: #fde047 !important; }
 .slot-select-type.ant-turquoise, .slot-input.ant-turquoise { background-color: rgba(204, 251, 241, 0.92) !important; color: #0f766e !important; border-color: #5eead4 !important; }
+.slot-select-type.ant-fuchsia, .slot-input.ant-fuchsia { background-color: rgba(250, 232, 255, 0.92) !important; color: #a21caf !important; border-color: #f0abfc !important; }
+.slot-select-type.ant-blue, .slot-input.ant-blue { background-color: rgba(219, 234, 254, 0.92) !important; color: #1d4ed8 !important; border-color: #93c5fd !important; }
+.slot-select-type.ant-lime, .slot-input.ant-lime { background-color: rgba(236, 252, 203, 0.92) !important; color: #4d7c0f !important; border-color: #bef264 !important; }
+.slot-select-type.ant-brown, .slot-input.ant-brown { background-color: rgba(245, 235, 224, 0.92) !important; color: #92400e !important; border-color: #d6b48a !important; }
+.slot-select-type.ant-slate, .slot-input.ant-slate { background-color: rgba(241, 245, 249, 0.92) !important; color: #475569 !important; border-color: #cbd5e1 !important; }
 .slot-select-type.ant-burgundy, .slot-input.ant-burgundy { background-color: rgba(255, 228, 230, 0.92) !important; color: #881337 !important; border-color: #fda4af !important; }
 
 /* Fișă: telefon și email (linkuri tel: / mailto:) */
@@ -6699,6 +7130,11 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   flex-shrink: 0;
 }
 
+/* Conținut scris din JS (ex. abonamentul): copiii lui se așază ca și cum ar fi direct în fereastră */
+.incasare-foaie-corp {
+  display: contents;
+}
+
 .incasare-foaie-titlu {
   margin: 0 0 6px;
   font-size: 1.15rem;
@@ -7087,26 +7523,42 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
 .badge-expirat { background: #f8d7da; color: #721c24; }
 .badge-arhivat { background: var(--border); color: var(--text); }
 
-/* Bifa „Arată și arhivate” și bifele din listele de clienți (Anunț, Trimite planul): în stilul aplicației, nu pătratul alb standard */
+/* Bifele din toată aplicația (Mesaj nou, Trimite planul, acordurile, lista de cumpărături): cerc de sticlă;
+   bifat = exact nuanțele pastilei alese (în aceeași regulă cu .pastile-egale button.active), cu ✓ în culoarea accentului */
 #checkArataArhivate,
-.trimite-plan-rand input[type="checkbox"] {
+input.bifa-sticla,
+.trimite-plan-rand input[type="checkbox"],
+.checkin-bifa input[type="checkbox"],
+.inscriere-acord input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
   flex-shrink: 0;
-  border: 1.5px solid var(--glass-border-subtle);
-  border-radius: 5px;
-  background: var(--primary-light);
-  box-shadow: inset 0 1px 2px rgba(var(--primary-dark-rgb), 0.12);
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  position: relative;
+  border-radius: 50%;
+  border: 1.5px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-#checkArataArhivate:checked,
-.trimite-plan-rand input[type="checkbox"]:checked {
-  background: var(--primary) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L19 7'/%3E%3C/svg%3E") center / 12px no-repeat;
-  border-color: var(--primary);
+#checkArataArhivate:checked::after,
+input.bifa-sticla:checked::after,
+.trimite-plan-rand input[type="checkbox"]:checked::after,
+.checkin-bifa input[type="checkbox"]:checked::after,
+.inscriere-acord input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 6px;
+  height: 11px;
+  border: solid var(--m-accent-text);
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .form-group {
@@ -7256,7 +7708,8 @@ details[open] > summary .summary-sageata {
 #modalNoutatiBackdrop,
 #modalProgresExBackdrop,
 #modalObiectivBackdrop,
-#modalPozaProfilBackdrop {
+#modalPozaProfilBackdrop,
+#modalSetariBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
@@ -7899,11 +8352,7 @@ details[open] > summary .summary-sageata {
 }
 
 .trimite-plan-rand input {
-  width: 18px;
-  height: 18px;
   flex-shrink: 0;
-  accent-color: var(--primary);
-  margin: 0;
 }
 
 .trimite-plan-text {
@@ -7988,7 +8437,8 @@ details[open] > summary .summary-sageata {
 .plan-chip,
 .poze-comp-unghiuri .inscriere-chip,
 .progres-ex-masuri button,
-.obiectiv-pastile button {
+.obiectiv-pastile button,
+.pastile-egale button {
   border-radius: 16px;
   border: 1px solid var(--glass-border);
   background: var(--card-bg);
@@ -8003,7 +8453,8 @@ details[open] > summary .summary-sageata {
 .plan-chip:active,
 .poze-comp-unghiuri .inscriere-chip:active,
 .progres-ex-masuri button:active,
-.obiectiv-pastile button:active {
+.obiectiv-pastile button:active,
+.pastile-egale button:active {
   transform: scale(0.96);
 }
 
@@ -8011,7 +8462,14 @@ details[open] > summary .summary-sageata {
 .plan-chip.is-activ,
 .poze-comp-unghiuri .inscriere-chip.active,
 .progres-ex-masuri button.active,
-.obiectiv-pastile button.active {
+.obiectiv-pastile button.active,
+.pastile-egale button.active,
+.comutator:checked,
+#checkArataArhivate:checked,
+input.bifa-sticla:checked,
+.trimite-plan-rand input[type="checkbox"]:checked,
+.checkin-bifa input[type="checkbox"]:checked,
+.inscriere-acord input[type="checkbox"]:checked {
   background: rgba(var(--accent-rgb), 0.26);
   color: var(--primary);
   font-weight: 800;
@@ -8028,7 +8486,8 @@ details[open] > summary .summary-sageata {
 [data-theme="dark"] .plan-chip,
 [data-theme="dark"] .poze-comp-unghiuri .inscriere-chip,
 [data-theme="dark"] .progres-ex-masuri button,
-[data-theme="dark"] .obiectiv-pastile button {
+[data-theme="dark"] .obiectiv-pastile button,
+[data-theme="dark"] .pastile-egale button {
   color: rgba(255, 255, 255, 0.52);
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
@@ -8040,7 +8499,14 @@ details[open] > summary .summary-sageata {
 [data-theme="dark"] .plan-chip.is-activ,
 [data-theme="dark"] .poze-comp-unghiuri .inscriere-chip.active,
 [data-theme="dark"] .progres-ex-masuri button.active,
-[data-theme="dark"] .obiectiv-pastile button.active {
+[data-theme="dark"] .obiectiv-pastile button.active,
+[data-theme="dark"] .pastile-egale button.active,
+[data-theme="dark"] .comutator:checked,
+[data-theme="dark"] #checkArataArhivate:checked,
+[data-theme="dark"] input.bifa-sticla:checked,
+[data-theme="dark"] .trimite-plan-rand input[type="checkbox"]:checked,
+[data-theme="dark"] .checkin-bifa input[type="checkbox"]:checked,
+[data-theme="dark"] .inscriere-acord input[type="checkbox"]:checked {
   background: rgba(var(--accent-rgb), 0.24);
   color: var(--accent-purple-light);
   border-color: rgba(var(--accent-pale-rgb), 0.35);
@@ -10514,22 +10980,6 @@ html:not([data-theme="dark"]) .mesaj-bife.citit {
   background: rgba(var(--accent-rgb), 0.1);
 }
 
-.anunt-rand input.bifa-sticla {
-  width: 26px;
-  height: 26px;
-  margin: 0;
-  border-radius: 50%;
-  border: 1.5px solid var(--m-border);
-  background: var(--m-btn);
-  box-shadow: var(--m-float-sm);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-}
-
-.anunt-rand input.bifa-sticla:checked {
-  border-color: rgba(var(--accent-light-rgb), 0.5);
-  background: rgba(var(--accent-rgb), 0.85) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12l5 5L19 7'/%3E%3C/svg%3E") center / 14px no-repeat;
-}
-
 .mesaj-nou-info {
   padding: 0 14px;
   font-size: 0.74rem;
@@ -11717,8 +12167,10 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   margin-top: 6px;
 }
 
-/* Poza de profil se deschide din meniu: deasupra lui */
-#modalPozaProfilBackdrop {
+/* Poza de profil, fereastra din Setări și codul QR al link-ului de înscriere se deschid din meniu: deasupra lui */
+#modalPozaProfilBackdrop,
+#modalSetariBackdrop,
+#modalQrBackdrop {
   z-index: 10002;
 }
 
@@ -11930,6 +12382,8 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   color: var(--text-muted);
 }
 
+/* Scanarea codului de bare (stilul nou): camera pe tot ecranul, cadrul cu linia care scanează, × de sticlă sus
+   și jos o fereastră de sticlă cu indicația și codul scris de mână */
 .scanare-strat {
   position: fixed;
   inset: 0;
@@ -11950,23 +12404,143 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   position: absolute;
   left: 10%;
   right: 10%;
-  top: 30%;
+  top: 26%;
   height: 22%;
-  border: 3px solid rgba(255, 255, 255, 0.9);
-  border-radius: 14px;
-  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 22px;
+  box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
 
+.scanare-cadru i {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 2px;
+  border-radius: 2px;
+  background: rgb(var(--accent-rgb));
+  box-shadow: 0 0 12px 2px rgba(var(--accent-rgb), 0.7);
+  animation: scanare-linie 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes scanare-linie {
+  from { transform: translateY(-38px); }
+  to { transform: translateY(38px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanare-cadru i { animation: none; }
+}
+
+.scanare-inchide {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 14px);
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(20, 20, 24, 0.45);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.scanare-lanterna {
+  left: auto;
+  right: 16px;
+}
+
+.scanare-lanterna[hidden] {
+  display: none;
+}
+
+.scanare-lanterna.activ {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.scanare-lanterna.activ svg {
+  stroke: #111;
+}
+
+.scanare-inchide svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
 .scanare-jos {
-  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
-  background: var(--card-bg);
-  color: var(--text);
-  font-size: 0.85rem;
-  font-weight: 700;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: -24px;
+  padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+  border-radius: 26px 26px 0 0;
+  border-top: 1px solid var(--m-border);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  color: var(--m-text);
   text-align: center;
 }
 
+/* Peste camera neagră sticla deschisă ar ieși gri: fundal aproape opac, pe fiecare temă */
+[data-theme="dark"] .scanare-jos {
+  background: rgba(22, 24, 30, 0.9);
+}
+
+.scanare-jos .lista-sticla {
+  align-self: stretch;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.scanare-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 2px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.14);
+  border: 1px solid rgba(var(--accent-light-rgb), 0.45);
+  box-shadow: var(--m-float-sm);
+}
+
+.scanare-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: var(--m-accent-text);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.scanare-mesaj {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.scanare-detaliu {
+  font-size: 0.8rem;
+  color: var(--m-muted);
+  line-height: 1.35;
+}
+
+/* Fără cameră (permisiune refuzată): doar fereastra de jos, peste pagină */
 .scanare-strat.fara-camera video,
 .scanare-strat.fara-camera .scanare-cadru {
   display: none;
@@ -11974,7 +12548,20 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 
 .scanare-strat.fara-camera {
   justify-content: flex-end;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.scanare-strat.fara-camera .scanare-icon {
+  background: rgba(185, 28, 28, 0.12);
+  border-color: rgba(185, 28, 28, 0.25);
+}
+
+.scanare-strat.fara-camera .scanare-icon svg {
+  stroke: #b91c1c;
+}
+
+[data-theme="dark"] .scanare-strat.fara-camera .scanare-icon svg {
+  stroke: #f87171;
 }
 
 /* ==========================================
@@ -12108,8 +12695,384 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .nutriscore { display: inline-flex; gap: 2px; margin-top: 2px; }
 .nutriscore i { font-style: normal; font-weight: 800; font-size: 0.7rem; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; color: #ffffff; opacity: 0.35; }
 .nutriscore i.activ { opacity: 1; transform: scale(1.18); }
-.nutriscore .ns-a { background: #038141; } .nutriscore .ns-b { background: #85bb2f; } .nutriscore .ns-c { background: #e6a700; }
-.nutriscore .ns-d { background: #ee8100; } .nutriscore .ns-e { background: #e63e11; }
+.nutriscore .ns-a, .verifica-ns.ns-a { background: #038141; } .nutriscore .ns-b, .verifica-ns.ns-b { background: #85bb2f; } .nutriscore .ns-c, .verifica-ns.ns-c { background: #e6a700; }
+.nutriscore .ns-d, .verifica-ns.ns-d { background: #ee8100; } .nutriscore .ns-e, .verifica-ns.ns-e { background: #e63e11; }
+
+/* Meniu › Verifică un produs (stilul nou): căutarea, rândurile de produs, capul cu poza, cifrele, „Pe scurt” și eticheta */
+.verifica-rezultate,
+.verifica-cantitate {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.verifica-rezultate:empty {
+  display: none;
+}
+
+/* Butonul principal (Notează în jurnal / Trimite în chat / Salvează produsul), cu înălțimea lui (altfel flex: 1 îl strânge) */
+.verifica-continut > .fisa-scurta-actiune,
+.produs-nou > .fisa-scurta-actiune {
+  flex: none;
+  min-height: 44px;
+  margin-top: 4px;
+}
+
+.verifica-rand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--m-divider);
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.verifica-rand:active {
+  background: var(--m-btn);
+}
+
+.verifica-rand .nutritie-imagine {
+  border-radius: 12px;
+  border-color: var(--m-border);
+}
+
+.verifica-rand-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.verifica-rand-text b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.92rem;
+}
+
+.verifica-rand-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.76rem;
+  color: var(--m-muted);
+}
+
+.verifica-ns {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.verifica-cap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+}
+
+.verifica-cap > * {
+  position: relative;
+}
+
+.verifica-cap .nutritie-imagine.mare {
+  border-radius: 18px;
+  border-color: var(--m-border);
+}
+
+.verifica-cap-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.verifica-cap-text b {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--m-text);
+}
+
+.verifica-cap-text small {
+  font-size: 0.82rem;
+  color: var(--m-muted);
+}
+
+.orar-cifre.verifica-cifre {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.verifica-cifre .orar-cifra {
+  padding: 10px;
+  border-radius: 18px;
+}
+
+.verifica-cifre .orar-cifra b {
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
+.verifica-cifre .orar-cifra b small {
+  margin-left: 1px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.verifica-unitate {
+  flex-shrink: 0;
+  padding-right: 10px;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.verifica-scurt,
+.verifica-eticheta-rand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--m-divider);
+  color: var(--m-text);
+}
+
+.verifica-scurt {
+  padding: 11px 14px;
+}
+
+.verifica-scurt > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.verifica-scurt small {
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--m-muted);
+}
+
+.verifica-pastila {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.verifica-pastila.verde { background: rgba(21, 128, 61, 0.14); color: #15803d; }
+.verifica-pastila.portocaliu { background: rgba(245, 176, 65, 0.22); color: #b45309; }
+.verifica-pastila.rosu { background: rgba(185, 28, 28, 0.12); color: #b91c1c; }
+[data-theme="dark"] .verifica-pastila.verde { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
+[data-theme="dark"] .verifica-pastila.portocaliu { background: rgba(251, 191, 36, 0.16); color: #fbbf24; }
+[data-theme="dark"] .verifica-pastila.rosu { background: rgba(248, 113, 113, 0.14); color: #f87171; }
+
+.verifica-eticheta-rand {
+  padding: 10px 14px;
+  font-size: 0.88rem;
+}
+
+.verifica-eticheta-rand.sub span {
+  padding-left: 14px;
+  color: var(--m-muted);
+}
+
+.verifica-eticheta-rand.sub b {
+  font-weight: 500;
+}
+
+/* „Verificate recent” / bannerul de comparație: butonul mic din dreapta titlului */
+.lista-titlu.verifica-titlu-rand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.verifica-titlu-btn {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--m-accent-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.verifica-compara-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.verifica-compara-banner > * {
+  position: relative;
+}
+
+.verifica-compara-banner .verifica-rand-text small {
+  white-space: normal;
+}
+
+/* Alergenii (pastile) și ingredientele */
+.verifica-alergeni {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.verifica-ingrediente {
+  position: relative;
+  padding: 11px 14px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--m-muted);
+}
+
+/* Comparația: două coloane, valoarea mai bună verde */
+.verifica-comp-capete,
+.verifica-comp-rand {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--m-divider);
+}
+
+.verifica-comp-capete {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  padding-left: calc(33% + 8px);
+}
+
+.verifica-comp-cap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.verifica-comp-cap b {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+
+.verifica-comp-cap small {
+  font-size: 0.7rem;
+  color: var(--m-muted);
+}
+
+.verifica-comp-rand span {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.verifica-comp-rand b {
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--m-text);
+}
+
+.verifica-comp-rand b.mai-bun {
+  color: #15803d;
+}
+
+[data-theme="dark"] .verifica-comp-rand b.mai-bun {
+  color: #4ade80;
+}
+
+/* Produsul nou: rânduri de sticlă cu eticheta în stânga și câmpul în dreapta */
+.produs-nou {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.produs-nou > * {
+  flex-shrink: 0;
+}
+
+.produs-nou-rand {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--m-divider);
+  cursor: text;
+}
+
+.produs-nou-rand span {
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--m-text);
+}
+
+.produs-nou-rand input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--m-text);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: right;
+  outline: none;
+}
+
+.produs-nou-renunta {
+  align-self: center;
+  padding: 8px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--m-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
 .nutritie-calcul { gap: 10px; }
 .nutritie-kcal-mare { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-weight: 700; color: var(--primary); }
 .nutritie-calcul .nutritie-kcal-mare b { font-size: 1.9rem; line-height: 1; }

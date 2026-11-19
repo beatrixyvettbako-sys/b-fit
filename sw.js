@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v235';
+const CACHE_NAME = 'bfit-cache-v236';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,6 +14,7 @@ const ASSETS_TO_CACHE = [
   './icon-petrol.png',
   './icon-mov.png',
   './icon-red.png',
+  './icon-orange.png',
   './icon-green.png',
   './icon-graphite.png'
 ];

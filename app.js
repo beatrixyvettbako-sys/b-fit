@@ -152,6 +152,7 @@ const i18n = {
     accentPetrol: "Petrol",
     accentBlue: "Albastru",
     accentRed: "Roșu",
+    accentOrange: "Portocaliu",
     accentGreen: "Verde",
     accentGraphite: "Grafit",
     accentMov: "Mov",
@@ -301,6 +302,7 @@ const i18n = {
     accentPetrol: "Teal",
     accentBlue: "Blue",
     accentRed: "Red",
+    accentOrange: "Orange",
     accentGreen: "Green",
     accentGraphite: "Graphite",
     accentMov: "Violet",
@@ -1129,6 +1131,8 @@ function navigheazaSubMeniu(strat) {
     if (el) el.classList.remove('active');
   });
 
+  // Subsolul (Powered by, versiunea, linkurile legale) apare doar în meniul principal
+  document.getElementById('appDrawer').classList.toggle('in-submeniu', strat !== 'main');
   if (layers[strat]) {
     layers[strat].classList.add('active');
     // Antetul meniului (avatar mic la derulare) urmează derularea ecranului deschis, nu a celui de dinainte
@@ -1138,6 +1142,11 @@ function navigheazaSubMeniu(strat) {
   if ((strat === 'settings' || strat === 'settingsSignup') && rolUtilizator === 'antrenor') incarcaCodInscriere();
   if (strat === 'settings') actualizeazaRezumatNotificari();
   if (strat === 'noutati') document.getElementById('noutatiLista').innerHTML = htmlNoutati(noutatiPentruRol(), true);
+  if (strat === 'feedback') {
+    document.getElementById('feedbackFormular').hidden = false;
+    document.getElementById('feedbackTrimis').hidden = true;
+    document.getElementById('feedbackEcran').textContent = ecranFeedback()[1] || tr('curent', 'current');
+  }
   if (strat === 'settingsNotifications') randeazaSetariNotificari();
   if (strat === 'profile') {
     inchideRanduriProfil();
@@ -1155,6 +1164,15 @@ function navigheazaSubMeniu(strat) {
 // ---- Feedback (meniu › Raportează o problemă): text în tabelul feedback (trimite_feedback), fișierul în R2 prin Worker ----
 let feedbackTip = 'problema';
 let feedbackFisier = null; // Blob gata de trimis (poza deja micșorată)
+
+// Ecranul de sub meniu: [cheia trimisă cu mesajul, numele afișat în formular]
+function ecranFeedback() {
+  if (rolUtilizator === 'clienta') {
+    const tab = document.querySelector('#clientaNav button.active');
+    return tab ? [tab.id.replace('clientaTab_', ''), tab.textContent.trim()] : ['', ''];
+  }
+  return [tipTabCurent, (document.getElementById('pageTitle')?.textContent || '').trim()];
+}
 
 function seteazaTipFeedback(tip) {
   feedbackTip = tip;
@@ -1192,13 +1210,23 @@ async function alegeFisierFeedback(input) {
       return;
     }
   }
+  stergeFisierFeedback();
   feedbackFisier = blob;
-  document.getElementById('feedbackFisierNume').textContent = `${(blob.size / 1024 / 1024).toFixed(1)} MB · ${fisier.name}`;
+  // Miniatura: poza sau primul cadru din video, ca să se vadă ce se trimite
+  const url = URL.createObjectURL(blob);
+  document.getElementById('feedbackMiniatura').innerHTML = blob.type.startsWith('video/')
+    ? `<video src="${url}#t=0.1" muted playsinline preload="metadata"></video>` : `<img src="${url}" alt="">`;
+  const marime = blob.size < 1024 * 1024 ? `${Math.max(1, Math.round(blob.size / 1024))} KB` : `${(blob.size / 1024 / 1024).toFixed(1)} MB`;
+  document.getElementById('feedbackFisierNume').textContent = `${marime} · ${fisier.name}`;
   document.getElementById('feedbackFisierAles').hidden = false;
 }
 
 function stergeFisierFeedback() {
   feedbackFisier = null;
+  const miniatura = document.getElementById('feedbackMiniatura');
+  const el = miniatura.firstElementChild;
+  if (el) URL.revokeObjectURL(el.src.split('#')[0]);
+  miniatura.innerHTML = '';
   document.getElementById('feedbackFisierAles').hidden = true;
 }
 
@@ -1234,7 +1262,7 @@ async function trimiteFeedback() {
     }
     const versiune = ((document.querySelector('script[src*="app.js"]')?.getAttribute('src') || '').match(/fitFinal(\d+)/) || [])[1] || '';
     const { error } = await supabaseClient.rpc('trimite_feedback', {
-      p_tip: feedbackTip, p_mesaj: mesaj, p_ecran: `${rolUtilizator}/${tipTabCurent}`, p_versiune: versiune, p_fisier: cheie
+      p_tip: feedbackTip, p_mesaj: mesaj, p_ecran: `${rolUtilizator}/${ecranFeedback()[0]}`, p_versiune: versiune, p_fisier: cheie
     });
     if (error) {
       showToast(/prea_multe/.test(error.message)
@@ -1245,8 +1273,8 @@ async function trimiteFeedback() {
     campText.value = '';
     stergeFisierFeedback();
     seteazaTipFeedback('problema');
-    showToast(tr('Mulțumim! Mesajul a fost trimis.', 'Thank you! Your message has been sent.'));
-    navigheazaSubMeniu('main');
+    document.getElementById('feedbackFormular').hidden = true;
+    document.getElementById('feedbackTrimis').hidden = false;
   } finally {
     btn.disabled = false;
     btn.textContent = tr('Trimite', 'Send');
@@ -2049,17 +2077,37 @@ if ('serviceWorker' in navigator) {
   }
 })();
 
-// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea fundalului (--bg), ca să pară parte din ecran,
-// ca antetul transparent; cât e splash-ul (html.app-pornire) rămân albastre ca el (meta theme-color din index.html)
+// Barele telefonului (ceas/baterie sus, linia de gesturi jos) iau culoarea de sus a ecranului, ca să pară parte din el,
+// ca antetul transparent: --bg plus pata de lumină din stânga-sus a .stil-nou-ecran (accent 0,28 / 0,35 pe întunecat,
+// „circle at 8% 4%”, până la 40%), în medie pe lățimea ecranului; după derulare, cu sticla antetului peste
+// (alb 0,55 / rgb(20,28,34) 0,6, ca în style.css). Cât e splash-ul (html.app-pornire) rămân albastre ca el.
 (function () {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (!meta) return;
   const actualizeaza = () => {
-    if (document.documentElement.classList.contains('app-pornire')) return;
-    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-    if (bg) meta.setAttribute('content', bg);
+    const root = document.documentElement;
+    if (root.classList.contains('app-pornire')) return;
+    const stil = getComputedStyle(root);
+    const bg = stil.getPropertyValue('--bg').trim().match(/^#([0-9a-f]{6})$/i);
+    const accent = stil.getPropertyValue('--accent-rgb').split(',').map(Number);
+    if (!bg || accent.length !== 3) return;
+    const baza = [0, 2, 4].map(i => parseInt(bg[1].substr(i, 2), 16));
+    const W = innerWidth, H = innerHeight, cx = 0.08 * W, cy = 0.04 * H;
+    const raza = 0.4 * Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy));
+    const intunecat = root.dataset.theme === 'dark';
+    let a = 0;
+    for (let i = 0; i <= 8; i++) a += Math.max(0, 1 - Math.hypot(W * i / 8 - cx, cy) / raza) * (intunecat ? 0.35 : 0.28) / 9;
+    let culoare = baza.map((v, i) => v + (accent[i] - v) * a);
+    const ecranClient = document.getElementById('clientaScreen');
+    const sticla = document.body.classList.contains('orar-titlu-strans')
+      || (ecranClient && ecranClient.classList.contains('titlu-strans') && ecranClient.getClientRects().length);
+    if (sticla) culoare = culoare.map((v, i) => intunecat ? v + ([20, 28, 34][i] - v) * 0.6 : v + (255 - v) * 0.55);
+    meta.setAttribute('content', '#' + culoare.map(v => Math.round(v).toString(16).padStart(2, '0')).join(''));
   };
   new MutationObserver(actualizeaza).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'data-accent', 'class'] });
+  const observaClasa = el => el && new MutationObserver(actualizeaza).observe(el, { attributes: true, attributeFilter: ['class'] });
+  observaClasa(document.body);
+  observaClasa(document.getElementById('clientaScreen'));
   actualizeaza();
 })();
 
@@ -2200,7 +2248,8 @@ const ANTRENAMENTE_IMPLICITE = [
   { text: "Cardio + Abdomen", cls: "ant-burgundy" },
   { text: "Sedinta Gratuita", cls: "ant-lightgreen" }
 ];
-const CULORI_ANTRENAMENT = ['ant-orange', 'ant-yellow', 'ant-red', 'ant-burgundy', 'ant-pink', 'ant-purple', 'ant-darkblue', 'ant-lightblue', 'ant-turquoise', 'ant-lightgreen'];
+// Ordinea e cea din fereastra de culori (5 pe rând, pe nuanțe); clasele sunt în style.css (.slot-input.ant-*)
+const CULORI_ANTRENAMENT = ['ant-red', 'ant-burgundy', 'ant-pink', 'ant-fuchsia', 'ant-purple', 'ant-darkblue', 'ant-blue', 'ant-lightblue', 'ant-turquoise', 'ant-lightgreen', 'ant-lime', 'ant-yellow', 'ant-orange', 'ant-brown', 'ant-slate'];
 const METODE_PLATA_IMPLICITE = ['Cash', 'Card', 'Revolut', 'ING', 'Transfer bancar'];
 const MONEDE = ['RON', 'EUR', 'USD', 'GBP', 'HUF', 'CHF'];
 
@@ -3781,6 +3830,7 @@ function aplicaTraduceriInterfataStatic() {
   document.getElementById('accentBtnPetrolText').innerText = t('accentPetrol');
   document.getElementById('accentBtnBlueText').innerText = t('accentBlue');
   document.getElementById('accentBtnRedText').innerText = t('accentRed');
+  document.getElementById('accentBtnOrangeText').innerText = t('accentOrange');
   document.getElementById('accentBtnGreenText').innerText = t('accentGreen');
   document.getElementById('accentBtnGraphiteText').innerText = t('accentGraphite');
   document.getElementById('accentBtnMovText').innerText = t('accentMov');
@@ -6485,7 +6535,11 @@ function produsDinOff(p, cod) {
     kcal: isNaN(kcal) ? null : rotunjeste1(kcal), proteine: rotunjeste1(n.proteins_100g), carbo: rotunjeste1(n.carbohydrates_100g),
     grasimi: rotunjeste1(n.fat_100g), portie_g: Number(p.serving_quantity) > 0 ? Number(p.serving_quantity) : null, sursa: 'off',
     imagine: p.image_front_small_url || '', imagineMare: p.image_front_url || p.image_front_small_url || '', nutriscore: p.nutriscore_grade || '',
-    saturate: optional(n['saturated-fat_100g']), zaharuri: optional(n.sugars_100g), fibre: optional(n.fiber_100g), sare: optional(n.salt_100g) };
+    saturate: optional(n['saturated-fat_100g']), zaharuri: optional(n.sugars_100g), fibre: optional(n.fiber_100g), sare: optional(n.salt_100g),
+    // Doar la citirea după cod (căutarea prin Worker nu le aduce): alergenii, ingredientele și gramajul pachetului
+    ...(Array.isArray(p.allergens_tags) ? { alergeni: p.allergens_tags.map(t => String(t).replace(/^\w+:/, '')).slice(0, 14),
+      ingrediente: String(p.ingredients_text_ro || p.ingredients_text || '').trim().slice(0, 800),
+      pachet_g: Number(p.product_quantity) > 0 ? Number(p.product_quantity) : null } : {}) };
 }
 
 // Căutare după nume: întâi produsele noastre, apoi Open Food Facts (prin Worker; doar la „Caută”, nu la fiecare literă)
@@ -6535,7 +6589,7 @@ function produsPropriu(a) {
 }
 
 function alegeProdus(lista, i) {
-  if (lista === 'verificare') { verificare.produs = verificare.rezultate[i] || null; return randeazaVerificaProdus(); }
+  if (lista === 'verificare') return arataProdusVerificat(verificare.rezultate[i]);
   if (lista === 'reteta') return alegeIngredient(i);
   if (lista === 'favorite') {
     const f = (nutritie.salvate || []).filter(x => x.tip === 'favorit')[i];
@@ -6552,7 +6606,7 @@ async function produsDupaCod(cod) {
   // Baza noastră și Open Food Facts deodată (înainte, una după alta), ca produsul să apară mai repede
   const [resPropriu, r] = await Promise.all([
     supabaseClient.from('alimente').select('*').eq('cod', cod).maybeSingle(),
-    fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,image_front_url,nutriscore_grade`)
+    fetch(`${URL_OFF}/api/v2/product/${encodeURIComponent(cod)}.json?fields=code,product_name,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,image_front_url,nutriscore_grade,allergens_tags,ingredients_text,ingredients_text_ro,product_quantity`)
       .then(x => x.ok ? x.json() : null).catch(() => null)
   ]);
   if (resPropriu.data) return { produs: produsPropriu(resPropriu.data), complet: true };
@@ -6564,7 +6618,8 @@ async function produsDupaCod(cod) {
 
 async function gasesteDupaCod(cod) {
   showToast(tr('Caut produsul...', 'Looking up the product...'));
-  if (rolUtilizator === 'antrenor') return verificaProdusCod(cod);
+  // Din Verifică un produs (antrenor sau client) doar se afișează eticheta; altfel clientul notează produsul în jurnal
+  if (rolUtilizator === 'antrenor' || verificareDeschisa()) return verificaProdusCod(cod);
   const { produs: p, complet } = await produsDupaCod(cod);
   if (complet) return deschideCantitate(p);
   showToast(p ? tr('Produsul nu are valorile nutriționale complete. Completează-le de pe etichetă.', 'The product has incomplete nutrition data. Fill them in from the label.')
@@ -6834,18 +6889,15 @@ function deschideProdusNou(p) {
 
 // Formularul de produs nou: la client (Nutriție) și la antrenor (Verifică un produs), cu același salvare
 function htmlFormularProdusNou(x, actiuneRenunta) {
-  const camp = (id, et, v, mod) => `<label>${et}<input type="${mod || 'text'}" inputmode="${mod === 'text' ? 'text' : 'decimal'}" id="produsNou_${id}" class="plan-ex-input" value="${v ?? ''}"></label>`;
-  return `<div class="card obiectiv-form">
-      <div class="acasa-antrenament-detalii" style="margin-bottom:8px;">${tr('Valorile de pe etichetă, la 100 g. Produsul rămâne salvat și pentru ceilalți clienți.', 'Values from the label, per 100 g. The product stays saved for other clients too.')}</div>
-      <div class="antr-pers-campuri">${camp('nume', tr('Nume *', 'Name *'), escAttr(x.nume || ''), 'text')}</div>
-      <div class="antr-pers-campuri">${camp('marca', tr('Marcă', 'Brand'), escAttr(x.marca || ''), 'text')}${camp('cod', tr('Cod de bare', 'Barcode'), escAttr(x.cod || ''), 'text')}</div>
-      <div class="antr-pers-campuri">${camp('kcal', tr('Calorii (kcal) *', 'Calories (kcal) *'), x.kcal ?? '')}${camp('proteine', tr('Proteine (g)', 'Protein (g)'), x.proteine ?? '')}</div>
-      <div class="antr-pers-campuri">${camp('carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)'), x.carbo ?? '')}${camp('grasimi', tr('Grăsimi (g)', 'Fat (g)'), x.grasimi ?? '')}</div>
-      <div class="antr-pers-campuri">${camp('portie', tr('Porție (g, opțional)', 'Serving (g, optional)'), x.portie_g ?? '')}</div>
-      <div class="antr-pers-actiuni" style="margin:12px 0 0;">
-        <button type="button" class="btn" onclick="salveazaProdusNou()">${tr('Salvează produsul', 'Save product')}</button>
-        <button type="button" class="btn btn-clear" onclick="${actiuneRenunta}">${tr('Renunță', 'Cancel')}</button>
-      </div>
+  const camp = (id, et, v, text) => `<label class="produs-nou-rand"><span>${et}</span><input type="${text ? 'text' : 'text'}" inputmode="${text ? 'text' : 'decimal'}" id="produsNou_${id}" value="${v ?? ''}" autocomplete="off"></label>`;
+  return `<div class="produs-nou">
+      <div class="profil-nota">${tr('Valorile de pe etichetă, la 100 g. Produsul rămâne salvat și pentru ceilalți.', 'Values from the label, per 100 g. The product stays saved for others too.')}</div>
+      <div class="lista-sticla">${camp('nume', tr('Nume *', 'Name *'), escAttr(x.nume || ''), true)}${camp('marca', tr('Marcă', 'Brand'), escAttr(x.marca || ''), true)}${camp('cod', tr('Cod de bare', 'Barcode'), escAttr(x.cod || ''), true)}</div>
+      <div class="lista-titlu">${tr('La 100 g', 'Per 100 g')}</div>
+      <div class="lista-sticla">${camp('kcal', tr('Calorii (kcal) *', 'Calories (kcal) *'), x.kcal ?? '')}${camp('proteine', tr('Proteine (g)', 'Protein (g)'), x.proteine ?? '')}${camp('carbo', tr('Carbohidrați (g)', 'Carbohydrates (g)'), x.carbo ?? '')}${camp('grasimi', tr('Grăsimi (g)', 'Fat (g)'), x.grasimi ?? '')}</div>
+      <div class="lista-sticla">${camp('portie', tr('Porție (g, opțional)', 'Serving (g, optional)'), x.portie_g ?? '')}</div>
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="salveazaProdusNou()">${tr('Salvează produsul', 'Save product')}</button>
+      <button type="button" class="produs-nou-renunta" onclick="${actiuneRenunta}">${tr('Renunță', 'Cancel')}</button>
     </div>`;
 }
 
@@ -6863,9 +6915,9 @@ async function salveazaProdusNou() {
   if (error && rand.cod && /duplicate|unique/i.test(error.message || '')) return gasesteDupaCod(rand.cod);
   if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
   showToast(tr('✓ Produs salvat', '✓ Product saved'));
-  if (rolUtilizator === 'antrenor') {
-    verificare = { cautare: '', rezultate: [], produs: produsPropriu(data), negasit: '' };
-    return randeazaVerificaProdus();
+  if (rolUtilizator === 'antrenor' || verificareDeschisa()) {
+    verificare = { cautare: '', rezultate: [], produs: null, negasit: '', grame: 100, alta: false, alternative: [] };
+    return arataProdusVerificat(produsPropriu(data), true);
   }
   deschideCantitate(Object.assign({}, data, { kcal: Number(data.kcal), proteine: Number(data.proteine), carbo: Number(data.carbo), grasimi: Number(data.grasimi), sursa: 'propriu' }));
 }
@@ -6891,15 +6943,23 @@ async function pornesteScanare() {
   const strat = document.createElement('div');
   strat.id = 'scanareStrat';
   strat.className = 'scanare-strat';
+  // Stilul nou: camera pe tot ecranul, cadrul cu linia care scanează, × de sticlă sus, jos o fereastră de sticlă
+  // cu indicația și codul scris de mână (cifrele de sub bare)
   strat.innerHTML = `<video playsinline muted autoplay></video>
-    <div class="scanare-cadru"></div>
+    <div class="scanare-cadru"><i></i></div>
+    <button type="button" class="scanare-inchide" onclick="opresteScanare()" aria-label="${tr('Închide', 'Close')}" title="${tr('Închide', 'Close')}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <!-- Lanterna: apare doar unde camera o are (Android; pe iPhone browserul nu o dă) -->
+    <button type="button" class="scanare-inchide scanare-lanterna" hidden aria-label="${tr('Lanternă', 'Flashlight')}" title="${tr('Lanternă', 'Flashlight')}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2h8l-1 6H9L8 2zM9 8l1 13a2 2 0 0 0 4 0l1-13"/><path d="M12 12v2"/></svg></button>
     <div class="scanare-jos">
-      <div>${tr('Ține codul de bare în cadru', 'Keep the barcode inside the frame')}</div>
-      <div class="antr-pers-adauga" style="margin:10px 0 0;">
-        <input type="text" inputmode="numeric" id="scanareCodManual" class="plan-ex-input" maxlength="14" placeholder="${tr('sau scrie codul', 'or type the code')}">
-        <button type="button" class="btn" onclick="codManualScanare()">OK</button>
-      </div>
-      <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="opresteScanare()">${tr('Închide', 'Close')}</button>
+      <span class="scanare-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg></span>
+      <b class="scanare-mesaj">${tr('Ține codul de bare în cadru', 'Keep the barcode inside the frame')}</b>
+      <small class="scanare-detaliu">${tr('Se citește singur. Merge și cu codul scris:', 'It reads by itself. You can also type the code:')}</small>
+      <div class="lista-sticla"><div class="setari-cod-rand">
+        <input type="text" inputmode="numeric" id="scanareCodManual" class="setari-cod-camp" maxlength="14" autocomplete="off" placeholder="${tr('Cifrele de sub bare', 'The digits under the bars')}" onkeydown="if (event.key === 'Enter') codManualScanare()">
+        <button type="button" class="setari-cod-salveaza" onclick="codManualScanare()">${tr('Caută', 'Search')}</button>
+      </div></div>
     </div>`;
   document.body.appendChild(strat);
   const video = strat.querySelector('video');
@@ -6911,6 +6971,7 @@ async function pornesteScanare() {
       scanare.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
       video.srcObject = scanare.stream;
       await video.play().catch(() => {});
+      pregatesteLanterna(scanare.stream);
       const detector = new BarcodeDetector({ formats: formate });
       const bucla = async () => {
         if (!scanare || scanare.oprit) return;
@@ -6927,14 +6988,31 @@ async function pornesteScanare() {
       await scanare.cititor.decodeFromConstraints({ video: { facingMode: 'environment' }, audio: false }, video, (rezultat) => {
         if (rezultat && scanare && !scanare.oprit && /^\d{6,14}$/.test(rezultat.getText())) codGasitScanare(rezultat.getText());
       });
+      setTimeout(() => pregatesteLanterna(video.srcObject), 500);
     }
   } catch (e) {
     // Fără cameră (permisiune refuzată): fereastra rămâne pentru codul scris de mână
     const s = scanare && scanare.stream;
     if (s && s.getTracks) s.getTracks().forEach(t => t.stop());
     strat.classList.add('fara-camera');
-    strat.querySelector('.scanare-jos > div').textContent = tr('Nu am putut porni camera. Dă voie aplicației să folosească camera (setările telefonului) sau scrie codul de sub bare.', 'Couldn’t start the camera. Allow camera access (phone settings) or type the code under the bars.');
+    strat.querySelector('.scanare-mesaj').textContent = tr('Camera nu a pornit', 'The camera didn’t start');
+    strat.querySelector('.scanare-detaliu').textContent = tr('Dă voie aplicației să folosească camera (din setările telefonului) sau scrie cifrele de sub bare:', 'Allow the app to use the camera (in your phone settings) or type the digits under the bars:');
   }
+}
+
+// Butonul de lanternă, doar dacă camera din spate o are (getCapabilities().torch)
+function pregatesteLanterna(stream) {
+  const pista = stream && stream.getVideoTracks ? stream.getVideoTracks()[0] : null;
+  const btn = document.querySelector('#scanareStrat .scanare-lanterna');
+  if (!pista || !btn || !(pista.getCapabilities && pista.getCapabilities().torch)) return;
+  btn.hidden = false;
+  btn.onclick = async () => {
+    const pornita = !btn.classList.contains('activ');
+    try {
+      await pista.applyConstraints({ advanced: [{ torch: pornita }] });
+      btn.classList.toggle('activ', pornita);
+    } catch (e) {}
+  };
 }
 
 function opresteScanare() {
@@ -6960,70 +7038,389 @@ function codManualScanare() {
   codGasitScanare(cod);
 }
 
-// ---- Antrenorul: meniu › Verifică un produs. Scanare sau căutare, doar ca să vadă eticheta (nu se notează nicăieri) ----
-let verificare = { cautare: '', rezultate: [], produs: null, negasit: '' };
+// ---- Meniu › Verifică un produs (antrenor și client): scanare sau căutare, doar ca să vezi eticheta. Nu se notează nicăieri
+// (antrenorul nu scrie în jurnalul clientului); doar „Adaugă produsul în bază” scrie în baza comună (alimente). ----
+let verificare = { cautare: '', rezultate: [], produs: null, negasit: '', grame: 100, alta: false, alternative: [], compara: null, comparatie: null };
+const CHEIE_VERIFICATE = 'BFIT_VERIFICATE_RECENT';
+let timerCautareVerificare = null;
+
+const verificareDeschisa = () => !!document.getElementById('drawerVerificaProdusView')?.classList.contains('active')
+  && !!document.getElementById('appDrawer')?.classList.contains('open');
 
 function deschideVerificaProdus() {
-  verificare = { cautare: '', rezultate: [], produs: null, negasit: '' };
+  verificare = { cautare: '', rezultate: [], produs: null, negasit: '', grame: 100, alta: false, alternative: [], compara: null, comparatie: null };
   navigheazaSubMeniu('verificaProdus');
   randeazaVerificaProdus();
+}
+
+// Înapoi (antetul și butonul telefonului): din comparație la primul produs, din alegerea celui de-al doilea la primul,
+// din produs / formular la căutare, din căutare în meniu
+function inapoiVerificaProdus() {
+  if (verificare.comparatie || (verificare.compara && !verificare.produs)) {
+    const p = verificare.compara || verificare.comparatie[0];
+    verificare.comparatie = null;
+    verificare.compara = null;
+    return arataProdusVerificat(p, true);
+  }
+  if (verificare.produs || verificare.formular) {
+    verificare.produs = null;
+    verificare.formular = null;
+    return randeazaVerificaProdus();
+  }
+  navigheazaSubMeniu('main');
+}
+
+// Ultimele produse verificate, pe acest dispozitiv (doar o comoditate, nu date importante)
+function verificateRecent() {
+  try { return JSON.parse(localStorage.getItem(CHEIE_VERIFICATE) || '[]'); } catch (e) { return []; }
+}
+
+function tineMinteVerificat(p) {
+  const cheie = x => x.cod || x.id || x.nume;
+  const lista = [p].concat(verificateRecent().filter(x => cheie(x) !== cheie(p))).slice(0, 8);
+  try { localStorage.setItem(CHEIE_VERIFICATE, JSON.stringify(lista)); } catch (e) {}
+}
+
+function stergeVerificateRecent() {
+  try { localStorage.removeItem(CHEIE_VERIFICATE); } catch (e) {}
+  randeazaRezultateVerificare();
+}
+
+function arataProdusVerificat(p, faraAlternative) {
+  if (!p) return;
+  // Al doilea produs pentru comparație (același produs, din altă listă, nu se compară cu el însuși)
+  if (verificare.compara) {
+    const cheie = x => x.cod || x.id || x.nume;
+    if (cheie(p) === cheie(verificare.compara)) return showToast(tr('Alege alt produs decât primul.', 'Pick a different product from the first one.'), 'error');
+    verificare.comparatie = [verificare.compara, p];
+    verificare.compara = null;
+    verificare.produs = null;
+    tineMinteVerificat(p);
+    randeazaVerificaProdus();
+    completeazaDetaliiProdus(p);
+    return document.querySelector('#drawerVerificaProdusView .drawer-body')?.scrollTo(0, 0);
+  }
+  verificare.produs = p;
+  verificare.formular = null;
+  verificare.grame = 100;
+  verificare.alta = false;
+  verificare.alternative = faraAlternative ? [] : alternativeMaiBune(p, Array.isArray(verificare.rezultate) ? verificare.rezultate : []);
+  tineMinteVerificat(p);
+  randeazaVerificaProdus();
+  document.querySelector('#drawerVerificaProdusView .drawer-body')?.scrollTo(0, 0);
+  completeazaDetaliiProdus(p);
+}
+
+// Produsele găsite prin căutare n-au alergenii, ingredientele și pachetul: le cerem după cod, o dată, și redesenăm
+async function completeazaDetaliiProdus(p) {
+  if (p.sursa !== 'off' || !p.cod || p.alergeni !== undefined || p.detaliiCerute) return;
+  p.detaliiCerute = true;
+  const { produs } = await produsDupaCod(p.cod).catch(() => ({}));
+  if (!produs || produs.alergeni === undefined) return;
+  Object.assign(p, { alergeni: produs.alergeni, ingrediente: produs.ingrediente, pachet_g: produs.pachet_g });
+  tineMinteVerificat(p);
+  if (verificare.produs === p) {
+    const grame = verificare.grame, alta = verificare.alta;
+    randeazaVerificaProdus();
+    verificare.grame = grame;
+    verificare.alta = alta;
+    randeazaCantitateVerificare();
+  }
+}
+
+// Alergenii din Open Food Facts, pe numele lor (cei 14 de pe etichetele din UE)
+const ALERGENI_RO = { milk: ['Lapte', 'Milk'], gluten: ['Gluten', 'Gluten'], eggs: ['Ouă', 'Eggs'], nuts: ['Fructe cu coajă', 'Tree nuts'],
+  peanuts: ['Arahide', 'Peanuts'], soybeans: ['Soia', 'Soy'], fish: ['Pește', 'Fish'], crustaceans: ['Crustacee', 'Crustaceans'],
+  molluscs: ['Moluște', 'Molluscs'], celery: ['Țelină', 'Celery'], mustard: ['Muștar', 'Mustard'], 'sesame-seeds': ['Susan', 'Sesame'],
+  'sulphur-dioxide-and-sulphites': ['Sulfiți', 'Sulphites'], lupin: ['Lupin', 'Lupin'] };
+
+function htmlAlergeniIngrediente(p) {
+  const alergeni = (p.alergeni || []).map(a => ALERGENI_RO[a] ? tr(...ALERGENI_RO[a]) : null).filter(Boolean);
+  if (!alergeni.length && !p.ingrediente) return '';
+  return `<div class="lista-titlu">${tr('Alergeni și ingrediente', 'Allergens and ingredients')}</div>
+    <div class="lista-sticla">
+      ${alergeni.length ? `<div class="verifica-scurt"><span>${tr('Conține', 'Contains')}</span><span class="verifica-alergeni">${alergeni.map(a => `<span class="verifica-pastila portocaliu">${escAttr(a)}</span>`).join('')}</span></div>` : ''}
+      ${p.ingrediente ? `<div class="verifica-ingrediente">${escAttr(p.ingrediente)}</div>` : ''}
+    </div>`;
+}
+
+// Alternative din aceeași căutare: Nutri-Score mai bun sau cu cel puțin 30% mai multe proteine la aceleași calorii
+function alternativeMaiBune(p, lista) {
+  const nota = x => 'abcde'.indexOf(String(x.nutriscore || '').toLowerCase());
+  const protKcal = x => x.kcal > 0 ? x.proteine / x.kcal : 0;
+  return lista.filter(x => x !== p && x.kcal > 0 && (
+      (nota(x) >= 0 && nota(p) >= 0 && nota(x) < nota(p))
+      || (protKcal(p) > 0 && x.proteine >= 5 && protKcal(x) >= protKcal(p) * 1.3)))
+    .sort((x, y) => ((nota(x) < 0 ? 9 : nota(x)) - (nota(y) < 0 ? 9 : nota(y))) || protKcal(y) - protKcal(x))
+    .slice(0, 3);
+}
+
+// Un rând de produs: poza, numele, marca, caloriile la 100 g și litera Nutri-Score
+function htmlVerificaRand(p, onclick) {
+  const ns = /^[a-e]$/i.test(p.nutriscore || '') ? `<span class="verifica-ns ns-${p.nutriscore.toLowerCase()}" title="Nutri-Score">${p.nutriscore.toUpperCase()}</span>` : '';
+  return `<button type="button" class="verifica-rand" onclick="${onclick}">
+      ${htmlImagineProdus(p.imagine, 'mica')}
+      <span class="verifica-rand-text"><b>${escAttr(p.nume)}</b><small>${p.marca ? escAttr(p.marca) + ' · ' : ''}${Math.round(p.kcal)} kcal ${tr('la 100 g', 'per 100 g')}</small></span>
+      ${ns}<span class="drawer-nav-arrow">›</span>
+    </button>`;
+}
+
+// „Pe scurt”: zahărul, grăsimile și sarea după pragurile semaforului de pe etichete (la 100 g; la băuturi pragurile sunt mai mici),
+// proteinele și fibrele după regulile UE pentru „sursă de” / „bogat în”
+const PRAGURI_SEMAFOR = [['zaharuri', 5, 22.5, 'Zahăr', 'Sugar'], ['saturate', 1.5, 5, 'Grăsimi saturate', 'Saturated fat'],
+  ['grasimi', 3, 17.5, 'Grăsimi', 'Fat'], ['sare', 0.3, 1.5, 'Sare', 'Salt']];
+
+function evaluareProdus(p) {
+  const rez = [];
+  PRAGURI_SEMAFOR.forEach(([cheie, putin, mult, ro, en]) => {
+    const v = p[cheie];
+    if (v === null || v === undefined || v === '' || isNaN(v)) return;
+    const [cls, et] = v <= putin ? ['verde', tr('Puțin', 'Low')] : v > mult ? ['rosu', tr('Mult', 'High')] : ['portocaliu', tr('Mediu', 'Medium')];
+    rez.push({ et: tr(ro, en), val: `${formatKg(v)} g`, cls, pastila: et });
+  });
+  const procProt = p.kcal > 0 ? p.proteine * 4 / p.kcal * 100 : 0;
+  if (procProt >= 12) rez.push({ et: tr('Proteine', 'Protein'), val: tr(`${Math.round(procProt)}% din calorii`, `${Math.round(procProt)}% of calories`),
+    cls: 'verde', pastila: procProt >= 20 ? tr('Bogat', 'High') : tr('Sursă bună', 'Good source') });
+  if (p.fibre >= 3) rez.push({ et: tr('Fibre', 'Fibre'), val: `${formatKg(p.fibre)} g`, cls: 'verde', pastila: p.fibre >= 6 ? tr('Bogat', 'High') : tr('Sursă bună', 'Good source') });
+  return rez;
+}
+
+function htmlPeScurt(p) {
+  const rez = evaluareProdus(p);
+  if (!rez.length) return '';
+  return `<div class="lista-titlu">${tr('Pe scurt, la 100 g', 'At a glance, per 100 g')}</div>
+    <div class="lista-sticla">${rez.map(x => `<div class="verifica-scurt"><span>${x.et}<small>${x.val}</small></span><span class="verifica-pastila ${x.cls}">${x.pastila}</span></div>`).join('')}</div>
+    <div class="profil-nota">${tr('Zahăr, grăsimi, sare: pragurile semaforului de pe etichete (la băuturi sunt mai mici). Proteine și fibre: regulile UE pentru „sursă de” și „bogat în”.',
+      'Sugar, fat, salt: the traffic-light thresholds used on labels (lower for drinks). Protein and fibre: the EU rules for “source of” and “high in”.')}</div>`;
+}
+
+// Cifrele pentru cantitatea aleasă: calorii, proteine, carbohidrați, grăsimi
+function htmlCifreVerificare(p, g) {
+  const v = valoriPentruGrame(p, g);
+  const cifra = (nr, et, cls) => `<div class="orar-cifra${cls ? ' orar-cifra-' + cls : ''}"><b>${nr}</b><span>${et}</span></div>`;
+  return `<div class="orar-cifre verifica-cifre">${cifra(Math.round(v.kcal), 'kcal', 'accent')}${cifra(`${formatKg(v.proteine)}<small>g</small>`, tr('proteine', 'protein'))}${cifra(`${formatKg(v.carbo)}<small>g</small>`, tr('carbo', 'carbs'))}${cifra(`${formatKg(v.grasimi)}<small>g</small>`, tr('grăsimi', 'fat'))}</div>`;
+}
+
+function alegeGrameVerificare(g) {
+  verificare.alta = g === null;
+  if (g !== null) verificare.grame = g;
+  randeazaCantitateVerificare();
+  if (verificare.alta) document.getElementById('verificaGrame')?.focus();
+}
+
+function grameScriseVerificare(inp) {
+  const g = parseFloat(String(inp.value).replace(',', '.'));
+  if (!(g > 0 && g <= 5000)) return;
+  verificare.grame = g;
+  document.getElementById('verificaCifre').innerHTML = htmlCifreVerificare(verificare.produs, g);
+}
+
+function randeazaCantitateVerificare() {
+  const p = verificare.produs;
+  const portie = p.portie_g && p.portie_g !== 100 ? p.portie_g : null;
+  const pachet = p.pachet_g && p.pachet_g !== 100 && p.pachet_g !== portie ? p.pachet_g : null;
+  const optiuni = [[100, '100 g']].concat(portie ? [[portie, tr(`O porție · ${formatKg(portie)} g`, `1 serving · ${formatKg(portie)} g`)]] : [])
+    .concat(pachet ? [[pachet, tr(`Pachetul · ${formatKg(pachet)} g`, `Pack · ${formatKg(pachet)} g`)]] : []);
+  const alta = verificare.alta || !optiuni.some(([g]) => g === verificare.grame);
+  document.getElementById('verificaCantitate').innerHTML = `
+    <div class="pastile-egale">${optiuni.map(([g, et]) => `<button type="button"${!alta && verificare.grame === g ? ' class="active"' : ''} onclick="alegeGrameVerificare(${g})">${et}</button>`).join('')}
+      <button type="button"${alta ? ' class="active"' : ''} onclick="alegeGrameVerificare(null)">${tr('Altă cantitate', 'Other amount')}</button></div>
+    ${alta ? `<div class="lista-sticla"><div class="setari-cod-rand"><input type="number" inputmode="decimal" id="verificaGrame" class="setari-cod-camp" value="${verificare.grame}" oninput="grameScriseVerificare(this)"><span class="verifica-unitate">g</span></div></div>` : ''}
+    <div id="verificaCifre">${htmlCifreVerificare(p, verificare.grame)}</div>`;
+}
+
+// Eticheta la 100 g, ca pe ambalaj (rândurile lipsă nu apar), în rânduri de sticlă
+function htmlEtichetaVerificare(p) {
+  const rand = (et, v, sub) => v === null || v === undefined ? '' : `<div class="verifica-eticheta-rand${sub ? ' sub' : ''}"><span>${et}</span><b>${formatKg(v)} g</b></div>`;
+  const sursa = p.sursa === 'off' ? 'Open Food Facts' : p.sursa === 'baza' ? 'USDA FoodData Central' : tr('adăugat de un utilizator B-Fit', 'added by a B-Fit user');
+  return `<div class="lista-titlu">${tr('Valori nutriționale la 100 g', 'Nutrition facts per 100 g')}</div>
+    <div class="lista-sticla">
+      <div class="verifica-eticheta-rand"><span>${tr('Energie', 'Energy')}</span><b>${Math.round(p.kcal)} kcal</b></div>
+      ${rand(tr('Grăsimi', 'Fat'), p.grasimi)}${rand(tr('din care saturate', 'of which saturates'), p.saturate, true)}
+      ${rand(tr('Carbohidrați', 'Carbohydrates'), p.carbo)}${rand(tr('din care zaharuri', 'of which sugars'), p.zaharuri, true)}
+      ${rand(tr('Fibre', 'Fibre'), p.fibre)}${rand(tr('Proteine', 'Protein'), p.proteine)}${rand(tr('Sare', 'Salt'), p.sare)}
+    </div>
+    <div class="profil-nota">${tr('Sursa', 'Source')}: ${sursa}</div>`;
+}
+
+// Rezumatul produsului, trimis prin meniul de partajare al telefonului
+function trimiteProdusVerificat() {
+  if (verificare.produs) partajeaza(textRezumatProdus(verificare.produs));
 }
 
 function randeazaVerificaProdus() {
   const el = document.getElementById('verificaProdusContinut');
   if (!el) return;
   const v = verificare;
+  const client = rolUtilizator === 'clienta';
   if (v.produs) {
     const p = v.produs;
-    el.innerHTML = `<button type="button" class="btn btn-clear" onclick="verificare.produs = null; randeazaVerificaProdus()">‹ ${tr('Alt produs', 'Another product')}</button>
-      <div class="card nutritie-cantitate">
-        ${htmlCapProdus(p)}
-        <div class="nutritie-calcul">${htmlCalculProdus(p, 100)}
-          ${p.portie_g && p.portie_g !== 100 ? `<div class="acasa-antrenament-detalii nutritie-dupa">${tr(`O porție (${formatKg(p.portie_g)} g): ${Math.round(valoriPentruGrame(p, p.portie_g).kcal)} kcal`, `One serving (${formatKg(p.portie_g)} g): ${Math.round(valoriPentruGrame(p, p.portie_g).kcal)} kcal`)}</div>` : ''}
-        </div>
-        ${htmlEticheta(p, true)}
+    el.innerHTML = `<div class="lista-sticla verifica-cap">
+        ${htmlImagineProdus(p.imagine || p.imagineMare, 'mare')}
+        <div class="verifica-cap-text"><b>${escAttr(p.nume)}</b>${p.marca ? `<small>${escAttr(p.marca)}</small>` : ''}${htmlNutriScore(p.nutriscore)}</div>
+      </div>
+      <div class="lista-titlu">${tr('Cantitate', 'Amount')}</div>
+      <div class="verifica-cantitate" id="verificaCantitate"></div>
+      ${htmlPeScurt(p)}
+      ${v.alternative.length ? `<div class="lista-titlu">${tr('Alternative mai bune din căutare', 'Better options from the search')}</div>
+        <div class="lista-sticla">${v.alternative.map((x, k) => htmlVerificaRand(x, `arataProdusVerificat(verificare.alternative[${k}])`)).join('')}</div>` : ''}
+      ${htmlAlergeniIngrediente(p)}
+      ${htmlEtichetaVerificare(p)}
+      <!-- Clientul: îl poate nota în jurnal; antrenorul: îl trimite în conversația unui client (nu scrie în jurnalul lui) -->
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="${client ? 'noteazaProdusVerificat()' : 'trimiteProdusInChat()'}">
+        ${client ? tr('Notează în jurnal', 'Add to my log') : tr('Trimite unui client în chat', 'Send to a client in chat')}</button>
+      <div class="pastile-egale">
+        <button type="button" onclick="trimiteProdusVerificat()">${tr('Distribuie', 'Share')}</button>
+        <button type="button" onclick="incepeComparatia()">${tr('Compară', 'Compare')}</button>
       </div>`;
+    randeazaCantitateVerificare();
     return;
   }
-  // Produs negăsit sau fără calorii: antrenorul îl poate adăuga în baza comună, de pe etichetă
+  if (v.comparatie) {
+    el.innerHTML = htmlComparatie(v.comparatie[0], v.comparatie[1]);
+    return;
+  }
+  // Produs negăsit sau fără calorii: oricine îl poate adăuga în baza comună, de pe etichetă
   if (v.formular) {
     el.innerHTML = htmlFormularProdusNou(v.formular, 'verificare.formular = null; randeazaVerificaProdus()');
     return;
   }
-  el.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Vezi eticheta unui produs, de exemplu ca să-i spui unui client dacă e o alegere bună. Nu se salvează nimic.', 'See a product’s label, for example to tell a client whether it is a good choice. Nothing is saved.')}</div>
-    <button type="button" class="btn nutritie-scaneaza" onclick="pornesteScanare()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>
-      ${tr('Scanează codul de bare', 'Scan the barcode')}</button>
-    <div class="antr-pers-adauga">
-      <input type="search" id="verificaCauta" class="plan-ex-input" maxlength="60" value="${escAttr(v.cautare)}" placeholder="${tr('Caută produsul (ex: iaurt grecesc)', 'Search the product (e.g. greek yogurt)')}" onkeydown="if (event.key === 'Enter') cautaVerificaProdus()">
-      <button type="button" class="btn" onclick="cautaVerificaProdus()">${tr('Caută', 'Search')}</button>
+  el.innerHTML = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><h1>${v.compara ? tr('Compară', 'Compare') : tr('Verifică un produs', 'Check a product')}</h1></div></div>
+    ${v.compara ? `<div class="lista-sticla verifica-compara-banner">
+        ${htmlImagineProdus(v.compara.imagine, 'mica')}
+        <span class="verifica-rand-text"><b>${escAttr(v.compara.nume)}</b><small>${tr('Alege al doilea produs: scanează-l, caută-l sau ia-l din recente.', 'Pick the second product: scan it, search it or pick a recent one.')}</small></span>
+        <button type="button" class="verifica-titlu-btn" onclick="inapoiVerificaProdus()">${tr('Renunță', 'Cancel')}</button>
+      </div>` : `<div class="profil-nota">${client
+      ? tr('Vezi eticheta unui produs, de exemplu în magazin. Nu se notează în jurnal.', 'See a product’s label, for example in the shop. Nothing goes into your log.')
+      : tr('Vezi eticheta unui produs, de exemplu ca să-i spui unui client dacă e o alegere bună. Nu se salvează nimic.', 'See a product’s label, for example to tell a client whether it is a good choice. Nothing is saved.')}</div>`}
+    <div class="lista-sticla">
+      <button type="button" class="drawer-nav-card" onclick="pornesteScanare()">
+        <div class="drawer-nav-card-left">
+          <div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg></div>
+          <div><div class="drawer-nav-title">${tr('Scanează codul de bare', 'Scan the barcode')}</div><div class="drawer-nav-desc">${tr('Îndreaptă camera spre cod', 'Point the camera at the code')}</div></div>
+        </div>
+        <div class="drawer-nav-arrow">›</div>
+      </button>
     </div>
-    ${v.negasit ? `<div class="progres-gol">${escAttr(v.negasit)}</div>` : ''}
-    ${v.negasit && v.cod ? `<button type="button" class="btn btn-clear" style="width:100%;" onclick="verificare.formular = Object.assign({ cod: verificare.cod }, verificare.partial || {}); randeazaVerificaProdus()">+ ${tr('Adaugă produsul în bază', 'Add the product to the database')}</button>` : ''}
-    ${v.rezultate === 'cautare' ? `<div class="progres-gol">${tr('Se caută...', 'Searching...')}</div>`
-      : v.rezultate.length ? v.rezultate.map((p, i) => htmlProdusRand(p, i, 'verificare')).join('')
-      : v.cautare ? `<div class="progres-gol">${tr('Nu am găsit produsul.', 'Product not found.')}</div>` : ''}`;
+    <span class="istoric-cauta-camp verifica-cauta">
+      <input type="search" id="verificaCauta" maxlength="60" value="${escAttr(v.cautare)}" placeholder="${tr('Sau caută după nume (ex: iaurt grecesc)', 'Or search by name (e.g. greek yogurt)')}" autocomplete="off"
+        oninput="cautaVerificaProdusIntarziat()" onkeydown="if (event.key === 'Enter') { clearTimeout(timerCautareVerificare); cautaVerificaProdus(); }">
+    </span>
+    <div class="verifica-rezultate" id="verificaRezultate"></div>`;
+  randeazaRezultateVerificare();
+}
+
+// Doar lista de sub căutare (câmpul rămâne, cu tot cu tastatura deschisă)
+function randeazaRezultateVerificare() {
+  const el = document.getElementById('verificaRezultate');
+  if (!el) return;
+  const v = verificare;
+  const recente = verificateRecent();
+  el.innerHTML = `${v.negasit ? `<div class="profil-nota">${escAttr(v.negasit)}</div>` : ''}
+    ${v.negasit && v.cod ? `<div class="lista-sticla"><button type="button" class="setari-lista-adauga" onclick="verificare.formular = Object.assign({ cod: verificare.cod }, verificare.partial || {}); randeazaVerificaProdus()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${tr('Adaugă produsul în bază', 'Add the product to the database')}</button></div>` : ''}
+    ${v.rezultate === 'cautare' ? `<div class="profil-nota">${tr('Se caută...', 'Searching...')}</div>`
+      : v.rezultate.length ? `<div class="lista-titlu">${tr('Rezultate', 'Results')}</div><div class="lista-sticla">${v.rezultate.map((p, i) => htmlVerificaRand(p, `alegeProdus('verificare', ${i})`)).join('')}</div>`
+      : v.cautare ? `<div class="profil-nota">${tr('Nu am găsit produsul. Încearcă alt nume sau scanează codul.', 'Product not found. Try another name or scan the code.')}</div>`
+      : recente.length ? `<div class="lista-titlu verifica-titlu-rand"><span>${tr('Verificate recent', 'Recently checked')}</span><button type="button" class="verifica-titlu-btn" onclick="stergeVerificateRecent()">${tr('Șterge', 'Clear')}</button></div><div class="lista-sticla">${recente.map((p, i) => htmlVerificaRand(p, `arataProdusVerificat(verificateRecent()[${i}], true)`)).join('')}</div>` : ''}`;
+}
+
+// Clientul: produsul verificat intră în Nutriție, la masa potrivită orei, cu cantitatea aleasă aici (se confirmă acolo)
+async function noteazaProdusVerificat() {
+  const p = verificare.produs;
+  if (!p) return;
+  const ora = new Date().getHours();
+  const masa = ora < 11 ? 'mic_dejun' : ora < 16 ? 'pranz' : ora < 21 ? 'cina' : 'gustare';
+  const grame = verificare.grame;
+  inchideMeniuLateral();
+  await deschideAdaugaAliment(masa);
+  deschideCantitate(p);
+  const camp = document.getElementById('nutritieGrame');
+  if (camp && grame !== 100) { camp.value = grame; actualizeazaCalculCantitate(); }
+}
+
+function textRezumatProdus(p) {
+  const linii = [`${p.nume}${p.marca ? ` (${p.marca})` : ''}`,
+    `${tr('La 100 g', 'Per 100 g')}: ${Math.round(p.kcal)} kcal · ${formatKg(p.proteine)} g ${tr('proteine', 'protein')} · ${formatKg(p.carbo)} g ${tr('carbohidrați', 'carbs')} · ${formatKg(p.grasimi)} g ${tr('grăsimi', 'fat')}`]
+    .concat(evaluareProdus(p).map(x => `${x.et}: ${x.pastila.toLowerCase()} (${x.val})`));
+  if (/^[a-e]$/i.test(p.nutriscore || '')) linii.push(`Nutri-Score: ${p.nutriscore.toUpperCase()}`);
+  return linii.join('\n');
+}
+
+// Antrenorul: alege clientul, iar rezumatul intră în câmpul conversației (îl trimite el, după ce îl vede)
+function trimiteProdusInChat() {
+  if (!verificare.produs) return;
+  textMesajPregatit = textRezumatProdus(verificare.produs);
+  inchideMeniuLateral();
+  deschideMesajNou();
+  if (!selectieMesaj) textMesajPregatit = null;
+}
+
+function incepeComparatia() {
+  verificare.compara = verificare.produs;
+  verificare.produs = null;
+  verificare.comparatie = null;
+  randeazaVerificaProdus();
+  document.querySelector('#drawerVerificaProdusView .drawer-body')?.scrollTo(0, 0);
+}
+
+// Două produse alăturat, la 100 g; valoarea mai bună e verde (mai puțin la calorii, zahăr, grăsimi, sare; mai mult la proteine, fibre)
+function htmlComparatie(a, b) {
+  const nota = x => 'abcde'.indexOf(String(x.nutriscore || '').toLowerCase());
+  const rand = (et, cheie, unitate, maiBineMic) => {
+    const va = a[cheie], vb = b[cheie];
+    if ((va === null || va === undefined) && (vb === null || vb === undefined)) return '';
+    const bun = (x, y) => x !== null && x !== undefined && y !== null && y !== undefined && x !== y && (maiBineMic ? x < y : x > y);
+    const cel = (v, ok) => `<b class="${ok ? 'mai-bun' : ''}">${v === null || v === undefined ? '–' : (cheie === 'kcal' ? Math.round(v) : formatKg(v)) + ' ' + unitate}</b>`;
+    return `<div class="verifica-comp-rand"><span>${et}</span>${cel(va, maiBineMic !== null && bun(va, vb))}${cel(vb, maiBineMic !== null && bun(vb, va))}</div>`;
+  };
+  const cap = (p, k) => `<button type="button" class="verifica-comp-cap" onclick="verificare.comparatie = null; arataProdusVerificat(${k ? 'verificare.comparatieB' : 'verificare.comparatieA'}, true)">
+      ${htmlImagineProdus(p.imagine || p.imagineMare, 'mica')}<b>${escAttr(p.nume)}</b>${p.marca ? `<small>${escAttr(p.marca)}</small>` : ''}</button>`;
+  verificare.comparatieA = a;
+  verificare.comparatieB = b;
+  const nsA = nota(a), nsB = nota(b);
+  return `<div class="orar-titlu-mare"><div class="orar-titlu-text"><h1>${tr('Comparație', 'Comparison')}</h1></div></div>
+    <div class="lista-sticla verifica-comp">
+      <div class="verifica-comp-capete">${cap(a, 0)}${cap(b, 1)}</div>
+      ${nsA >= 0 || nsB >= 0 ? `<div class="verifica-comp-rand"><span>Nutri-Score</span><b class="${nsA >= 0 && nsB >= 0 && nsA < nsB ? 'mai-bun' : ''}">${nsA >= 0 ? a.nutriscore.toUpperCase() : '–'}</b><b class="${nsA >= 0 && nsB >= 0 && nsB < nsA ? 'mai-bun' : ''}">${nsB >= 0 ? b.nutriscore.toUpperCase() : '–'}</b></div>` : ''}
+      ${rand(tr('Calorii', 'Calories'), 'kcal', 'kcal', true)}${rand(tr('Proteine', 'Protein'), 'proteine', 'g', false)}
+      ${rand(tr('Carbohidrați', 'Carbs'), 'carbo', 'g', null)}${rand(tr('Zahăr', 'Sugar'), 'zaharuri', 'g', true)}
+      ${rand(tr('Grăsimi', 'Fat'), 'grasimi', 'g', true)}${rand(tr('Saturate', 'Saturates'), 'saturate', 'g', true)}
+      ${rand(tr('Sare', 'Salt'), 'sare', 'g', true)}${rand(tr('Fibre', 'Fibre'), 'fibre', 'g', false)}
+    </div>
+    <div class="profil-nota">${tr('La 100 g. Verde = varianta mai bună pe rândul acela. Atinge un produs ca să-l deschizi.', 'Per 100 g. Green = the better option on that row. Tap a product to open it.')}</div>`;
+}
+
+function cautaVerificaProdusIntarziat() {
+  clearTimeout(timerCautareVerificare);
+  timerCautareVerificare = setTimeout(cautaVerificaProdus, 600);
 }
 
 async function cautaVerificaProdus() {
-  const q = (document.getElementById('verificaCauta').value || '').trim();
-  if (q.length < 2) return;
-  verificare.cautare = q;
+  const q = (document.getElementById('verificaCauta')?.value || '').trim();
   verificare.negasit = '';
+  if (q.length < 2) {
+    verificare.cautare = '';
+    verificare.rezultate = [];
+    return randeazaRezultateVerificare();
+  }
+  verificare.cautare = q;
   verificare.rezultate = 'cautare';
-  randeazaVerificaProdus();
-  verificare.rezultate = await cautaProduse(q);
-  randeazaVerificaProdus();
+  randeazaRezultateVerificare();
+  const rez = await cautaProduse(q);
+  if (verificare.cautare !== q) return; // între timp s-a scris altceva
+  verificare.rezultate = rez;
+  randeazaRezultateVerificare();
 }
 
 async function verificaProdusCod(cod) {
   const { produs, complet } = await produsDupaCod(cod);
-  verificare.negasit = complet ? '' : produs
+  if (complet) return arataProdusVerificat(produs, true);
+  verificare.negasit = produs
     ? tr(`„${produs.nume}”: produsul nu are valorile nutriționale în Open Food Facts.`, `“${produs.nume}”: the product has no nutrition data in Open Food Facts.`)
     : tr(`Codul ${cod} nu e în Open Food Facts.`, `Code ${cod} is not in Open Food Facts.`);
-  verificare.produs = complet ? produs : null;
-  verificare.cod = complet ? '' : cod;
-  verificare.partial = complet ? null : produs;
+  verificare.produs = null;
+  verificare.cod = cod;
+  verificare.partial = produs;
   verificare.formular = null;
   randeazaVerificaProdus();
 }
@@ -11576,6 +11973,17 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 236, data: '2026-11-19',
+    client: [
+      ['Nou în meniu: Verifică un produs. Scanezi sau cauți un produs din magazin și vezi pe scurt zahărul, sarea și grăsimile, alergenii și ingredientele, apoi îl poți compara cu altul sau nota în jurnal.', 'New in the menu: Check a product. Scan or search a product in the shop and see sugar, salt and fat at a glance, allergens and ingredients, then compare it with another or add it to your log.'],
+      ['Setările și Feedback-ul arată nou. Ai și o culoare nouă, Portocaliu (Setări › Aspect).', 'Settings and Feedback have a new look. There’s also a new colour, Orange (Settings › Appearance).'],
+      ['Dacă notificările sunt blocate, Setări › Notificări îți arată pașii pentru telefonul tău.', 'If notifications are blocked, Settings › Notifications shows you the steps for your phone.']
+    ],
+    antrenor: [
+      ['Verifică un produs, refăcut: pe scurt zahărul, sarea și grăsimile, alergenii, alternative mai bune, comparația a două produse și trimiterea rezumatului unui client în chat.', 'Check a product, redone: sugar, salt and fat at a glance, allergens, better options, comparing two products and sending the summary to a client in chat.'],
+      ['Setările, refăcute: tipurile de antrenament (acum cu 15 culori), metodele de plată și abonamentele se modifică într-o fereastră de jos. Ai și culoarea Portocaliu.', 'Settings, redone: workout types (now with 15 colours), payment methods and subscriptions are edited in a bottom sheet. There’s also the Orange colour.'],
+      ['Codul QR al link-ului de înscriere se deschide din nou peste meniu.', 'The sign-up link QR code opens above the menu again.']
+    ] },
   { v: 234, data: '2026-11-19',
     client: [
       ['Dacă intri cu Google, poza ta de acolo apare singură la profil și o vede și antrenorul.', 'If you sign in with Google, your photo from there shows up on your profile automatically, and your trainer sees it too.']
@@ -12293,7 +12701,6 @@ document.addEventListener('visibilitychange', () => {
 const PARINTE_SUBMENIU = { settingsAppearance: 'settings', settingsLanguage: 'settings', settingsSchedule: 'settings', settingsSignup: 'settings', settingsNotifications: 'settings', settingsWorkouts: 'settings', settingsPayments: 'settings', settingsSubscriptions: 'settings' };
 const MODALE_INAPOI = [
   ['modalInlocuiesteBackdrop', () => inchideInlocuiesteExercitiu()],
-  ['modalCuloareTipBackdrop', () => inchideCuloareTip()],
   ['modalTrimitePlanBackdrop', () => inchideTrimitePlan()],
   ['modalSharePlanBackdrop', () => inchideModalSharePlan()],
   ['modalQrBackdrop', () => inchideModalQr()],
@@ -12301,7 +12708,8 @@ const MODALE_INAPOI = [
   ['modalEditareIncasareBackdrop', () => inchideModalEditareIncasare()],
   ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()],
   ['modalNoutatiBackdrop', () => inchideNoutati()],
-  ['modalPozaProfilBackdrop', () => inchideFoaiePoza()]
+  ['modalPozaProfilBackdrop', () => inchideFoaiePoza()],
+  ['modalSetariBackdrop', () => inchideFoaieSetari()]
 ];
 let ignoraPopstateGarda = false;
 
@@ -12327,6 +12735,7 @@ function pasInapoiTelefon() {
   if (document.getElementById('appDrawer')?.classList.contains('open')) {
     const strat = document.querySelector('#appDrawer [id^="drawer"][id$="View"].active')?.id.replace(/^drawer|View$/g, '');
     const cheie = strat ? strat.charAt(0).toLowerCase() + strat.slice(1) : 'main';
+    if (cheie === 'verificaProdus') return inapoiVerificaProdus;
     if (cheie !== 'main') return () => navigheazaSubMeniu(PARINTE_SUBMENIU[cheie] || 'main');
     return inchideMeniuLateral;
   }
@@ -16171,10 +16580,16 @@ function deschideMesajNou() {
 }
 
 // Un singur client: se deschide conversația, unde se vede și ce v-ați scris înainte
+// Text gata de trimis (ex. rezumatul unui produs din Verifică un produs): intră în câmpul conversației alese
+let textMesajPregatit = null;
+
 function alegeClientMesajNou(id) {
   const c = clientiMesajNou().find(x => x.id === id);
+  const text = textMesajPregatit;
+  textMesajPregatit = null;
   anuleazaMesajNou();
-  if (c) deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+  if (c && text) deschideMesajeCuText(c, text);
+  else if (c) deschideMesaje(c.id, utilizatorCurent.id, c.nume);
 }
 
 function deschideAnuntMesaj() {
@@ -17505,28 +17920,89 @@ async function randeazaSetariNotificari() {
   if (!corp) return;
   const stare = await stareNotificari();
   const textStare = {
-    pornite: tr('Pornite pe acest dispozitiv.', 'On for this device.'),
-    oprite: tr('Oprite pe acest dispozitiv. Pornește-le ca să afli la timp de programări și mesaje, chiar și cu aplicația închisă.', 'Off for this device. Turn them on to hear about bookings and messages in time, even with the app closed.'),
+    pornite: tr('Primești notificări și cu aplicația închisă.', 'You get notifications even with the app closed.'),
+    oprite: tr('Pornește-le ca să afli la timp de programări și mesaje, chiar și cu aplicația închisă.', 'Turn them on to hear about bookings and messages in time, even with the app closed.'),
     blocate: tr('Blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Blocked for B-Fit. You can turn them on in your browser or phone settings.'),
     nesuportat: tr('Pe acest dispozitiv notificările nu sunt disponibile. Pe iPhone, adaugă aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'Notifications aren’t available on this device. On iPhone, add the app to your home screen: Share › “Add to Home Screen”.')
   }[stare];
-  const buton = stare === 'oprite' ? `<button type="button" class="btn" onclick="comutaNotificariSetari()">${tr('Pornește', 'Turn on')}</button>`
-    : stare === 'pornite' ? `<button type="button" class="btn btn-clear" onclick="comutaNotificariSetari()">${tr('Oprește', 'Turn off')}</button>` : '';
+  // Pornite / oprite: comutator „Pe acest telefon”. Blocate / nesuportat: cardul cu ce pierzi și pașii pentru acest
+  // dispozitiv (aplicația nu poate deschide singură setările telefonului); la întoarcere ecranul se reverifică singur.
+  const ajutor = pasiPornireNotificari(stare);
+  const peTelefon = dispozitivNotificari().telefon;
+  const randTelefon = stare === 'pornite' || stare === 'oprite'
+    ? `<label class="setare-notificare"><span><b>${peTelefon ? tr('Pe acest telefon', 'On this phone') : tr('În acest browser', 'In this browser')}</b><small>${textStare}</small></span>
+        <input type="checkbox" class="comutator" ${stare === 'pornite' ? 'checked' : ''} onchange="this.checked = !this.checked; comutaNotificariSetari()"></label>`
+    : ajutor ? `<div class="setari-notif-ajutor">
+        <div class="setari-notif-sus">
+          <span class="setari-notif-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.7 21a2 2 0 0 1-3.4 0M18.6 13A17.9 17.9 0 0 1 18 8M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14M18 8a6 6 0 0 0-9.3-5M2 2l20 20"/></svg></span>
+          <span><b>${stare !== 'blocate' ? tr('Indisponibile aici', 'Not available here')
+            : peTelefon ? tr('Blocate pe acest telefon', 'Blocked on this phone') : tr('Blocate în acest browser', 'Blocked in this browser')}</b>
+            <small>${stare === 'blocate' ? tr('Nu afli la timp de programări și mesaje. Le pornești așa:', 'You won’t hear about bookings and messages in time. Turn them on like this:')
+              : tr('Pe iPhone, notificările merg doar din aplicația de pe ecranul principal:', 'On iPhone, notifications only work from the app on your home screen:')}</small></span>
+        </div>
+        <ol class="setari-pasi">${ajutor.map(p => `<li>${p}</li>`).join('')}</ol>
+      </div>`
+    : `<div class="setare-notificare"><span><small>${textStare}</small></span></div>`;
   const oprite = notificariOprite();
   const randuri = (TIPURI_NOTIFICARI[rolUtilizator === 'clienta' ? 'clienta' : 'antrenor']).map(([tipuri, titlu, desc]) => `
     <label class="setare-notificare">
       <span><b>${tr(...titlu)}</b><small>${tr(...desc)}</small></span>
       <input type="checkbox" class="comutator" ${tipuri.some(x => oprite.includes(x)) ? '' : 'checked'} onchange="seteazaTipNotificare('${tipuri.join(',')}', this.checked, this)">
     </label>`).join('');
-  corp.innerHTML = `<div class="drawer-section">
-      <div class="card card-push"><span>${textStare}</span>${buton}</div>
-    </div>
-    <div class="drawer-section" style="margin-top:14px;">
-      <div class="drawer-section-title">${tr('Notificări push', 'Push notifications')}</div>
-      <div class="card setari-lista-sticla">${randuri}</div>
-      <div style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">${tr('Cele oprite nu te mai anunță, dar le găsești în continuare la clopoțel.', 'The ones turned off won’t alert you, but you’ll still find them under the bell.')}</div>
-    </div>`;
+  corp.innerHTML = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><h1>${tr('Notificări', 'Notifications')}</h1></div></div>
+    <div class="lista-sticla setari-lista-sticla">${randTelefon}</div>
+    <div class="lista-titlu">${tr('Ce te anunță', 'What alerts you')}</div>
+    <div class="lista-sticla setari-lista-sticla">${randuri}</div>
+    <div class="profil-nota">${tr('Cele oprite nu te mai anunță, dar le găsești în continuare la clopoțel. Alegerile se păstrează în cont.', 'The ones turned off won’t alert you, but you’ll still find them under the bell. Your choices are saved to your account.')}</div>`;
 }
+
+// Unde rulează B-Fit: aplicația instalată pe telefon, browserul telefonului sau browserul calculatorului
+function dispozitivNotificari() {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/.test(navigator.userAgent);
+  const instalata = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  return { ios, android, instalata, telefon: ios || android || matchMedia('(pointer: coarse)').matches };
+}
+
+// Pașii pentru a porni notificările, după dispozitiv (null = nu avem pași de dat)
+function pasiPornireNotificari(stare) {
+  const { ios, android, instalata, telefon } = dispozitivNotificari();
+  const revino = tr('Revino aici: ecranul se actualizează singur.', 'Come back here: this screen updates by itself.');
+  if (stare === 'nesuportat') return ios && !instalata ? [
+    tr('Deschide B-Fit în Safari.', 'Open B-Fit in Safari.'),
+    tr('Apasă Partajează, apoi „Adaugă pe ecranul principal”.', 'Tap Share, then “Add to Home Screen”.'),
+    tr('Deschide aplicația de pe ecranul principal și pornește notificările de aici.', 'Open the app from your home screen and turn notifications on here.')
+  ] : null;
+  if (stare !== 'blocate') return null;
+  if (ios) return [
+    tr('Deschide Setările telefonului › Notificări.', 'Open your phone’s Settings › Notifications.'),
+    tr('Alege B-Fit și pornește „Permite notificările”.', 'Choose B-Fit and turn on “Allow Notifications”.'),
+    revino
+  ];
+  if (android && instalata) return [
+    tr('Ține apăsat pe iconița B-Fit de pe ecranul telefonului și alege „Informații aplicație”.', 'Press and hold the B-Fit icon on your home screen and choose “App info”.'),
+    tr('Intră la Notificări și pornește-le.', 'Go to Notifications and turn them on.'),
+    revino
+  ];
+  if (telefon) return [
+    tr('Apasă pe iconița din stânga adresei paginii, sus în browser.', 'Tap the icon to the left of the page address, at the top of the browser.'),
+    tr('Intră la Permisiuni › Notificări și alege „Permite”.', 'Go to Permissions › Notifications and choose “Allow”.'),
+    revino
+  ];
+  return [
+    tr('Dă clic pe lacătul din stânga adresei paginii.', 'Click the lock to the left of the page address.'),
+    tr('La Notificări alege „Permite”.', 'Under Notifications choose “Allow”.'),
+    revino
+  ];
+}
+
+// Întoarcerea din setările telefonului: Setări › Notificări arată din nou starea reală
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && document.getElementById('drawerSettingsNotificationsView')?.classList.contains('active')) {
+    randeazaSetariNotificari();
+    actualizeazaRezumatNotificari();
+  }
+});
 
 async function seteazaTipNotificare(tipuri, pornit, input) {
   const lista = tipuri.split(',');
@@ -19064,6 +19540,7 @@ trageInJosCaSaInchizi(document.getElementById('cardNoutati'), inchideNoutati, '.
 trageInJosCaSaInchizi(document.getElementById('cardProgresEx'), inchideProgresExercitiu, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardObiectiv'), inchideFoaieObiectiv, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardPozaProfil'), inchideFoaiePoza);
+trageInJosCaSaInchizi(document.getElementById('cardSetari'), inchideFoaieSetari, '.fisa-scurta-maner, .incasare-foaie-titlu');
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
@@ -20972,7 +21449,7 @@ function incarcaPdfMake() {
 }
 
 // Culoarea de brand a fiecărei palete (aceeași ca fundalul iconiței)
-const CULORI_PDF = { blue: '#335C8F', petrol: '#0F5E63', mov: '#5C4D7D', red: '#9F2A3A', green: '#267048', graphite: '#343A43' };
+const CULORI_PDF = { blue: '#335C8F', petrol: '#0F5E63', mov: '#5C4D7D', red: '#9F2A3A', orange: '#C2410C', green: '#267048', graphite: '#343A43' };
 
 // Textul secțiunilor: rândurile care încep cu „-”, „•” sau „*” devin buline; la „Termen: explicație” termenul e îngroșat
 function parseazaTextPlan(text) {
@@ -21939,7 +22416,7 @@ function actualizeazaRezumatSetari() {
 // Paleta de culori: albastru (implicit; <html data-accent="blue"> din index.html, ca iconița și manifest.json) sau celelalte.
 // Petrolul își păstrează valorile în :root din style.css și apare doar când atributul lipsește (vezi scriptul din <head>).
 // „violet” (vechiul mov) și petrolul implicit din v95 trec o singură dată pe albastru (beatrix_paleta_v96); movul de acum e „mov”.
-const PALETE_ACCENT = ['blue', 'petrol', 'mov', 'red', 'green', 'graphite'];
+const PALETE_ACCENT = ['blue', 'petrol', 'mov', 'red', 'orange', 'green', 'graphite'];
 
 function actualizeazaButoaneSetariOrar() {
   let val = document.getElementById('setariLocuriValoare');
@@ -22107,27 +22584,25 @@ function aplicaAbonamenteUI() {
 }
 
 function randeazaSetariStudio() {
-  const randuri = (lista, colorat) => lista.map((el, i) => {
-    const text = colorat ? el.text : el;
-    const cls = colorat ? el.cls : '';
-    return `<div class="setari-lista-rand">
-      ${colorat ? `<button type="button" class="setari-lista-culoare slot-input ${cls || 'fara-culoare'}" onclick="schimbaCuloareAntrenament(${i})" title="${tr('Schimbă culoarea', 'Change colour')}" aria-label="${tr('Schimbă culoarea', 'Change colour')}"></button>` : ''}
-      <input type="text" class="slot-input setari-lista-input ${cls}" maxlength="40" value="${escAttr(traduceValoare(text))}" onchange="redenumesteElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i}, this)">
-      <button type="button" class="setari-lista-sterge" onclick="stergeElementSetari('${colorat ? 'antrenamente' : 'metodePlata'}', ${i})" title="${tr('Șterge', 'Delete')}" aria-label="${tr('Șterge', 'Delete')}">${SVG_COS_PLAN}</button>
-    </div>`;
+  const randuri = lista => setariStudio[lista].map((el, i) => {
+    const text = escAttr(traduceValoare(textElementSetari(lista, el)));
+    const stanga = lista === 'antrenamente'
+      ? `<span class="tip-rand"><span class="tip-bulina slot-input ${el.cls || 'fara-culoare'}"></span><b class="tip-text slot-input ${el.cls}">${text}</b></span>`
+      : `<span><b>${text}</b></span>`;
+    return `<button type="button" class="setari-abonament-rand" onclick="deschideElementSetari('${lista}', ${i})">${stanga}<span class="drawer-nav-arrow">›</span></button>`;
   }).join('');
   const elAnt = document.getElementById('setariListaAntrenamente');
-  if (elAnt) elAnt.innerHTML = randuri(setariStudio.antrenamente, true);
+  if (elAnt) elAnt.innerHTML = randuri('antrenamente');
   const elMet = document.getElementById('setariListaMetode');
-  if (elMet) elMet.innerHTML = randuri(setariStudio.metodePlata, false);
+  if (elMet) elMet.innerHTML = randuri('metodePlata');
   const elAb = document.getElementById('setariListaAbonamente');
-  if (elAb && !elAb.querySelector('.setari-abonament-form')) elAb.innerHTML = setariStudio.abonamente.map((a, i) => a.sters ? '' :
+  if (elAb) elAb.innerHTML = setariStudio.abonamente.map((a, i) => a.sters ? '' :
     `<button type="button" class="setari-abonament-rand" onclick="deschideFormAbonament(${i})">
       <span><b>${escAttr(numeAbonamentAfisat(a.nume))}</b><small>${escAttr(rezumatAbonament(a))}</small></span><span class="drawer-nav-arrow">›</span>
     </button>`).join('');
   const elMon = document.getElementById('setariMonede');
   if (elMon) elMon.innerHTML = MONEDE.map(m =>
-    `<button type="button" class="theme-option-btn${m === setariStudio.moneda ? ' active' : ''}" onclick="seteazaSetariStudio({ moneda: '${m}' })">${m}</button>`).join('');
+    `<button type="button"${m === setariStudio.moneda ? ' class="active"' : ''} onclick="seteazaSetariStudio({ moneda: '${m}' })">${m}</button>`).join('');
 }
 
 const textElementSetari = (lista, el) => lista === 'antrenamente' ? el.text : el;
@@ -22136,72 +22611,79 @@ function existaElementSetari(lista, text, exceptIdx) {
   return setariStudio[lista].some((el, i) => i !== exceptIdx && textElementSetari(lista, el).toLowerCase() === text.toLowerCase());
 }
 
-function adaugaElementSetari(lista) {
-  const ant = lista === 'antrenamente';
-  customConfirm(ant ? tr('Tip nou de antrenament', 'New workout type') : tr('Metodă nouă de plată', 'New payment method'),
-    ant ? tr('Poate fi și o combinație, de ex. „Fesieri + Abdomen”.', 'It can also be a combination, e.g. “Glutes + Abs”.') : '',
-    (text) => {
-      text = (text || '').slice(0, 40).trim();
-      if (!text) return;
-      if (existaElementSetari(lista, text, -1)) { showToast(tr('Există deja în listă.', 'Already in the list.'), 'error'); return; }
-      const nou = ant ? { text, cls: CULORI_ANTRENAMENT[setariStudio.antrenamente.length % CULORI_ANTRENAMENT.length] } : text;
-      seteazaSetariStudio({ [lista]: setariStudio[lista].concat([nou]) });
-    }, { placeholder: ant ? tr('Nume tip', 'Type name') : tr('Ex. Card, Transfer bancar', 'E.g. Card, Bank transfer') });
+// Fereastra de jos comună din Setări (abonament, tip de antrenament, metodă de plată)
+function deschideFoaieSetari() {
+  deschideFoaieCuFundal(document.getElementById('modalSetariBackdrop'), document.getElementById('cardSetari'));
 }
 
-// Redenumirea schimbă doar ce se alege de acum; rândurile deja salvate își păstrează textul
-function redenumesteElementSetari(lista, idx, inp) {
-  const vechi = setariStudio[lista][idx];
-  if (vechi === undefined) return;
-  const text = inp.value.trim();
-  if (!text || existaElementSetari(lista, text, idx)) {
-    if (text) showToast(tr('Există deja în listă.', 'Already in the list.'), 'error');
-    inp.value = traduceValoare(textElementSetari(lista, vechi));
-    return;
-  }
+function inchideFoaieSetari() {
+  inchideFoaieCuFundal(document.getElementById('modalSetariBackdrop'), document.getElementById('cardSetari'));
+}
+
+// Un tip de antrenament sau o metodă de plată (idx null = nou): numele, la tip și culoarea, apoi Salvează / Șterge.
+// Numele se previzualizează în culoarea aleasă, ca în Orar.
+let elementSetari = null; // { lista, idx, cls }
+
+function deschideElementSetari(lista, idx) {
+  const ant = lista === 'antrenamente';
+  const el = idx === null ? null : setariStudio[lista][idx];
+  if (idx !== null && el === undefined) return;
+  const cls = ant ? (el ? el.cls : CULORI_ANTRENAMENT[setariStudio.antrenamente.length % CULORI_ANTRENAMENT.length]) : '';
+  elementSetari = { lista, idx, cls };
+  document.getElementById('setariFoaieTitlu').textContent = ant
+    ? (el ? tr('Tipul de antrenament', 'Workout type') : tr('Tip nou de antrenament', 'New workout type'))
+    : (el ? tr('Metoda de plată', 'Payment method') : tr('Metodă nouă de plată', 'New payment method'));
+  document.getElementById('setariFoaieContinut').innerHTML = `
+    <div class="form-group"><label>${tr('Nume', 'Name')}</label>
+      <input type="text" id="elementSetariNume" class="form-control${ant ? ` tip-text slot-input ${cls}` : ''}" maxlength="40"
+        value="${el ? escAttr(traduceValoare(textElementSetari(lista, el))) : ''}"></div>
+    ${ant ? `<div class="form-group"><label>${tr('Culoare', 'Colour')}</label>
+      <div class="culori-tip-grila">${CULORI_ANTRENAMENT.map(c =>
+        `<button type="button" class="culoare-tip-optiune slot-input ${c}${c === cls ? ' activ' : ''}" data-cls="${c}" onclick="alegeCuloareElementSetari('${c}')" aria-label="${tr('Culoare', 'Colour')}"><svg class="setari-bifa" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>`).join('')}</div>
+      <div class="pastile-egale"><button type="button" class="culoare-tip-fara${cls ? '' : ' active'}" data-cls="" onclick="alegeCuloareElementSetari('')">${tr('Fără culoare', 'No colour')}</button></div></div>` : ''}
+    ${el ? `<button type="button" class="profil-sterge-cont" onclick="stergeElementSetari()">${ant ? tr('Șterge tipul', 'Delete type') : tr('Șterge metoda', 'Delete method')}</button>` : ''}
+    <div class="incasare-bara">
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala incasare-salveaza" onclick="salveazaElementSetari()">${tr('Salvează', 'Save')}</button>
+    </div>`;
+  deschideFoaieSetari();
+  if (!el) document.getElementById('elementSetariNume').focus();
+}
+
+function alegeCuloareElementSetari(cls) {
+  const inp = document.getElementById('elementSetariNume');
+  if (elementSetari.cls) inp.classList.remove(elementSetari.cls);
+  if (cls) inp.classList.add(cls);
+  elementSetari.cls = cls;
+  document.querySelectorAll('#setariFoaieContinut [data-cls]').forEach(b => b.classList.toggle(b.classList.contains('culoare-tip-fara') ? 'active' : 'activ', b.dataset.cls === cls));
+}
+
+function salveazaElementSetari() {
+  const { lista, idx, cls } = elementSetari;
+  const vechi = idx === null ? null : setariStudio[lista][idx];
+  let text = document.getElementById('elementSetariNume').value.slice(0, 40).trim();
+  if (!text) { showToast(tr('Completează numele!', 'Enter the name!'), 'error'); return; }
   // Element implicit afișat tradus și nemodificat: rămâne valoarea românească
-  if (text === traduceValoare(textElementSetari(lista, vechi))) return;
+  if (vechi && text === traduceValoare(textElementSetari(lista, vechi))) text = textElementSetari(lista, vechi);
+  if (existaElementSetari(lista, text, idx === null ? -1 : idx)) { showToast(tr('Există deja în listă.', 'Already in the list.'), 'error'); return; }
+  // Redenumirea schimbă doar ce se alege de acum; sloturile deja salvate își păstrează textul
+  const nou = lista === 'antrenamente' ? { ...(vechi || {}), text, cls } : text;
   const noua = setariStudio[lista].slice();
-  noua[idx] = lista === 'antrenamente' ? { ...vechi, text } : text;
+  if (idx === null) noua.push(nou); else noua[idx] = nou;
+  inchideFoaieSetari();
   seteazaSetariStudio({ [lista]: noua });
 }
 
-function stergeElementSetari(lista, idx) {
+function stergeElementSetari() {
+  const { lista, idx } = elementSetari;
   const el = setariStudio[lista][idx];
   if (el === undefined) return;
   const text = traduceValoare(textElementSetari(lista, el));
   customConfirm(tr(`Ștergi „${text}”?`, `Delete “${text}”?`),
     tr('Nu va mai apărea în listă. Ce s-a salvat deja cu el rămâne neschimbat.', 'It will no longer appear in the list. Anything already saved with it stays unchanged.'),
-    () => seteazaSetariStudio({ [lista]: setariStudio[lista].filter((_, i) => i !== idx) }));
-}
-
-// Culoarea se alege dintr-o fereastră cu toate culorile, plus „Fără culoare”
-let idxCuloareTip = null;
-
-function schimbaCuloareAntrenament(idx) {
-  const el = setariStudio.antrenamente[idx];
-  if (!el) return;
-  idxCuloareTip = idx;
-  const nume = traduceValoare(el.text);
-  document.getElementById('culoareTipTitlu').innerText = tr(`Culoarea pentru „${nume}”`, `Colour for “${nume}”`);
-  document.getElementById('listaCuloriTip').innerHTML = CULORI_ANTRENAMENT.map(cls =>
-    `<button type="button" class="culoare-tip-optiune slot-input ${cls}${cls === el.cls ? ' activ' : ''}" onclick="alegeCuloareTip('${cls}')"></button>`).join('');
-  const fara = document.getElementById('btnFaraCuloareTip');
-  fara.classList.toggle('active', !el.cls);
-  document.getElementById('modalCuloareTipBackdrop').style.display = 'flex';
-}
-
-function alegeCuloareTip(cls) {
-  const el = setariStudio.antrenamente[idxCuloareTip];
-  inchideCuloareTip();
-  if (!el || el.cls === cls) return;
-  const noua = setariStudio.antrenamente.slice();
-  noua[idxCuloareTip] = { ...el, cls };
-  seteazaSetariStudio({ antrenamente: noua });
-}
-
-function inchideCuloareTip() {
-  document.getElementById('modalCuloareTipBackdrop').style.display = 'none';
+    () => {
+      inchideFoaieSetari();
+      seteazaSetariStudio({ [lista]: setariStudio[lista].filter((_, i) => i !== idx) });
+    });
 }
 
 // ---- Setări › Abonamente: lista, iar la atingere formularul (nume, fel, preț, ședințe, zile, o dată per client) ----
@@ -22225,14 +22707,14 @@ function deschideFormAbonament(idx) {
   const a = idx === null ? { nume: '', pret: '', sedinte: 8, zile: 30, fel: 'abonament' } : setariStudio.abonamente[idx];
   if (!a) return;
   idxFormAbonament = idx;
-  const el = document.getElementById('setariListaAbonamente');
-  el.innerHTML = `<div class="setari-abonament-form">
+  document.getElementById('setariFoaieTitlu').textContent = idx === null ? tr('Abonament nou', 'New subscription') : tr('Modifică abonamentul', 'Edit subscription');
+  document.getElementById('setariFoaieContinut').innerHTML = `
     <div class="form-group"><label>${tr('Nume', 'Name')}</label>
       <input type="text" id="formAbNume" class="form-control" maxlength="40" value="${escAttr(idx === null ? '' : numeAbonamentAfisat(a.nume))}" placeholder="${tr('Ex. 8 ședințe', 'E.g. 8 sessions')}"></div>
     <div class="form-group"><label>${tr('Fel', 'Kind')}</label>
-      <div class="theme-selector-grid" id="formAbFel">
+      <div class="pastile-egale" id="formAbFel">
         ${[['abonament', tr('Abonament', 'Subscription')], ['unica', tr('Ședință unică', 'Single session')], ['gratuita', tr('Gratuită', 'Free')]]
-          .map(([f, txt]) => `<button type="button" class="theme-option-btn" data-fel="${f}" onclick="alegeFelAbonament('${f}')">${txt}</button>`).join('')}
+          .map(([f, txt]) => `<button type="button" data-fel="${f}" onclick="alegeFelAbonament('${f}')">${txt}</button>`).join('')}
       </div>
       <div class="setari-lista-nota" id="formAbFelNota"></div></div>
     <div class="setari-abonament-campuri">
@@ -22243,23 +22725,22 @@ function deschideFormAbonament(idx) {
       <div class="form-group" id="formAbZileGrup"><label>${tr('Valabil (zile)', 'Valid (days)')}</label>
         <input type="number" id="formAbZile" class="form-control" min="1" max="730" inputmode="numeric" value="${escAttr(a.zile)}"></div>
     </div>
-    <label class="setari-abonament-bifa" id="formAbODataGrup"><input type="checkbox" id="formAbOData"${a.oData ? ' checked' : ''}>
-      <span>${tr('O singură dată per client', 'Once per client')}<small>${tr('Ex. ofertă pentru primul abonament', 'E.g. a first-subscription offer')}</small></span></label>
-    <div class="setari-abonament-butoane">
-      ${idx === null ? '' : `<button type="button" class="btn btn-clear" onclick="stergeAbonamentSetari()">${tr('Șterge', 'Delete')}</button>`}
-      <button type="button" class="btn btn-clear" onclick="inchideFormAbonament()">${tr('Renunță', 'Cancel')}</button>
-      <button type="button" class="btn" onclick="salveazaFormAbonament()">${tr('Salvează', 'Save')}</button>
-    </div>
+    <label class="form-group setari-abonament-bifa" id="formAbODataGrup">
+      <span>${tr('O singură dată per client', 'Once per client')}<small>${tr('Ex. ofertă pentru primul abonament', 'E.g. a first-subscription offer')}</small></span>
+      <input type="checkbox" class="comutator" id="formAbOData"${a.oData ? ' checked' : ''}></label>
     <div class="setari-lista-nota">${tr('Schimbările se aplică abonamentelor activate de acum. Fișele și încasările existente rămân cum sunt.', 'Changes apply to subscriptions activated from now on. Existing profiles and payments stay as they are.')}</div>
-  </div>`;
+    ${idx === null ? '' : `<button type="button" class="profil-sterge-cont" onclick="stergeAbonamentSetari()">${tr('Șterge abonamentul', 'Delete subscription')}</button>`}
+    <div class="incasare-bara">
+      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala incasare-salveaza" onclick="salveazaFormAbonament()">${tr('Salvează', 'Save')}</button>
+    </div>`;
   alegeFelAbonament(a.fel);
-  document.getElementById('btnAdaugaAbonament').hidden = true;
+  deschideFoaieSetari();
   if (idx === null) document.getElementById('formAbNume').focus();
 }
 
 function alegeFelAbonament(fel) {
   felFormAbonament = fel;
-  document.querySelectorAll('#formAbFel .theme-option-btn').forEach(b => b.classList.toggle('active', b.dataset.fel === fel));
+  document.querySelectorAll('#formAbFel button').forEach(b => b.classList.toggle('active', b.dataset.fel === fel));
   document.getElementById('formAbSedinteGrup').hidden = fel !== 'abonament';
   document.getElementById('formAbZileGrup').hidden = fel !== 'abonament';
   document.getElementById('formAbPretGrup').hidden = fel === 'gratuita';
@@ -22274,9 +22755,7 @@ function alegeFelAbonament(fel) {
 
 function inchideFormAbonament() {
   idxFormAbonament = null;
-  document.getElementById('setariListaAbonamente').innerHTML = '';
-  document.getElementById('btnAdaugaAbonament').hidden = false;
-  randeazaSetariStudio();
+  inchideFoaieSetari();
 }
 
 function salveazaFormAbonament() {
@@ -22307,9 +22786,7 @@ function salveazaFormAbonament() {
     if (alias.length) nou.alias = alias;
     lista[lista.indexOf(vechi)] = nou;
   } else lista.push(nou);
-  idxFormAbonament = null;
-  document.getElementById('setariListaAbonamente').innerHTML = '';
-  document.getElementById('btnAdaugaAbonament').hidden = false;
+  inchideFormAbonament();
   seteazaSetariStudio({ abonamente: lista });
   showToast(tr('✓ Abonament salvat', '✓ Subscription saved'));
 }
@@ -22326,9 +22803,7 @@ function stergeAbonamentSetari() {
     () => {
       const lista = setariStudio.abonamente.slice();
       lista[idx] = { ...a, sters: true };
-      idxFormAbonament = null;
-      document.getElementById('setariListaAbonamente').innerHTML = '';
-      document.getElementById('btnAdaugaAbonament').hidden = false;
+      inchideFormAbonament();
       seteazaSetariStudio({ abonamente: lista });
     });
 }
