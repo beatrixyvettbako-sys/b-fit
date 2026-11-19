@@ -485,22 +485,19 @@ html.deconectare body {
 /* „Ai uitat parola?” sub câmpul de parolă din login */
 .auth-link-parola {
   display: block;
-  margin: 5px 0 0 auto;
+  margin: 8px 2px 0 auto;
   padding: 2px 0;
   border: none;
   background: none;
-  color: var(--primary);
-  font-size: 0.74rem;
+  color: var(--m-accent-text);
+  font: inherit;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .auth-link-parola[hidden] {
   display: none;
-}
-
-[data-theme="dark"] .auth-link-parola {
-  color: var(--accent-purple-light);
 }
 
 /* Contul nou e doar pentru antrenori: un link discret la final, nu un tab la egalitate cu intrarea */
@@ -510,19 +507,165 @@ html.deconectare body {
 
 .auth-link-comutare {
   display: block;
-  margin: 14px auto 0;
+  margin: 18px auto 0;
   padding: 4px 6px;
   border: none;
   background: none;
-  color: var(--primary);
+  color: var(--m-accent-text);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
 }
 
-[data-theme="dark"] .auth-link-comutare {
-  color: var(--accent-purple-light);
+/* „Ai primit o invitație? Intră cu un link pe email”: link discret, cu plicul în față */
+.auth-link-email {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: var(--m-muted);
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.auth-link-email svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.auth-link-email + .auth-link-comutare {
+  margin-top: 8px;
+}
+
+.auth-link-email[hidden],
+.auth-cod-linkuri [hidden] {
+  display: none;
+}
+
+/* Câmpurile din login: sticlă, înalte de 50px; textul de 16px (pe iPhone, sub 16px pagina se mărește la atingere) */
+.auth-card .form-group label {
+  display: block;
+  margin: 0 0 6px 4px;
+  font-size: 0.8rem !important;
+  font-weight: 700;
+  color: var(--m-muted);
+}
+
+.auth-card .form-control {
+  height: 50px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
+  font-size: 16px;
+}
+
+.auth-card .form-control:focus {
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+}
+
+.auth-card .password-toggle-btn {
+  right: 10px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--m-muted);
+}
+
+/* „Intră în cont”: butonul principal al aplicației, mare, după câmpuri (cel principal are altfel order: -1) */
+.auth-submit.fisa-scurta-actiune {
+  order: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 8px;
+  border-radius: 16px;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-submit:disabled {
+  opacity: 0.75;
+}
+
+/* Codul din email: câmpul (cifre mari, rărite) și butonul lui, sub formular */
+.auth-cod {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.auth-cod[hidden] {
+  display: none;
+}
+
+/* Sub „Intră cu codul”: „Deschide emailul” · „Trimite alt cod (42s)” */
+.auth-cod-linkuri {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 18px;
+}
+
+.auth-cod-linkuri .auth-link-comutare {
+  margin: 0;
+}
+
+.auth-cod-linkuri .auth-link-comutare:disabled {
+  color: var(--m-muted);
+  cursor: default;
+}
+
+.auth-cod .form-control {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+}
+
+/* Butonul din mesaj (ex. „Intră cu un cod pe email” după o parolă greșită) */
+.auth-mesaj-actiune {
+  display: block;
+  margin: 8px auto 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* Bun venit (client): un rând de text, câmpul de parolă și butonul */
+.onboard-parola {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.onboard-parola p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--m-muted);
 }
 
 /* CÂMPURI PAROLĂ CU OCHIȘOR */
@@ -656,18 +799,14 @@ header {
   inset: 0;
   width: 100vw;
   height: 100dvh;
-  background: var(--bg);
-  background-image: var(--bg-gradient);
-  backdrop-filter: blur(26px) saturate(180%);
-  -webkit-backdrop-filter: blur(26px) saturate(180%);
+  background-color: var(--bg);
   z-index: 20000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 14px;
-  overflow: hidden !important;
-  overscroll-behavior: none;
-  touch-action: none;
+  flex-direction: column;
+  /* Loc sus pentru pastila de limbă; când nu încape tot (telefon mic, tastatura deschisă), ecranul derulează */
+  padding: max(68px, calc(env(safe-area-inset-top) + 56px)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
   transition: opacity 0.26s ease, visibility 0.26s ease;
 }
 
@@ -678,40 +817,39 @@ header {
 }
 
 .auth-card {
-  position: relative;
   width: 100%;
-  max-width: 375px;
-  background: var(--card-bg);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid var(--glass-border);
-  border-radius: 22px;
-  padding: 20px 18px 18px;
-  box-shadow: 0 16px 40px rgba(var(--primary-dark-rgb), 0.2), var(--glass-shadow);
+  max-width: 380px;
+  margin: auto; /* centrat când încape; altfel pornește de sus și derulează */
   text-align: center;
-  overflow: hidden;
+  color: var(--m-text);
 }
 
+/* Limba: o pastilă de sticlă cu RO / EN, în colțul de sus */
 .auth-lang-picker {
   position: absolute;
-  top: 12px;
-  right: 14px;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
   display: flex;
-  align-items: center;
-  gap: 4px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--m-card);
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-float-sm);
   z-index: 5;
 }
 
 .auth-lang-btn {
+  min-width: 38px;
+  padding: 5px 10px;
+  border: 0;
+  border-radius: 999px;
   background: transparent;
-  border: none;
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: var(--text-muted);
+  color: var(--m-muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
   cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 6px;
-  transition: all 0.16s ease;
 }
 
 .auth-lang-btn:active {
@@ -719,14 +857,14 @@ header {
 }
 
 .auth-lang-btn.active {
-  color: var(--primary);
-  background: var(--primary-light);
+  color: var(--m-accent-text);
+  background: rgba(var(--accent-rgb), 0.22);
 }
 
 .auth-app-icon-wrap {
-  width: 76px;
-  height: 76px;
-  margin: 0 auto 10px;
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -748,21 +886,19 @@ header {
   object-fit: cover;
 }
 
+/* Titlul mare, ca pe ecranele noi */
 .auth-title {
-  font-size: 1.22rem;
+  margin-bottom: 26px;
+  font-size: 1.75rem;
   font-weight: 800;
-  color: var(--primary);
-  letter-spacing: -0.3px;
-  margin-bottom: 12px;
+  color: var(--m-text);
+  letter-spacing: -0.5px;
+  line-height: 1.15;
 }
 
-/* Subtitlul rămâne în HTML (îl folosește app.js), dar nu se mai afișează */
+/* Subtitlul rămâne în HTML (îl actualizează app.js), dar nu se afișează */
 .auth-subtitle {
   display: none;
-  font-size: 0.76rem;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-  font-weight: 600;
 }
 
 .auth-tabs {
@@ -799,37 +935,40 @@ header {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 10px 0;
+  margin: 16px 0;
 }
 
 .auth-divider::before,
 .auth-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--m-divider);
 }
 
 .auth-divider span {
-  padding: 0 10px;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  font-weight: 600;
+  padding: 0 12px;
+  font-size: 0.72rem;
+  color: var(--m-muted);
+  font-weight: 700;
   text-transform: uppercase;
 }
 
+/* Google: buton de sticlă cât butonul principal */
 .btn-google-sso {
   width: 100%;
+  min-height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  padding: 8px 12px;
-  background: var(--input-glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
-  color: var(--text);
-  border-radius: 10px;
-  font-size: 0.82rem;
+  padding: 12px;
+  background: var(--m-card);
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
+  border-radius: 16px;
+  font: inherit;
+  font-size: 0.92rem;
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.15s ease;
@@ -839,27 +978,91 @@ header {
   transform: scale(0.98);
 }
 
-.auth-status-msg {
+#authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Amprentă / Face ID (pe telefonul unde e activată): în locul formularului, un buton rotund mare de sticlă */
+.cu-amprenta #authForm,
+.cu-amprenta .auth-cod,
+.cu-amprenta .auth-divider,
+.cu-amprenta .btn-google-sso,
+.cu-amprenta .auth-link-email,
+.cu-amprenta #authLinkComutare,
+.auth-amprenta-zona[hidden] {
+  display: none;
+}
+
+.auth-amprenta-zona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   margin-top: 8px;
-  font-size: 0.76rem;
-  padding: 7px 10px;
-  border-radius: 8px;
-  line-height: 1.3;
+}
+
+.auth-amprenta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 1px solid var(--m-border);
+  background: var(--m-card);
+  box-shadow: var(--m-float);
+  color: var(--m-accent-text);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.auth-amprenta:active {
+  transform: scale(0.94);
+}
+
+.auth-amprenta-text {
+  margin-top: 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--m-text);
+  text-align: center;
+}
+
+.auth-amprenta-email {
+  font-size: 0.84rem;
+  color: var(--m-muted);
+}
+
+.auth-amprenta-zona .auth-link-comutare {
+  margin-top: 14px;
+}
+
+.auth-status-msg {
+  margin-top: 0;
+  font-size: 0.84rem;
+  padding: 10px 14px;
+  border-radius: 14px;
+  line-height: 1.4;
   font-weight: 600;
   text-align: center;
 }
 
 .auth-status-msg.error {
-  background: rgba(254, 226, 226, 0.9);
+  background: rgba(185, 28, 28, 0.12);
   color: #b91c1c;
-  border: 1px solid #fca5a5;
+  border: 1px solid rgba(185, 28, 28, 0.3);
 }
 
 .auth-status-msg.success {
-  background: rgba(220, 252, 231, 0.9);
+  background: rgba(21, 128, 61, 0.12);
   color: #15803d;
-  border: 1px solid #86efac;
+  border: 1px solid rgba(21, 128, 61, 0.3);
 }
+
+[data-theme="dark"] .auth-status-msg.error { color: #f87171; }
+[data-theme="dark"] .auth-status-msg.success { color: #4ade80; }
 
 /* MENIU LATERAL FULL-SCREEN */
 .drawer-backdrop {
@@ -3528,13 +3731,13 @@ select.poza-comp-data {
 }
 
 .auth-nota-antrenor {
-  font-size: 0.75rem;
-  line-height: 1.35;
-  color: var(--text-muted);
-  background: var(--primary-light);
-  border-radius: 8px;
-  padding: 7px 9px;
-  margin: -4px 0 10px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--m-muted);
+  background: rgba(var(--accent-rgb), 0.1);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin: -10px 0 16px;
 }
 
 .auth-nota-antrenor[hidden] {
@@ -6874,7 +7077,8 @@ details[open] > summary .summary-sageata {
 #modalQrBackdrop,
 #modalFinalBackdrop,
 #modalNoutatiBackdrop,
-#modalProgresExBackdrop {
+#modalProgresExBackdrop,
+#modalObiectivBackdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
@@ -7605,7 +7809,8 @@ details[open] > summary .summary-sageata {
 .lista-filtru,
 .plan-chip,
 .poze-comp-unghiuri .inscriere-chip,
-.progres-ex-masuri button {
+.progres-ex-masuri button,
+.obiectiv-pastile button {
   border-radius: 16px;
   border: 1px solid var(--glass-border);
   background: var(--card-bg);
@@ -7619,14 +7824,16 @@ details[open] > summary .summary-sageata {
 .lista-filtru:active,
 .plan-chip:active,
 .poze-comp-unghiuri .inscriere-chip:active,
-.progres-ex-masuri button:active {
+.progres-ex-masuri button:active,
+.obiectiv-pastile button:active {
   transform: scale(0.96);
 }
 
 .lista-filtru.active,
 .plan-chip.is-activ,
 .poze-comp-unghiuri .inscriere-chip.active,
-.progres-ex-masuri button.active {
+.progres-ex-masuri button.active,
+.obiectiv-pastile button.active {
   background: rgba(var(--accent-rgb), 0.26);
   color: var(--primary);
   font-weight: 800;
@@ -7642,7 +7849,8 @@ details[open] > summary .summary-sageata {
 [data-theme="dark"] .lista-filtru,
 [data-theme="dark"] .plan-chip,
 [data-theme="dark"] .poze-comp-unghiuri .inscriere-chip,
-[data-theme="dark"] .progres-ex-masuri button {
+[data-theme="dark"] .progres-ex-masuri button,
+[data-theme="dark"] .obiectiv-pastile button {
   color: rgba(255, 255, 255, 0.52);
   background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
@@ -7653,7 +7861,8 @@ details[open] > summary .summary-sageata {
 [data-theme="dark"] .lista-filtru.active,
 [data-theme="dark"] .plan-chip.is-activ,
 [data-theme="dark"] .poze-comp-unghiuri .inscriere-chip.active,
-[data-theme="dark"] .progres-ex-masuri button.active {
+[data-theme="dark"] .progres-ex-masuri button.active,
+[data-theme="dark"] .obiectiv-pastile button.active {
   background: rgba(var(--accent-rgb), 0.24);
   color: var(--accent-purple-light);
   border-color: rgba(var(--accent-pale-rgb), 0.35);
@@ -11230,46 +11439,184 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-weight: 800;
 }
 
-.obiectiv-card {
-  margin: 0 0 8px;
-  padding: 10px 12px;
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-
-.obiectiv-cine {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.obiectiv-actiuni {
+/* Obiectivele (stilul nou): rânduri de sticlă cu inelul de progres, titlul, cât mai e și „în ritmul ăsta” */
+.obiectiv-rand,
+.obiectiv-atins {
   display: flex;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.obiectiv-actiuni .btn {
-  padding: 4px 10px;
-  font-size: 0.74rem;
-}
-
-.obiectiv-adauga {
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  margin-bottom: 8px;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--m-text);
+  font: inherit;
+  text-align: left;
+}
+
+.obiectiv-rand {
+  cursor: pointer;
+}
+
+.obiectiv-rand:active {
+  background: var(--m-btn);
+}
+
+:is(.obiectiv-rand, .obiectiv-atins) + :is(.obiectiv-rand, .obiectiv-atins) {
+  border-top: 1px solid var(--m-divider);
+}
+
+.obiectiv-rand .inel-progres {
+  width: 50px;
+  height: 50px;
+}
+
+.obiectiv-rand .inel-fundal {
+  stroke: var(--m-divider);
+}
+
+.obiectiv-rand .inel-progres:not(.atins) .inel-valoare {
+  stroke: rgb(var(--accent-rgb));
+}
+
+.obiectiv-rand .inel-progres:not(.atins) .inel-text {
+  fill: var(--m-text);
+}
+
+.obiectiv-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.obiectiv-text b {
+  font-size: 0.92rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.obiectiv-text small {
+  font-size: 0.76rem;
+  color: var(--m-muted);
+}
+
+.obiectiv-text small.obiectiv-jos {
+  font-weight: 700;
+  color: var(--m-accent-text);
+}
+
+/* „+ Obiectiv”: rândul de adăugare, cu plusul în bulă cât inelul */
+.obiectiv-plus {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--m-divider);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--m-accent-text);
+}
+
+.obiectiv-nou .obiectiv-text b {
+  color: var(--m-accent-text);
+}
+
+/* Atinse: trofeul, obiectivul, data; la cel mai nou, „Următorul” */
+.obiectiv-atins > span:first-child {
+  flex-shrink: 0;
+  width: 50px;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.obiectiv-urmator {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+/* Fereastra unui obiectiv: câmpurile, recordul de acum cu țintele gata, pastilele 1–7, avertismentul de ritm */
+.obiectiv-foaie {
+  max-height: 88dvh;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
 .obiectiv-form {
-  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.obiectiv-form .antr-pers-campuri + .antr-pers-campuri {
-  margin-top: 8px;
+.obiectiv-camp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--m-muted);
 }
 
-.obiectiv-form .antr-pers-actiuni {
-  margin: 10px 0 0;
+.obiectiv-record {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--m-text);
+}
+
+.obiectiv-record:empty {
+  display: none;
+}
+
+.obiectiv-pastile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.obiectiv-pastile button {
+  min-width: 42px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.obiectiv-aviz {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(245, 176, 65, 0.16);
+  color: #b45309;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+[data-theme="dark"] .obiectiv-aviz {
+  color: #fcd38d;
+}
+
+.obiectiv-nota {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--m-muted);
+}
+
+.obiectiv-form .fisa-scurta-actiune {
+  order: 0;
+}
+
+.fisa-scurta-actiune.obiectiv-sterge {
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .fisa-scurta-actiune.obiectiv-sterge {
+  color: #f87171;
 }
 
 /* Nutriție: cardul de pe Acasă, ziua (totaluri + mese), adăugarea, cantitatea și scanarea codului de bare */

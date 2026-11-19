@@ -202,7 +202,7 @@ const i18n = {
     authPasswordLabel: "Parolă",
     authSubmitBtnLogin: "Intră în cont",
     authSubmitBtnSignup: "Creează cont",
-    authMagicLinkBtn: "Primește un link pe email",
+    authMagicLinkBtn: "Ai primit o invitație? Intră cu un cod pe email",
     authDividerOr: "sau",
     authGoogleBtn: "Conectare cu Google",
     authProcessing: "Se procesează...",
@@ -213,7 +213,7 @@ const i18n = {
     authLoginSuccess: "✓ Conectat cu succes!",
     authSignupSuccess: "✓ Cont creat și conectat!",
     authSignupCheckEmail: "Cont creat! Verifică email-ul pentru confirmare.",
-    authMagicLinkSent: "✓ Link-ul de conectare a fost trimis pe email!",
+    authMagicLinkSent: "✓ Ți-am trimis pe email un link și un cod. Apasă linkul sau scrie codul mai jos.",
     authLogoutConfirmTitle: "Deconectare",
     authLogoutConfirmText: "Sigur vrei să ieși din cont?",
 
@@ -351,7 +351,7 @@ const i18n = {
     authPasswordLabel: "Password",
     authSubmitBtnLogin: "Log In",
     authSubmitBtnSignup: "Create Account",
-    authMagicLinkBtn: "Email me a sign-in link",
+    authMagicLinkBtn: "Got an invitation? Sign in with an email code",
     authDividerOr: "or",
     authGoogleBtn: "Sign in with Google",
     authProcessing: "Processing...",
@@ -362,7 +362,7 @@ const i18n = {
     authLoginSuccess: "✓ Connected successfully!",
     authSignupSuccess: "✓ Account created and connected!",
     authSignupCheckEmail: "Account created! Please check your email for confirmation.",
-    authMagicLinkSent: "✓ The login link has been sent to your email!",
+    authMagicLinkSent: "✓ We emailed you a link and a code. Tap the link or enter the code below.",
     authLogoutConfirmTitle: "Log Out",
     authLogoutConfirmText: "Are you sure you want to log out?",
 
@@ -582,10 +582,19 @@ async function obtineTokenCaptcha() {
   return token;
 }
 
-function afiseazaMesajAuthFeedback(mesaj, tip = 'error') {
+// actiune (opțional): { text, fn } = un buton chiar în mesaj (ex. „Intră cu un cod pe email” după o parolă greșită)
+function afiseazaMesajAuthFeedback(mesaj, tip = 'error', actiune) {
   const el = document.getElementById('authStatusFeedback');
   if (!el) return;
   el.innerText = mesaj;
+  if (actiune) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'auth-mesaj-actiune';
+    b.textContent = actiune.text;
+    b.onclick = actiune.fn;
+    el.appendChild(b);
+  }
   el.className = 'auth-status-msg ' + (tip === 'error' ? 'error' : 'success');
   el.style.display = 'block';
 }
@@ -593,6 +602,98 @@ function afiseazaMesajAuthFeedback(mesaj, tip = 'error') {
 function ascundeMesajAuthFeedback() {
   const el = document.getElementById('authStatusFeedback');
   if (el) el.style.display = 'none';
+}
+
+// Ultimul email cu care s-a intrat (orice metodă): la următorul login e deja scris, rămâne doar parola
+const CHEIE_ULTIM_EMAIL = 'BFIT_ULTIM_EMAIL';
+function tineMinteEmailAuth(email) {
+  try { if (email) localStorage.setItem(CHEIE_ULTIM_EMAIL, email); } catch (e) {}
+}
+function preumpleEmailAuth() {
+  const camp = document.getElementById('authEmail');
+  let email = '';
+  try { email = localStorage.getItem(CHEIE_ULTIM_EMAIL) || ''; } catch (e) {}
+  if (camp && !camp.value && email) camp.value = email;
+}
+
+// ---- Amprentă / Face ID (passkey Supabase, beta; Authentication › Passkeys) ----
+// Se activează din Profil, pe fiecare telefon; cheia ține id-ul passkey-ului de aici, ca butonul de login să apară doar unde merge
+const CHEIE_AMPRENTA = 'BFIT_AMPRENTA';
+const AMPRENTA_POSIBILA = typeof window !== 'undefined' && !!window.PublicKeyCredential && window.isSecureContext;
+function amprentaAici() {
+  try { return AMPRENTA_POSIBILA ? localStorage.getItem(CHEIE_AMPRENTA) || '' : ''; } catch (e) { return ''; }
+}
+function tineMinteAmprenta(id) {
+  try { id ? localStorage.setItem(CHEIE_AMPRENTA, id) : localStorage.removeItem(CHEIE_AMPRENTA); } catch (e) {}
+}
+// Fereastra de amprentă închisă de utilizator: nu e o eroare de arătat
+function amprentaAnulata(err) {
+  return err.code === 'ERROR_CEREMONY_ABORTED' || (err.cause && err.cause.name === 'NotAllowedError');
+}
+
+// Login cu amprenta activată aici: doar amprenta (și emailul contului), formularul e la „Intră cu parola sau alt cont”.
+// porneste = la deschiderea aplicației fereastra de amprentă apare singură (o dată; nu și după ieșirea din cont)
+let amprentaPornitaAutomat = false;
+function aratAmprentaAuth(porneste) {
+  const activa = !!amprentaAici();
+  document.getElementById('authScreenOverlay').classList.toggle('cu-amprenta', activa);
+  document.getElementById('authAmprentaZona').hidden = !activa;
+  document.getElementById('authAmprentaEmail').innerText = document.getElementById('authEmail').value;
+  if (activa && porneste && !amprentaPornitaAutomat) {
+    amprentaPornitaAutomat = true;
+    intraCuAmprenta();
+  }
+}
+
+function folosesteParolaAuth() {
+  document.getElementById('authScreenOverlay').classList.remove('cu-amprenta');
+  document.getElementById('authAmprentaZona').hidden = true;
+}
+
+async function intraCuAmprenta() {
+  ascundeMesajAuthFeedback();
+  const { error } = await supabaseClient.auth.signInWithPasskey();
+  // Conectat: aplicația se deschide prin onAuthStateChange. Fereastră închisă (sau pornită fără atingere, pe iPhone): rămâne butonul
+  if (!error || amprentaAnulata(error)) return;
+  // Mesajele stau în formular: îl arătăm
+  folosesteParolaAuth();
+  if (error.code === 'webauthn_credential_not_found') {
+    tineMinteAmprenta('');
+    return afiseazaMesajAuthFeedback(tr('Amprenta nu mai e activă. Intră cu emailul și activeaz-o din nou din Profil.', 'Fingerprint sign-in is no longer active. Sign in with your email and turn it on again in Profile.'));
+  }
+  afiseazaMesajAuthFeedback(tr('Nu am putut intra cu amprenta. Încearcă din nou sau intră cu emailul.', 'Fingerprint sign-in failed. Try again or sign in with your email.'));
+}
+
+function actualizeazaProfilAmprenta() {
+  document.getElementById('profileAmprenta').hidden = !AMPRENTA_POSIBILA;
+  const activa = !!amprentaAici();
+  document.getElementById('profileAmprentaText').innerText = activa
+    ? tr('Activă pe acest telefon: intri fără parolă.', 'On for this phone: you sign in without a password.')
+    : tr('Intri în aplicație cu amprenta sau Face ID, fără parolă și fără cod.', 'Sign in with your fingerprint or Face ID, no password or code.');
+  const btn = document.getElementById('btnAmprenta');
+  btn.innerText = activa ? tr('Dezactivează', 'Turn off') : tr('Activează amprenta', 'Turn on fingerprint');
+  btn.classList.toggle('btn-clear', activa);
+}
+
+async function comutaAmprenta() {
+  const btn = document.getElementById('btnAmprenta');
+  const id = amprentaAici();
+  btn.disabled = true;
+  if (id) {
+    // „1” = activă, dar fără id cunoscut (înregistrată deja de pe acest telefon): rămâne în cont, doar butonul de login dispare
+    const { error } = id === '1' ? { error: null } : await supabaseClient.auth.passkey.delete({ passkeyId: id });
+    if (error && error.code !== 'webauthn_credential_not_found') showToast(localizeazaEroareAuth(error.message), 'error');
+    else { tineMinteAmprenta(''); showToast(tr('Amprenta e dezactivată pe acest telefon.', 'Fingerprint sign-in is off on this phone.')); }
+  } else {
+    const { data, error } = await supabaseClient.auth.registerPasskey();
+    if (!error) {
+      tineMinteAmprenta(data.id);
+      showToast(tr('✓ Gata! Data viitoare intri cu amprenta sau Face ID.', '✓ Done! Next time sign in with your fingerprint or Face ID.'));
+    } else if (error.code === 'ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED') tineMinteAmprenta('1');
+    else if (!amprentaAnulata(error)) showToast(tr('Nu am putut activa amprenta pe acest telefon.', 'Couldn’t turn on fingerprint sign-in on this phone.'), 'error');
+  }
+  btn.disabled = false;
+  actualizeazaProfilAmprenta();
 }
 
 function comutaTabAuth(mod) {
@@ -694,7 +795,8 @@ async function gestioneazaSubmitAuth(e) {
         options: {
           data: {
             full_name: email.split('@')[0],
-            captcha_token: captchaToken
+            captcha_token: captchaToken,
+            rol_ales: 'antrenor'
           }
         }
       });
@@ -711,7 +813,10 @@ async function gestioneazaSubmitAuth(e) {
       }
     }
   } catch (err) {
-    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
+    // Parolă greșită (sau cont fără parolă, ex. client invitat): ieșirea e chiar în mesaj, cu un cod pe email
+    const credentiale = tipModAuth === 'login' && /invalid (login )?credentials/i.test(err.message || '');
+    afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message), 'error',
+      credentiale ? { text: tr('Intră cu un cod pe email', 'Sign in with an email code'), fn: trimiteMagicLink } : null);
   } finally {
     // După o conectare reușită butonul rămâne „Se încarcă...” până se deschide aplicația (rolul și datele încă se încarcă)
     if (btnSubmit && !conectat) {
@@ -761,10 +866,47 @@ function deschideProfilPentruParolaNoua() {
   setTimeout(() => document.getElementById('profileInputParolaNoua')?.focus(), 350);
 }
 
+// Supabase refuză un cod nou pe același email mai devreme de 60 de secunde (Authentication › Rate limits)
+const PAUZA_COD_EMAIL = 60;
+let codEmailTrimisLa = 0;
+
+// „Trimite alt cod (42s)”: dezactivat până se poate cere din nou
+function numaraPanaLaAltCod() {
+  const btn = document.getElementById('authRetrimiteCod');
+  const ramase = PAUZA_COD_EMAIL - Math.floor((Date.now() - codEmailTrimisLa) / 1000);
+  btn.disabled = ramase > 0;
+  btn.textContent = tr('Trimite alt cod', 'Send a new code') + (ramase > 0 ? ` (${ramase}s)` : '');
+  if (ramase > 0) setTimeout(numaraPanaLaAltCod, 1000);
+}
+
+// Deschide aplicația de email (pe telefon) sau inboxul web (pe calculator), după adresă; dacă nu știm unde, butonul nu apare
+function linkEmailul(email) {
+  const domeniu = (email.split('@')[1] || '').toLowerCase();
+  const gmail = /^(gmail|googlemail)\.com$/.test(domeniu);
+  const web = gmail ? 'https://mail.google.com'
+    : /^(yahoo|ymail)\./.test(domeniu) ? 'https://mail.yahoo.com'
+    : /^(outlook|hotmail|live|msn)\./.test(domeniu) ? 'https://outlook.live.com/mail'
+    : /^(icloud|me|mac)\.com$/.test(domeniu) ? 'https://www.icloud.com/mail' : '';
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return gmail
+    ? 'intent://#Intent;package=com.google.android.gm;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;S.browser_fallback_url=' + encodeURIComponent(web) + ';end'
+    : 'intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.APP_EMAIL;end';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return gmail ? 'googlegmail://' : 'message://';
+  return web;
+}
+
+function deschideEmailul() {
+  const link = linkEmailul((document.getElementById('authEmail').value || '').trim());
+  if (/^https:/.test(link)) window.open(link, '_blank', 'noopener');
+  else if (link) location.href = link;
+}
+
 async function trimiteMagicLink() {
   if (!supabaseClient) return;
   const email = citesteEmailAuthValid();
   if (!email) return;
+  const ramase = PAUZA_COD_EMAIL - Math.floor((Date.now() - codEmailTrimisLa) / 1000);
+  if (ramase > 0) return afiseazaMesajAuthFeedback(tr(`Poți cere alt cod peste ${ramase} secunde.`, `You can request a new code in ${ramase} seconds.`));
 
   ascundeMesajAuthFeedback();
   try {
@@ -775,9 +917,63 @@ async function trimiteMagicLink() {
     });
     if (error) throw error;
     afiseazaMesajAuthFeedback(t('authMagicLinkSent'), 'success');
+    // Pe iPhone linkul se deschide în Safari, nu în aplicația instalată: codul din același email se scrie aici
+    // (cu „Deschide emailul” și „Trimite alt cod” dedesubt, așa că linkul de jos nu mai e nevoie să stea și el)
+    codEmailTrimisLa = Date.now();
+    numaraPanaLaAltCod();
+    document.getElementById('authDeschideEmail').hidden = !linkEmailul(email);
+    document.getElementById('authMagicLinkBtn').hidden = true;
+    document.getElementById('authCodGroup').hidden = false;
+    const cod = document.getElementById('authCod');
+    cod.value = '';
+    cod.focus();
   } catch (err) {
     afiseazaMesajAuthFeedback(localizeazaEroareAuth(err.message));
   }
+}
+
+// Codul din email: câte cifre are în Supabase (Authentication › Email › „Email OTP length”, 8 pe staging și producție);
+// se verifică singur la ultima cifră; aplicația se deschide prin onAuthStateChange
+const LUNGIME_COD_EMAIL = 8;
+function laCodAuth(camp) {
+  camp.value = camp.value.replace(/\D/g, '').slice(0, LUNGIME_COD_EMAIL);
+  if (camp.value.length === LUNGIME_COD_EMAIL) verificaCodAuth();
+}
+
+async function verificaCodAuth() {
+  const email = citesteEmailAuthValid();
+  const token = (document.getElementById('authCod').value || '').trim();
+  if (!email) return;
+  if (token.length !== LUNGIME_COD_EMAIL) return afiseazaMesajAuthFeedback(tr(`Scrie cele ${LUNGIME_COD_EMAIL} cifre din email.`, `Enter the ${LUNGIME_COD_EMAIL} digits from the email.`));
+  const btn = document.getElementById('authCodBtn');
+  btn.disabled = true;
+  const { error } = await supabaseClient.auth.verifyOtp({ email, token, type: 'email' });
+  btn.disabled = false;
+  if (error) {
+    afiseazaMesajAuthFeedback(tr('Codul nu e bun sau a expirat. Cere altul.', 'The code is wrong or has expired. Request a new one.'), 'error',
+      { text: tr('Trimite alt cod', 'Send a new code'), fn: trimiteMagicLink });
+    return;
+  }
+  document.getElementById('authCodGroup').hidden = true;
+  document.getElementById('authMagicLinkBtn').hidden = false;
+  ascundeMesajAuthFeedback();
+}
+
+// Cont nou, fără nimic legat de el (ex. Google cu alt email decât cel din invitație): ar rămâne un antrenor cu aplicația goală.
+// O singură întrebare, în primele 15 minute ale contului: antrenor → continuă; client → ieșire, cu ce are de făcut
+function confirmaRolContNou() {
+  const u = utilizatorCurent;
+  const meta = (u && u.user_metadata) || {};
+  const nou = u && u.created_at && Date.now() - new Date(u.created_at).getTime() < 15 * 60 * 1000;
+  if (rolUtilizator !== 'antrenor' || meta.rol_ales || !nou) return;
+  customConfirm(tr('Ești antrenor sau client?', 'Are you a trainer or a client?'),
+    tr(`Contul ${u.email} e nou și nu e legat de niciun antrenor.`, `The account ${u.email} is new and not linked to any trainer.`),
+    () => supabaseClient.auth.updateUser({ data: { rol_ales: 'antrenor' } }));
+  document.getElementById('modalBtnConfirm').innerText = tr('Sunt antrenor', 'I’m a trainer');
+  aratButonAlternativModal(tr('Sunt client', 'I’m a client'), async () => {
+    await supabaseClient.auth.signOut();
+    afiseazaMesajAuthFeedback(tr('Intră cu emailul pe care l-ai dat antrenorului. Dacă nu ai primit invitația, cere-i-o.', 'Sign in with the email you gave your trainer. If you didn’t get an invitation, ask for one.'), 'success');
+  });
 }
 
 async function loginCuGoogle() {
@@ -880,6 +1076,7 @@ function navigheazaSubMeniu(strat) {
   if (strat === 'settings') actualizeazaRezumatNotificari();
   if (strat === 'noutati') document.getElementById('noutatiLista').innerHTML = htmlNoutati(noutatiPentruRol(), true);
   if (strat === 'settingsNotifications') randeazaSetariNotificari();
+  if (strat === 'profile') actualizeazaProfilAmprenta();
   if (strat === 'profile' && rolUtilizator === 'antrenor') incarcaTelefonContact();
   if (strat === 'profile' && rolUtilizator === 'clienta') {
     const inp = document.getElementById('profileInputTelefonClient');
@@ -3767,14 +3964,11 @@ function htmlOnboardingClienta() {
   const arataInstalare = !instalata && !localStorage.getItem(cheieOnboardingClienta());
   if (dateClienta.areParola && !arataInstalare) return '';
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const parola = dateClienta.areParola ? '' : `<div id="onboardParola" style="margin-top:8px; font-size:0.8rem; line-height:1.45;">
-      <b>${tr('Setează o parolă', 'Set a password')}</b><br>
-      ${tr('Așa te poți conecta oricând cu email și parolă, inclusiv în aplicația instalată.', 'This lets you sign in any time with email and password, including in the installed app.')}
-      <div style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
-        ${htmlCampParola('onboardParolaInput', tr('Parolă nouă (min. 8 caractere)', 'New password (min. 8 characters)'))}
-        ${htmlCampParola('onboardParolaConfirma', tr('Confirmă parola', 'Confirm password'))}
-        <button type="button" class="btn" id="btnOnboardParola" onclick="seteazaParolaOnboarding()">${tr('Setează parola', 'Set password')}</button>
-      </div>
+  // Un singur câmp (ochiul arată ce ai scris, deci fără „Confirmă parola”)
+  const parola = dateClienta.areParola ? '' : `<div id="onboardParola" class="onboard-parola">
+      <p>${tr('Alege o parolă ca să intri ușor data viitoare, de oriunde, inclusiv din aplicația instalată.', 'Choose a password so you can sign in easily next time, from anywhere, including the installed app.')}</p>
+      ${htmlCampParola('onboardParolaInput', tr('Parolă nouă (min. 8 caractere)', 'New password (min. 8 characters)'))}
+      <button type="button" class="btn" id="btnOnboardParola" onclick="seteazaParolaOnboarding()">${tr('Salvează parola', 'Save password')}</button>
     </div>`;
   const instalare = !arataInstalare ? '' : `<div style="margin-top:12px; font-size:0.8rem; line-height:1.45;">
       <b>${tr('Instalează aplicația', 'Install the app')}</b><br>
@@ -3782,23 +3976,19 @@ function htmlOnboardingClienta() {
         ? tr('Apasă Partajează (pătratul cu săgeată) → „Adaugă pe ecranul principal”. După instalare te conectezi din nou, cu email și parolă.', 'Tap Share (the square with an arrow) → "Add to Home Screen". After installing, sign in again with email and password.')
         : tr('Meniul ⋮ al browserului → „Instalează aplicația” sau „Adaugă pe ecranul principal”.', 'Browser menu ⋮ → "Install app" or "Add to Home screen".')}
     </div>`;
+  const prenume = ((dateClienta.fisa && dateClienta.fisa.nume) || '').trim().split(/\s+/)[0];
   return `<div class="card" id="clientaOnboarding">
-    <div style="font-weight:800; font-size:1.05rem; color:var(--m-text);">${tr('Bine ai venit!', 'Welcome!')}</div>
+    <div style="font-weight:800; font-size:1.05rem; color:var(--m-text);">${prenume ? tr(`Bun venit, ${escAttr(prenume)}!`, `Welcome, ${escAttr(prenume)}!`) : tr('Bun venit!', 'Welcome!')}</div>
     ${parola}
     ${instalare}
-    <button type="button" class="btn btn-clear" style="width:100%; margin-top:12px;" onclick="inchideOnboardingClienta()">${tr('Gata', 'Done')}</button>
+    <button type="button" class="btn btn-clear" style="width:100%; margin-top:12px;" onclick="inchideOnboardingClienta()">${dateClienta.areParola ? tr('Gata', 'Done') : tr('Mai târziu', 'Later')}</button>
   </div>`;
 }
 
 async function seteazaParolaOnboarding() {
   const parola = document.getElementById('onboardParolaInput')?.value || '';
-  const confirmare = document.getElementById('onboardParolaConfirma')?.value || '';
   if (parola.length < 8) {
     showToast(t('authErrPassLength'), 'error');
-    return;
-  }
-  if (parola !== confirmare) {
-    showToast(tr('Parolele introduse nu coincid!', 'Passwords do not match!'), 'error');
     return;
   }
   const btn = document.getElementById('btnOnboardParola');
@@ -5061,57 +5251,172 @@ function progresObiectiv(o, ctx) {
 
 function titluObiectiv(o) {
   if (o.tip === 'antrenamente_saptamana') return Number(o.tinta) === 1 ? tr('1 antrenament pe săptămână', '1 workout per week') : tr(`${Number(o.tinta)} antrenamente pe săptămână`, `${Number(o.tinta)} workouts per week`);
-  return `${o.exercitiu}: ${formatKg(Number(o.tinta))} kg${o.termen ? ` ${tr('până la', 'by')} ${formatZiLuna(new Date(o.termen + 'T12:00:00'))}` : ''}`;
+  return `${o.exercitiu}: ${formatKg(Number(o.tinta))} kg`;
 }
 
+// Recordul de acum (kg maxime) la un exercițiu și ritmul de creștere (kg pe săptămână, din ultimele 8 antrenamente)
+function recordSiRitmEx(sursa, exercitiu) {
+  const e = istoricExercitii(sursa).find(x => x.nume.toLowerCase() === String(exercitiu || '').trim().toLowerCase());
+  const p = e ? e.puncte.filter(x => x.kg > 0).slice(-8) : [];
+  const record = p.length ? Math.max(...p.map(x => x.kg)) : 0;
+  const sapt = p.length >= 3 ? (p[p.length - 1].d - p[0].d) / (7 * 864e5) : 0;
+  return { record, ritm: sapt >= 1 ? (record - p[0].kg) / sapt : 0 };
+}
+
+// Rândurile de sub titlul unui obiectiv la exercițiu: cât mai are, „în ritmul ăsta” și zilele până la termen
+function detaliiObiectivEx(o, ctx) {
+  const { record, ritm } = recordSiRitmEx(ctx.sursa, o.exercitiu);
+  const t = Number(o.tinta), rest = t - record;
+  const zile = o.termen ? Math.ceil((new Date(o.termen + 'T12:00:00') - new Date()) / 864e5) : null;
+  const sus = !record ? tr('Încă nimic notat la acest exercițiu', 'Nothing logged for this exercise yet')
+    : tr(`Mai ai ${formatKg(rest)} kg · recordul: ${formatKg(record)} kg`, `${formatKg(rest)} kg to go · best: ${formatKg(record)} kg`);
+  const parti = [];
+  if (record && ritm > 0) {
+    const s = Math.ceil(rest / ritm);
+    parti.push(s <= 1 ? tr('În ritmul ăsta: cam o săptămână', 'At this pace: about a week') : tr(`În ritmul ăsta: ~${s} săptămâni`, `At this pace: ~${s} weeks`));
+  }
+  if (zile !== null) parti.push(zile < 0 ? tr('termenul a trecut', 'deadline passed') : zile === 0 ? tr('termenul e azi', 'due today')
+    : zile === 1 ? tr('mai e o zi', '1 day left') : tr(`mai sunt ${zile} zile`, `${zile} days left`));
+  return { sus, jos: parti.join(' · '), procent: Math.round(Math.min(1, record / t) * 100) };
+}
+
+// Obiectivele (Fișa mea / Fișă › Progres), pe grupe: Săptămâna asta, Forță, Greutate corporală, apoi Atinse (cu „Următorul”).
+// Atingerea unui obiectiv deschide fereastra de modificare; adăugarea are aceeași fereastră
 function htmlObiective() {
   const ctx = obiectiveUI;
   if (!ctx) return '';
-  const cine = o => o.creat_de === (ctx.rol === 'client' ? 'client' : 'antrenor') ? tr('setat de tine', 'set by you')
-    : o.creat_de === 'antrenor' ? tr('setat de antrenor', 'set by your trainer') : tr('setat de client', 'set by the client');
-  const randuri = ctx.lista.map(o => {
-    if (ctx.editare === o.id) return htmlFormObiectiv(o);
-    const p = progresObiectiv(o, ctx);
-    return `<div class="obiectiv-progres obiectiv-card${p.atins ? ' atins' : ''}">
-      <div class="obiectiv-sus"><span><b>${escAttr(titluObiectiv(o))}</b> <small class="obiectiv-cine">${cine(o)}</small></span><b>${p.procent}%</b></div>
-      <div class="progress-wrapper"><div class="progress-fill" style="width:${p.procent}%"></div></div>
-      <div class="obiectiv-detalii">${escAttr(p.text)}</div>
-      <div class="obiectiv-actiuni">
-        <button type="button" class="btn btn-clear" onclick="editeazaObiectiv('${o.id}')">${tr('Modifică', 'Edit')}</button>
-        <button type="button" class="btn btn-clear antr-pers-sterge" onclick="stergeObiectiv('${o.id}')">${tr('Șterge', 'Delete')}</button>
-      </div>
-    </div>`;
-  }).join('');
-  const gol = ctx.lista.length ? '' : `<div class="progres-gol">${ctx.rol === 'client'
-    ? tr('Setează-ți un obiectiv: câte antrenamente pe săptămână sau o greutate de atins la un exercițiu.', 'Set a goal: workouts per week or a weight to reach on an exercise.')
-    : tr('Clientul nu are încă obiective. Poți seta tu unul.', 'The client has no goals yet. You can set one.')}</div>`;
-  return gol + randuri + (ctx.editare === 'nou' ? htmlFormObiectiv(null)
-    : `<button type="button" class="btn btn-clear obiectiv-adauga" onclick="editeazaObiectiv('nou')">${tr('+ Obiectiv', '+ Goal')}</button>`);
+  const cine = o => o.creat_de === (ctx.rol === 'client' ? 'client' : 'antrenor') ? '' : o.creat_de === 'antrenor' ? tr('de la antrenor', 'from your trainer') : tr('pus de client', 'set by the client');
+  // Cine l-a pus (când nu ești tu) stă la finalul rândului mic, ca titlul să aibă tot rândul
+  const rand = (onclick, inel, titlu, sus, jos, eticheta) => `<button type="button" class="obiectiv-rand" onclick="${onclick}">
+      ${inel}<span class="obiectiv-text"><b>${escAttr(titlu)}</b><small>${escAttr(sus + (eticheta ? ' · ' + eticheta : ''))}</small>${jos ? `<small class="obiectiv-jos">${escAttr(jos)}</small>` : ''}</span></button>`;
+  const adauga = (tip, text) => `<button type="button" class="obiectiv-rand obiectiv-nou" onclick="deschideFoaieObiectiv('nou', '${tip}')"><span class="obiectiv-plus">+</span><span class="obiectiv-text"><b>${text}</b></span></button>`;
+  let html = '';
+  // Săptămâna asta: inelul zilelor active
+  const sapt = obiectivSaptamana(ctx.lista);
+  html += `<div class="lista-titlu">${tr('Săptămâna asta', 'This week')}</div><div class="lista-sticla">${sapt ? (() => {
+    const p = progresObiectiv(sapt, ctx);
+    return rand(`deschideFoaieObiectiv('${sapt.id}')`, htmlInelProgres(p.procent, `${Math.min(ctx.zileSapt || 0, 99)}/${Number(sapt.tinta)}`, p.atins), titluObiectiv(sapt),
+      p.atins ? tr('✓ Atins săptămâna asta', '✓ Reached this week') : tr(`${ctx.zileSapt || 0} din ${Number(sapt.tinta)} zile active`, `${ctx.zileSapt || 0} of ${Number(sapt.tinta)} active days`), '', cine(sapt));
+  })() : adauga('antrenamente_saptamana', tr('Câte antrenamente pe săptămână?', 'How many workouts per week?'))}</div>`;
+  // Forță: obiectivele la exerciții încă neatinse
+  const forta = ctx.lista.filter(o => o.tip === 'exercitiu_kg');
+  const active = forta.filter(o => !o.atins_la);
+  html += `<div class="lista-titlu">${tr('Forță', 'Strength')}</div><div class="lista-sticla">${active.map(o => {
+    const d = detaliiObiectivEx(o, ctx);
+    return rand(`deschideFoaieObiectiv('${o.id}')`, htmlInelProgres(d.procent, `${d.procent}%`, false), titluObiectiv(o), d.sus, d.jos, cine(o));
+  }).join('')}${adauga('exercitiu_kg', tr('Obiectiv la un exercițiu', 'Goal on an exercise'))}</div>`;
+  // Greutate corporală: ținta din fișă (se modifică la Greutate)
+  const corp = ctx.corp;
+  if (corp && corp.ob && corp.puncte && corp.puncte.length) {
+    const start = corp.puncte[0].kg, acum = corp.puncte[corp.puncte.length - 1].kg, tinta = corp.ob.kg;
+    const atins = start >= tinta ? acum <= tinta : acum >= tinta;
+    const procent = atins ? 100 : Math.max(0, Math.min(100, Math.round((start - acum) / (start - tinta) * 100)));
+    const zile = corp.ob.data ? Math.ceil((new Date(corp.ob.data + 'T12:00:00') - new Date()) / 864e5) : null;
+    html += `<div class="lista-titlu">${tr('Greutate corporală', 'Body weight')}</div><div class="lista-sticla">${rand(ctx.rol === 'antrenor' ? "deschideFoaieProgres('greutate')" : '',
+      htmlInelProgres(procent, `${procent}%`, atins), `${tr('Ținta', 'Target')}: ${formatKg(tinta)} kg`,
+      atins ? tr('✓ Atinsă', '✓ Reached') : tr(`Mai ai ${formatKg(Math.abs(acum - tinta))} kg · acum: ${formatKg(acum)} kg`, `${formatKg(Math.abs(acum - tinta))} kg to go · now: ${formatKg(acum)} kg`),
+      zile === null || atins ? '' : zile < 0 ? tr('termenul a trecut', 'deadline passed') : tr(`mai sunt ${zile} zile`, `${zile} days left`), '')}</div>`;
+  }
+  // Atinse: raftul cu trofee; la cel mai nou, „Următorul” (dacă nu există deja un obiectiv activ la același exercițiu)
+  const atinse = forta.filter(o => o.atins_la).sort((a, b) => String(b.atins_la).localeCompare(String(a.atins_la)));
+  if (atinse.length) {
+    const ultim = atinse[0];
+    const areActiv = active.some(o => o.exercitiu.trim().toLowerCase() === ultim.exercitiu.trim().toLowerCase());
+    html += `<div class="lista-titlu">${tr('Atinse', 'Reached')}</div><div class="lista-sticla obiective-atinse">${atinse.map(o => `<div class="obiectiv-atins">
+        <span>🏆</span><span class="obiectiv-text"><b>${escAttr(titluObiectiv(o))}</b><small>${tr('Atins pe', 'Reached on')} ${formatZiLuna(new Date(o.atins_la))}</small>
+        ${o === ultim && !areActiv ? `<button type="button" class="istoric-toate obiectiv-urmator" onclick="adaugaObiectivUrmator('${o.id}')">${tr('Următorul', 'Next')}: ${formatKg(tintaUrmatoare(o, ctx))} kg</button>` : ''}</span>
+      </div>`).join('')}</div>`;
+  }
+  return html;
+}
+
+// Următoarea țintă după un obiectiv atins: de la ținta atinsă sau de la recordul de acum (dacă a trecut de ea),
+// +2,5 kg până la 40 kg, apoi +5 kg, rotunjit la 2,5 kg
+function tintaUrmatoare(o, ctx) {
+  const baza = Math.max(Number(o.tinta), recordSiRitmEx(ctx.sursa, o.exercitiu).record);
+  return Math.ceil((baza + (baza < 40 ? 2.5 : 5)) / 2.5) * 2.5;
+}
+
+async function adaugaObiectivUrmator(id) {
+  const ctx = obiectiveUI;
+  const o = ctx && ctx.lista.find(x => x.id === id);
+  if (!o) return;
+  const { data, error } = await supabaseClient.from('obiective').insert({ tip: 'exercitiu_kg', exercitiu: o.exercitiu, tinta: tintaUrmatoare(o, ctx),
+    updated_at: new Date().toISOString(), user_id: ctx.userId, client_id: ctx.clientId, creat_de: ctx.rol }).select().single();
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  ctx.lista = ctx.lista.concat(data);
+  dupaSchimbareObiective();
+  showToast(tr(`✓ Obiectiv nou: ${data.exercitiu} ${formatKg(Number(data.tinta))} kg`, `✓ New goal: ${data.exercitiu} ${formatKg(Number(data.tinta))} kg`));
+}
+
+// Fereastra de jos pentru un obiectiv: nou (cu tipul ales) sau existent (modificare și ștergere)
+function deschideFoaieObiectiv(id, tip) {
+  const ctx = obiectiveUI;
+  if (!ctx) return;
+  const o = id === 'nou' ? null : ctx.lista.find(x => x.id === id);
+  if (id !== 'nou' && !o) return;
+  ctx.editare = id;
+  ctx.tipNou = tip || null;
+  document.getElementById('obiectivFoaieTitlu').textContent = o ? tr('Obiectiv', 'Goal') : tr('Obiectiv nou', 'New goal');
+  document.getElementById('obiectivFoaieContinut').innerHTML = htmlFormObiectiv(o);
+  document.getElementById('obiectivTermen')?.addEventListener('change', actualizeazaAvizObiectiv);
+  actualizeazaAvizObiectiv();
+  deschideFoaieCuFundal(document.getElementById('modalObiectivBackdrop'), document.getElementById('cardObiectiv'));
+}
+
+function inchideFoaieObiectiv() {
+  if (obiectiveUI) obiectiveUI.editare = null;
+  inchideFoaieCuFundal(document.getElementById('modalObiectivBackdrop'), document.getElementById('cardObiectiv'));
 }
 
 function htmlFormObiectiv(o) {
   const ctx = obiectiveUI;
-  const areSapt = ctx.lista.some(x => x.tip === 'antrenamente_saptamana' && (!o || x.id !== o.id));
-  const tip = o ? o.tip : (ctx.tipNou || (areSapt ? 'exercitiu_kg' : 'antrenamente_saptamana'));
+  const tip = o ? o.tip : (ctx.tipNou || 'exercitiu_kg');
+  const actiuni = `<button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" onclick="salveazaObiectivUI('${o ? o.id : ''}')"><span>${tr('Salvează', 'Save')}</span></button>
+    ${o ? `<button type="button" class="fisa-scurta-actiune obiectiv-sterge" onclick="stergeObiectiv('${o.id}')"><span>${tr('Șterge obiectivul', 'Delete goal')}</span></button>` : ''}`;
+  if (tip === 'antrenamente_saptamana') {
+    const v = o ? Number(o.tinta) : 3;
+    return `<div class="obiectiv-form" data-tip="${tip}">
+      <div class="lista-titlu">${tr('Câte antrenamente pe săptămână?', 'How many workouts per week?')}</div>
+      <div class="obiectiv-pastile">${[1, 2, 3, 4, 5, 6, 7].map(n => `<button type="button" class="${n === v ? 'active' : ''}" onclick="alegeTintaObiectiv(this, ${n})">${n}</button>`).join('')}</div>
+      <input type="hidden" id="obiectivTinta" value="${v}">
+      <p class="obiectiv-nota">${tr('Contează orice zi activă: ședință la sală, zi din plan bifată sau antrenament propriu.', 'Any active day counts: a gym session, a checked plan day or an own workout.')}</p>
+      ${actiuni}</div>`;
+  }
   // Întâi exercițiile pe care clientul le-a făcut deja (au progres), apoi restul celor cunoscute
   const nume = [...new Set(istoricExercitii(ctx.sursa).map(x => x.nume).concat([...exercitiiCunoscuteAntrPers().values()].map(x => x.exercitiu)))];
-  const sugestii = nume.map(n => `<option value="${escAttr(n)}"></option>`).join('');
-  const tipuri = o ? '' : `<div class="antr-pers-activitati">
-      ${areSapt ? '' : `<button type="button" class="antr-pers-activitate${tip === 'antrenamente_saptamana' ? ' activ' : ''}" onclick="alegeTipObiectiv('antrenamente_saptamana')">${tr('Antrenamente pe săptămână', 'Workouts per week')}</button>`}
-      <button type="button" class="antr-pers-activitate${tip === 'exercitiu_kg' ? ' activ' : ''}" onclick="alegeTipObiectiv('exercitiu_kg')">${tr('Greutate la un exercițiu', 'Weight on an exercise')}</button>
-    </div>`;
-  const campuri = tip === 'antrenamente_saptamana'
-    ? `<div class="antr-pers-campuri"><label>${tr('Câte pe săptămână (1–7)', 'How many per week (1–7)')}<input type="number" inputmode="numeric" min="1" max="7" id="obiectivTinta" class="plan-ex-input" value="${o ? Number(o.tinta) : 3}"></label></div>`
-    : `<div class="antr-pers-campuri"><label>${tr('Exercițiu', 'Exercise')}<input type="text" id="obiectivExercitiu" class="plan-ex-input" maxlength="80" list="listaExercitiiObiectiv" value="${escAttr(o ? o.exercitiu : '')}" placeholder="${tr('Ex: Hip thrust', 'E.g. Hip thrust')}"></label>
-        <datalist id="listaExercitiiObiectiv">${sugestii}</datalist></div>
-      <div class="antr-pers-campuri"><label>${tr('Greutate țintă (kg)', 'Target weight (kg)')}<input type="text" inputmode="decimal" id="obiectivTinta" class="plan-ex-input" maxlength="6" value="${o ? formatKg(Number(o.tinta)) : ''}"></label>
-        <label>${tr('Termen (opțional)', 'Deadline (optional)')}${htmlPastilaData('obiectivTermen', o && o.termen ? o.termen : '', tr('Alege data', 'Pick a date'))}</label></div>`;
-  return `<div class="card obiectiv-form" data-tip="${tip}">${tipuri}${campuri}
-    <div class="antr-pers-actiuni">
-      <button type="button" class="btn" onclick="salveazaObiectivUI('${o ? o.id : ''}')">${tr('Salvează', 'Save')}</button>
-      <button type="button" class="btn btn-clear" onclick="editeazaObiectiv(null)">${tr('Renunță', 'Cancel')}</button>
-    </div>
-  </div>`;
+  return `<div class="obiectiv-form" data-tip="${tip}">
+    <label class="obiectiv-camp">${tr('Exercițiu', 'Exercise')}<input type="text" id="obiectivExercitiu" class="plan-ex-input" maxlength="80" list="listaExercitiiObiectiv" value="${escAttr(o ? o.exercitiu : '')}" placeholder="${tr('Ex: Hip thrust', 'E.g. Hip thrust')}" oninput="actualizeazaAvizObiectiv()" onchange="actualizeazaAvizObiectiv()"></label>
+    <datalist id="listaExercitiiObiectiv">${nume.map(n => `<option value="${escAttr(n)}"></option>`).join('')}</datalist>
+    <div class="obiectiv-record" id="obiectivRecord"></div>
+    <label class="obiectiv-camp">${tr('Greutate țintă (kg)', 'Target weight (kg)')}<input type="text" inputmode="decimal" id="obiectivTinta" class="plan-ex-input" maxlength="6" value="${o ? formatKg(Number(o.tinta)) : ''}" oninput="actualizeazaAvizObiectiv()"></label>
+    <label class="obiectiv-camp">${tr('Termen (opțional)', 'Deadline (optional)')}${htmlPastilaData('obiectivTermen', o && o.termen ? o.termen : '', tr('Alege data', 'Pick a date'))}</label>
+    <div class="obiectiv-aviz" id="obiectivAviz" hidden></div>
+    ${actiuni}</div>`;
+}
+
+function alegeTintaObiectiv(btn, n) {
+  document.getElementById('obiectivTinta').value = n;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+}
+
+// Sub exercițiu: recordul de acum și țintele gata (+2,5 / +5 / +10 kg); sub termen: avertisment când ritmul cerut e prea mare
+function actualizeazaAvizObiectiv() {
+  const ctx = obiectiveUI;
+  const camp = document.getElementById('obiectivExercitiu');
+  if (!ctx || !camp) return;
+  const { record } = recordSiRitmEx(ctx.sursa, camp.value);
+  const el = document.getElementById('obiectivRecord');
+  el.innerHTML = record ? `<span>${tr('Recordul de acum', 'Current best')}: <b>${formatKg(record)} kg</b></span>
+    <span class="obiectiv-pastile">${[2.5, 5, 10].map(p => `<button type="button" onclick="document.getElementById('obiectivTinta').value='${formatKg(record + p)}'; actualizeazaAvizObiectiv()">+${formatKg(p)} kg</button>`).join('')}</span>` : '';
+  const tinta = parseFloat(String(document.getElementById('obiectivTinta').value).replace(',', '.'));
+  const termen = document.getElementById('obiectivTermen')?.value;
+  const aviz = document.getElementById('obiectivAviz');
+  const sapt = termen ? (new Date(termen + 'T12:00:00') - new Date()) / (7 * 864e5) : 0;
+  const necesar = record && tinta > record && sapt > 0 ? (tinta - record) / sapt : 0;
+  aviz.hidden = necesar <= 1.5;
+  aviz.textContent = tr(`Ambițios: ar cere ~${formatKg(Math.round(necesar * 10) / 10)} kg pe săptămână. Poate o țintă mai mică sau un termen mai lung.`,
+    `Ambitious: it would take ~${formatKg(Math.round(necesar * 10) / 10)} kg per week. Maybe a lower target or a later deadline.`);
 }
 
 function randeazaObiective() {
@@ -5119,22 +5424,9 @@ function randeazaObiective() {
   if (el && obiectiveUI) el.innerHTML = htmlObiective();
 }
 
-function editeazaObiectiv(id) {
-  if (!obiectiveUI) return;
-  obiectiveUI.editare = id;
-  obiectiveUI.tipNou = null;
-  randeazaObiective();
-}
-
-function alegeTipObiectiv(tip) {
-  if (!obiectiveUI) return;
-  obiectiveUI.tipNou = tip;
-  randeazaObiective();
-}
-
 async function salveazaObiectivUI(id) {
   const ctx = obiectiveUI;
-  const form = document.querySelector('#obiectiveContinut .obiectiv-form');
+  const form = document.querySelector('#cardObiectiv .obiectiv-form');
   if (!ctx || !form) return;
   const tip = form.dataset.tip;
   const tinta = parseFloat(String(document.getElementById('obiectivTinta').value).replace(',', '.'));
@@ -5157,7 +5449,7 @@ async function salveazaObiectivUI(id) {
   const { data, error } = await q.select().single();
   if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
   ctx.lista = ctx.lista.filter(x => x.id !== data.id).concat(data);
-  ctx.editare = null;
+  inchideFoaieObiectiv();
   dupaSchimbareObiective();
   showToast(tr('✓ Obiectiv salvat', '✓ Goal saved'));
 }
@@ -5167,8 +5459,10 @@ function stergeObiectiv(id) {
     const { error } = await supabaseClient.from('obiective').delete().eq('id', id);
     if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
     obiectiveUI.lista = obiectiveUI.lista.filter(x => x.id !== id);
+    inchideFoaieObiectiv();
     dupaSchimbareObiective();
   });
+  document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Delete');
 }
 
 function dupaSchimbareObiective() {
@@ -9945,7 +10239,8 @@ function afiseazaFisaMeaClienta() {
       ${htmlRandSticla('deschideLunaTa(0)', '<path d="M3 3v18h18"/><path d="M7 16v-4M11 16V8M15 16v-6M19 16V5"/>', tr('Luna ta', 'Your month'), tr('Rezumatul lunii, de trimis mai departe', 'This month in short, ready to share'))}</div>`;
   html += titlu(tr('Săptămâna asta', 'This week')) + `<div class="lista-sticla checkin-card">${htmlCheckinClienta()}</div>`;
   obiectiveUI = { rol: 'client', clientId: dateClienta.fisa.id, userId: dateClienta.fisa.user_id, lista: (dateClienta.obiective || []).slice(),
-    sursa: sursaProgresClient(), zileSapt: zileActiveSaptamanaClient(), editare: null };
+    sursa: sursaProgresClient(), zileSapt: zileActiveSaptamanaClient(), editare: null,
+    corp: { ob: obiectivClient(dateClienta.fisa.obiectiv, r), puncte: puncteGreutate(r, checkinuriClienta, dateClienta.greutati || []) } };
   html += titlu(tr('Obiectivele mele', 'My goals')) + `<div id="obiectiveContinut">${htmlObiective()}</div>`;
   html += titlu(tr('Greutate', 'Weight')) + `<div class="card">${htmlProgres(r, checkinuriClienta, { greutati: dateClienta.greutati || [], obiectiv: dateClienta.fisa.obiectiv })}</div>`;
   html += titlu(tr('Recorduri la exerciții', 'Exercise records')) + htmlProgresExercitii(sursaProgresClient());
@@ -11096,6 +11391,17 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 232, data: '2026-11-19',
+    client: [
+      ['Intri cu amprenta sau Face ID: o activezi o dată din Meniu › Profil, apoi aplicația te întreabă singură la deschidere.', 'Sign in with your fingerprint or Face ID: turn it on once in Menu › Profile, then the app asks for it on its own when it opens.'],
+      ['Emailul de conectare are acum și un cod: îl scrii direct în aplicație, util mai ales pe iPhone, unde linkul se deschide în browser.', 'The sign-in email now has a code too: type it straight into the app, handy on iPhone, where the link opens in the browser.'],
+      ['Obiectivele arată nou: grupate pe Săptămâna asta, Forță și Greutate, cu cât mai ai până la țintă și „Următorul” când atingi unul.', 'Goals have a new look: grouped into This week, Strength and Weight, with how far you are from the target and “Next” when you reach one.']
+    ],
+    antrenor: [
+      ['Intri cu amprenta sau Face ID: o activezi o dată din Meniu › Profil, apoi aplicația te întreabă singură la deschidere.', 'Sign in with your fingerprint or Face ID: turn it on once in Menu › Profile, then the app asks for it on its own when it opens.'],
+      ['Login mai simplu pentru clienți: emailul de invitație și cel de conectare au și un cod de scris în aplicație, iar la parolă greșită apare direct „Intră cu un cod pe email”.', 'Simpler sign-in for clients: the invitation and sign-in emails include a code to type in the app, and a wrong password offers “Sign in with an email code” right away.'],
+      ['Obiectivele din fișa clientului arată nou: grupate pe Săptămâna asta, Forță și Greutate, cu propuneri de țintă din recordul clientului și „Următorul” când atinge unul.', 'Goals in the client’s file have a new look: grouped into This week, Strength and Weight, with target suggestions from the client’s record and “Next” when one is reached.']
+    ] },
   { v: 230, data: '2026-11-18',
     client: [
       ['Recordurile la exerciții arată nou: fiecare exercițiu cu un mic grafic și 🏆 când ai bătut un record. Atinge un exercițiu ca să vezi recordul, graficul și tot istoricul.', 'Exercise records have a new look: each exercise with a small chart and 🏆 when you beat a record. Tap an exercise to see the record, the chart and the full history.']
@@ -11541,23 +11847,31 @@ async function verificaSesiuneSupabase() {
   if (session && session.user) {
     utilizatorCurent = session.user;
     actualizeazaDateProfilUI(session.user);
+    tineMinteEmailAuth(session.user.email);
     await stabilesteRol();
     // Clienta: ecranul ei apare înaintea oricărei alte afișări
     if (rolUtilizator === 'clienta') document.getElementById('clientaScreen')?.classList.remove('auth-hidden');
     if (overlay) overlay.classList.add('auth-hidden');
     actualizeazaStareNoScrollBody();
     terminaPornirea();
+    confirmaRolContNou();
     return true;
   } else {
     utilizatorCurent = null;
     // Fără sesiune aplicația rămâne ascunsă (app-pornire): login-ul apare cu fade și orarul s-ar vedea prin el.
     // Devine vizibilă abia la conectare (ascundeLogin din onAuthStateChange).
+    preumpleEmailAuth();
     if (overlay) overlay.classList.remove('auth-hidden');
     if (eroareLink) afiseazaMesajAuthFeedback(eroareLink);
     if (sessionStorage.getItem('BFIT_CONT_STERS')) {
       sessionStorage.removeItem('BFIT_CONT_STERS');
+      // Contul șters: emailul lui nu mai rămâne scris în login
+      try { localStorage.removeItem(CHEIE_ULTIM_EMAIL); } catch (e) {}
+      tineMinteAmprenta('');
+      document.getElementById('authEmail').value = '';
       afiseazaMesajAuthFeedback(tr('Contul tău a fost șters.', 'Your account has been deleted.'), 'success');
     }
+    aratAmprentaAuth(!eroareLink);
     actualizeazaStareNoScrollBody();
     return false;
   }
@@ -11625,6 +11939,7 @@ window.onload = async function() {
         const eraNeconectat = !utilizatorCurent;
         utilizatorCurent = session.user;
         actualizeazaDateProfilUI(session.user);
+        tineMinteEmailAuth(session.user.email);
         const ascundeLogin = () => {
           if (overlay) overlay.classList.add('auth-hidden');
           actualizeazaStareNoScrollBody();
@@ -11639,6 +11954,7 @@ window.onload = async function() {
               incarcaBazaDateSilencios(null, true);
             }
             ascundeLogin();
+            confirmaRolContNou();
           });
         } else if (sesiuneInitializata) {
           ascundeLogin();
@@ -11646,6 +11962,8 @@ window.onload = async function() {
       } else if (event === 'SIGNED_OUT' && !deconectareInCurs) {
         utilizatorCurent = null;
         document.getElementById('clientaScreen')?.classList.add('auth-hidden');
+        preumpleEmailAuth();
+        aratAmprentaAuth(false);
         if (overlay) overlay.classList.remove('auth-hidden');
         actualizeazaStareNoScrollBody();
       }
@@ -11792,6 +12110,7 @@ function pasInapoiTelefon() {
   if (document.getElementById('clientNouFundal')) return inchideClientNou;
   // Exercițiul se deschide peste fereastra Progres a fișei: Înapoi îl închide întâi pe el
   if (document.getElementById('modalProgresExBackdrop').style.display === 'flex') return inchideProgresExercitiu;
+  if (document.getElementById('modalObiectivBackdrop').style.display === 'flex') return inchideFoaieObiectiv;
   if (document.getElementById('foaieFisaFundal')) return inchideFoaieFisa;
   const modal = MODALE_INAPOI.find(([id]) => document.getElementById(id)?.style.display === 'flex');
   if (modal) return modal[1];
@@ -17405,7 +17724,8 @@ async function incarcaProgresFisa(forta) {
     [], planuriClient, antrenamenteClient);
   // Obiectivele clientului: antrenorul le vede, le adaugă și le modifică (fără tabel, placa nu apare)
   obiectiveUI = resObiective && !resObiective.error ? { rol: 'antrenor', clientId: client.id, userId: utilizatorCurent.id, lista: resObiective.data || [],
-    sursa: { planuri: planuriClient, antrenamente: antrenamenteClient }, zileSapt: zileActiveSaptamanaAntrenor(client, planuriClient, antrenamenteClient), editare: null } : null;
+    sursa: { planuri: planuriClient, antrenamente: antrenamenteClient }, zileSapt: zileActiveSaptamanaAntrenor(client, planuriClient, antrenamenteClient), editare: null,
+    corp: { ob: obiectivClient(client.obiectiv, client.fisaInscriere), puncte: greutateTila.puncte } } : null;
   const sursaEx = { planuri: planuriClient, antrenamente: antrenamenteClient };
   const faraCheckin = `<div class="progres-gol">${client.contConectat
     ? tr('Clientul nu a făcut încă niciun check-in. Îl face din tab-ul „Fișa mea”.', 'No check-ins yet. The client does it from the “My profile” tab.')
@@ -18537,6 +18857,7 @@ trageInJosCaSaInchizi(document.getElementById('cardQr'), inchideModalQr);
 trageInJosCaSaInchizi(document.getElementById('cardFinal'), inchideFinalAntrenament);
 trageInJosCaSaInchizi(document.getElementById('cardNoutati'), inchideNoutati, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardProgresEx'), inchideProgresExercitiu, '.fisa-scurta-maner, .incasare-foaie-titlu');
+trageInJosCaSaInchizi(document.getElementById('cardObiectiv'), inchideFoaieObiectiv, '.fisa-scurta-maner, .incasare-foaie-titlu');
 
 function salveazaModificareIncasare() {
   let row = document.getElementById('editIncRow').value;
