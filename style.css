@@ -12710,6 +12710,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   display: none;
 }
 
+/* Câmpul de căutare: înălțimea lui (.istoric-cauta-camp are flex: 1 pentru rândurile orizontale) */
+.istoric-cauta-camp.verifica-cauta {
+  flex: none;
+}
+
 /* Butonul principal (Notează în jurnal / Trimite în chat / Salvează produsul), cu înălțimea lui (altfel flex: 1 îl strânge) */
 .verifica-continut > .fisa-scurta-actiune,
 .produs-nou > .fisa-scurta-actiune {
@@ -12911,14 +12916,14 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 
 .verifica-titlu-btn {
   flex-shrink: 0;
-  padding: 4px 10px;
+  padding: 2px 4px;
   border: 0;
-  border-radius: 999px;
   background: transparent;
-  color: var(--m-accent-text);
+  color: var(--m-muted);
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   cursor: pointer;
 }
 
@@ -12935,6 +12940,31 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 
 .verifica-compara-banner .verifica-rand-text small {
   white-space: normal;
+}
+
+/* Cardul de produs din chat: rândul de produs (poza, nume, calorii, Nutri-Score), în bula mesajului */
+.mesaj-produs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 220px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mesaj-produs .nutritie-imagine {
+  border-radius: 12px;
+}
+
+.mesaj-produs .verifica-rand-text small {
+  color: inherit;
+  opacity: 0.75;
 }
 
 /* Alergenii (pastile) și ingredientele */

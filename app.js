@@ -7056,6 +7056,7 @@ function deschideVerificaProdus() {
 // Înapoi (antetul și butonul telefonului): din comparație la primul produs, din alegerea celui de-al doilea la primul,
 // din produs / formular la căutare, din căutare în meniu
 function inapoiVerificaProdus() {
+  if (verificare.dinChat && verificare.produs && !verificare.comparatie) return inchideMeniuLateral();
   if (verificare.comparatie || (verificare.compara && !verificare.produs)) {
     const p = verificare.compara || verificare.comparatie[0];
     verificare.comparatie = null;
@@ -7081,9 +7082,15 @@ function tineMinteVerificat(p) {
   try { localStorage.setItem(CHEIE_VERIFICATE, JSON.stringify(lista)); } catch (e) {}
 }
 
+// Se golește pe loc; „Anulează” din mesajul de jos o aduce înapoi (câteva secunde)
 function stergeVerificateRecent() {
+  const lista = verificateRecent();
   try { localStorage.removeItem(CHEIE_VERIFICATE); } catch (e) {}
   randeazaRezultateVerificare();
+  showToast(tr('Lista de produse recente a fost ștearsă', 'Recent products cleared'), 'success', [{ text: tr('Anulează', 'Undo'), fn: () => {
+    try { localStorage.setItem(CHEIE_VERIFICATE, JSON.stringify(lista)); } catch (e) {}
+    randeazaRezultateVerificare();
+  } }], 5000);
 }
 
 function arataProdusVerificat(p, faraAlternative) {
@@ -7332,6 +7339,8 @@ async function noteazaProdusVerificat() {
   const masa = ora < 11 ? 'mic_dejun' : ora < 16 ? 'pranz' : ora < 21 ? 'cina' : 'gustare';
   const grame = verificare.grame;
   inchideMeniuLateral();
+  // Deschis din chat: conversația se închide, ca Nutriția să nu rămână sub ea
+  if (!document.getElementById('panouMesaje').classList.contains('auth-hidden')) inchidePanouMesaje();
   await deschideAdaugaAliment(masa);
   deschideCantitate(p);
   const camp = document.getElementById('nutritieGrame');
@@ -7346,13 +7355,13 @@ function textRezumatProdus(p) {
   return linii.join('\n');
 }
 
-// Antrenorul: alege clientul, iar rezumatul intră în câmpul conversației (îl trimite el, după ce îl vede)
+// Antrenorul: alege clientul, iar produsul pleacă drept card în conversația lui (clientul îl deschide și îl poate nota)
 function trimiteProdusInChat() {
   if (!verificare.produs) return;
-  textMesajPregatit = textRezumatProdus(verificare.produs);
+  produsDeTrimis = verificare.produs;
   inchideMeniuLateral();
   deschideMesajNou();
-  if (!selectieMesaj) textMesajPregatit = null;
+  if (!selectieMesaj) produsDeTrimis = null;
 }
 
 function incepeComparatia() {
@@ -11973,6 +11982,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 237, data: '2026-11-20',
+    client: [
+      ['Antrenorul îți poate trimite în chat un produs recomandat. Atingi cardul și vezi produsul, apoi îl poți nota în jurnal.', 'Your trainer can send you a recommended product in chat. Tap the card to see it, then add it to your log.']
+    ],
+    antrenor: [
+      ['Verifică un produs › „Trimite unui client în chat” trimite acum un card cu produsul. Clientul îl deschide și îl poate nota în jurnal.', 'Check a product › “Send to a client in chat” now sends a product card. The client opens it and can add it to their log.']
+    ] },
   { v: 236, data: '2026-11-19',
     client: [
       ['Nou în meniu: Verifică un produs. Scanezi sau cauți un produs din magazin și vezi pe scurt zahărul, sarea și grăsimile, alergenii și ingredientele, apoi îl poți compara cu altul sau nota în jurnal.', 'New in the menu: Check a product. Scan or search a product in the shop and see sugar, salt and fat at a glance, allergens and ingredients, then compare it with another or add it to your log.'],
@@ -15936,9 +15952,11 @@ function randeazaConversatie() {
     // Vocal: ▶ / ⏸, bara de progres și durata (redaVocal)
     const vocal = m.tip === 'voce' && cx.voce
       ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-bara"><i></i></span><span class="vocal-durata">${durataVocal(cx.durata)}</span></div>` : '';
-    const text = (poza && m.text === '📷') || vocal ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
-    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
-    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${vocal}${text}${subsol}${reactiiHtml}</div>`;
+    // Produs (Verifică un produs › Trimite în chat): card cu poza, numele, caloriile și Nutri-Score; atingerea îl deschide
+    const produs = m.tip === 'produs' && cx.nume ? htmlCardProdusMesaj(cx, i) : '';
+    const text = (poza && m.text === '📷') || vocal || produs ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
+    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${produs ? ' mesaj-cu-produs' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
+    return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${vocal}${produs}${text}${subsol}${reactiiHtml}</div>`;
   }).join('');
   umplePozeChat(lista);
   // Un vocal care se aude rămâne legat de bula lui și după redesenare
@@ -16006,6 +16024,8 @@ async function trimiteMesajTemporar(temp, conv) {
       }
       delete temp._fisier;
     }
+  }
+  if (temp.tip && temp.tip !== 'text') {
     rand.tip = temp.tip;
     rand.context = temp.context;
   }
@@ -16580,16 +16600,63 @@ function deschideMesajNou() {
 }
 
 // Un singur client: se deschide conversația, unde se vede și ce v-ați scris înainte
-// Text gata de trimis (ex. rezumatul unui produs din Verifică un produs): intră în câmpul conversației alese
-let textMesajPregatit = null;
+// Produs de trimis (Verifică un produs › Trimite unui client în chat): pleacă drept card în conversația aleasă
+let produsDeTrimis = null;
 
-function alegeClientMesajNou(id) {
+async function alegeClientMesajNou(id) {
   const c = clientiMesajNou().find(x => x.id === id);
-  const text = textMesajPregatit;
-  textMesajPregatit = null;
+  const produs = produsDeTrimis;
+  produsDeTrimis = null;
   anuleazaMesajNou();
-  if (c && text) deschideMesajeCuText(c, text);
-  else if (c) deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+  if (!c) return;
+  await deschideMesaje(c.id, utilizatorCurent.id, c.nume);
+  if (produs && conversatie && conversatie.clientId === c.id) {
+    const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text: `🛒 ${produs.nume}`, created_at: new Date().toISOString(), citit: false,
+      tip: 'produs', context: contextProdusMesaj(produs), raspuns_la: null, _stare: 'trimite' };
+    conversatie.mesaje.push(temp);
+    randeazaConversatie();
+    trimiteMesajTemporar(temp, conversatie);
+    document.getElementById('mesajText').focus();
+  }
+}
+
+// Produsul în mesaj (max. 500 de caractere în bază): valorile la 100 g și poza, fără detaliile lungi (alergeni, ingrediente)
+function contextProdusMesaj(p) {
+  const nr = v => v === null || v === undefined || v === '' || isNaN(v) ? undefined : rotunjeste1(v);
+  const cx = { nume: String(p.nume).slice(0, 80), marca: p.marca ? String(p.marca).slice(0, 40) : undefined, cod: p.cod && /^\d{6,14}$/.test(p.cod) ? p.cod : undefined,
+    kcal: rotunjeste1(p.kcal), proteine: nr(p.proteine), carbo: nr(p.carbo), grasimi: nr(p.grasimi), zaharuri: nr(p.zaharuri), sare: nr(p.sare),
+    ns: /^[a-e]$/i.test(p.nutriscore || '') ? p.nutriscore.toLowerCase() : undefined,
+    img: /^https:\/\/images\.openfoodfacts\.org\//.test(p.imagine || '') && p.imagine.length <= 200 ? p.imagine : undefined };
+  if (JSON.stringify(cx).length > 480) delete cx.img;
+  return cx;
+}
+
+// Produsul refăcut din mesaj (pentru Verifică un produs)
+function produsDinMesaj(cx) {
+  return { nume: cx.nume, marca: cx.marca || '', cod: cx.cod || null, kcal: Number(cx.kcal) || 0, proteine: Number(cx.proteine) || 0,
+    carbo: Number(cx.carbo) || 0, grasimi: Number(cx.grasimi) || 0, zaharuri: cx.zaharuri ?? null, sare: cx.sare ?? null,
+    nutriscore: cx.ns || '', imagine: cx.img || '', sursa: cx.cod ? 'off' : 'propriu' };
+}
+
+function htmlCardProdusMesaj(cx, i) {
+  const ns = /^[a-e]$/.test(cx.ns || '') ? `<span class="verifica-ns ns-${cx.ns}">${cx.ns.toUpperCase()}</span>` : '';
+  return `<button type="button" class="mesaj-produs" onclick="event.stopPropagation(); deschideProdusDinMesaj(${i})">
+      ${htmlImagineProdus(cx.img, 'mica')}
+      <span class="verifica-rand-text"><b>${escAttr(cx.nume)}</b><small>${cx.marca ? escAttr(cx.marca) + ' · ' : ''}${Math.round(cx.kcal)} kcal ${tr('la 100 g', 'per 100 g')}</small></span>
+      ${ns}<span class="drawer-nav-arrow">›</span>
+    </button>`;
+}
+
+// Atingerea cardului: produsul se deschide în Verifică un produs, peste conversație (cu codul, valorile complete și alergenii)
+async function deschideProdusDinMesaj(i) {
+  const m = conversatie && conversatie.mesaje[i];
+  if (!m || !m.context) return;
+  const p = produsDinMesaj(m.context);
+  deschideMeniuLateral();
+  deschideVerificaProdus();
+  verificare.dinChat = true; // Înapoi închide meniul și te lasă în conversație
+  if (p.cod) return verificaProdusCod(p.cod);
+  arataProdusVerificat(p, true);
 }
 
 function deschideAnuntMesaj() {
