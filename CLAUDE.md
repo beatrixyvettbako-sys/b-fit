@@ -17,10 +17,11 @@ Comunică cu utilizatoarea în română, concis și tehnic, fără introduceri s
 
 ## Flux de lucru
 
-1. Modific fișierele local, chirurgical (diff-uri mici, nu rescrieri de fișiere întregi).
-2. Utilizatoarea testează local în browser (desktop + Device Toolbar pe mobil). Panoul din dreapta: `preview_start` cu configurația `b-fit` (`.claude/launch.json`, `http://127.0.0.1:5500`).
+1. Înainte de cod, scriu pe scurt ținta verificabilă („gata” = ce trebuie să se vadă / să se salveze) și verific exact asta la final. La sarcini triviale, o propoziție ajunge.
+2. Modific fișierele local, chirurgical (diff-uri mici, nu rescrieri de fișiere întregi).
+3. Utilizatoarea testează local în browser (desktop + Device Toolbar pe mobil). Panoul din dreapta: `preview_start` cu configurația `b-fit` (`.claude/launch.json`, `http://127.0.0.1:5500`).
    - La orice modificare vizuală verific pe mai multe lățimi de telefon, nu pe una singură: **360** (Android mic), **390** (iPhone), **448** (Android mare, ex. Pixel 8 Pro) și desktop. Fără text rupt pe două rânduri în butoane, fără scroll orizontal, fără elemente tăiate.
-3. Commit + push **doar** când utilizatoarea cere explicit (skill-ul `/publica`). Niciodată din proprie inițiativă.
+4. Commit + push **doar** când utilizatoarea cere explicit (skill-ul `/publica`). Niciodată din proprie inițiativă.
 
 ## Principii de inginerie
 

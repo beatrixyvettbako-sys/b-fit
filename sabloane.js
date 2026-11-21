@@ -180,3 +180,513 @@ const SABLOANE_PLAN_EN = [{"id":"bfit-2-zile","nr_zile":2,"tip":"Full Body Split
 {"nr":4,"exercitiu":"Machine Leg Curls (lying face down)","muschi":"Hamstrings (all heads)","tip":"kg","seturi_repetari":"3 × 12-15","pauza":"60 sec","indicatii":"Pad on the lower third of the calf, hips pressed to the bench; powerful curl with a 1 sec pause, 3-second lowering tempo.","greutate_kg":"","seturi_finalizate":"","status":""},
 {"nr":5,"exercitiu":"Cable Glute Kickback","muschi":"Glutes (Gluteus maximus & upper)","tip":"kg","seturi_repetari":"3 × 15-20 / leg","pauza":"60 sec","indicatii":"Torso at 45°, stable spine; move the leg back and out at 30-45° with the knee slightly bent; squeeze the glute hard.","greutate_kg":"","seturi_finalizate":"","status":""},
 {"nr":6,"exercitiu":"Russian Twist with plate / ball","muschi":"Internal/external obliques, Rectus abdominis","tip":"kg","seturi_repetari":"3 × 20","pauza":"60 sec","indicatii":"Torso at 45°, feet slightly raised, rotate the shoulders side to side controlling the movement only from the torso.","greutate_kg":"","seturi_finalizate":"","status":""}]}],"sectiuni_final":[],"nota_subsol":""}}];
+
+// Biblioteca de start pentru planurile alimentare: rețete generale, în formatul importului din text.
+// Generatorul alege din ea și din planurile salvate; gramajele sunt pentru ziua de repaus și se potrivesc apoi pe ținte.
+// „Tranzit:” = varianta fără bucătărie (supermarket / delegație), cu „;” între produse.
+const BIBLIOTECA_RETETE_START = `# MIC DEJUN
+## Iaurt grecesc cu proteină, fructe și granola
+- Iaurt grecesc 2% — 200 g
+- Proteină whey — 25 g
+- Afine — 100 g
+- Granola — 30 g
+Preparare: Amesteci pudra proteică în iaurt, apoi adaugi fructele și granola deasupra.
+Tranzit: 1 iaurt proteic de băut; 1 banană; 1 pumn de nuci
+## Shakshuka cu spanac
+- Ouă — 2 buc
+- Ceapă verde — 35 g
+- Ardei gras — 50 g
+- Roșii — 150 g
+- Sos de roșii — 50 g
+- Spanac — 50 g
+- Pâine integrală — 35 g
+- Sare, piper, boia
+Preparare: Călești ceapa și ardeiul în puțină apă, adaugi roșiile și sosul, apoi ouăle; spanacul la final, cu capac.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală; roșii cherry
+## Omletă cu lipie și mozzarella
+- Ouă — 2 buc
+- Albuș de ou — 60 g
+- Ulei de măsline — 5 g
+- Lipie integrală — 30 g
+- Mozzarella — 25 g
+- Roșii — 75 g
+- Castraveți — 75 g
+Preparare: Omleta în tigaie antiaderentă cu uleiul măsurat; lipia încălzită, legumele crude alături.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală; roșii și castraveți
+## Wrap cu brânză de vaci și avocado
+- Lipie integrală — 30 g
+- Ouă — 2 buc
+- Brânză de vaci — 80 g
+- Avocado — 40 g
+- Ardei gras — 100 g
+- Salată verde — 50 g
+Tranzit: 150 g brânză de vaci; 1 lipie integrală; roșii cherry
+## Terci proteic de ovăz cu banană
+- Fulgi de ovăz — 35 g
+- Iaurt grecesc 2% — 150 g
+- Semințe de chia — 10 g
+- Banană — 80 g
+- Scorțișoară
+Preparare: Ovăzul fiert în apă sau lăsat peste noapte în iaurt; banana și chia deasupra.
+Tranzit: 200 g iaurt grecesc; 1 banană medie; 15 g mix de semințe
+## Iaurt cu caju și fructe
+- Iaurt grecesc 2% — 200 g
+- Caju — 15 g
+- Piersici — 120 g
+Tranzit: 300 ml chefir; 15 g caju; 1 piersică
+## Ouă fierte cu pâine și legume crocante
+- Ouă — 2 buc
+- Pâine integrală — 35 g
+- Castraveți — 100 g
+Tranzit: 2 ouă fierte; 1 felie pâine integrală; 1 castravete
+## Clătite proteice
+- Ouă — 1 buc
+- Proteină whey — 25 g
+- Făină de ovăz — 25 g
+- Băutură vegetală de migdale — 60 ml
+- Afine — 50 g
+Preparare: Compoziția în tigaie antiaderentă, la foc mediu, 1–2 minute pe fiecare parte.
+Tranzit: 1 iaurt proteic; 1 baton proteic
+## Toast cu hummus și roșii
+- Pâine integrală — 50 g
+- Humus — 50 g
+- Roșii — 100 g
+- Busuioc, sare, piper
+Tranzit: 1 sandviș integral cu hummus; 1 roșie
+## Toast cu ricotta, fistic și miere
+- Pâine integrală — 50 g
+- Ricotta — 50 g
+- Fistic — 10 g
+- Miere — 10 g
+Tranzit: 1 iaurt grecesc; 1 felie pâine integrală; 1 linguriță miere
+## Ovăz peste noapte cu mure și nuci
+- Fulgi de ovăz — 30 g
+- Băutură vegetală de migdale — 100 ml
+- Iaurt grecesc 2% — 30 g
+- Mure — 70 g
+- Nuci — 10 g
+- Vanilie, scorțișoară
+Preparare: Amesteci ovăzul cu băutura de migdale și iaurtul și le lași la frigider peste noapte; dimineața, murele și nucile deasupra.
+Tranzit: 1 iaurt cu fructe; 1 pumn de nuci
+# GUSTARE
+## Chefir cu fruct și semințe
+- Chefir — 250 ml
+- Piersici — 150 g
+- Mix de semințe — 10 g
+Tranzit: 1 sticlă de ayran (300 ml); 1 banană mică
+## Iaurt cu unt de arahide și prune
+- Iaurt grecesc 2% — 150 g
+- Unt de arahide — 12 g
+- Prune — 100 g
+Tranzit: 150 g iaurt grecesc; 15 g caju; 2 prune
+## Lapte bătut cu caju și măr
+- Lapte bătut — 250 ml
+- Caju — 15 g
+- Măr — 100 g
+Tranzit: 250 ml lapte bătut; 15 g caju
+## Avocado toast pe lipie
+- Lipie integrală — 30 g
+- Avocado — 45 g
+- Ouă — 1 buc
+- Roșii — 80 g
+Tranzit: 1 iaurt de băut simplu; 1 piersică
+## Brânză de vaci cu fructe
+- Brânză de vaci — 150 g
+- Afine — 100 g
+Tranzit: 1 cutie de brânză de vaci; 1 măr
+## Măr cu unt de arahide
+- Măr — 150 g
+- Unt de arahide — 15 g
+Tranzit: 1 măr; 1 pumn de migdale
+# PRÂNZ
+## Pulpe de pui și cartofi la cuptor
+- Pulpă de pui — 150 g
+- Cartofi — 180 g
+- Ulei de măsline — 5 g
+- Boia, usturoi, cimbru, rozmarin
+Preparare: La cuptor, pe hârtie de copt, 35–40 de minute la 200°C.
+Tranzit: 150 g piept de pui la grătar; 1 cartof copt; salată
+## Paste integrale cu creveți și pesto
+- Paste integrale — 55 g
+- Creveți — 180 g
+- Pesto — 15 g
+- Parmezan — 10 g
+- Usturoi, piper, busuioc
+Tranzit: 1 salată cu creveți; 1 lipie integrală
+## Gulaș de vită cu mămăligă
+- Mușchi de vită — 170 g
+- Mălai — 55 g
+- Ulei de măsline — 6 g
+- Ceapă, ardei, roșii pentru sos
+- Boia, foi de dafin, chimen
+Preparare: Carnea tăiată cuburi, înăbușită la foc mic cu legumele în sos de roșii și boia; mămăliga alături.
+Tranzit: 150 g friptură de vită; 1 lipie integrală; roșii cherry
+## Curcan marinat cu piure de cartofi
+- Piept de curcan — 170 g
+- Iaurt 2% — 55 g
+- Cartofi — 225 g
+- Murături, boia, usturoi, cimbru
+Preparare: Curcanul marinat în iaurt și condimente, la cuptor sau pe grătar; piureul cu puțină apă de la fiert.
+Tranzit: 150 g piept de curcan la grătar; salată; 1 lipie integrală
+## Curcan cu linte și salată de varză
+- Piept de curcan — 150 g
+- Linte — 45 g
+- Ulei de măsline — 10 g
+- Varză — 150 g
+- Ardei gras — 50 g
+Tranzit: 150 g piept de curcan la grătar; salată mare de varză; 1 lipie integrală mică
+## Pui cu orez și broccoli
+- Piept de pui — 150 g
+- Orez — 45 g
+- Ulei de măsline — 10 g
+- Broccoli — 200 g
+- Usturoi
+Tranzit: 150 g piept de pui la grătar; 3–4 linguri de orez; legume la grătar
+## Bowl cu ton și năut
+- Ton în apă — 130 g
+- Năut fiert — 100 g
+- Ulei de măsline — 10 g
+- Roșii — 90 g
+- Castraveți — 90 g
+Tranzit: 1 conservă de ton; 1 conservă mică de năut; roșii cherry
+## Pește alb cu cartofi copți
+- Pește alb — 170 g
+- Cartofi — 160 g
+- Ulei de măsline — 10 g
+- Roșii — 100 g
+- Castraveți — 100 g
+Tranzit: 1 conservă de ton; 1 cartof copt; salată asortată
+## Mușchiuleț de porc cu cartof copt
+- Mușchiuleț de porc — 150 g
+- Cartofi — 150 g
+- Ulei de măsline — 10 g
+- Roșii — 100 g
+- Castraveți — 100 g
+Tranzit: 150 g fâșii de porc la caserolă; 1 lipie integrală; roșii cherry
+## Tocăniță de vită cu orez
+- Carne tocată de vită slabă — 140 g
+- Orez — 40 g
+- Ulei de măsline — 10 g
+- Roșii — 100 g
+- Ardei gras — 100 g
+Tranzit: 150 g friptură de vită slabă; 1 lipie integrală; roșii cherry
+## Penne cu roșii și pui
+- Paste integrale — 50 g
+- Piept de pui — 120 g
+- Roșii cherry — 150 g
+- Sos de roșii — 80 g
+- Busuioc, ierburi de Provence
+Tranzit: 1 salată cu pui; 1 lipie integrală
+# CINĂ
+## Paste cu somon, roșii și telemea
+- Somon — 140 g
+- Paste integrale — 55 g
+- Telemea — 25 g
+- Roșii cherry — 100 g
+- Spanac — 50 g
+- Usturoi, oregano
+Tranzit: 1 conservă de somon; 1 lipie integrală; roșii cherry
+## Salată de creveți cu quinoa și avocado
+- Creveți — 150 g
+- Quinoa — 30 g
+- Avocado — 50 g
+- Castraveți — 100 g
+- Roșii — 150 g
+- Salată verde — 70 g
+- Lămâie, sare, piper
+Tranzit: 1 salată cu creveți; 1 pâine integrală mică
+## Poke bowl cu tofu și edamame
+- Tofu — 100 g
+- Edamame — 50 g
+- Quinoa — 20 g
+- Morcovi — 50 g
+- Ardei gras — 50 g
+- Ridichi — 50 g
+- Sos de soia, ghimbir, lămâie
+Tranzit: 1 salată cu tofu sau năut; 1 lipie integrală
+## Dovlecei spiralați cu ton și fasole albă
+- Ton în apă — 100 g
+- Dovlecei — 300 g
+- Fasole albă fiartă — 50 g
+- Pătrunjel, lămâie
+Tranzit: 1 conservă de ton; 1 conservă mică de fasole albă; castraveți
+## Pește alb cu legume coapte
+- Pește alb — 180 g
+- Vinete — 125 g
+- Conopidă — 125 g
+- Ulei de măsline — 10 g
+- Smântână 12% — 30 g
+Tranzit: 1 conservă de ton; 1 pungă de salată verde; 1 lipie integrală
+## Creveți cu ciuperci și mămăligă
+- Creveți — 180 g
+- Ciuperci — 150 g
+- Ulei de măsline — 5 g
+- Mălai — 40 g
+- Smântână 12% — 30 g
+Tranzit: 200 g brânză de vaci; 1 lipie integrală; ardei gras și castraveți
+## Pui cu fasole și varză
+- Piept de pui — 150 g
+- Fasole albă fiartă — 110 g
+- Ulei de măsline — 10 g
+- Varză — 150 g
+Tranzit: 1 conservă mică de fasole albă; 1 conservă de piept de pui; roșii cherry
+## Wrap cald cu ton și mozzarella
+- Lipie integrală — 45 g
+- Ton în apă — 120 g
+- Mozzarella — 30 g
+- Ardei gras — 50 g
+- Salată verde — 50 g
+Tranzit: 1 lipie integrală; 1 conservă de ton; 30 g mozzarella; castraveți
+## Mușchi de vită cu legume
+- Mușchi de vită — 150 g
+- Ciuperci — 100 g
+- Ardei gras — 75 g
+- Dovlecei — 75 g
+- Ulei de măsline — 10 g
+- Smântână 12% — 30 g
+Tranzit: 150 g friptură de vită rece; salată verde; 1 lipie integrală
+## Chiftele de vită la cuptor
+- Carne tocată de vită slabă — 140 g
+- Conopidă — 125 g
+- Ciuperci — 125 g
+- Ulei de măsline — 10 g
+- Smântână 12% — 30 g
+Tranzit: 150 g friptură de vită slabă; salată asortată; 1 lipie integrală
+# GUSTARE
+## Iaurt grecesc cu miere și nuci
+- Iaurt grecesc 2% — 170 g
+- Miere — 10 g
+- Nuci — 10 g
+Tranzit: 1 iaurt grecesc; 1 pumn de nuci
+## Ouă fierte cu castravete și pâine
+- Ouă — 2 buc
+- Castraveți — 150 g
+- Pâine integrală — 25 g
+Tranzit: 2 ouă fierte; 1 castravete
+## Brânză cottage cu roșii
+- Brânză cottage — 150 g
+- Roșii — 100 g
+- Pâine integrală — 30 g
+Tranzit: 1 caserolă de brânză cottage; roșii cherry
+## Humus cu legume crocante
+- Humus — 60 g
+- Morcovi — 80 g
+- Castraveți — 80 g
+- Ardei gras — 60 g
+Tranzit: 1 cutie mică de humus; legume tăiate la caserolă
+## Banană cu unt de arahide
+- Banană — 100 g
+- Unt de arahide — 12 g
+Tranzit: 1 banană; 1 pumn de arahide
+## Shake proteic cu banană
+- Proteină whey — 25 g
+- Banană — 80 g
+- Lapte 1,5% — 200 ml
+Preparare: Totul în blender sau în shaker, cu gheață după gust.
+Tranzit: 1 shake proteic gata făcut
+## Chefir cu ovăz și căpșuni
+- Chefir — 250 ml
+- Fulgi de ovăz — 20 g
+- Căpșuni — 100 g
+Tranzit: 1 sticlă de chefir; 1 măr
+## Mozzarella cu roșii și busuioc
+- Mozzarella — 50 g
+- Roșii — 150 g
+- Ulei de măsline — 3 g
+- Busuioc, sare, piper
+Tranzit: 1 salată caprese la caserolă
+## Sandviș cu pastramă de curcan
+- Pastramă de curcan — 60 g
+- Pâine de secară — 40 g
+- Castraveți — 80 g
+Tranzit: 1 sandviș cu curcan
+## Iaurt cu zmeură și semințe
+- Iaurt grecesc 2% — 150 g
+- Zmeură — 100 g
+- Semințe de dovleac — 10 g
+Tranzit: 1 iaurt cu fructe; 1 pumn de semințe
+## Kiwi cu migdale
+- Kiwi — 150 g
+- Migdale — 15 g
+Tranzit: 2 kiwi; 1 pumn de migdale
+## Edamame cu sare de mare
+- Edamame — 120 g
+- Sare de mare
+Tranzit: 1 punguță de edamame
+# MIC DEJUN
+## Omletă cu ciuperci și spanac
+- Ouă — 2 buc
+- Albuș de ou — 60 g
+- Ciuperci — 100 g
+- Spanac — 50 g
+- Pâine integrală — 35 g
+- Ulei de măsline — 5 g
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală
+## Sandviș cu ou și avocado
+- Pâine de secară — 60 g
+- Ouă — 2 buc
+- Avocado — 40 g
+- Roșii — 60 g
+Tranzit: 1 sandviș cu ou; 1 roșie
+## Ovăz cu lapte, măr și scorțișoară
+- Fulgi de ovăz — 40 g
+- Lapte 1,5% — 200 ml
+- Măr — 100 g
+- Proteină whey — 15 g
+- Scorțișoară
+Preparare: Ovăzul fiert în lapte 3–4 minute, apoi proteina amestecată și mărul ras deasupra.
+Tranzit: 1 iaurt proteic; 1 măr
+## Pâine cu brânză cottage și roșii
+- Pâine integrală — 60 g
+- Brânză cottage — 120 g
+- Roșii — 100 g
+- Castraveți — 50 g
+Tranzit: 1 caserolă de brânză cottage; 1 chiflă integrală
+## Budincă de chia cu zmeură
+- Semințe de chia — 25 g
+- Lapte 1,5% — 150 ml
+- Iaurt grecesc 2% — 100 g
+- Zmeură — 80 g
+Preparare: Chia în lapte, lăsată la frigider peste noapte; dimineața iaurtul și zmeura deasupra.
+Tranzit: 1 iaurt grecesc; fructe de sezon
+## Wrap cu ou și pastramă de curcan
+- Tortilla integrală — 40 g
+- Ouă — 2 buc
+- Pastramă de curcan — 40 g
+- Ardei gras — 50 g
+Tranzit: 1 wrap cu curcan de la magazin
+# PRÂNZ
+## Pui cu quinoa și legume
+- Piept de pui — 150 g
+- Quinoa — 50 g
+- Dovlecei — 100 g
+- Ardei gras — 80 g
+- Ulei de măsline — 10 g
+Tranzit: 150 g piept de pui la grătar; 1 salată cu quinoa
+## Cotlet de porc cu fasole verde și cartofi
+- Cotlet de porc — 140 g
+- Cartofi — 150 g
+- Fasole verde — 150 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g friptură de porc la caserolă; salată
+## Vită cu cartofi dulci și broccoli
+- Pulpă de vită — 150 g
+- Cartofi dulci — 200 g
+- Broccoli — 150 g
+- Ulei de măsline — 8 g
+Tranzit: 150 g friptură de vită; 1 cartof copt
+## Chili cu vită și fasole roșie
+- Carne tocată de vită slabă — 130 g
+- Fasole roșie — 120 g
+- Sos de roșii — 150 g
+- Ceapă — 50 g
+- Orez — 30 g
+- Ulei de măsline — 5 g
+- Chimen, boia, usturoi
+Preparare: Carnea rumenită cu ceapa, apoi fasolea, sosul și condimentele, 15 minute la foc mic; orezul alături.
+Tranzit: 1 conservă de chili cu fasole; 1 lipie integrală
+## Curcan cu paste integrale și broccoli
+- Piept de curcan — 140 g
+- Paste integrale — 60 g
+- Broccoli — 150 g
+- Parmezan — 10 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g piept de curcan la grătar; 1 salată de paste
+## Somon cu cartofi și salată verde
+- Somon — 140 g
+- Cartofi — 200 g
+- Salată verde — 80 g
+- Ulei de măsline — 5 g
+- Lămâie, mărar
+Tranzit: 1 conservă de somon; 1 cartof copt; salată
+## Paste integrale cu ton și roșii
+- Paste integrale — 60 g
+- Ton în apă — 120 g
+- Roșii cherry — 150 g
+- Ulei de măsline — 8 g
+- Busuioc, usturoi
+Tranzit: 1 salată de paste cu ton
+## Pui cu bulgur și salată de castraveți
+- Piept de pui — 150 g
+- Bulgur — 50 g
+- Castraveți — 150 g
+- Iaurt grecesc 2% — 50 g
+- Mărar, usturoi
+Tranzit: 150 g piept de pui la grătar; 1 lipie integrală; castraveți
+## Porc cu varză călită
+- Mușchiuleț de porc — 150 g
+- Varză — 250 g
+- Sos de roșii — 80 g
+- Pâine integrală — 40 g
+- Ulei de măsline — 8 g
+- Cimbru, piper, foi de dafin
+Tranzit: 150 g friptură de porc; salată de varză; 1 felie pâine integrală
+# CINĂ
+## Omletă cu legume și mozzarella
+- Ouă — 3 buc
+- Ardei gras — 80 g
+- Ciuperci — 80 g
+- Mozzarella — 25 g
+- Ulei de măsline — 5 g
+Tranzit: 3 ouă fierte; legume tăiate la caserolă
+## Salată de pui cu avocado
+- Piept de pui — 130 g
+- Avocado — 50 g
+- Salată verde — 80 g
+- Roșii — 100 g
+- Ulei de măsline — 5 g
+- Lămâie, sare, piper
+Tranzit: 1 salată cu pui de la magazin
+## Curcan cu legume la cuptor
+- Piept de curcan — 150 g
+- Dovlecei — 150 g
+- Ardei gras — 100 g
+- Ceapă — 50 g
+- Cartofi — 120 g
+- Ulei de măsline — 8 g
+Tranzit: 150 g piept de curcan la grătar; legume la grătar
+## Cod cu cartofi dulci și spanac
+- Cod — 180 g
+- Cartofi dulci — 150 g
+- Spanac — 80 g
+- Ulei de măsline — 8 g
+Tranzit: 1 conservă de ton; 1 cartof copt; salată verde
+## Salată de ton cu ou și fasole albă
+- Ton în apă — 100 g
+- Ouă — 1 buc
+- Fasole albă fiartă — 80 g
+- Salată verde — 80 g
+- Roșii — 80 g
+- Ulei de măsline — 5 g
+Tranzit: 1 conservă de ton; 1 conservă mică de fasole albă; roșii cherry
+## Tofu cu orez și legume la wok
+- Tofu — 150 g
+- Orez — 40 g
+- Ardei gras — 80 g
+- Morcovi — 50 g
+- Broccoli — 80 g
+- Ulei de măsline — 5 g
+- Sos de soia, ghimbir
+Tranzit: 1 salată cu tofu sau năut; 1 lipie integrală
+## Vită cu ciuperci, dovlecei și orez
+- Pulpă de vită — 140 g
+- Orez — 40 g
+- Dovlecei — 100 g
+- Ciuperci — 100 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g friptură de vită; salată verde
+## Cotlet de porc cu salată de varză
+- Cotlet de porc — 140 g
+- Varză — 150 g
+- Morcovi — 50 g
+- Pâine integrală — 40 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g friptură de porc slabă; salată de varză
+## Păstrăv cu broccoli și cartofi
+- Păstrăv — 180 g
+- Broccoli — 150 g
+- Cartofi — 120 g
+- Ulei de măsline — 5 g
+- Lămâie, usturoi
+Tranzit: 1 conservă de somon sau ton; 1 cartof copt; salată
+`;

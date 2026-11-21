@@ -3992,7 +3992,7 @@ function randeazaHomeClienta() {
   const html = `<div class="orar-titlu-mare"><div class="orar-titlu-text"><span>${escAttr(dataAziAcasa())}</span><h1>${escAttr(salut)}</h1></div></div>`
     + `<div class="acasa-urgente"><div id="cardMesajeAcasa"></div><div id="cardNotaAntrenor">${htmlNotaAntrenor(c)}</div><div id="cardReinnoireClienta">${htmlReinnoireClienta(c)}</div><div>${htmlLunaTaAcasa()}</div><div>${htmlOnboardingClienta()}</div><div id="cardPushAcasa"></div></div>`
     + `<div class="card acasa-azi">${htmlAntrenamentAcasa()}${htmlSedintaAcasa()}${htmlCicluAcasa()}</div>`
-    + `<div class="card acasa-de-facut"><div class="acasa-eticheta">${tr('De făcut azi', 'To do today')}</div>${htmlCheckinAcasa()}${htmlMasaAcasa()}</div>`
+    + `<div class="card acasa-de-facut"><div class="acasa-eticheta">${tr('De făcut azi', 'To do today')}</div>${htmlCheckinAcasa()}${htmlMasaAcasa()}${htmlObiceiuriAcasa()}</div>`
     + `<div class="lista-titlu">${tr('Ritmul tău', 'Your rhythm')}</div>` + htmlCifreAcasa()
     + `<div class="acasa-scurtaturi">
         ${htmlAntrPersAcasa()}
@@ -4096,6 +4096,272 @@ function htmlCheckinAcasa() {
     <div class="acasa-antrenament-detalii">${facut ? tr('Antrenorul tău îl vede în fișa ta.', 'Your trainer sees it in your profile.') : tr('2 minute. Antrenorul tău îl vede în fișa ta.', '2 minutes. Your trainer sees it in your profile.')}</div></div>
     <span class="acasa-bifa"></span>
   </div>`;
+}
+
+// ---- Obiceiuri zilnice (sql/2026-11-21_obiceiuri.sql), ca „Habit Coaching” la Trainerize / Everfit ----
+// Antrenorul le dă din fișa clientului (din bibliotecă sau scrise de mână, cu zilele lor, unuia sau mai multor clienți);
+// clientul le bifează pe Acasă › De făcut azi și, pe ecranul lor, și zilele din urmă (7 zile). Cele cu tip se bifează singure.
+const BIBLIOTECA_OBICEIURI = [
+  ['apa', 'Bea apa din țintă', 'Drink your water target'],
+  ['mese', 'Notează toate mesele', 'Log all your meals'],
+  ['proteine', 'Proteinele din țintă', 'Hit your protein target'],
+  ['manual', 'Legume la fiecare masă', 'Vegetables at every meal'],
+  ['manual', 'Somn 7–8 ore', 'Sleep 7–8 hours'],
+  ['manual', '8.000 de pași', '8,000 steps'],
+  ['manual', 'Fără dulciuri', 'No sweets'],
+  ['manual', '10 minute de mobilitate', '10 minutes of mobility'],
+  ['manual', 'Fără alcool', 'No alcohol']
+];
+const ZILE_OBICEI = [[1, 'L', 'M'], [2, 'Ma', 'T'], [3, 'Mi', 'W'], [4, 'J', 'T'], [5, 'V', 'F'], [6, 'S', 'S'], [7, 'D', 'S']];
+
+// Obiceiurile unui client și ce e nevoie ca să știm, pe ultimele `zile` zile, ce e făcut: bifele de mână și,
+//   la cele automate, jurnalul, apa și țintele. null = tabelul lipsește (SQL nerulat) sau nu e internet
+async function incarcaObiceiuri(clientId, zile) {
+  const de = isoDinData(new Date(Date.now() - (zile - 1) * 86400000));
+  const { data: lista, error } = await supabaseClient.from('obiceiuri').select('*').eq('client_id', clientId).eq('activ', true).order('created_at');
+  if (error) return null;
+  const automate = lista.some(o => o.tip !== 'manual'), gol = { data: [] };
+  const [b, j, a, st] = await Promise.all([
+    lista.length ? supabaseClient.from('obiceiuri_bife').select('obicei_id, data').eq('client_id', clientId).gte('data', de) : gol,
+    automate ? supabaseClient.from('jurnal_alimente').select('data, masa, proteine').eq('client_id', clientId).gte('data', de) : gol,
+    automate ? supabaseClient.from('apa_zilnica').select('data, pahare').eq('client_id', clientId).gte('data', de) : gol,
+    automate ? supabaseClient.from('setari_nutritie').select('proteine, apa_tinta').eq('client_id', clientId).maybeSingle() : { data: null }
+  ]);
+  return { clientId, zile, lista, bife: new Set((b.data || []).map(x => x.obicei_id + '|' + x.data)), jurnal: j.data || [], apa: a.data || [], setari: st.data || {} };
+}
+
+function ziObicei(o, iso) {
+  return (o.zile || []).includes(dataDinIso(iso).getDay() || 7);
+}
+
+function obiceiFacut(d, o, iso) {
+  if (o.tip === 'manual') return d.bife.has(o.id + '|' + iso);
+  if (o.tip === 'apa') { const r = d.apa.find(x => x.data === iso); return !!r && r.pahare >= (d.setari.apa_tinta || 8); }
+  const zi = d.jurnal.filter(x => x.data === iso);
+  if (o.tip === 'mese') return ['mic_dejun', 'pranz', 'cina'].every(m => zi.some(x => x.masa === m));
+  return !!d.setari.proteine && zi.reduce((t, x) => t + Number(x.proteine || 0), 0) >= d.setari.proteine * 0.9;
+}
+
+// Zilele programate de la adăugare încoace (cea mai nouă prima); % pe 7 și pe toată perioada; seria = zile programate la rând
+//   făcute (azi nebifat încă nu rupe seria)
+function statisticiObicei(d, o) {
+  const start = String(o.created_at || '').slice(0, 10), azi = aziIsoAntrPers();
+  const zile = [...Array(d.zile)].map((_, k) => isoDinData(new Date(Date.now() - k * 86400000))).filter(z => z >= start && ziObicei(o, z));
+  const proc = lista => { const t = lista.filter(z => z !== azi || obiceiFacut(d, o, z)); return t.length ? Math.round(t.filter(z => obiceiFacut(d, o, z)).length / t.length * 100) : null; };
+  let serie = 0;
+  for (const z of zile) { if (obiceiFacut(d, o, z)) serie++; else if (z !== azi) break; }
+  const sapt = isoDinData(new Date(Date.now() - 6 * 86400000));
+  return { p7: proc(zile.filter(z => z >= sapt)), pTot: proc(zile), serie };
+}
+
+function textZileObicei(o) {
+  const z = o.zile || [];
+  if (z.length === 7) return tr('zilnic', 'daily');
+  if (z.join() === '1,2,3,4,5') return tr('luni–vineri', 'Mon–Fri');
+  return ZILE_OBICEI.filter(x => z.includes(x[0])).map(x => tr(x[1], x[2])).join(' ');
+}
+
+function iconitaObicei(o) {
+  return { apa: '<path d="M12 2.7C9 7 6 10.3 6 14a6 6 0 0 0 12 0c0-3.7-3-7-6-11.3z"/>', mese: '<path d="M4 3v8a3 3 0 0 0 6 0V3M7 3v18M17 3c-2 2-3 5-3 8h3v10"/>',
+    proteine: '<path d="M6.5 6.5h11M6.5 17.5h11M3 9.5v5M21 9.5v5M6.5 4v16M17.5 4v16"/>' }[o.tip] || '<path d="m5 12 5 5L20 7"/>';
+}
+
+// ---- Clientul: Acasă › De făcut azi ----
+function htmlObiceiuriAcasa() {
+  const d = dateClienta.obiceiuri;
+  if (d === undefined && dateClienta.fisa) { dateClienta.obiceiuri = null; reincarcaObiceiuriClient(); }
+  if (!d || !d.lista.length) return '<div id="acasaObiceiuri"></div>';
+  const azi = aziIsoAntrPers(), deAzi = d.lista.filter(o => ziObicei(o, azi));
+  return `<div id="acasaObiceiuri">${deAzi.map(o => {
+    const facut = obiceiFacut(d, o, azi), st = statisticiObicei(d, o);
+    // Cele automate deschid locul unde se notează; cele de mână se bifează direct
+    const onclick = o.tip === 'manual' ? `comutaBifaObicei('${o.id}', '${azi}')` : 'deschideNutritie()';
+    return `<div class="acasa-rand${facut ? ' facut' : ''}" onclick="${onclick}">
+      <span class="acasa-rand-icon"><svg viewBox="0 0 24 24">${iconitaObicei(o)}</svg></span>
+      <div class="acasa-rand-text"><b>${escAttr(o.titlu)}</b><div class="acasa-antrenament-detalii">${o.tip === 'manual' ? '' : tr('se bifează singur · ', 'ticks itself · ')}${st.serie > 1 ? tr(`${st.serie} zile la rând`, `${st.serie} days in a row`) : textZileObicei(o)}</div></div>
+      <span class="acasa-bifa"></span></div>`;
+  }).join('')}
+    <button type="button" class="acasa-rand obiceiuri-toate" onclick="deschideObiceiuriClient()"><div class="acasa-rand-text"><b>${tr('Obiceiurile tale', 'Your habits')}</b><div class="acasa-antrenament-detalii">${tr('ultimele 7 zile, ziua de ieri, obiceiurile tale', 'last 7 days, yesterday, your own habits')}</div></div><div class="drawer-nav-arrow">›</div></button></div>`;
+}
+
+async function reincarcaObiceiuriClient() {
+  const d = await incarcaObiceiuri(dateClienta.fisa.id, 7);
+  dateClienta.obiceiuri = d || { lista: [] };
+  const el = document.getElementById('acasaObiceiuri');
+  if (el && clientaTabCurent === 'acasa' && !antrPers.ecran) el.outerHTML = htmlObiceiuriAcasa();
+  if (antrPers.ecran === 'obiceiuri') randeazaObiceiuriClient();
+}
+
+// Bifa de mână (azi sau una din ultimele 7 zile), cu revenire dacă nu se salvează
+async function comutaBifaObicei(id, iso) {
+  const d = dateClienta.obiceiuri, k = id + '|' + iso, era = d.bife.has(k);
+  if (era) d.bife.delete(k); else d.bife.add(k);
+  const redesen = () => { const el = document.getElementById('acasaObiceiuri'); if (el && !antrPers.ecran) el.outerHTML = htmlObiceiuriAcasa(); if (antrPers.ecran === 'obiceiuri') randeazaObiceiuriClient(); };
+  redesen();
+  const q = era ? supabaseClient.from('obiceiuri_bife').delete().eq('obicei_id', id).eq('data', iso)
+    : supabaseClient.from('obiceiuri_bife').insert({ obicei_id: id, client_id: dateClienta.fisa.id, data: iso });
+  const { error } = await q;
+  if (error) { if (era) d.bife.add(k); else d.bife.delete(k); redesen(); showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); }
+}
+
+// ---- Clientul: ecranul „Obiceiurile tale” (7 zile, seria, obiceiurile proprii) ----
+function deschideObiceiuriClient() {
+  antrPers.ecran = 'obiceiuri';
+  arataInapoiAntrPers();
+  document.getElementById('clientaTitlu').innerText = tr('Obiceiurile tale', 'Your habits');
+  randeazaObiceiuriClient();
+}
+
+function randeazaObiceiuriClient() {
+  const d = dateClienta.obiceiuri, el = document.getElementById('clientaContinut');
+  if (!d || !d.lista) return void (el.innerHTML = `<div class="progres-gol">${tr('Se încarcă...', 'Loading...')}</div>`);
+  const zile = [...Array(7)].map((_, k) => isoDinData(new Date(Date.now() - (6 - k) * 86400000)));
+  const randuri = d.lista.map(o => {
+    const st = statisticiObicei(d, o), alMeu = utilizatorCurent && o.autor === utilizatorCurent.id;
+    return `<div class="lista-sticla plan-alim-sticla obicei-card">
+      <div class="obicei-cap"><b>${escAttr(o.titlu)}</b>${alMeu ? `<button type="button" class="verifica-titlu-btn" onclick="stergeObiceiulMeu('${o.id}')">${tr('Șterge', 'Delete')}</button>` : ''}</div>
+      <div class="acasa-antrenament-detalii">${textZileObicei(o)}${o.tip === 'manual' ? '' : tr(' · se bifează singur din jurnal', ' · ticks itself from your log')}${st.serie ? ' · ' + tr(`${st.serie} zile la rând`, `${st.serie} days in a row`) : ''}${st.p7 !== null ? ` · ${st.p7}%` : ''}</div>
+      <div class="obicei-zile">${zile.map(z => {
+        const prog = ziObicei(o, z), facut = prog && obiceiFacut(d, o, z), eticheta = ZILE_OBICEI[(dataDinIso(z).getDay() || 7) - 1];
+        return `<button type="button" class="obicei-zi${facut ? ' facut' : ''}${prog ? '' : ' liber'}" ${prog && o.tip === 'manual' ? `onclick="comutaBifaObicei('${o.id}', '${z}')"` : 'disabled'}>
+          <small>${tr(eticheta[1], eticheta[2])}</small><span>${facut ? '✓' : dataDinIso(z).getDate()}</span></button>`;
+      }).join('')}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Atinge o zi ca s-o bifezi (și ieri, dacă ai uitat). Apa, mesele și proteinele se bifează singure din jurnal.', 'Tap a day to tick it (yesterday too, if you forgot). Water, meals and protein tick themselves from your log.')}</div>
+    ${randuri || `<div class="progres-gol">${tr('Încă niciun obicei. Adaugă unul al tău mai jos.', 'No habits yet. Add one of your own below.')}</div>`}
+    <div class="lista-titlu">${tr('Obiceiul tău', 'Your own habit')}</div>
+    <div class="lista-sticla plan-alim-sticla obiectiv-form">
+      <input type="text" id="obiceiNouClient" class="plan-ex-input" maxlength="80" placeholder="${tr('ex. Mers pe jos 30 de minute', 'e.g. Walk 30 minutes')}">
+      <button type="button" class="btn" onclick="adaugaObiceiulMeu(this)">${tr('Adaugă (zilnic)', 'Add (daily)')}</button>
+    </div>`;
+}
+
+async function adaugaObiceiulMeu(btn) {
+  const titlu = (document.getElementById('obiceiNouClient').value || '').trim().slice(0, 80);
+  if (!titlu) return showToast(tr('Scrie obiceiul.', 'Write the habit.'), 'error');
+  btn.disabled = true;
+  const { data, error } = await supabaseClient.from('obiceiuri').insert({ user_id: dateClienta.fisa.user_id, client_id: dateClienta.fisa.id, titlu, tip: 'manual' }).select().single();
+  btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  dateClienta.obiceiuri.lista.push(data);
+  randeazaObiceiuriClient();
+}
+
+function stergeObiceiulMeu(id) {
+  customConfirm(tr('Ștergi obiceiul?', 'Delete the habit?'), tr('Și bifele lui.', 'Its ticks too.'), async () => {
+    const { error } = await supabaseClient.from('obiceiuri').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    dateClienta.obiceiuri.lista = dateClienta.obiceiuri.lista.filter(o => o.id !== id);
+    randeazaObiceiuriClient();
+  });
+}
+
+// ---- Antrenorul: fișa clientului › Obiceiuri (respectarea pe 7 / 30 de zile, seria) ----
+let obiceiuriFisa = null;
+
+async function incarcaObiceiuriFisa() {
+  const client = clientaFisaCurenta(), corp = document.getElementById('obiceiuriFisaContinut');
+  if (!client || !corp) return;
+  if (!obiceiuriFisa || obiceiuriFisa.clientId !== client.id) corp.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Se încarcă...', 'Loading...')}</div>`;
+  const d = await incarcaObiceiuri(client.id, 30);
+  if ((clientaFisaCurenta() || {}).id !== client.id) return;
+  obiceiuriFisa = d ? d : { clientId: client.id, lipsa: true };
+  randeazaObiceiuriFisa();
+}
+
+function randeazaObiceiuriFisa() {
+  const d = obiceiuriFisa, corp = document.getElementById('obiceiuriFisaContinut'), nr = document.getElementById('obiceiuriFisaNumar');
+  if (!corp || !d) return;
+  if (nr) nr.textContent = d.lipsa ? '' : d.lista.length || '';
+  if (d.lipsa) return void (corp.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Obiceiurile nu sunt disponibile încă: în Supabase trebuie rulat sql/2026-11-21_obiceiuri.sql.', 'Habits aren’t available yet: run sql/2026-11-21_obiceiuri.sql in Supabase.')}</div>`);
+  corp.innerHTML = d.lista.map(o => {
+    const st = statisticiObicei(d, o), alClientului = o.autor !== (utilizatorCurent || {}).id;
+    return `<button type="button" class="profil-rand obicei-fisa-rand" onclick="deschideFoaieObicei('${o.id}')">
+      <span class="profil-rand-eticheta">${escAttr(o.titlu)}<small>${textZileObicei(o)}${o.tip === 'manual' ? '' : tr(' · automat', ' · automatic')}${alClientului ? tr(' · adăugat de client', ' · added by the client') : ''}</small></span>
+      <span class="profil-rand-valoare">${st.p7 === null ? '–' : `${st.p7}%`} <small>7 ${tr('zile', 'days')}</small> · ${st.pTot === null ? '–' : `${st.pTot}%`} <small>30</small>${st.serie > 1 ? ` · 🔥${st.serie}` : ''}</span></button>`;
+  }).join('') + `<button type="button" class="profil-rand plan-alim-adauga" onclick="deschideFoaieObicei(null)"><span class="profil-rand-eticheta">${tr('+ Obicei', '+ Habit')}</span></button>`;
+}
+
+// Fereastra de jos: obicei nou (din bibliotecă sau scris, zilele, și pentru alți clienți) sau unul existent (zilele, ștergere)
+let obiceiEditor = null;
+
+function deschideFoaieObicei(id) {
+  const client = clientaFisaCurenta();
+  if (!client || !obiceiuriFisa || obiceiuriFisa.lipsa) return;
+  const o = id ? obiceiuriFisa.lista.find(x => x.id === id) : null;
+  obiceiEditor = o ? { id: o.id, titlu: o.titlu, tip: o.tip, zile: (o.zile || []).slice(), clienti: [client.id] }
+    : { id: null, titlu: '', tip: 'manual', zile: [1, 2, 3, 4, 5, 6, 7], clienti: [client.id], altii: false };
+  randeazaFoaieObicei();
+  deschideFoaieCuFundal(document.getElementById('modalObiceiBackdrop'), document.getElementById('cardObicei'));
+}
+
+function inchideFoaieObicei() {
+  inchideFoaieCuFundal(document.getElementById('modalObiceiBackdrop'), document.getElementById('cardObicei'));
+}
+
+function randeazaFoaieObicei() {
+  const e = obiceiEditor, curent = (clientaFisaCurenta() || {}).id;
+  const pastila = (activ, onclick, et) => `<button type="button" class="antr-pers-activitate${activ ? ' activ' : ''}" onclick="${onclick}">${et}</button>`;
+  const altii = (DB.clienti || []).filter(c => c.id !== curent).sort((a, b) => a.nume.localeCompare(b.nume));
+  document.getElementById('obiceiTitlu').textContent = e.id ? tr('Obiceiul', 'The habit') : tr('Obicei nou', 'New habit');
+  document.getElementById('obiceiContinut').innerHTML = `<div class="obiectiv-form">
+    ${e.id ? '' : `<div class="checkin-eticheta">${tr('Din bibliotecă', 'From the library')}</div>
+      <div class="antr-pers-activitati">${BIBLIOTECA_OBICEIURI.map(([tip, ro, en], k) => pastila(e.titlu === tr(ro, en), `alegeObiceiBiblioteca(${k})`, tr(ro, en))).join('')}</div>`}
+    <div class="checkin-eticheta">${tr('Obiceiul', 'The habit')}</div>
+    <input type="text" class="plan-ex-input" maxlength="80" value="${escAttr(e.titlu)}" placeholder="${tr('sau scrie-l tu', 'or write your own')}" oninput="obiceiEditor.titlu = this.value; obiceiEditor.tip = 'manual'">
+    ${e.tip !== 'manual' ? `<div class="acasa-antrenament-detalii">${tr('Se bifează singur din jurnalul clientului (apă, mese, proteine).', 'Ticks itself from the client’s log (water, meals, protein).')}</div>` : ''}
+    <div class="checkin-eticheta">${tr('În ce zile', 'Which days')}</div>
+    <div class="antr-pers-activitati obicei-zile-alegere">${ZILE_OBICEI.map(([z, ro, en]) => pastila(e.zile.includes(z), `comutaZiObicei(${z})`, tr(ro, en))).join('')}</div>
+    ${e.id ? '' : `<label class="setare-notificare"><span><b>${tr('Și pentru alți clienți', 'For other clients too')}</b><small>${tr('Același obicei, la mai mulți deodată', 'The same habit, for several at once')}</small></span>
+      <input type="checkbox" class="comutator" ${e.altii ? 'checked' : ''} onchange="obiceiEditor.altii = this.checked; randeazaFoaieObicei()"></label>
+      ${e.altii ? `<div class="antr-pers-activitati">${altii.map(c => pastila(e.clienti.includes(c.id), `comutaClientObicei('${escAttr(c.id)}')`, escAttr(c.nume))).join('')}</div>` : ''}`}
+    <button type="button" class="btn" onclick="salveazaObicei(this)">${e.id ? tr('Salvează', 'Save') : e.clienti.length > 1 ? tr(`Adaugă la ${e.clienti.length} clienți`, `Add to ${e.clienti.length} clients`) : tr('Adaugă', 'Add')}</button>
+    ${e.id ? `<button type="button" class="btn btn-clear ciclu-opreste" onclick="stergeObicei()">${tr('Șterge obiceiul', 'Delete the habit')}</button>` : ''}
+  </div>`;
+}
+
+function alegeObiceiBiblioteca(k) {
+  const [tip, ro, en] = BIBLIOTECA_OBICEIURI[k];
+  Object.assign(obiceiEditor, { titlu: tr(ro, en), tip });
+  randeazaFoaieObicei();
+}
+
+function comutaZiObicei(z) {
+  const zile = obiceiEditor.zile, i = zile.indexOf(z);
+  if (i >= 0) { if (zile.length > 1) zile.splice(i, 1); } else zile.push(z);
+  zile.sort((a, b) => a - b);
+  randeazaFoaieObicei();
+}
+
+function comutaClientObicei(id) {
+  const c = obiceiEditor.clienti, i = c.indexOf(id);
+  if (i >= 0) c.splice(i, 1); else c.push(id);
+  randeazaFoaieObicei();
+}
+
+async function salveazaObicei(btn) {
+  const e = obiceiEditor, titlu = (e.titlu || '').trim().slice(0, 80);
+  if (!titlu) return showToast(tr('Alege sau scrie obiceiul.', 'Pick or write the habit.'), 'error');
+  btn.disabled = true;
+  const camp = { titlu, tip: e.tip, zile: e.zile };
+  const { error } = e.id ? await supabaseClient.from('obiceiuri').update(camp).eq('id', e.id)
+    : await supabaseClient.from('obiceiuri').insert(e.clienti.map(client_id => Object.assign({ user_id: utilizatorCurent.id, client_id }, camp)));
+  btn.disabled = false;
+  if (error) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  inchideFoaieObicei();
+  showToast(e.clienti.length > 1 ? tr(`✓ Obicei adăugat la ${e.clienti.length} clienți`, `✓ Habit added to ${e.clienti.length} clients`) : tr('✓ Salvat: clientul îl vede pe Acasă', '✓ Saved: the client sees it on Home'));
+  incarcaObiceiuriFisa();
+}
+
+function stergeObicei() {
+  const id = obiceiEditor.id;
+  customConfirm(tr('Ștergi obiceiul?', 'Delete the habit?'), tr('Și bifele lui. Clientul nu-l mai vede.', 'Its ticks too. The client no longer sees it.'), async () => {
+    const { error } = await supabaseClient.from('obiceiuri').delete().eq('id', id);
+    if (error) return showToast(tr('Nu s-a putut șterge. Verifică internetul.', 'Could not delete. Check your internet.'), 'error');
+    inchideFoaieObicei();
+    incarcaObiceiuriFisa();
+  });
 }
 
 // Trei cifre: ședințe săptămâna asta, ședințe rămase, săptămâni la rând (până vin datele: „–”)
@@ -7437,6 +7703,7 @@ async function verificaProdusCod(cod) {
 // Înapoi din ecranele de nutriție: din adăugare/cantitate/produs nou la ziua deschisă, din zi la Acasă
 function inapoiNutritie() {
   opresteScanare();
+  if (antrPers.ecran === 'nutritie-cumparaturi' && retete.dinPlan) { retete.dinPlan = false; return deschidePlanAlimClient(); }
   if (['nutritie-reteta', 'nutritie-reteta-editor', 'nutritie-cumparaturi'].includes(antrPers.ecran)) {
     if (antrPers.ecran === 'nutritie-reteta-editor' && retete.editor && retete.editor.id) { retete.vedere = 'reteta'; antrPers.ecran = 'nutritie-reteta'; }
     else { retete.vedere = 'lista'; antrPers.ecran = 'nutritie-retete'; }
@@ -8583,6 +8850,13 @@ async function deschideRetete() {
   randeazaRetete();
 }
 
+// Înapoi din antet: din editor la rețetă (sau listă), din rețetă la listă, din listă în meniu
+function inapoiReteteAntrenor() {
+  if (retete.vedere === 'lista') return navigheazaSubMeniu('main');
+  retete.vedere = retete.vedere === 'editor' && retete.editor && retete.editor.id ? 'reteta' : 'lista';
+  randeazaRetete();
+}
+
 function deschideReteteAntrenor() {
   navigheazaSubMeniu('retete');
   deschideRetete();
@@ -8599,8 +8873,10 @@ function randeazaRetete() {
       : retete.vedere === 'editor' ? (retete.editor && retete.editor.id ? tr('Editează rețeta', 'Edit recipe') : tr('Rețetă nouă', 'New recipe')) : tr('Rețete', 'Recipes');
   }
   if (retete.lista === null) { el.innerHTML = `<div class="progres-gol">${tr('Rețetele nu sunt disponibile acum. Verifică internetul.', 'Recipes are not available right now. Check your internet.')}</div>`; return; }
-  const inapoi = laAntrenorRetete() && retete.vedere !== 'lista' ? `<button type="button" class="btn btn-clear" onclick="retete.vedere = 'lista'; randeazaRetete()">‹ ${tr('Rețete', 'Recipes')}</button>` : '';
-  el.innerHTML = inapoi + (retete.vedere === 'reteta' ? htmlReteta() : retete.vedere === 'editor' ? htmlEditorReteta() : retete.vedere === 'cumparaturi' ? htmlCumparaturi() : htmlListaRetete());
+  const titlu = !laAntrenorRetete() ? '' : retete.vedere === 'reteta' ? titluPlanAlim(retete.curenta.nume, tr('Rețeta ta', 'Your recipe'), 'reteteTitluAntet')
+    : retete.vedere === 'editor' ? titluPlanAlim(retete.editor && retete.editor.id ? tr('Editează rețeta', 'Edit recipe') : tr('Rețetă nouă', 'New recipe'), '', 'reteteTitluAntet')
+    : titluPlanAlim(tr('Rețete', 'Recipes'), '', 'reteteTitluAntet');
+  el.innerHTML = titlu + (retete.vedere === 'reteta' ? htmlReteta() : retete.vedere === 'editor' ? htmlEditorReteta() : retete.vedere === 'cumparaturi' ? htmlCumparaturi() : htmlListaRetete());
 }
 
 function htmlRandReteta(r) {
@@ -8617,13 +8893,17 @@ function htmlListaRetete() {
   const antrenor = laAntrenorRetete();
   const aleAntrenorului = retete.lista.filter(r => !r.client_id);
   const aleMele = retete.lista.filter(r => r.client_id);
+  // Antrenorul: rândul „Rețetă nouă” spune deja că o văd clienții
   let html = antrenor
-    ? `<div class="acasa-antrenament-detalii">${tr('Rețetele tale le văd toți clienții tăi, în Nutriție › Rețete. Le pot adăuga în jurnal pe porții.', 'All your clients see your recipes in Nutrition › Recipes and can log them by serving.')}</div>`
+    ? ''
     : `<div class="nutritie-scurtaturi"><button type="button" class="btn" onclick="deschideEditorReteta(null)">${tr('+ Rețetă nouă', '+ New recipe')}</button>
         <button type="button" class="btn btn-clear" onclick="retete.vedere = 'cumparaturi'; randeazaRetete()">🛒 ${tr('Cumpărături', 'Shopping')}${listaCumparaturi().length ? ` (${listaCumparaturi().filter(x => !x.bifat).length})` : ''}</button></div>`;
-  if (antrenor) html += `<button type="button" class="btn profile-save-btn" onclick="deschideEditorReteta(null)">${tr('+ Rețetă nouă', '+ New recipe')}</button>`;
   if (antrenor) {
-    html += aleAntrenorului.length ? aleAntrenorului.map(htmlRandReteta).join('') : `<div class="progres-gol">${tr('Încă nicio rețetă. Adaugă una: clienții o văd imediat.', 'No recipes yet. Add one: your clients see it right away.')}</div>`;
+    const rand = r => { const v = valoriReteta(r); return randPlanAlim(`deschideReteta('${r.id}')`, 'reteta', escAttr(r.nume),
+      `${Math.round(v.portie.kcal)} kcal ${tr('pe porție', 'per serving')} · ${r.portii} ${Number(r.portii) === 1 ? tr('porție', 'serving') : tr('porții', 'servings')}${(r.mese || []).length ? ' · ' + r.mese.map(c => numeMasaPlan(c)).join(', ') : ''}`); };
+    html += `<div class="lista-sticla">${randPlanAlim('deschideEditorReteta(null)', 'nou', tr('Rețetă nouă', 'New recipe'), tr('O văd toți clienții tăi; intră și în Plan nou', 'All your clients see it; it also goes into New plan'))}</div>
+      <div class="lista-titlu">${tr('Rețetele tale', 'Your recipes')}</div>`;
+    html += aleAntrenorului.length ? `<div class="lista-sticla">${aleAntrenorului.map(rand).join('')}</div>` : `<div class="progres-gol">${tr('Încă nicio rețetă. Adaugă una: clienții o văd imediat.', 'No recipes yet. Add one: your clients see it right away.')}</div>`;
     return html;
   }
   if (aleAntrenorului.length) html += `<div class="antr-pers-sectiune">${tr('De la antrenorul tău', 'From your trainer')}</div>` + aleAntrenorului.map(htmlRandReteta).join('');
@@ -8645,7 +8925,7 @@ function htmlReteta() {
   const editabila = laAntrenorRetete() ? !r.client_id : !!r.client_id;
   const placa = (k, ro, en) => `<div class="nutritie-macro ${k}"><span>${tr(ro, en)}</span><b>${formatKg(v.portie[k])} g</b></div>`;
   const masa = nutritie.masa || masaImplicita();
-  return `<div class="card reteta-card">
+  return `<div class="lista-sticla plan-alim-sticla reteta-card">
       <b class="nutritie-produs-nume">${escAttr(r.nume)}</b>
       <div class="acasa-antrenament-detalii">${r.client_id ? tr('Rețeta ta', 'Your recipe') : laAntrenorRetete() ? tr('Rețeta ta · o văd clienții tăi', 'Your recipe · your clients see it') : tr('De la antrenor', 'From your trainer')} · ${r.portii} ${Number(r.portii) === 1 ? tr('porție', 'serving') : tr('porții', 'servings')} · ~${formatKg(Math.round(v.gramePortie))} g ${tr('porția', 'per serving')}${r.timp_min ? ` · ${r.timp_min} min` : ''}</div>
       <div class="nutritie-calcul">
@@ -8659,11 +8939,11 @@ function htmlReteta() {
         <button type="button" class="btn" onclick="adaugaRetetaInJurnal(this)">${tr('Adaugă', 'Add')}</button>
       </div>`}
     </div>
-    <div class="antr-pers-sectiune">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
-    <div class="card">${(r.ingrediente || []).map(i => `<div class="nutritie-rand">${htmlImagineProdus(i.imagine, 'mica')}
+    <div class="lista-titlu">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
+    <div class="lista-sticla plan-alim-sticla">${(r.ingrediente || []).map(i => `<div class="nutritie-rand">${htmlImagineProdus(i.imagine, 'mica')}
         <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(i.nume)}${i.marca ? ` <small>${escAttr(i.marca)}</small>` : ''}</div>
         <div class="acasa-antrenament-detalii">${formatKg(Number(i.cantitate_g))} g · ${Math.round(valoriPentruGrame(i, Number(i.cantitate_g)).kcal)} kcal</div></div></div>`).join('')}</div>
-    ${r.instructiuni ? `<div class="antr-pers-sectiune">${tr('Mod de preparare', 'Method')}</div><div class="card reteta-instructiuni">${escAttr(r.instructiuni)}</div>` : ''}
+    ${r.instructiuni ? `<div class="lista-titlu">${tr('Mod de preparare', 'Method')}</div><div class="lista-sticla plan-alim-sticla reteta-instructiuni">${escAttr(r.instructiuni)}</div>` : ''}
     <div class="nutritie-adauga-jos">
       ${laAntrenorRetete() ? '' : `<button type="button" class="btn btn-clear" onclick="adaugaLaCumparaturi()">🛒 ${tr('Pune ingredientele pe lista de cumpărături', 'Add the ingredients to the shopping list')}</button>`}
       ${editabila ? `<button type="button" class="btn btn-clear" onclick="deschideEditorReteta('${r.id}')">${tr('Editează', 'Edit')}</button>
@@ -8703,8 +8983,8 @@ function stergeReteta(id) {
 // ---- Editorul: nume, porții, timp, ingrediente (căutate ca la jurnal), mod de preparare ----
 function deschideEditorReteta(id) {
   const r = id ? (retete.lista || []).find(x => x.id === id) : null;
-  retete.editor = r ? JSON.parse(JSON.stringify({ id: r.id, nume: r.nume, portii: r.portii, timp_min: r.timp_min, instructiuni: r.instructiuni, ingrediente: r.ingrediente }))
-    : { id: null, nume: '', portii: 4, timp_min: null, instructiuni: '', ingrediente: [] };
+  retete.editor = r ? JSON.parse(JSON.stringify({ id: r.id, nume: r.nume, portii: r.portii, timp_min: r.timp_min, instructiuni: r.instructiuni, ingrediente: r.ingrediente, mese: r.mese || [] }))
+    : { id: null, nume: '', portii: 4, timp_min: null, instructiuni: '', ingrediente: [], mese: [] };
   retete.cautare = '';
   retete.rezultate = [];
   retete.vedere = 'editor';
@@ -8716,15 +8996,17 @@ function htmlEditorReteta() {
   const e = retete.editor;
   const v = valoriReteta(e);
   const rez = retete.rezultate;
-  return `<div class="card obiectiv-form">
+  return `<div class="lista-sticla plan-alim-sticla obiectiv-form">
       <div class="antr-pers-campuri"><label>${tr('Numele rețetei *', 'Recipe name *')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(e.nume)}" placeholder="${tr('ex. Ciorbă de legume', 'e.g. Vegetable soup')}" oninput="retete.editor.nume = this.value"></label></div>
       <div class="antr-pers-campuri">
         <label>${tr('Câte porții iese', 'Servings')}<input type="number" inputmode="numeric" class="plan-ex-input" min="1" max="50" value="${e.portii}" onchange="retete.editor.portii = Math.max(1, Math.min(50, parseInt(this.value, 10) || 1)); randeazaRetete()"></label>
         <label>${tr('Timp (min, opțional)', 'Time (min, optional)')}<input type="number" inputmode="numeric" class="plan-ex-input" min="1" max="1440" value="${e.timp_min ?? ''}" oninput="retete.editor.timp_min = parseInt(this.value, 10) || null"></label>
       </div>
+      ${laAntrenorRetete() ? `<div class="checkin-eticheta">${tr('Potrivită pentru', 'Good for')}</div>
+      <div class="antr-pers-activitati">${MESE_NUTRITIE.map(([cod, ro, en]) => `<button type="button" class="antr-pers-activitate${(e.mese || []).includes(cod) ? ' activ' : ''}" onclick="comutaMasaReteta('${cod}')">${cod === 'gustare' ? tr('Gustare', 'Snack') : tr(ro, en)}</button>`).join('')}</div>` : ''}
     </div>
-    <div class="antr-pers-sectiune">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
-    <div class="card">
+    <div class="lista-titlu">${tr('Ingrediente', 'Ingredients')} <small>(${tr('pentru toată rețeta', 'for the whole recipe')})</small></div>
+    <div class="lista-sticla plan-alim-sticla">
       ${e.ingrediente.length ? e.ingrediente.map((i, k) => `<div class="nutritie-rand">${htmlImagineProdus(i.imagine, 'mica')}
         <div class="nutritie-rand-text"><div class="nutritie-rand-nume">${escAttr(i.nume)}</div>
         <div class="acasa-antrenament-detalii">${formatKg(Number(i.cantitate_g))} g · ${Math.round(valoriPentruGrame(i, Number(i.cantitate_g)).kcal)} kcal</div></div>
@@ -8739,8 +9021,8 @@ function htmlEditorReteta() {
         : rez.length ? rez.map((p, i) => htmlProdusRand(p, i, 'reteta')).join('')
         : retete.cautare ? `<div class="progres-gol">${tr('Nu am găsit ingredientul.', 'Ingredient not found.')}</div>` : ''}
     </div>
-    <div class="antr-pers-sectiune">${tr('Mod de preparare (opțional)', 'Method (optional)')}</div>
-    <div class="card"><textarea class="plan-ex-textarea" rows="5" maxlength="4000" oninput="retete.editor.instructiuni = this.value">${escAttr(e.instructiuni || '')}</textarea></div>
+    <div class="lista-titlu">${tr('Mod de preparare (opțional)', 'Method (optional)')}</div>
+    <div class="lista-sticla plan-alim-sticla"><textarea class="plan-ex-textarea" rows="5" maxlength="4000" oninput="retete.editor.instructiuni = this.value">${escAttr(e.instructiuni || '')}</textarea></div>
     <div class="antr-pers-actiuni" style="margin:12px 0 0;">
       <button type="button" class="btn" onclick="salveazaReteta(this)">${tr('Salvează rețeta', 'Save recipe')}</button>
       <button type="button" class="btn btn-clear" onclick="retete.vedere = '${e.id ? 'reteta' : 'lista'}'; randeazaRetete()">${tr('Renunță', 'Cancel')}</button>
@@ -8772,16 +9054,34 @@ function alegeIngredient(i) {
   }, { valoare: String(implicit), placeholder: tr('grame', 'grams') });
 }
 
+function comutaMasaReteta(cod) {
+  const m = retete.editor.mese = retete.editor.mese || [], i = m.indexOf(cod);
+  if (i >= 0) m.splice(i, 1); else m.push(cod);
+  randeazaRetete();
+}
+
+// Scrie rețeta (nouă sau existentă). Până la sql/2026-11-21_retete_mese.sql coloana „mese” nu există: se salvează fără ea
+async function scrieReteta(id, rand) {
+  const trimite = r => (id ? supabaseClient.from('retete').update(r).eq('id', id) : supabaseClient.from('retete').insert(r)).select().single();
+  let rez = await trimite(rand);
+  if (rez.error && 'mese' in rand && /mese/.test(rez.error.message || '')) {
+    const { mese, ...fara } = rand;
+    rez = await trimite(fara);
+  }
+  // Rețeta nouă sau schimbată intră în biblioteca generatorului la următoarea deschidere
+  if (!rez.error) planAlim.biblioteca = null;
+  return rez;
+}
+
 async function salveazaReteta(btn) {
   const e = retete.editor;
   if (!(e.nume || '').trim()) return showToast(tr('Dă un nume rețetei.', 'Give the recipe a name.'), 'error');
   if (!e.ingrediente.length) return showToast(tr('Adaugă cel puțin un ingredient.', 'Add at least one ingredient.'), 'error');
   const proprietar = laAntrenorRetete() ? { user_id: utilizatorCurent.id, client_id: null } : { user_id: dateClienta.fisa.user_id, client_id: dateClienta.fisa.id };
   const rand = Object.assign({ nume: e.nume.trim().slice(0, 120), portii: e.portii, timp_min: e.timp_min || null, ingrediente: e.ingrediente,
-    instructiuni: (e.instructiuni || '').slice(0, 4000), updated_at: new Date().toISOString() }, e.id ? {} : proprietar);
+    instructiuni: (e.instructiuni || '').slice(0, 4000), updated_at: new Date().toISOString() }, e.id ? {} : proprietar, laAntrenorRetete() ? { mese: e.mese || [] } : {});
   btn.disabled = true;
-  const q = e.id ? supabaseClient.from('retete').update(rand).eq('id', e.id) : supabaseClient.from('retete').insert(rand);
-  const { data, error } = await q.select().single();
+  const { data, error } = await scrieReteta(e.id, rand);
   btn.disabled = false;
   if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
   retete.lista = (retete.lista || []).filter(r => r.id !== data.id).concat(data).sort((a, b) => a.nume.localeCompare(b.nume));
@@ -8795,9 +9095,17 @@ async function salveazaReteta(btn) {
 // „Potrivește gramajele” ajustează sursele de proteine / carbohidrați / grăsimi ca varianta să ajungă la ținta mesei;
 // „Înlocuiește” păstrează aportul alimentului vechi (ex. aceleași grame de proteină la pui → curcan).
 // vedere: 'lista' | 'editor' | 'import'
-let planAlim = { lista: null, vedere: 'lista', plan: null, cautare: null, importText: '' };
+let planAlim = { lista: null, vedere: 'lista', plan: null, cautare: null, importText: '', gen: null, biblioteca: null, schimba: null };
 const OBIECTIVE_PLAN = [OBIECTIVE_CALCULATOR[0], ['recompozitie', 0.85, 2.0, 'Recompoziție corporală', 'Body recomposition'], ...OBIECTIVE_CALCULATOR.slice(1)];
-const PROCENTE_MESE_PLAN = { mic_dejun: 25, pranz: 35, cina: 30, gustare: 10 };
+// Mesele zilei după câte sunt, cu procentul din ținta zilei. Gustările au codul „gustare”, ca în jurnal.
+const STRUCTURI_MESE_PLAN = {
+  3: [['mic_dejun', 30], ['pranz', 40], ['cina', 30]],
+  4: [['mic_dejun', 25], ['pranz', 32], ['gustare', 15], ['cina', 28]],
+  // Ca în planurile făcute de mână: gustările cam 200 kcal la o țintă de 1.500
+  5: [['mic_dejun', 22], ['gustare', 13], ['pranz', 27], ['gustare', 13], ['cina', 25]]
+};
+// Ziua fără antrenament: mai puțini carbohidrați (ca la Tatiana: −200 kcal, din −50 g carbohidrați)
+const CARBO_MINUS_REPAUS = 50;
 const ZERO_NUTRITIE = { kcal: 0, proteine: 0, carbo: 0, grasimi: 0 };
 
 function instructiuniPlanImplicite() {
@@ -8808,6 +9116,22 @@ function instructiuniPlanImplicite() {
 function numeMasaPlan(cod) {
   const m = MESE_NUTRITIE.find(x => x[0] === cod);
   return m ? tr(m[1], m[2]) : cod;
+}
+
+// În plan: cu două gustări, „Gustare 1” / „Gustare 2”
+function numeMasaInPlan(mese, mi) {
+  const gustari = mese.filter(m => m.cod === 'gustare');
+  if (mese[mi].cod !== 'gustare') return numeMasaPlan(mese[mi].cod);
+  return gustari.length > 1 ? tr(`Gustare ${gustari.indexOf(mese[mi]) + 1}`, `Snack ${gustari.indexOf(mese[mi]) + 1}`) : tr('Gustare', 'Snack');
+}
+
+function meseDupaStructura(nr) {
+  return STRUCTURI_MESE_PLAN[nr].map(([cod, procent]) => ({ cod, procent, variante: [] }));
+}
+
+// Ținta zilei fără antrenament, din cea cu antrenament
+function tinteRepausDin(t) {
+  return t ? { kcal: Math.max(0, t.kcal - CARBO_MINUS_REPAUS * 4), proteine: t.proteine, carbo: Math.max(0, t.carbo - CARBO_MINUS_REPAUS), grasimi: t.grasimi } : null;
 }
 
 function numeClientPlan(clientId) {
@@ -8850,8 +9174,8 @@ async function profilDinClient(clientId) {
 
 function planAlimGol() {
   return { id: null, client_id: null, titlu: tr('Plan alimentar personalizat', 'Personalised meal plan'),
-    continut: { profil: { sex: '', varsta: '', inaltime: '', greutate: '', activitate: 1.375, obiectiv: 'recompozitie' }, tinte: null,
-      instructiuni: instructiuniPlanImplicite(), mese: MESE_NUTRITIE.map(([cod]) => ({ cod, procent: PROCENTE_MESE_PLAN[cod], variante: [] })) } };
+    continut: { profil: { sex: '', varsta: '', inaltime: '', greutate: '', activitate: 1.375, obiectiv: 'recompozitie' }, tinte: null, tinteRepaus: null,
+      instructiuni: instructiuniPlanImplicite(), suplimente: '', mese: meseDupaStructura(5) } };
 }
 
 // ---- Calcul ----
@@ -8863,9 +9187,27 @@ function valoriVariantaPlan(v) {
   return totaluriNutritie((v.ingrediente || []).map(valoriIngrPlan));
 }
 
-function tintaMasaPlan(plan, m) {
-  const t = plan.continut.tinte, p = (Number(m.procent) || 0) / 100;
+// repaus = ținta zilei fără antrenament (dacă planul o are); gramajele salvate sunt pentru ziua cu antrenament
+function tintaMasaPlan(plan, m, repaus) {
+  const t = repaus && plan.continut.tinteRepaus ? plan.continut.tinteRepaus : plan.continut.tinte, p = (Number(m.procent) || 0) / 100;
   return t && p ? { kcal: t.kcal * p, proteine: t.proteine * p, carbo: t.carbo * p, grasimi: t.grasimi * p } : null;
+}
+
+// Gramajele variantei în ziua fără antrenament: doar sursele de carbohidrați scad, cu diferența dintre cele două ținte ale mesei
+//   (proteinele și grăsimile rămân, ca în planurile făcute de mână). Fără ținta de repaus: aceleași gramaje.
+function ingredienteRepaus(plan, m, v) {
+  const ing = v.ingrediente || [];
+  const tA = tintaMasaPlan(plan, m), tR = plan.continut.tinteRepaus && tintaMasaPlan(plan, m, true);
+  if (!tA || !tR) return ing;
+  // Întâi carbohidrații (cel mult 40% din ei), iar ce nu ajunge, din grăsimi (cel mult 30%): varianta fără pâine / orez scade și ea,
+  //   iar porțiile rămân de mâncat (nu 10 g de lipie)
+  const grup = rol => ing.filter(i => rolIngrPlan(i) === rol && Number(i.cantitate_g) > 0);
+  const carbo = grup('carbo'), grasimi = grup('grasimi'), kcal = g => g.reduce((s, i) => s + valoriIngrPlan(i).kcal, 0);
+  const deficit = Math.max(0, tA.kcal - tR.kcal), dinCarbo = Math.min(deficit, kcal(carbo) * 0.4), dinGrasimi = Math.min(deficit - dinCarbo, kcal(grasimi) * 0.3);
+  const factor = new Map();
+  carbo.forEach(i => factor.set(i, 1 - dinCarbo / kcal(carbo)));
+  grasimi.forEach(i => factor.set(i, 1 - dinGrasimi / kcal(grasimi)));
+  return ing.map(i => factor.has(i) && factor.get(i) < 1 ? Object.assign({}, i, { cantitate_g: rotunjesteGramePlan(i, Number(i.cantitate_g) * factor.get(i)) }) : i);
 }
 
 // Rolul alimentului: sursă de proteine (≥ 30% din calorii), altfel carbohidrați sau grăsimi; legumele și condimentele rămân fixe
@@ -8878,7 +9220,11 @@ function rolIngrPlan(i) {
 
 // Gramaje „de bucătărie”: din 5 în 5 g, sub 20 g la gram, iar ce se măsoară în bucăți pe jumătăți de bucată
 function rotunjesteGramePlan(i, g) {
-  if (i.unitate && i.unitate.g > 0) return Math.max(0.5, Math.round(g / i.unitate.g * 2) / 2) * i.unitate.g;
+  // Bucățile (ouă, fructe) rămân întregi; feliile, cupele, lingurile merg și pe jumătăți
+  if (i.unitate && i.unitate.g > 0) {
+    const pas = /^(buc|pcs)/i.test(i.unitate.nume || '') ? 1 : 0.5;
+    return Math.max(pas, Math.round(g / i.unitate.g / pas) * pas) * i.unitate.g;
+  }
   return g < 20 ? Math.max(1, Math.round(g)) : Math.round(g / 5) * 5;
 }
 
@@ -8912,10 +9258,23 @@ function potrivesteVariantaPlan(v, tinta) {
   M.forEach((r, i) => { r[i] += lambda; y[i] += lambda; });
   const m = rezolvaSistemMic(M, y);
   if (!m) return false;
-  grupuri.forEach((g, k) => {
-    const f = Math.max(0.35, Math.min(3, m[k]));
-    g.forEach(i => { i.cantitate_g = rotunjesteGramePlan(i, Number(i.cantitate_g) * f); });
-  });
+  // Proporțiile rămân ale rețetei: porția întreagă se poate mări sau micșora (s = cât cere ținta), dar fiecare aliment
+  //   stă între 70% și 160% din „rețeta × s” (fără 17 g de ovăz lângă 255 g de iaurt). Apoi caloriile: compromisul pe
+  //   macro-uri lasă varianta des sub țintă, iar suma zilei contează cel mai mult; factorul comun se reia de câteva ori,
+  //   ca alimentele rămase sub limită să preia ce nu pot cele blocate
+  const factor = new Map(), orig = new Map(ing.map(i => [i, Number(i.cantitate_g)]));
+  const kcalAjust = () => [...factor].reduce((s, [i, f]) => s + valoriPentruGrame(i, orig.get(i) * f).kcal, 0);
+  grupuri.forEach(g => g.forEach(i => factor.set(i, 1)));
+  const s = Math.max(0.5, Math.min(3, (tinta.kcal - fix.kcal) / (kcalAjust() || 1)));
+  const limita = x => Math.max(0.7 * s, Math.min(1.6 * s, x));
+  grupuri.forEach((g, k) => g.forEach(i => factor.set(i, limita(m[k]))));
+  for (let pas = 0; pas < 4; pas++) {
+    const k = kcalAjust();
+    if (!(k > 0)) break;
+    const r = (tinta.kcal - fix.kcal) / k;
+    factor.forEach((f, i) => factor.set(i, limita(f * r)));
+  }
+  factor.forEach((f, i) => { i.cantitate_g = rotunjesteGramePlan(i, orig.get(i) * f); });
   return true;
 }
 
@@ -8966,30 +9325,63 @@ async function deschidePlanuriAlimentare() {
   if (planAlim.vedere === 'lista') randeazaPlanAlim();
 }
 
+// Titlul mare din pagină și cel mic din antet (apare la derulare), la fel pe fiecare vedere
+function titluPlanAlim(titlu, sus, idAntet) {
+  const antet = document.getElementById(idAntet || 'planuriAlimTitluAntet');
+  if (antet) antet.textContent = titlu;
+  return `<div class="orar-titlu-mare"><div class="orar-titlu-text">${sus ? `<span>${escAttr(sus)}</span>` : ''}<h1>${escAttr(titlu)}</h1></div></div>`;
+}
+
+// Butonul Înapoi din antet: din plan / generator / import la listă, din listă în meniu
+function inapoiPlanuriAlim() {
+  if (planAlim.vedere !== 'lista') return inchideEditorPlanAlim();
+  navigheazaSubMeniu('main');
+}
+
+const ICONITE_PLAN_ALIM = {
+  nou: '<path d="M12 5v14M5 12h14"/>',
+  importa: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3 3 3-3"/>',
+  gol: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  reteta: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+  plan: '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>'
+};
+
+// Rând de meniu de sticlă (ca în Setări): iconiță, titlu, descriere, săgeată
+function randPlanAlim(onclick, iconita, titlu, desc) {
+  return `<div class="drawer-nav-card" onclick="${onclick}">
+    <div class="drawer-nav-card-left">
+      <div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONITE_PLAN_ALIM[iconita]}</svg></div>
+      <div><div class="drawer-nav-title">${titlu}</div>${desc ? `<div class="drawer-nav-desc">${desc}</div>` : ''}</div>
+    </div>
+    <div class="drawer-nav-arrow">›</div>
+  </div>`;
+}
+
 function randeazaPlanAlim() {
   const el = elPlanAlim();
   if (!el) return;
   if (planAlim.vedere === 'editor') return void (el.innerHTML = htmlEditorPlanAlim());
   if (planAlim.vedere === 'import') return void (el.innerHTML = htmlImportPlanAlim());
-  if (planAlim.lista === null) return void (el.innerHTML = `<div class="progres-gol">${tr('Planurile nu sunt disponibile acum. Verifică internetul.', 'Meal plans are not available right now. Check your internet.')}</div>`);
+  if (planAlim.vedere === 'genereaza') return void (el.innerHTML = htmlGenereazaPlanAlim());
+  const titlu = titluPlanAlim(tr('Planuri alimentare', 'Meal plans'));
+  if (planAlim.lista === null) return void (el.innerHTML = titlu + `<div class="progres-gol">${tr('Planurile nu sunt disponibile acum. Verifică internetul.', 'Meal plans are not available right now. Check your internet.')}</div>`);
   const rand = p => {
     const client = p.client_id ? numeClientPlan(p.client_id) : '';
     const nrVar = (p.continut.mese || []).reduce((s, m) => s + (m.variante || []).length, 0);
-    return `<button type="button" class="plan-zi-card nutritie-produs" onclick="deschidePlanAlim('${p.id}')">
-      <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(client || p.titlu)}</span>
-      <span class="plan-zi-card-detalii">${client ? escAttr(p.titlu) + ' · ' : ''}${p.continut.tinte ? `<b>${p.continut.tinte.kcal} kcal</b> · ` : ''}${nrVar} ${tr('variante', 'options')} · ${formatZiLuna(new Date(p.updated_at))}</span></span>
-      <span class="progres-ex-dif">›</span></button>`;
+    return randPlanAlim(`deschidePlanAlim('${p.id}')`, 'plan', escAttr(client || p.titlu),
+      `${client ? escAttr(p.titlu) + ' · ' : ''}${p.continut.tinte ? `${p.continut.tinte.kcal} kcal · ` : ''}${nrVar} ${tr('variante', 'options')} · ${formatZiLuna(new Date(p.updated_at))}`);
   };
   const aleClientilor = planAlim.lista.filter(p => p.client_id), sabloane = planAlim.lista.filter(p => !p.client_id);
-  el.innerHTML = `<div class="acasa-antrenament-detalii">${tr('Planul unui client îl vede clientul în Nutriție. Fără aplicație, îi trimiți linkul sau PDF-ul.', 'Clients see their plan in Nutrition. Without the app, send them the link or the PDF.')}</div>
-    <div class="antr-pers-actiuni plan-alim-actiuni">
-      <button type="button" class="btn" onclick="planNouAlim()">${tr('+ Plan nou', '+ New plan')}</button>
-      <button type="button" class="btn btn-clear" onclick="planAlim.vedere = 'import'; randeazaPlanAlim()">${tr('Importă din text', 'Import from text')}</button>
+  el.innerHTML = `${titlu}
+    <div class="lista-sticla">
+      ${randPlanAlim('planNouGenerat()', 'nou', tr('Plan nou', 'New plan'), tr('Generat din biblioteca ta, pe țintele și gusturile clientului', 'Generated from your library, on the client’s targets and tastes'))}
+      ${randPlanAlim("planAlim.vedere = 'import'; randeazaPlanAlim()", 'importa', tr('Importă', 'Import'), tr('Un plan vechi (PDF, Word) sau textul de la Gemini / ChatGPT', 'An old plan (PDF, Word) or the text from Gemini / ChatGPT'))}
+      ${randPlanAlim('planNouAlim()', 'gol', tr('Plan gol', 'Blank plan'), tr('Scrii tu fiecare variantă', 'You write every option'))}
     </div>
-    <div class="antr-pers-sectiune">${tr('Planurile clienților', 'Client plans')}</div>
-    ${aleClientilor.length ? aleClientilor.map(rand).join('') : `<div class="progres-gol">${tr('Încă niciun plan trimis.', 'No plans sent yet.')}</div>`}
-    <div class="antr-pers-sectiune">${tr('Șabloane', 'Templates')}</div>
-    ${sabloane.length ? sabloane.map(rand).join('') : `<div class="progres-gol">${tr('Un plan fără client rămâne șablon: îl aplici apoi oricui, cu gramajele recalculate.', 'A plan without a client stays a template: apply it to anyone later, with recalculated amounts.')}</div>`}`;
+    <div class="lista-titlu">${tr('Planurile clienților', 'Client plans')}</div>
+    ${aleClientilor.length ? `<div class="lista-sticla">${aleClientilor.map(rand).join('')}</div>` : `<div class="progres-gol">${tr('Încă niciun plan trimis. Clientul îl vede în Nutriție; fără aplicație, îi trimiți linkul sau PDF-ul.', 'No plans sent yet. Clients see their plan in Nutrition; without the app, send them the link or the PDF.')}</div>`}
+    <div class="lista-titlu">${tr('Șabloane', 'Templates')}</div>
+    ${sabloane.length ? `<div class="lista-sticla">${sabloane.map(rand).join('')}</div>` : `<div class="progres-gol">${tr('Un plan fără client rămâne șablon: îl aplici apoi oricui, cu gramajele recalculate.', 'A plan without a client stays a template: apply it to anyone later, with recalculated amounts.')}</div>`}`;
 }
 
 function planNouAlim() {
@@ -9009,95 +9401,598 @@ function deschidePlanAlim(id) {
   elPlanAlim().scrollIntoView({ block: 'start' });
 }
 
+// ---- Antrenorul: planul nou, generat din bibliotecă (ca „Generate Meals” la Everfit, plus ce mănâncă clientul) ----
+
+// Biblioteca: variantele din planurile salvate (întâi ale antrenorului) și rețetele de start, fără dubluri după nume
+async function incarcaBibliotecaAlim() {
+  if (planAlim.biblioteca) return planAlim.biblioteca;
+  const start = parseazaPlanAlimText(BIBLIOTECA_RETETE_START);
+  // Rețetele de start sunt scrise pe numele din bază: potrivirile lor nu mai trec prin „De verificat”
+  (await rezolvaIngredientePlan(start)).forEach(i => { delete i.verifica; });
+  const lista = [], vazute = new Set();
+  const adaugaUna = (cod, v) => {
+    const k = cod + '|' + cheieAliasAlim(v.titlu || '');
+    if (!(v.titlu || '').trim() || vazute.has(k) || !(v.ingrediente || []).some(i => !i.text && !i.negasit)) return;
+    vazute.add(k);
+    lista.push({ cod, v });
+  };
+  const adauga = mese => (mese || []).forEach(m => (m.variante || []).forEach(v => adaugaUna(m.cod, v)));
+  if (retete.lista === null) await incarcaRetete();
+  (retete.lista || []).filter(r => !r.client_id).forEach(r => { const v = variantaDinReteta(r); meseReteta(r).forEach(cod => adaugaUna(cod, v)); });
+  (planAlim.lista || []).forEach(p => adauga(p.continut.mese));
+  adauga(start.continut.mese);
+  return (planAlim.biblioteca = lista);
+}
+
+// O porție din rețeta din Rețete, ca variantă de plan (ingredientele au același format: valori la 100 g + grame)
+function variantaDinReteta(r) {
+  const portii = Number(r.portii) || 1;
+  return { titlu: r.nume, preparare: String(r.instructiuni || '').slice(0, 1000),
+    ingrediente: (r.ingrediente || []).map(i => Object.assign({}, i, { aliment: i.nume, unitate: null, cantitate_g: rotunjesteGramePlan({}, Number(i.cantitate_g) / portii) })) };
+}
+
+// La ce masă intră rețeta: cele bifate în editor, altfel după caloriile pe porție
+function meseReteta(r) {
+  if ((r.mese || []).length) return r.mese;
+  const kcal = valoriReteta(r).portie.kcal;
+  return kcal < 300 ? ['gustare'] : kcal < 500 ? ['mic_dejun', 'cina'] : ['pranz', 'cina'];
+}
+
+// Alimentele bibliotecii, o dată fiecare, cu grupa lor (proteine / carbo / grăsimi / fix = legume)
+function alimenteBiblioteca(bib) {
+  const m = new Map();
+  bib.forEach(x => x.v.ingrediente.forEach(i => {
+    const k = cheieAliasAlim(i.nume);
+    if (!i.text && !i.negasit && !m.has(k)) m.set(k, { nume: i.nume, grup: rolIngrPlan(i) });
+  }));
+  return m;
+}
+
+async function planNouGenerat() {
+  planAlim.gen = { client_id: '', profil: planAlimGol().continut.profil, nrMese: 5, nrVar: 3, repaus: true, tranzit: true, nu: [] };
+  planAlim.vedere = 'genereaza';
+  randeazaPlanAlim();
+  elPlanAlim().scrollIntoView({ block: 'start' });
+  try { await incarcaBibliotecaAlim(); } catch (e) { planAlim.biblioteca = null; }
+  if (planAlim.vedere === 'genereaza') randeazaPlanAlim();
+}
+
+// Clientul aduce profilul din fișă și ce nu mănâncă din ultimul lui plan
+async function schimbaClientGen(id) {
+  const g = planAlim.gen;
+  g.client_id = id;
+  if (id) {
+    const profil = await profilDinClient(id);
+    Object.assign(g.profil, Object.fromEntries(Object.entries(profil).filter(([k, v]) => v !== '' && k !== 'obiectiv' && k !== 'sex')));
+    const ultim = (planAlim.lista || []).find(p => p.client_id === id && p.continut.preferinte);
+    g.nu = ultim ? ultim.continut.preferinte.nu.slice() : [];
+    g.lista = ultim ? ultim.continut.preferinte.lista || '' : '';
+    g.nota = ultim ? ultim.continut.preferinte.nota || '' : '';
+    g.prefera = ultim ? (ultim.continut.preferinte.prefera || []).slice() : [];
+  }
+  randeazaPlanAlim();
+}
+
+function schimbaProfilGen(camp, valoare) {
+  planAlim.gen.profil[camp] = camp === 'activitate' ? Number(valoare) : valoare;
+  randeazaPlanAlim();
+}
+
+function comutaAlimentGen(k) {
+  const nu = planAlim.gen.nu, i = nu.indexOf(k);
+  if (i >= 0) nu.splice(i, 1); else nu.push(k);
+  randeazaPlanAlim();
+}
+
+// Profilul (sex, vârstă, înălțime, greutate, activitate, obiectiv), comun editorului și generatorului; fn = funcția care primește (câmp, valoare)
+function htmlProfilCampuri(pr, fn) {
+  const buton = (camp, val, et) => `<button type="button" class="antr-pers-activitate${String(pr[camp]) === String(val) ? ' activ' : ''}" onclick="${fn}('${camp}', '${val}')">${et}</button>`;
+  const camp = (id, et) => `<label>${et}<input type="number" inputmode="decimal" class="plan-ex-input" value="${escAttr(String(pr[id] || ''))}" onchange="${fn}('${id}', this.value)"></label>`;
+  return `<div class="antr-pers-activitati">${buton('sex', 'f', tr('Feminin', 'Female'))}${buton('sex', 'm', tr('Masculin', 'Male'))}</div>
+    <div class="antr-pers-campuri" style="margin-top:8px;">${camp('varsta', tr('Vârsta', 'Age'))}${camp('inaltime', tr('Înălțimea (cm)', 'Height (cm)'))}${camp('greutate', tr('Greutatea (kg)', 'Weight (kg)'))}</div>
+    <div class="antr-pers-campuri"><label>${tr('Activitate', 'Activity')}<select class="plan-ex-input" onchange="${fn}('activitate', this.value)">
+      ${ACTIVITATI_CALCULATOR.map(([f, ro, en]) => `<option value="${f}"${Number(pr.activitate) === f ? ' selected' : ''}>${tr(ro, en)}</option>`).join('')}</select></label></div>
+    <div class="checkin-eticheta" style="margin-top:8px;">${tr('Obiectivul', 'Goal')}</div>
+    <div class="antr-pers-activitati plan-alim-obiective">${OBIECTIVE_PLAN.map(o => buton('obiectiv', o[0], tr(o[3], o[4]))).join('')}</div>`;
+}
+
+function htmlGenereazaPlanAlim() {
+  const g = planAlim.gen, bib = planAlim.biblioteca, rez = tinteDinProfil(g.profil), tR = rez && tinteRepausDin(rez);
+  const clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
+  const restr = restrictiiPlan(g.client_id, g);
+  const pastila = (activ, onclick, et) => `<button type="button" class="antr-pers-activitate${activ ? ' activ' : ''}" onclick="${onclick}">${et}</button>`;
+  const comutator = (camp, et, sub) => `<label class="setare-notificare"><span><b>${et}</b><small>${sub}</small></span>
+    <input type="checkbox" class="comutator" ${g[camp] ? 'checked' : ''} onchange="planAlim.gen.${camp} = this.checked"></label>`;
+  let alimente = '';
+  if (bib) {
+    const toate = [...alimenteBiblioteca(bib).entries()].sort((a, b) => a[1].nume.localeCompare(b[1].nume));
+    alimente = [['proteine', 'Proteine', 'Protein'], ['carbo', 'Carbohidrați și fructe', 'Carbs and fruit'], ['grasimi', 'Grăsimi', 'Fats'], ['fix', 'Legume', 'Vegetables']]
+      .map(([grup, ro, en]) => `<div class="checkin-eticheta">${tr(ro, en)}</div><div class="antr-pers-activitati">${toate.filter(([, a]) => a.grup === grup)
+        .map(([k, a]) => pastila(!g.nu.includes(k), `comutaAlimentGen('${escAttr(k)}')`, escAttr(a.nume))).join('')}</div>`).join('');
+  }
+  return `${titluPlanAlim(tr('Plan nou', 'New plan'), tr('Din biblioteca ta de rețete', 'From your recipe library'))}
+    <div class="lista-sticla plan-alim-sticla obiectiv-form">
+      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<select class="plan-ex-input" onchange="schimbaClientGen(this.value)">
+        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
+        ${clienti.map(x => `<option value="${escAttr(x.id)}"${x.id === g.client_id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
+      </select></label></div>
+      ${restr.lista.length || restr.nota ? `<div class="plan-alim-restrictii">⚠ ${tr('Nu mănâncă', 'Doesn’t eat')}: <b>${escAttr(textRestrictii(restr))}</b> · ${tr('le scot singur din plan', 'I leave them out')}</div>` : ''}
+    </div>
+    <div class="lista-titlu">${tr('Profil și ținte', 'Profile and targets')}</div>
+    <div class="lista-sticla plan-alim-sticla obiectiv-form calculator-tinte">${htmlProfilCampuri(g.profil, 'schimbaProfilGen')}
+      <div class="acasa-antrenament-detalii" style="margin-top:8px;">${rez ? `${tr('Zi cu antrenament', 'Training day')} <b>~${rez.kcal} kcal</b>${g.repaus ? ` · ${tr('fără antrenament', 'rest day')} <b>~${tR.kcal} kcal</b>` : ''} · ${tr('proteine', 'protein')} ${rez.proteine} g`
+        : tr('Completează sexul, vârsta, înălțimea și greutatea ca să calculez țintele.', 'Fill in sex, age, height and weight to calculate the targets.')}</div>
+    </div>
+    <div class="lista-titlu">${tr('Structura zilei', 'Day structure')}</div>
+    <div class="lista-sticla plan-alim-sticla obiectiv-form">
+      <div class="checkin-eticheta">${tr('Mese pe zi', 'Meals a day')}</div>
+      <div class="antr-pers-activitati">${[3, 4, 5].map(n => pastila(g.nrMese === n, `planAlim.gen.nrMese = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
+      <div class="checkin-eticheta">${tr('Variante la fiecare masă', 'Options per meal')}</div>
+      <div class="antr-pers-activitati">${[2, 3, 4].map(n => pastila(g.nrVar === n, `planAlim.gen.nrVar = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
+      ${comutator('repaus', tr('Zile fără antrenament', 'Rest days'), tr('Gramaje mai mici la carbohidrați în zilele fără antrenament', 'Smaller carb amounts on rest days'))}
+      ${comutator('tranzit', tr('Variante pentru tranzit', 'On-the-go options'), tr('Ce cumpără din supermarket când e plecat', 'What to buy at the supermarket when away'))}
+    </div>
+    <div class="lista-titlu">${tr('Ce mănâncă', 'What they eat')} <small>${tr('atinge ce nu mănâncă', 'tap what they don’t eat')}</small></div>
+    <div class="lista-sticla plan-alim-sticla obiectiv-form">
+      <textarea id="genListaClient" class="plan-ex-textarea" rows="4" maxlength="4000" placeholder="${tr('Lipește lista clientului: ce preferă și, după „Ce să nu fie deloc:”, ce nu mănâncă', 'Paste the client’s list: what they like and, after “Not at all:”, what they never eat')}">${escAttr(g.lista || '')}</textarea>
+      <button type="button" class="btn btn-clear" ${bib ? '' : 'disabled'} onclick="aplicaListaGen()">${tr('Marchează din listă', 'Mark from the list')}</button>
+      ${bib ? alimente : `<div class="progres-gol">${bib === null && planAlim.vedere === 'genereaza' ? tr('Se încarcă biblioteca...', 'Loading the library...') : ''}</div>`}</div>
+    <button type="button" class="btn profile-save-btn" style="margin-top:10px;" ${bib && rez ? '' : 'disabled'} onclick="genereazaPlanAlim()">${tr('Generează planul', 'Generate the plan')}</button>`;
+}
+
+// Restricțiile planului: cele din fișa clientului plus ce nu mănâncă din lista lipită în generator (pref.nota)
+function restrictiiPlan(clientId, pref) {
+  const r = restrictiiClient(clientId), nota = (pref && pref.nota) || '';
+  return { lista: r.lista, nota: [r.nota, nota].filter(Boolean).join(', ') };
+}
+
+// Lista clientului lipită („Proteine: ouă, curcan, pui... Ce să nu fie deloc: berbec/oaie”). Ce mănâncă e o listă de preferințe,
+//   nu una completă (porcul și vita se cer des în plus): rețetele cu alimentele ei vin primele, celelalte rămân posibile.
+//   Doar ce e după „să nu fie / nu mănânc” se scoate din plan. Etichetele de categorie („Proteine:”) nu contează.
+// Cuvântul din listă acoperă și rudele lui din bibliotecă („ouă” → albușuri; „oaie” / „berbec” → miel)
+const RUDE_LISTA_ALIM = { ou: ['albus'], branz: ['ricott', 'parmezan'], oaie: ['miel'], berbec: ['miel'] };
+
+function aplicaListaGen() {
+  const g = planAlim.gen, text = String((document.getElementById('genListaClient') || {}).value || '');
+  g.lista = text;
+  const [da, ...nu] = faraDiacritice(text).split(/(?:ce sa nu fie|sa nu fie|nu mananc|nu vreau|nu manca|excluderi)\s*(?:deloc)?\s*:?/);
+  const radDa = radaciniAliment(da.split('\n').map(r => r.replace(/^[^:\n]{0,25}:/, ' ')).join(' '));
+  // Fără bucățile de frază („la preț”) și fără dubluri
+  const libere = nu.join(' ').split(/[,;\n/]|\bsi\b/).map(x => x.replace(/[^a-z ]/g, '').trim()).filter(x => x.length >= 3 && !/^la\b/.test(x));
+  g.nota = [...new Set(libere.concat(libere.flatMap(x => RUDE_LISTA_ALIM[x] || [])))].join(', ');
+  const termeni = radDa.concat(radDa.flatMap(t => RUDE_LISTA_ALIM[t] || []));
+  const seamana = (w, t) => w === t || (w.length >= 3 && t.length >= 3 && (w.startsWith(t) || t.startsWith(w)));
+  g.prefera = radDa.length >= 3 ? [...alimenteBiblioteca(planAlim.biblioteca || []).entries()]
+    .filter(([, a]) => radaciniAliment(faraDiacritice(a.nume)).some(w => termeni.some(t => seamana(w, t)))).map(([k]) => k) : [];
+  randeazaPlanAlim();
+  showToast(tr(`✓ Din listă: ${g.prefera.length} alimente preferate${g.nota ? ', plus ce nu mănâncă deloc' : ''}`, `✓ From the list: ${g.prefera.length} preferred foods${g.nota ? ', plus what they never eat' : ''}`));
+}
+
+// Variantele permise pentru client: fără ce nu mănâncă (bifat sau din fișă)
+function permisaPlan(v, nu, restr) {
+  return (v.ingrediente || []).every(i => i.text || (!nu.includes(cheieAliasAlim(i.nume)) && !restrictiiAliment(i, restr.lista, restr.nota).length));
+}
+
+// Sursa principală de proteine a variantei (alimentul cu cele mai multe grame de proteine), ca să nu se repete la aceeași masă
+function proteinaVariantei(v) {
+  let max = 0, k = '';
+  (v.ingrediente || []).forEach(i => { const p = valoriIngrPlan(i).proteine; if (p > max) { max = p; k = cheieAliasAlim(i.aliment || i.nume); } });
+  return k;
+}
+
+// n variante pentru o masă, în ordine aleatorie (la „Regenerează” iese altceva): întâi cu proteine diferite, apoi oricare;
+// copiate și potrivite pe ținta mesei. folosite = titlurile deja puse (două gustări nu primesc aceeași rețetă)
+function alegeVariantePlan(plan, m, n, folosite, nu, restr, tranzit, prefera) {
+  // Treapta: cât din rețetă e din lista de preferințe (pe sferturi, ca la egalitate să decidă întâmplarea)
+  const treapta = v => {
+    const ing = (v.ingrediente || []).filter(i => !i.text && rolIngrPlan(i) !== 'fix');
+    return prefera && prefera.length && ing.length ? Math.round(ing.filter(i => prefera.includes(cheieAliasAlim(i.nume))).length / ing.length * 4) : 0;
+  };
+  const candidati = (planAlim.biblioteca || []).filter(x => x.cod === m.cod && !folosite.has(cheieAliasAlim(x.v.titlu)) && permisaPlan(x.v, nu, restr))
+    .map(x => [treapta(x.v), Math.random(), x.v]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map(x => x[2]);
+  const alese = [], proteine = new Set();
+  candidati.forEach(v => { if (alese.length < n && !proteine.has(proteinaVariantei(v))) { alese.push(v); proteine.add(proteinaVariantei(v)); } });
+  candidati.forEach(v => { if (alese.length < n && !alese.includes(v)) alese.push(v); });
+  const tinta = tintaMasaPlan(plan, m);
+  return alese.map(v => {
+    folosite.add(cheieAliasAlim(v.titlu));
+    const copie = JSON.parse(JSON.stringify(v));
+    if (!tranzit) delete copie.tranzit;
+    potrivesteVariantaPlan(copie, tinta);
+    return copie;
+  });
+}
+
+function genereazaPlanAlim() {
+  const g = planAlim.gen, rez = tinteDinProfil(g.profil);
+  if (!rez || !planAlim.biblioteca) return;
+  const plan = planAlimGol(), c = plan.continut;
+  plan.client_id = g.client_id || null;
+  if (plan.client_id) plan.titlu = tr(`Plan alimentar — ${numeClientPlan(plan.client_id)}`, `Meal plan — ${numeClientPlan(plan.client_id)}`).slice(0, 120);
+  c.profil = Object.assign({}, g.profil);
+  c.tinte = { kcal: rez.kcal, proteine: rez.proteine, carbo: rez.carbo, grasimi: rez.grasimi };
+  c.tinteRepaus = g.repaus ? tinteRepausDin(c.tinte) : null;
+  c.preferinte = { nu: g.nu.slice(), tranzit: g.tranzit, nota: g.nota || '', lista: g.lista || '', prefera: (g.prefera || []).slice() };
+  c.mese = meseDupaStructura(g.nrMese);
+  const restr = restrictiiPlan(plan.client_id, c.preferinte), folosite = new Set();
+  c.mese.forEach(m => { m.variante = alegeVariantePlan(plan, m, g.nrVar, folosite, g.nu, restr, g.tranzit, g.prefera); });
+  const putine = c.mese.map((m, mi) => m.variante.length < g.nrVar ? numeMasaInPlan(c.mese, mi) : '').filter(Boolean);
+  planAlim.plan = plan;
+  planAlim.cautare = null;
+  planAlim.vedere = 'editor';
+  randeazaPlanAlim();
+  elPlanAlim().scrollIntoView({ block: 'start' });
+  showToast(putine.length ? tr(`Plan gata. Puține rețete potrivite la: ${putine.join(', ')}.`, `Plan ready. Few matching recipes for: ${putine.join(', ')}.`) : tr('✓ Plan gata. Verifică și trimite.', '✓ Plan ready. Check it and send.'));
+}
+
+// În editor: altă selecție pentru o masă (păstrează ce nu mănâncă clientul, din plan)
+async function regenereazaMasaPlan(mi) {
+  await incarcaBibliotecaAlim();
+  const c = planAlim.plan.continut, m = c.mese[mi], pref = c.preferinte || { nu: [], tranzit: true };
+  const folosite = new Set(c.mese.flatMap((x, k) => k === mi ? [] : x.variante.map(v => cheieAliasAlim(v.titlu || ''))));
+  m.variante.forEach(v => folosite.add(cheieAliasAlim(v.titlu || '')));
+  const noi = alegeVariantePlan(planAlim.plan, m, Math.max(1, m.variante.length), folosite, pref.nu, restrictiiPlan(planAlim.plan.client_id, pref), pref.tranzit !== false, pref.prefera);
+  if (!noi.length) return showToast(tr('Nu mai am alte rețete potrivite pentru masa asta.', 'No other matching recipes for this meal.'), 'error');
+  m.variante = noi;
+  planAlim.schimba = null;
+  randeazaPlanAlim();
+}
+
+// „Schimbă”: lista rețetelor din bibliotecă pentru aceeași masă; alegerea înlocuiește varianta, potrivită pe ținta mesei
+async function deschideSchimbaVarianta(mi, vi) {
+  planAlim.schimba = { mi, vi };
+  planAlim.cautare = null;
+  if (!planAlim.biblioteca) { randeazaPlanAlim(); await incarcaBibliotecaAlim(); }
+  randeazaPlanAlim();
+}
+
+// Grupa sursei principale de proteine, pentru filtrul din „Schimbă” / „Din bibliotecă” (mai multă vită sau porc, ca în cereri)
+const GRUPE_PROTEINE_PLAN = [['pui', 'Pui', 'Chicken', /pui|chicken/], ['curcan', 'Curcan', 'Turkey', /curcan|turkey/], ['vita', 'Vită', 'Beef', /vita|beef/],
+  ['porc', 'Porc', 'Pork', /porc|pork/], ['peste', 'Pește', 'Fish', /peste|ton\b|somon|crevet|fish|tuna|salmon|shrimp/], ['oua', 'Ouă', 'Eggs', /\bou\b|oua|albus|egg/],
+  ['lactate', 'Lactate', 'Dairy', /iaurt|branz|chefir|lapte|ricotta|mozzarella|telemea|whey|protein/], ['vegetal', 'Vegetal', 'Plant', /tofu|naut|linte|fasol|edamame|humus/]];
+
+function grupaProteinaPlan(v) {
+  let max = 0, text = '';
+  (v.ingrediente || []).forEach(i => { const p = valoriIngrPlan(i).proteine; if (p > max) { max = p; text = faraDiacritice(`${i.aliment || ''} ${i.nume}`); } });
+  const g = GRUPE_PROTEINE_PLAN.find(x => x[3].test(text));
+  return g ? g[0] : '';
+}
+
+function htmlSchimbaVarianta(mi, vi) {
+  const c = planAlim.plan.continut, m = c.mese[mi], pref = c.preferinte || { nu: [] };
+  if (!planAlim.biblioteca) return `<div class="progres-gol">${tr('Se încarcă biblioteca...', 'Loading the library...')}</div>`;
+  const inPlan = new Set(m.variante.map(v => cheieAliasAlim(v.titlu || '')));
+  const restr = restrictiiPlan(planAlim.plan.client_id, pref), filtru = planAlim.schimba.filtru || '';
+  const toate = planAlim.biblioteca.filter(x => x.cod === m.cod && !inPlan.has(cheieAliasAlim(x.v.titlu)) && permisaPlan(x.v, pref.nu, restr));
+  const grupe = GRUPE_PROTEINE_PLAN.filter(g => toate.some(x => grupaProteinaPlan(x.v) === g[0]));
+  const lista = filtru ? toate.filter(x => grupaProteinaPlan(x.v) === filtru) : toate;
+  const pastila = (k, et) => `<button type="button" class="antr-pers-activitate${filtru === k ? ' activ' : ''}" onclick="planAlim.schimba.filtru = '${k}'; randeazaPlanAlim()">${et}</button>`;
+  return `<div class="plan-alim-cautare">
+    ${grupe.length > 1 ? `<div class="antr-pers-activitati">${pastila('', tr('Toate', 'All'))}${grupe.map(g => pastila(g[0], tr(g[1], g[2]))).join('')}</div>` : ''}
+    ${lista.length ? lista.map(x => `<button type="button" class="plan-zi-card nutritie-produs" onclick="alegeSchimbaVarianta('${escAttr(cheieAliasAlim(x.v.titlu))}')">
+      <span class="plan-zi-card-text"><span class="plan-zi-card-titlu">${escAttr(x.v.titlu)}</span>
+      <span class="plan-zi-card-detalii">${escAttr(x.v.ingrediente.filter(i => !i.text).map(i => i.nume).slice(0, 4).join(', '))}</span></span>
+      <span class="progres-ex-dif">+</span></button>`).join('') : `<div class="progres-gol">${tr('Nu mai am alte rețete pentru masa asta.', 'No other recipes for this meal.')}</div>`}
+    <button type="button" class="btn btn-clear" style="width:100%;" onclick="planAlim.schimba = null; randeazaPlanAlim()">${tr('Renunță', 'Cancel')}</button>
+  </div>`;
+}
+
+function alegeSchimbaVarianta(k) {
+  const s = planAlim.schimba, m = planAlim.plan.continut.mese[s.mi];
+  const x = (planAlim.biblioteca || []).find(b => b.cod === m.cod && cheieAliasAlim(b.v.titlu) === k);
+  if (!x) return;
+  const copie = JSON.parse(JSON.stringify(x.v));
+  potrivesteVariantaPlan(copie, tintaMasaPlan(planAlim.plan, m));
+  if (s.vi < 0) m.variante.push(copie); else m.variante[s.vi] = copie;
+  planAlim.varDeschisa = `${s.mi}-${s.vi < 0 ? m.variante.length - 1 : s.vi}`;
+  planAlim.schimba = null;
+  randeazaPlanAlim();
+}
+
+// Ingredientele cu cantitate devin ingredientele rețetei (o porție); condimentele și notele, la modul de preparare
+async function salveazaVariantaCaReteta(mi, vi, btn) {
+  const m = planAlim.plan.continut.mese[mi], v = m.variante[vi];
+  const ingrediente = (v.ingrediente || []).filter(i => !i.text && !i.negasit && Number(i.cantitate_g) > 0)
+    .map(i => ({ nume: i.nume, marca: '', cod: null, imagine: '', kcal: i.kcal, proteine: i.proteine, carbo: i.carbo, grasimi: i.grasimi, cantitate_g: Number(i.cantitate_g) }));
+  if (!(v.titlu || '').trim() || !ingrediente.length) return showToast(tr('Dă variantei un nume și cel puțin un aliment.', 'Give the option a name and at least one food.'), 'error');
+  if ((retete.lista || []).some(r => !r.client_id && cheieAliasAlim(r.nume) === cheieAliasAlim(v.titlu))) return showToast(tr('Ai deja o rețetă cu numele ăsta în Rețete.', 'You already have a recipe with this name in Recipes.'), 'error');
+  const condimente = (v.ingrediente || []).filter(i => i.text).map(i => i.nume).join(', ');
+  if (btn) btn.disabled = true;
+  const { data, error } = await scrieReteta(null, { user_id: utilizatorCurent.id, client_id: null, nume: v.titlu.trim().slice(0, 120), portii: 1, timp_min: null, ingrediente,
+    instructiuni: [v.preparare, condimente && tr(`Condimente: ${condimente}`, `Seasoning: ${condimente}`)].filter(Boolean).join('\n').slice(0, 4000), mese: [m.cod], updated_at: new Date().toISOString() });
+  if (btn) btn.disabled = false;
+  if (error || !data) return showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error');
+  if (retete.lista) retete.lista = retete.lista.concat(data).sort((a, b) => a.nume.localeCompare(b.nume));
+  showToast(tr('✓ Salvată în Rețete: o văd toți clienții tăi', '✓ Saved in Recipes: all your clients see it'));
+}
+
 // ---- Antrenorul: editorul ----
 function varPlan(m, v) {
   return planAlim.plan.continut.mese[m].variante[v];
 }
 
+// Rând de secțiune pliată (ca rândurile din Setări): atingi și se deschide dedesubt; una singură deschisă odată
+function randSectiunePlan(cod, titlu, desc) {
+  const deschis = planAlim.sectiune === cod;
+  return `<button type="button" class="profil-rand plan-alim-sectiune${deschis ? ' deschis' : ''}" onclick="planAlim.sectiune = planAlim.sectiune === '${cod}' ? null : '${cod}'; randeazaPlanAlim()">
+    <span class="profil-rand-eticheta">${titlu}</span><span class="profil-rand-valoare">${desc}</span><span class="plan-alim-sageata">›</span></button>`;
+}
+
 function htmlEditorPlanAlim() {
   const p = planAlim.plan, c = p.continut, pr = c.profil, t = c.tinte, rez = tinteDinProfil(pr);
   const clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
-  const client = clienti.find(x => x.id === p.client_id);
-  // Alergiile / restricțiile din fișa clientului: avertisment sus și alimentele cu probleme marcate cu roșu
-  const restr = restrictiiClient(p.client_id);
+  // Alergiile / restricțiile din fișa clientului: avertisment în verificare și alimentele cu probleme marcate cu roșu
+  const restr = restrictiiPlan(p.client_id, c.preferinte);
   planAlim.restrictii = restr;
-  const conflicte = c.mese.reduce((n, m) => n + (m.variante || []).reduce((k, v) => k + (v.ingrediente || []).filter(i => restrictiiAliment(i, restr.lista, restr.nota).length).length, 0), 0);
-  const buton = (camp, val, et) => `<button type="button" class="antr-pers-activitate${String(pr[camp]) === String(val) ? ' activ' : ''}" onclick="schimbaProfilPlan('${camp}', '${val}')">${et}</button>`;
-  const camp = (id, et) => `<label>${et}<input type="number" inputmode="decimal" class="plan-ex-input" value="${escAttr(String(pr[id] || ''))}" onchange="schimbaProfilPlan('${id}', this.value)"></label>`;
-  const tinta = (k, et) => `<label>${et}<input type="number" inputmode="numeric" class="plan-ex-input" value="${t ? t[k] : ''}" onchange="schimbaTintaPlan('${k}', this.value)"></label>`;
-  return `<button type="button" class="btn btn-clear" onclick="inchideEditorPlanAlim()">‹ ${tr('Planuri alimentare', 'Meal plans')}</button>
-    <div class="card obiectiv-form">
-      <div class="antr-pers-campuri"><label>${tr('Titlul planului', 'Plan title')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(p.titlu)}" oninput="planAlim.plan.titlu = this.value"></label></div>
+  const tinta = (k, et, repaus) => { const x = repaus ? c.tinteRepaus : t; return `<label>${et}<input type="number" inputmode="numeric" class="plan-ex-input" value="${x ? x[k] : ''}" onchange="schimbaTintaPlan('${k}', this.value${repaus ? ', true' : ''})"></label>`; };
+  const randTinte = repaus => `<div class="antr-pers-campuri plan-alim-tinte">${tinta('kcal', 'kcal', repaus)}${tinta('proteine', tr('Proteine g', 'Protein g'), repaus)}${tinta('carbo', tr('Carbo g', 'Carbs g'), repaus)}${tinta('grasimi', tr('Grăsimi g', 'Fat g'), repaus)}</div>`;
+  const sec = planAlim.sectiune, inloc = inlocuiriEchivalente(p);
+  const descTinte = t ? (c.tinteRepaus ? `${t.kcal} / ${c.tinteRepaus.kcal} kcal` : `${t.kcal} kcal`) : tr('de completat', 'to fill in');
+  const continutSectiune = {
+    detalii: `<div class="antr-pers-campuri"><label>${tr('Titlul planului', 'Plan title')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(p.titlu)}" oninput="planAlim.plan.titlu = this.value"></label></div>
       <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<select class="plan-ex-input" onchange="schimbaClientPlan(this.value)">
-        <option value="">${tr('— Șablon (fără client) —', '— Template (no client) —')}</option>
+        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
         ${clienti.map(x => `<option value="${escAttr(x.id)}"${x.id === p.client_id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
-      </select></label></div>
-      ${restr.lista.length || restr.nota ? `<div class="plan-alim-restrictii">⚠ ${tr('Nu mănâncă', 'Doesn’t eat')}: <b>${escAttr(textRestrictii(restr))}</b>${conflicte ? ` · ${tr(`${conflicte} alimente de schimbat (cu roșu)`, `${conflicte} foods to swap (in red)`)}` : ''}</div>` : ''}
+      </select></label></div>`,
+    profil: `${htmlProfilCampuri(pr, 'schimbaProfilPlan')}
+      <div class="acasa-antrenament-detalii">${rez ? `${tr('Metabolism bazal', 'Basal metabolism')} ~${rez.bmr} kcal · ${tr('Menținere', 'Maintenance')} ~${rez.consum} kcal` : tr('Completează sexul, vârsta, înălțimea și greutatea ca să calculez țintele.', 'Fill in sex, age, height and weight to calculate the targets.')}</div>
+      <div class="checkin-eticheta">${c.tinteRepaus ? tr('Zi cu antrenament', 'Training day') : tr('Ținta zilei', 'Daily target')}</div>
+      ${randTinte(false)}
+      <label class="setare-notificare"><span><b>${tr('Zile fără antrenament', 'Rest days')}</b><small>${tr('Gramaje mai mici la carbohidrați', 'Smaller carb amounts')}</small></span>
+        <input type="checkbox" class="comutator" ${c.tinteRepaus ? 'checked' : ''} ${t ? '' : 'disabled'} onchange="comutaRepausPlan(this.checked)"></label>
+      ${c.tinteRepaus ? `<div class="checkin-eticheta">${tr('Zi fără antrenament', 'Rest day')}</div>${randTinte(true)}` : ''}
+      <div class="checkin-eticheta">${tr('Mesele zilei', 'Meals of the day')} <small>${tr('% din zi', '% of the day')}</small></div>
+      ${c.mese.map((m, mi) => `<div class="plan-alim-masa-setari"><span>${numeMasaInPlan(c.mese, mi)}</span>
+        <label class="plan-alim-procent"><input type="number" inputmode="numeric" class="plan-ex-input" min="0" max="100" value="${Number(m.procent) || 0}" onchange="schimbaProcentMasaPlan(${mi}, this.value)">%</label>
+        <input type="text" class="plan-ex-input" maxlength="200" value="${escAttr(m.descriere || '')}" placeholder="${tr('Descriere', 'Description')}" oninput="planAlim.plan.continut.mese[${mi}].descriere = this.value"></div>`).join('')}`,
+    text: `<div class="checkin-eticheta">${tr('Instrucțiuni generale', 'General instructions')}</div>
+      <textarea class="plan-ex-textarea" rows="3" maxlength="2000" oninput="planAlim.plan.continut.instructiuni = this.value">${escAttr(c.instructiuni || '')}</textarea>
+      <div class="checkin-eticheta">${tr('Suplimente', 'Supplements')} <small>${tr('câte unul pe rând: nume — doză — mod', 'one per line: name — dose — how')}</small></div>
+      <textarea class="plan-ex-textarea" rows="3" maxlength="2000" placeholder="${tr('Creatină — 5 g / zi — oricând, în orice lichid', 'Creatine — 5 g / day — any time, in any drink')}" oninput="planAlim.plan.continut.suplimente = this.value">${escAttr(c.suplimente || '')}</textarea>`,
+    inlocuiri: inloc.length ? inloc.map(x => `<div class="checkin-eticheta">${x.et}</div><div class="acasa-antrenament-detalii plan-alim-inlocuiri"><b>${escAttr(x.ref)}</b> = ${x.echiv.map(escAttr).join(' = ')}</div>`).join('')
+      + `<div class="acasa-antrenament-detalii">${tr('Calculate singure din alimentele planului; apar și la client și în PDF.', 'Calculated from the plan’s foods; the client and the PDF show them too.')}</div>`
+      : `<div class="acasa-antrenament-detalii">${tr('Apar când planul are cel puțin două surse de proteine sau de carbohidrați.', 'They show once the plan has at least two protein or carb sources.')}</div>`
+  };
+  const sectiune = (cod, titlu, desc) => randSectiunePlan(cod, titlu, desc) + (sec === cod ? `<div class="plan-alim-sectiune-continut obiectiv-form">${continutSectiune[cod]}</div>` : '');
+  return `${titluPlanAlim(p.titlu || tr('Plan alimentar', 'Meal plan'), p.client_id ? numeClientPlan(p.client_id) : tr('Șablon', 'Template'))}
+    ${htmlDeVerificatPlan(c)}
+    ${htmlVerificarePlan(p)}
+    <div class="lista-sticla">
+      ${sectiune('detalii', tr('Titlu și client', 'Title and client'), escAttr(p.client_id ? numeClientPlan(p.client_id) : tr('Șablon', 'Template')))}
+      ${sectiune('profil', tr('Profil și ținte', 'Profile and targets'), descTinte)}
+      ${sectiune('text', tr('Instrucțiuni și suplimente', 'Instructions and supplements'), String(c.suplimente || '').trim() ? tr(`${String(c.suplimente).trim().split('\n').length} suplimente`, `${String(c.suplimente).trim().split('\n').length} supplements`) : '')}
+      ${sectiune('inlocuiri', tr('Înlocuiri echivalente', 'Equivalent swaps'), inloc.length ? tr('automat', 'automatic') : '')}
     </div>
-    <div class="antr-pers-sectiune">${tr('Profil și ținte', 'Profile and targets')}</div>
-    <div class="card obiectiv-form calculator-tinte">
-      <div class="antr-pers-activitati">${buton('sex', 'f', tr('Feminin', 'Female'))}${buton('sex', 'm', tr('Masculin', 'Male'))}</div>
-      <div class="antr-pers-campuri" style="margin-top:8px;">${camp('varsta', tr('Vârsta', 'Age'))}${camp('inaltime', tr('Înălțimea (cm)', 'Height (cm)'))}${camp('greutate', tr('Greutatea (kg)', 'Weight (kg)'))}</div>
-      <div class="antr-pers-campuri"><label>${tr('Activitate', 'Activity')}<select class="plan-ex-input" onchange="schimbaProfilPlan('activitate', this.value)">
-        ${ACTIVITATI_CALCULATOR.map(([f, ro, en]) => `<option value="${f}"${Number(pr.activitate) === f ? ' selected' : ''}>${tr(ro, en)}</option>`).join('')}</select></label></div>
-      <div class="checkin-eticheta" style="margin-top:8px;">${tr('Obiectivul', 'Goal')}</div>
-      <div class="antr-pers-activitati plan-alim-obiective">${OBIECTIVE_PLAN.map(o => buton('obiectiv', o[0], tr(o[3], o[4]))).join('')}</div>
-      ${rez ? `<div class="acasa-antrenament-detalii" style="margin-top:8px;">${tr('Metabolism bazal', 'Basal metabolism')} ~${rez.bmr} kcal · ${tr('Menținere', 'Maintenance')} ~${rez.consum} kcal</div>` : `<div class="acasa-antrenament-detalii" style="margin-top:8px;">${tr('Completează sexul, vârsta, înălțimea și greutatea ca să calculez țintele.', 'Fill in sex, age, height and weight to calculate the targets.')}</div>`}
-      <div class="antr-pers-campuri plan-alim-tinte" style="margin-top:8px;">${tinta('kcal', 'kcal')}${tinta('proteine', tr('Proteine g', 'Protein g'))}${tinta('carbo', tr('Carbo g', 'Carbs g'))}${tinta('grasimi', tr('Grăsimi g', 'Fat g'))}</div>
-      ${t && client && client.contConectat ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="aplicaTintePlanLaClient(this)">${tr('Pune țintele în jurnalul clientului', 'Use these targets in the client’s log')}</button>` : ''}
-    </div>
-    <div class="antr-pers-sectiune">${tr('Instrucțiuni generale', 'General instructions')}</div>
-    <div class="card"><textarea class="plan-ex-textarea" rows="3" maxlength="2000" oninput="planAlim.plan.continut.instructiuni = this.value">${escAttr(c.instructiuni || '')}</textarea></div>
     ${c.mese.map((m, mi) => htmlMasaEditorPlan(m, mi)).join('')}
     <div class="nutritie-adauga-jos plan-alim-jos">
-      ${t ? `<button type="button" class="btn btn-clear" onclick="potrivesteTotPlanulUI()">${tr('Potrivește gramajele în tot planul', 'Fit amounts in the whole plan')}</button>` : ''}
       <button type="button" class="btn" onclick="salveazaPlanAlim(this)">${p.client_id ? tr('Salvează planul', 'Save plan') : tr('Salvează șablonul', 'Save template')}</button>
-      ${p.id && p.client_id ? `<button type="button" class="btn btn-clear" onclick="trimiteLinkPlanAlim()">${tr('Trimite clientului (link)', 'Send to the client (link)')}</button>` : ''}
-      <button type="button" class="btn btn-clear" onclick="exportaPlanAlimPdf(planAlim.plan, numeClientPlan(planAlim.plan.client_id))">PDF</button>
-      ${p.id ? `<button type="button" class="btn btn-clear" onclick="copiazaPlanAlim()">${tr('Folosește pentru alt client', 'Use for another client')}</button>
-        <button type="button" class="btn btn-clear ciclu-opreste" onclick="stergePlanAlim()">${tr('Șterge', 'Delete')}</button>` : ''}
+      <button type="button" class="btn btn-clear" onclick="deschideActiuniPlanAlim()">${tr('Mai mult', 'More')}</button>
     </div>`;
+}
+
+// ---- „Mai mult” (planul) și „⋯” (o variantă): acțiunile rare stau într-o fereastră de jos, nu în pagină ----
+function deschideActiuniPlanAlim(mi, vi) {
+  const p = planAlim.plan, c = p.continut, client = (DB.clienti || []).find(x => x.id === p.client_id);
+  let titlu, lista;
+  if (mi === undefined) {
+    titlu = tr('Planul', 'The plan');
+    lista = [
+      p.id && p.client_id && [tr('Trimite clientului linkul', 'Send the client the link'), () => trimiteLinkPlanAlim()],
+      [tr('Descarcă PDF', 'Download PDF'), () => exportaPlanAlimPdf(planAlim.plan, numeClientPlan(planAlim.plan.client_id))],
+      c.tinte && [tr('Potrivește gramajele în tot planul', 'Fit amounts in the whole plan'), () => potrivesteTotPlanulUI()],
+      c.tinte && client && client.contConectat && [tr('Pune țintele în jurnalul clientului', 'Use these targets in the client’s log'), () => aplicaTintePlanLaClient(null)],
+      p.id && [tr('Folosește pentru alt client', 'Use for another client'), () => copiazaPlanAlim()],
+      p.id && [tr('Șterge planul', 'Delete the plan'), () => stergePlanAlim(), true]
+    ];
+  } else {
+    const m = c.mese[mi];
+    titlu = (m.variante[vi].titlu || '').trim() || tr(`Varianta ${vi + 1}`, `Option ${vi + 1}`);
+    lista = [
+      [tr('Schimbă cu altă rețetă', 'Swap for another recipe'), () => deschideSchimbaVarianta(mi, vi)],
+      c.tinte && [tr('Potrivește gramajele', 'Fit amounts'), () => potrivesteVariantaUI(mi, vi)],
+      [tr('Salvează ca rețetă (o văd toți clienții)', 'Save as recipe (all clients see it)'), () => salveazaVariantaCaReteta(mi, vi, null)],
+      [tr('Șterge varianta', 'Delete the option'), () => stergeVariantaPlan(mi, vi), true]
+    ];
+  }
+  planAlim.actiuni = lista.filter(Boolean);
+  document.getElementById('planAlimActiuniTitlu').textContent = titlu;
+  document.getElementById('planAlimActiuniLista').innerHTML = planAlim.actiuni.map(([et, , rosu], k) =>
+    `<button type="button" class="profil-rand${rosu ? ' profil-rand-rosu' : ''}" onclick="ruleazaActiunePlanAlim(${k})"><span class="profil-rand-eticheta">${et}</span></button>`).join('');
+  deschideFoaieCuFundal(document.getElementById('modalPlanAlimActiuniBackdrop'), document.getElementById('cardPlanAlimActiuni'));
+}
+
+function inchideActiuniPlanAlim() {
+  inchideFoaieCuFundal(document.getElementById('modalPlanAlimActiuniBackdrop'), document.getElementById('cardPlanAlimActiuni'));
+}
+
+function ruleazaActiunePlanAlim(k) {
+  const a = (planAlim.actiuni || [])[k];
+  inchideActiuniPlanAlim();
+  if (a) a[1]();
+}
+
+// Deschide varianta în editor (din verificare sau din „De verificat”) și o aduce în ecran
+function deschideVariantaEditor(mi, vi) {
+  planAlim.varDeschisa = `${mi}-${vi}`;
+  randeazaPlanAlim();
+  const el = document.getElementById(`planAlimVarEd_${mi}_${vi}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---- Verificarea planului (înainte de trimitere): totalul zilei, mese cu o singură variantă, proteine puține la mesele
+//   principale, aceeași sursă de proteine la mai mult de jumătate din variantele unei mese, alimente pe care nu le mănâncă ----
+function verificariPlan(plan) {
+  const c = plan.continut, out = [], restr = planAlim.restrictii || { lista: [], nota: '' };
+  c.mese.forEach((m, mi) => {
+    const nume = numeMasaInPlan(c.mese, mi), t = tintaMasaPlan(plan, m), v = m.variante || [];
+    if (!v.length) return out.push({ text: tr(`${nume}: nicio variantă`, `${nume}: no options`), mi });
+    if (v.length === 1) out.push({ text: tr(`${nume}: o singură variantă`, `${nume}: only one option`), mi, vi: 0 });
+    if (t && m.cod !== 'gustare') v.forEach((x, vi) => {
+      const pr = valoriVariantaPlan(x).proteine;
+      if (pr < t.proteine * 0.6) out.push({ text: tr(`${nume} · ${x.titlu || `Varianta ${vi + 1}`}: proteine puține (${Math.round(pr)} din ~${Math.round(t.proteine)} g)`, `${nume} · ${x.titlu || `Option ${vi + 1}`}: low protein (${Math.round(pr)} of ~${Math.round(t.proteine)} g)`), mi, vi });
+    });
+    const numar = {};
+    v.forEach(x => { const g = grupaProteinaPlan(x); if (g) numar[g] = (numar[g] || 0) + 1; });
+    const [g, n] = Object.entries(numar).sort((a, b) => b[1] - a[1])[0] || [];
+    const grupa = GRUPE_PROTEINE_PLAN.find(x => x[0] === g);
+    // Doar la prânz și cină: dimineața și la gustări lactatele la rând sunt firești
+    if (['pranz', 'cina'].includes(m.cod) && v.length >= 3 && n > v.length / 2 && grupa) out.push({ text: tr(`${nume}: ${n} din ${v.length} variante sunt cu ${grupa[1].toLowerCase()}`, `${nume}: ${n} of ${v.length} options are ${grupa[2].toLowerCase()}`), mi });
+    v.forEach((x, vi) => {
+      const lovite = (x.ingrediente || []).filter(i => restrictiiAliment(i, restr.lista, restr.nota).length);
+      if (lovite.length) out.push({ text: tr(`${nume} · ${x.titlu || `Varianta ${vi + 1}`}: ${lovite.map(i => i.nume).join(', ')} (nu mănâncă)`, `${nume} · ${x.titlu || `Option ${vi + 1}`}: ${lovite.map(i => i.nume).join(', ')} (doesn’t eat)`), mi, vi, rosu: true });
+    });
+  });
+  return out;
+}
+
+function htmlVerificarePlan(plan) {
+  const lista = verificariPlan(plan), totaluri = htmlTotalZiPlan(plan);
+  const randuri = lista.map(x => `<button type="button" class="profil-rand plan-alim-verificare${x.rosu ? ' profil-rand-rosu' : ''}" onclick="${x.vi === undefined ? `document.getElementById('planAlimMasaEd_${x.mi}').scrollIntoView({ behavior: 'smooth', block: 'start' })` : `deschideVariantaEditor(${x.mi}, ${x.vi})`}">
+      <span class="profil-rand-eticheta">${escAttr(x.text)}</span><span class="plan-alim-sageata">›</span></button>`).join('');
+  return `<div class="lista-titlu">${tr('Verificare', 'Check')} <small>${lista.length ? tr(`${lista.length} de văzut`, `${lista.length} to look at`) : tr('totul arată bine', 'all good')}</small></div>
+    <div class="lista-sticla">${totaluri}${randuri}</div>`;
+}
+
+// ---- Înlocuiri echivalente (ca în ghidurile făcute de mână): aceeași cantitate de proteine / carbohidrați,
+//   pornind de la alimentul cel mai des folosit în plan, cu gramajul lui obișnuit. Contează doar porțiile de mâncare
+//   (pudra proteică, parmezanul sau mierea, la câteva grame, nu se schimbă cu o friptură) ----
+function inlocuiriEchivalente(plan) {
+  const toate = plan.continut.mese.flatMap(m => (m.variante || []).flatMap(v => (v.ingrediente || []).filter(i => !i.text && !i.negasit && Number(i.cantitate_g) > 0)));
+  return [['proteine', tr('Proteine', 'Protein'), 10], ['carbo', tr('Carbohidrați', 'Carbohydrates'), 15]].map(([rol, et, minim]) => {
+    const alim = new Map();
+    toate.filter(i => rolIngrPlan(i) === rol && Number(i[rol]) >= minim).forEach(i => {
+      const k = cheieAliasAlim(i.aliment || i.nume), x = alim.get(k) || { i, grame: [] };
+      x.grame.push(Number(i.cantitate_g));
+      alim.set(k, x);
+    });
+    const median = x => x.grame.slice().sort((a, b) => a - b)[Math.floor(x.grame.length / 2)];
+    const lista = [...alim.values()].filter(x => median(x) >= (rol === 'proteine' ? 50 : 30) && !/whey|protein|miere|gem|zahar|sirop/.test(faraDiacritice(x.i.aliment || x.i.nume)))
+      .sort((a, b) => b.grame.length - a.grame.length).slice(0, 6);
+    if (lista.length < 2) return null;
+    // La proteine, punctul de plecare e carnea sau peștele (ca „150 g pui = 170 g pește”), nu oul sau brânza
+    const carne = rol === 'proteine' && lista.find(x => ['pui', 'curcan', 'vita', 'porc', 'peste'].includes(grupaProteinaPlan({ ingrediente: [x.i] })));
+    if (carne) lista.splice(lista.indexOf(carne), 1), lista.unshift(carne);
+    const ref = lista[0], g = median(ref);
+    const gRef = Math.max(5, Math.round(g / 5) * 5), aport = Number(ref.i[rol]) * gRef / 100;
+    return { et, ref: `${gRef} g ${ref.i.nume}`, echiv: lista.slice(1).map(x => `${Math.max(5, Math.round(aport * 100 / Number(x.i[rol]) / 5) * 5)} g ${x.i.nume}`) };
+  }).filter(Boolean);
+}
+
+// Totalul zilei, din variantele fiecărei mese (cea mai mică și cea mai mare): așa se vede dacă orice combinație rămâne pe țintă
+function intervalZiPlan(plan, repaus) {
+  const mese = plan.continut.mese.filter(m => (m.variante || []).length);
+  if (!mese.length) return null;
+  return mese.reduce((s, m) => {
+    const k = m.variante.map(v => valoriVariantaPlan({ ingrediente: repaus ? ingredienteRepaus(plan, m, v) : v.ingrediente }).kcal);
+    return [s[0] + Math.min(...k), s[1] + Math.max(...k)];
+  }, [0, 0]);
+}
+
+function htmlTotalZiPlan(plan) {
+  const c = plan.continut;
+  if (!c.tinte || !c.tinte.kcal) return '';
+  const rand = (et, t, repaus) => {
+    const z = intervalZiPlan(plan, repaus);
+    if (!z) return '';
+    const bine = z[0] >= t.kcal * 0.93 && z[1] <= t.kcal * 1.07;
+    return `<div class="verifica-scurt plan-alim-total"><span>${et}<small>${tr('orice combinație · ținta', 'any combination · target')} ${t.kcal} kcal</small></span>
+      <b class="plan-alim-kcal${bine ? '' : ' departe'}">${Math.round(z[0])}${Math.round(z[1]) !== Math.round(z[0]) ? '–' + Math.round(z[1]) : ''} kcal</b></div>`;
+  };
+  return rand(c.tinteRepaus ? tr('Zi cu antrenament', 'Training day') : tr('Totalul zilei', 'Day total'), c.tinte, false) + (c.tinteRepaus ? rand(tr('Zi fără antrenament', 'Rest day'), c.tinteRepaus, true) : '');
+}
+
+function comutaRepausPlan(da) {
+  const c = planAlim.plan.continut;
+  c.tinteRepaus = da ? tinteRepausDin(c.tinte) : null;
+  randeazaPlanAlim();
+}
+
+// După import, sus: doar alimentele de confirmat. „Corect” păstrează potrivirea, atingerea numelui alege alt aliment.
+function deVerificatPlan(c) {
+  const lista = [];
+  c.mese.forEach((m, mi) => (m.variante || []).forEach((v, vi) => (v.ingrediente || []).forEach((i, ii) => { if (i.negasit || i.verifica) lista.push({ i, mi, vi, ii }); })));
+  return lista;
+}
+
+function htmlDeVerificatPlan(c) {
+  const lista = deVerificatPlan(c);
+  if (!lista.length) return '';
+  return `<div class="lista-titlu plan-alim-masa-cap"><span>${tr(`De verificat (${lista.length})`, `To check (${lista.length})`)}</span>
+      ${lista.some(x => !x.i.negasit) ? `<button type="button" class="verifica-titlu-btn" onclick="confirmaIngrPlan()">${tr('Toate corecte', 'All correct')}</button>` : ''}</div>
+    <div class="lista-sticla plan-alim-sticla">${lista.map(({ i, mi, vi, ii }) => `<div class="nutritie-rand plan-alim-ingr">
+      <button type="button" class="nutritie-rand-text plan-alim-ingr-nume" onclick="deschideCautarePlan(${mi}, ${vi}, ${ii})">
+        <span class="nutritie-rand-nume">${escAttr(i.nume)}</span>
+        <span class="acasa-antrenament-detalii">${i.negasit ? `<span class="plan-alim-negasit">${tr('Negăsit: atinge și alege alimentul', 'Not found: tap and pick the food')}</span>`
+          : `= ${escAttr(i.aliment)}${i.unitate ? ` · 1 ${escAttr(i.unitate.nume)} = ${formatKg(i.unitate.g)} g` : ''}`}</span></button>
+      ${i.negasit ? '' : `<button type="button" class="verifica-titlu-btn" onclick="confirmaIngrPlan(${mi}, ${vi}, ${ii})">✓ ${tr('Corect', 'Correct')}</button>`}
+    </div>`).join('')}</div>`;
+}
+
+// Fără argumente: toate potrivirile de verificat (cele negăsite rămân). Alegerea se ține minte pentru importurile următoare.
+function confirmaIngrPlan(m, v, i) {
+  const lista = (m === undefined ? deVerificatPlan(planAlim.plan.continut).map(x => x.i) : [varPlan(m, v).ingrediente[i]]).filter(x => !x.negasit);
+  lista.forEach(x => { delete x.verifica; });
+  salveazaAliasAlim(lista.map(x => [x.nume, Object.assign({}, x, { nume: x.aliment })]));
+  randeazaPlanAlim();
 }
 
 function htmlMasaEditorPlan(m, mi) {
   const tinta = tintaMasaPlan(planAlim.plan, m);
-  return `<div class="antr-pers-sectiune plan-alim-masa-cap"><span>${numeMasaPlan(m.cod)}</span>
-      <label class="plan-alim-procent"><input type="number" inputmode="numeric" class="plan-ex-input" min="0" max="100" value="${Number(m.procent) || 0}" onchange="schimbaProcentMasaPlan(${mi}, this.value)">%</label></div>
-    ${tinta ? `<div class="acasa-antrenament-detalii">${tr('Ținta mesei', 'Meal target')}: <b>${Math.round(tinta.kcal)} kcal</b> · P ${Math.round(tinta.proteine)} · C ${Math.round(tinta.carbo)} · G ${Math.round(tinta.grasimi)} g</div>` : ''}
-    ${(m.variante || []).map((v, vi) => htmlVariantaEditorPlan(v, mi, vi, tinta)).join('')}
-    <button type="button" class="btn btn-clear plan-alim-adauga-var" onclick="adaugaVariantaPlan(${mi})">${tr('+ Variantă', '+ Option')}</button>`;
+  const mese = planAlim.plan.continut.mese;
+  const adauga = planAlim.adaugaMasa === mi;
+  return `<div class="lista-titlu plan-alim-masa-cap" id="planAlimMasaEd_${mi}"><span>${numeMasaInPlan(mese, mi)}${tinta ? ` <small>~${Math.round(tinta.kcal)} kcal</small>` : ''}</span>
+      ${(m.variante || []).length ? `<button type="button" class="verifica-titlu-btn" onclick="regenereazaMasaPlan(${mi})">↻ ${tr('Regenerează', 'Regenerate')}</button>` : ''}</div>
+    <div class="lista-sticla">${(m.variante || []).map((v, vi) => htmlVariantaEditorPlan(v, mi, vi, tinta)).join('')}
+      ${planAlim.schimba && planAlim.schimba.mi === mi && planAlim.schimba.vi < 0 ? `<div class="plan-alim-sticla">${htmlSchimbaVarianta(mi, -1)}</div>` : ''}
+      <button type="button" class="profil-rand plan-alim-adauga" onclick="planAlim.adaugaMasa = ${adauga ? 'null' : mi}; randeazaPlanAlim()"><span class="profil-rand-eticheta">${tr('+ Adaugă variantă', '+ Add option')}</span></button>
+      ${adauga ? `<div class="plan-alim-var-butoane plan-alim-sticla">
+        <button type="button" class="btn btn-clear" onclick="planAlim.adaugaMasa = null; deschideSchimbaVarianta(${mi}, -1)">${tr('Din bibliotecă', 'From the library')}</button>
+        <button type="button" class="btn btn-clear" onclick="planAlim.adaugaMasa = null; adaugaVariantaPlan(${mi})">${tr('Variantă nouă', 'New option')}</button></div>` : ''}
+    </div>`;
 }
 
+// Varianta: pliată e un rând (nume, calorii, repaus); deschisă, tot editorul ei. Acțiunile rare stau în „⋯”
 function htmlVariantaEditorPlan(v, mi, vi, tinta) {
+  const plan = planAlim.plan, m = plan.continut.mese[mi];
   const tot = valoriVariantaPlan(v);
+  // Ziua fără antrenament: gramajele calculate, arătate lângă fiecare aliment care se schimbă
+  const repaus = plan.continut.tinteRepaus ? ingredienteRepaus(plan, m, v) : null;
+  const kcalRepaus = repaus ? Math.round(valoriVariantaPlan({ ingrediente: repaus }).kcal) : 0;
+  const schimba = planAlim.schimba && planAlim.schimba.mi === mi && planAlim.schimba.vi === vi;
   const dif = tinta ? tot.kcal - tinta.kcal : 0;
   const bine = !tinta || Math.abs(dif) <= Math.max(25, tinta.kcal * 0.08);
   const cautare = planAlim.cautare && planAlim.cautare.m === mi && planAlim.cautare.v === vi ? planAlim.cautare : null;
-  return `<div class="card plan-alim-varianta">
-    <div class="plan-alim-var-cap"><span class="plan-alim-var-nr">${tr('Varianta', 'Option')} ${vi + 1}</span>
-      <b class="plan-alim-kcal${bine ? '' : ' departe'}">≈ ${Math.round(tot.kcal)} kcal${tinta && !bine ? ` <small>(${dif > 0 ? '+' : ''}${Math.round(dif)})</small>` : ''}</b>
-      <button type="button" class="notificare-x nutritie-sterge" onclick="stergeVariantaPlan(${mi}, ${vi})" aria-label="${tr('Șterge varianta', 'Delete option')}">×</button></div>
+  const deschisa = planAlim.varDeschisa === `${mi}-${vi}` || !!cautare || schimba;
+  const kcal = `<b class="plan-alim-kcal${bine ? '' : ' departe'}">≈ ${Math.round(tot.kcal)} kcal${tinta && !bine ? ` <small>(${dif > 0 ? '+' : ''}${Math.round(dif)})</small>` : ''}${repaus ? `<small class="plan-alim-kcal-repaus">${tr('repaus', 'rest')} ${kcalRepaus} kcal</small>` : ''}</b>`;
+  const cap = `<button type="button" class="plan-alim-var-rand" onclick="planAlim.varDeschisa = ${deschisa ? 'null' : `'${mi}-${vi}'`}; planAlim.cautare = null; planAlim.schimba = null; randeazaPlanAlim()">
+      <span class="plan-alim-var-nr">${vi + 1}</span><span class="plan-alim-var-titlu">${escAttr(v.titlu || tr('Variantă fără nume', 'Untitled option'))}</span>${kcal}<span class="plan-alim-sageata">›</span></button>`;
+  if (!deschisa) return `<div class="plan-alim-var-pliata" id="planAlimVarEd_${mi}_${vi}">${cap}</div>`;
+  return `<div class="plan-alim-sticla plan-alim-varianta deschisa" id="planAlimVarEd_${mi}_${vi}">
+    <div class="plan-alim-var-cap">${cap}
+      <button type="button" class="notificare-x plan-alim-mai-mult" onclick="deschideActiuniPlanAlim(${mi}, ${vi})" aria-label="${tr('Mai mult', 'More')}">⋯</button></div>
+    ${schimba ? htmlSchimbaVarianta(mi, vi) : ''}
     <input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(v.titlu || '')}" placeholder="${tr('Numele variantei (ex. Iaurt cu fructe)', 'Option name (e.g. Yogurt with fruit)')}" oninput="varPlan(${mi}, ${vi}).titlu = this.value">
     ${v.ai_kcal ? `<div class="acasa-antrenament-detalii plan-alim-ai">${tr(`Din text: ${v.ai_kcal} kcal · calculat: ${Math.round(tot.kcal)} kcal`, `From the text: ${v.ai_kcal} kcal · calculated: ${Math.round(tot.kcal)} kcal`)}</div>` : ''}
-    ${(v.ingrediente || []).map((i, ii) => htmlIngrEditorPlan(i, mi, vi, ii)).join('')}
+    ${(v.ingrediente || []).map((i, ii) => htmlIngrEditorPlan(i, mi, vi, ii, repaus && repaus[ii])).join('')}
     <div class="reteta-total">P ${formatKg(Math.round(tot.proteine))} g · C ${formatKg(Math.round(tot.carbo))} g · G ${formatKg(Math.round(tot.grasimi))} g</div>
     ${cautare ? htmlCautarePlan(cautare) : `<div class="plan-alim-var-butoane">
       <button type="button" class="btn btn-clear" onclick="deschideCautarePlan(${mi}, ${vi}, null)">${tr('+ Aliment', '+ Food')}</button>
-      <button type="button" class="btn btn-clear" onclick="adaugaTextPlan(${mi}, ${vi})">${tr('+ Condimente / notă', '+ Seasoning / note')}</button>
-      ${tinta ? `<button type="button" class="btn btn-clear" onclick="potrivesteVariantaUI(${mi}, ${vi})">${tr('Potrivește gramajele', 'Fit amounts')}</button>` : ''}</div>`}
+      <button type="button" class="btn btn-clear" onclick="adaugaTextPlan(${mi}, ${vi})">${tr('+ Condimente / notă', '+ Seasoning / note')}</button></div>`}
     <textarea class="plan-ex-textarea" rows="2" maxlength="1000" placeholder="${tr('Mod de preparare (opțional)', 'Method (optional)')}" oninput="varPlan(${mi}, ${vi}).preparare = this.value">${escAttr(v.preparare || '')}</textarea>
+    <textarea class="plan-ex-textarea" rows="2" maxlength="1000" placeholder="${tr('Tranzit / delegație: ce cumpără din supermarket (câte unul pe rând, opțional)', 'On the go: what to buy at the supermarket (one per line, optional)')}" oninput="varPlan(${mi}, ${vi}).tranzit = this.value">${escAttr(v.tranzit || '')}</textarea>
   </div>`;
 }
 
-function htmlIngrEditorPlan(i, mi, vi, ii) {
+function htmlIngrEditorPlan(i, mi, vi, ii, iRepaus) {
   const val = valoriIngrPlan(i);
+  const altRepaus = iRepaus && Number(iRepaus.cantitate_g) !== Number(i.cantitate_g) ? ` · ${tr('repaus', 'rest')} ${textCantitatePlan(iRepaus)}` : '';
   const lovite = planAlim.restrictii ? restrictiiAliment(i, planAlim.restrictii.lista, planAlim.restrictii.nota) : [];
   const camp = i.text ? '' : i.unitate && i.unitate.g > 0
     ? `<label class="plan-alim-grame"><input type="number" inputmode="decimal" class="plan-ex-input" step="0.5" min="0.5" value="${Number(i.cantitate_g) / i.unitate.g}" onchange="schimbaCantitatePlan(${mi}, ${vi}, ${ii}, this.value)">${escAttr(i.unitate.nume)}</label>`
     : `<label class="plan-alim-grame"><input type="number" inputmode="decimal" class="plan-ex-input" min="1" value="${Math.round(Number(i.cantitate_g) || 0)}" onchange="schimbaCantitatePlan(${mi}, ${vi}, ${ii}, this.value)">g</label>`;
   const detalii = i.text ? tr('fără calorii numărate', 'calories not counted')
     : i.negasit ? `<span class="plan-alim-negasit">${tr('Negăsit în bază: atinge ca să alegi alimentul', 'Not in the database: tap to pick the food')}</span>`
-    : `${Math.round(val.kcal)} kcal${i.aliment && faraDiacritice(i.aliment) !== faraDiacritice(i.nume) ? ` · = ${escAttr(i.aliment)}` : ''}${i.verifica ? ` · <span class="plan-alim-verifica">${tr('verifică', 'check')}</span>` : ''}`
+    : `${Math.round(val.kcal)} kcal${i.aliment && faraDiacritice(i.aliment) !== faraDiacritice(i.nume) ? ` · = ${escAttr(i.aliment)}` : ''}${i.verifica ? ` · <span class="plan-alim-verifica">${tr('verifică', 'check')}</span>` : ''}${altRepaus}`
     + (lovite.length ? ` · <span class="plan-alim-negasit">⚠ ${escAttr(lovite.map(r => tr(r.ro, r.en).toLowerCase()).join(', '))}</span>` : '');
   return `<div class="nutritie-rand plan-alim-ingr">
     <button type="button" class="nutritie-rand-text plan-alim-ingr-nume" ${i.text ? '' : `onclick="deschideCautarePlan(${mi}, ${vi}, ${ii})"`}>
@@ -9140,6 +10035,7 @@ function htmlProdusRandPlan(p, k, vechi) {
 
 function deschideCautarePlan(m, v, i) {
   const vechi = i !== null ? varPlan(m, v).ingrediente[i] : null;
+  planAlim.varDeschisa = `${m}-${v}`;
   planAlim.cautare = { m, v, i, q: vechi && (vechi.negasit || vechi.verifica) ? vechi.nume : '', rezultate: [], cautat: false };
   randeazaPlanAlim();
   const inp = document.getElementById('planAlimCauta');
@@ -9176,7 +10072,7 @@ function alegeProdusPlan(k) {
       // Alimentul potrivit pentru un rând importat: numele și cantitatea rămân ale antrenorului
       const nou = ingrDinProdus(p, Number(vechi.cantitate_g) || 100);
       lista[c.i] = Object.assign(nou, { nume: vechi.nume, unitate: vechi.unitate || nou.unitate });
-      salveazaAliasAlim(vechi.nume, p);
+      salveazaAliasAlim([[vechi.nume, p]]);
     } else {
       lista[c.i] = inlocuiesteIngrPlan(vechi, p);
     }
@@ -9204,6 +10100,7 @@ function adaugaTextPlan(m, v) {
 
 function adaugaVariantaPlan(m) {
   planAlim.plan.continut.mese[m].variante.push({ titlu: '', preparare: '', ingrediente: [] });
+  planAlim.varDeschisa = `${m}-${planAlim.plan.continut.mese[m].variante.length - 1}`;
   planAlim.cautare = { m, v: planAlim.plan.continut.mese[m].variante.length - 1, i: null, q: '', rezultate: [], cautat: false };
   randeazaPlanAlim();
 }
@@ -9228,13 +10125,14 @@ function schimbaProfilPlan(camp, valoare) {
   c.profil[camp] = camp === 'activitate' ? Number(valoare) : valoare;
   const rez = tinteDinProfil(c.profil);
   if (rez) c.tinte = { kcal: rez.kcal, proteine: rez.proteine, carbo: rez.carbo, grasimi: rez.grasimi };
+  if (rez && c.tinteRepaus) c.tinteRepaus = tinteRepausDin(c.tinte);
   randeazaPlanAlim();
 }
 
-function schimbaTintaPlan(k, valoare) {
-  const c = planAlim.plan.continut;
+function schimbaTintaPlan(k, valoare, repaus) {
+  const c = planAlim.plan.continut, camp = repaus ? 'tinteRepaus' : 'tinte';
   const n = parseInt(valoare, 10);
-  c.tinte = Object.assign({ kcal: 0, proteine: 0, carbo: 0, grasimi: 0 }, c.tinte || {}, { [k]: n > 0 ? n : 0 });
+  c[camp] = Object.assign({ kcal: 0, proteine: 0, carbo: 0, grasimi: 0 }, c[camp] || {}, { [k]: n > 0 ? n : 0 });
   randeazaPlanAlim();
 }
 
@@ -9261,6 +10159,7 @@ async function schimbaClientPlan(clientId) {
   c.profil = Object.assign({}, c.profil, Object.fromEntries(Object.entries(profil).filter(([k, v]) => v !== '' && k !== 'obiectiv' && k !== 'sex')));
   const rez = tinteDinProfil(c.profil);
   if (rez) c.tinte = { kcal: rez.kcal, proteine: rez.proteine, carbo: rez.carbo, grasimi: rez.grasimi };
+  if (rez && c.tinteRepaus) c.tinteRepaus = tinteRepausDin(c.tinte);
   randeazaPlanAlim();
   if (rez && c.mese.some(m => (m.variante || []).length)) {
     customConfirm(tr(`Potrivesc gramajele pentru ${nume}?`, `Fit the amounts for ${nume}?`),
@@ -9283,6 +10182,7 @@ function copiazaPlanAlim() {
 function inchideEditorPlanAlim() {
   planAlim.vedere = 'lista';
   planAlim.cautare = null;
+  Object.assign(planAlim, { sectiune: null, varDeschisa: null, adaugaMasa: null, schimba: null });
   randeazaPlanAlim();
 }
 
@@ -9291,6 +10191,8 @@ async function salveazaPlanAlim(btn) {
   if (!(p.titlu || '').trim()) return showToast(tr('Dă un titlu planului.', 'Give the plan a title.'), 'error');
   // Variantele goale nu se salvează
   p.continut.mese.forEach(m => { m.variante = (m.variante || []).filter(v => (v.ingrediente || []).length || (v.titlu || '').trim()); });
+  // Ce nu mănâncă intră în plan: PDF-ul și linkul nu au acces la fișa clientului
+  p.continut.excluderi = textRestrictii(restrictiiPlan(p.client_id, p.continut.preferinte));
   const rand = { titlu: p.titlu.trim().slice(0, 120), client_id: p.client_id || null, continut: p.continut, updated_at: new Date().toISOString() };
   if (btn) btn.disabled = true;
   const q = p.id ? supabaseClient.from('planuri_alimentare').update(rand).eq('id', p.id) : supabaseClient.from('planuri_alimentare').insert(rand);
@@ -9299,6 +10201,7 @@ async function salveazaPlanAlim(btn) {
   if (error || !data) { showToast(tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.'), 'error'); return null; }
   p.id = data.id;
   planAlim.lista = [data].concat((planAlim.lista || []).filter(x => x.id !== data.id));
+  planAlim.biblioteca = null;
   showToast(p.client_id ? tr('✓ Plan salvat: clientul îl vede în Nutriție', '✓ Plan saved: the client sees it in Nutrition') : tr('✓ Șablon salvat', '✓ Template saved'));
   randeazaPlanAlim();
   return data;
@@ -9324,12 +10227,14 @@ async function aplicaTintePlanLaClient(btn) {
   const p = planAlim.plan, t = p.continut.tinte;
   if (!t || !p.client_id) return;
   const camp = { kcal: t.kcal, proteine: t.proteine, carbo: t.carbo, grasimi: t.grasimi };
-  btn.disabled = true;
+  // Jurnalul are deja ținta de carbohidrați pentru zilele de pauză (carbo_pauza): o ia pe cea din plan
+  if (p.continut.tinteRepaus) camp.carbo_pauza = p.continut.tinteRepaus.carbo;
+  if (btn) btn.disabled = true;
   const { data: exista } = await supabaseClient.from('setari_nutritie').select('client_id').eq('client_id', p.client_id).maybeSingle();
   const q = exista ? supabaseClient.from('setari_nutritie').update(camp).eq('client_id', p.client_id)
     : supabaseClient.from('setari_nutritie').insert(Object.assign({ client_id: p.client_id, user_id: utilizatorCurent.id }, camp));
   const { error } = await q;
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
   showToast(error ? tr('Nu s-a putut salva. Verifică internetul.', 'Could not save. Check your internet.') : tr('✓ Țintele apar în jurnalul clientului', '✓ The targets show in the client’s log'), error ? 'error' : undefined);
 }
 
@@ -9343,16 +10248,21 @@ Nu-mi pune întrebări: dacă îți lipsesc date, presupune un adult activ cu pl
 Pune tot planul într-un singur bloc de cod (între \`\`\`), ca să-l pot copia dintr-o atingere.
 
 TITLU: <titlul planului>
+CLIENT: <numele clientului>
+PROFIL: <feminin sau masculin> | <vârsta> ani | <înălțimea> cm | <greutatea> kg | <obiectivul>
+ȚINTE: Proteine: <g> g | Carbohidrați: <g> g | Grăsimi: <g> g
 # MIC DEJUN
 ## <numele variantei>
 - <aliment> — <cantitate> g
 - <aliment> — <număr> buc
 - <condimente, fără cantitate>
 Preparare: <1–2 propoziții>
+Tranzit: <ce cumpără din supermarket când e plecat, separate prin ;>
 ## <următoarea variantă>
+# GUSTARE 1
 # PRÂNZ
+# GUSTARE 2
 # CINĂ
-# GUSTARE
 
 Reguli: 3–8 variante pe masă; cantitățile în grame (pastele, orezul, quinoa, mălaiul și carnea cântărite crude); ouăle și feliile în buc; alimente simple, ușor de găsit în magazinele locale. Nu scrie calorii: le calculează aplicația.${t ? `\nȚinte pe zi: ${t.kcal} kcal, ${t.proteine} g proteine, ${t.carbo} g carbohidrați, ${t.grasimi} g grăsimi.` : ''}${fara ? `\nClientul nu mănâncă (alergii / restricții): ${fara}. Nu folosi deloc aceste alimente.` : ''}`,
   `Make (or convert, if I give you one) a meal plan and write it EXACTLY in the format below, with no tables and no other text.
@@ -9360,25 +10270,39 @@ Don’t ask me questions: if details are missing, assume an active adult on a ma
 Put the whole plan in a single code block (between \`\`\`) so I can copy it in one tap.
 
 TITLE: <plan title>
+CLIENT: <client name>
+PROFILE: <female or male> | <age> years | <height> cm | <weight> kg | <goal>
+TARGETS: Protein: <g> g | Carbs: <g> g | Fat: <g> g
 # BREAKFAST
 ## <option name>
 - <food> — <amount> g
 - <food> — <number> pcs
 - <seasoning, no amount>
 Method: <1–2 sentences>
+Travel: <what to buy at the supermarket when away, separated by ;>
 ## <next option>
+# SNACK 1
 # LUNCH
+# SNACK 2
 # DINNER
-# SNACKS
 
 Rules: 3–8 options per meal; amounts in grams (pasta, rice, quinoa and meat weighed raw); eggs and slices in pcs; simple, easy-to-find foods. Do not write calories: the app calculates them.${t ? `\nDaily targets: ${t.kcal} kcal, ${t.proteine} g protein, ${t.carbo} g carbs, ${t.grasimi} g fat.` : ''}${fara ? `\nThe client doesn’t eat (allergies / restrictions): ${fara}. Do not use these foods at all.` : ''}`);
 }
 
+// Copierea pornește în aceeași atingere, înainte de deschidere (altfel browserul o blochează)
+function deschideAiPlanAlim(url) {
+  navigator.clipboard.writeText(promptAiPlanAlim()).then(() => showToast(tr('✓ Prompt copiat. Lipește-l în chat.', '✓ Prompt copied. Paste it in the chat.')), () => {});
+  window.open(url, '_blank', 'noopener');
+}
+
 function htmlImportPlanAlim() {
-  return `<button type="button" class="btn btn-clear" onclick="inchideEditorPlanAlim()">‹ ${tr('Planuri alimentare', 'Meal plans')}</button>
-    <div class="card obiectiv-form">
-      <div class="acasa-antrenament-detalii">${tr('1. Copiază promptul și lipește-l în Gemini sau ChatGPT, împreună cu datele clientului (sau cu un plan vechi de convertit).', '1. Copy the prompt and paste it into Gemini or ChatGPT, with the client’s details (or an old plan to convert).')}</div>
-      <button type="button" class="btn btn-clear" style="width:100%; margin:6px 0 10px;" onclick="navigator.clipboard.writeText(promptAiPlanAlim()).then(() => showToast(tr('✓ Prompt copiat', '✓ Prompt copied')))">${tr('Copiază promptul pentru AI', 'Copy the AI prompt')}</button>
+  return `${titluPlanAlim(tr('Importă', 'Import'), tr('PDF, Word sau text', 'PDF, Word or text'))}
+    <div class="lista-sticla plan-alim-sticla obiectiv-form">
+      <div class="acasa-antrenament-detalii">${tr('1. Alege chatul: copiez promptul și îl deschid. Acolo îl lipești, împreună cu datele clientului (sau cu un plan vechi de convertit).', '1. Pick the chat: I copy the prompt and open it. Paste it there, with the client’s details (or an old plan to convert).')}</div>
+      <div class="antr-pers-actiuni plan-alim-actiuni" style="margin:6px 0 10px;">
+        <button type="button" class="btn btn-clear" onclick="deschideAiPlanAlim('https://gemini.google.com/app')">Gemini</button>
+        <button type="button" class="btn btn-clear" onclick="deschideAiPlanAlim('https://chatgpt.com/')">ChatGPT</button>
+      </div>
       <div class="acasa-antrenament-detalii">${tr('2. Lipește aici răspunsul sau încarcă direct un plan vechi (PDF sau Word). Caloriile și macro-urile le calculez eu, din baza de alimente.', '2. Paste the answer here, or upload an old plan (PDF or Word). I calculate calories and macros from the food database.')}</div>
       <label class="btn btn-clear plan-alim-fisier">📄 ${tr('Încarcă PDF sau Word', 'Upload PDF or Word')}<input type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden onchange="incarcaFisierPlanAlim(this)"></label>
       <textarea id="planAlimImport" class="plan-ex-textarea" rows="12" maxlength="60000" placeholder="# MIC DEJUN&#10;## Iaurt grecesc cu fructe&#10;- Iaurt grecesc 2% — 200 g&#10;- Ouă — 2 buc" oninput="planAlim.importText = this.value">${escAttr(planAlim.importText)}</textarea>
@@ -9419,30 +10343,83 @@ async function incarcaPdfJs() {
   pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([buf], { type: 'text/javascript' }));
 }
 
-// Rândurile paginii, de sus în jos; rândurile indentate devin buline (în PDF bulina e desenată, nu e text)
+// Rândurile paginii, de sus în jos; rândurile indentate devin buline (în PDF bulina e desenată, nu e text).
+// Tabelele de variante (antet cu „Kcal” și „Macros”, ca în planurile „Mix & Match”) se citesc pe coloane și ies
+//   în formatul importului: ## variantă, ingredientele din ziua cu antrenament (sau singura coloană), Tranzit: ...
 async function textDinPdf(buf) {
   await incarcaPdfJs();
   const pdf = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
   const linii = [];
+  let tabel = null;
+  const textRand = parti => {
+    let t = '', capat = null;
+    parti.forEach(p => { if (capat !== null && p.x - capat > 1 && !/\s$/.test(t)) t += ' '; t += p.s; capat = p.x + p.w; });
+    return t.trim();
+  };
+  // Rândurile unei celule: un rând nou începe cu liniuță, celelalte continuă rândul de deasupra (text rupt în celulă)
+  const elemente = randuri => (randuri || []).reduce((out, l) => {
+    if (/^[-•]/.test(l) || !out.length) out.push(l.replace(/^[-•]\s*/, '')); else out[out.length - 1] += ' ' + l;
+    return out;
+  }, []).filter(Boolean);
+  const inchideVarianta = () => {
+    const v = tabel && tabel.v;
+    if (!v) return;
+    tabel.v = null;
+    if (tabel.tip === 'supl') return void linii.push([v.titlu.trim()].concat(Object.keys(v.cel).sort((a, b) => a - b).map(k => v.cel[k].join(' ').trim())).filter(Boolean).join(' — '));
+    const col = rol => tabel.rol.indexOf(rol);
+    const ing = [col('A'), col('I'), col('R')].find(k => k > 0);
+    linii.push('## ' + v.titlu.trim());
+    elemente(v.cel[ing]).forEach(x => linii.push('- ' + x));
+    if (col('T') > 0 && v.cel[col('T')]) linii.push('Tranzit: ' + elemente(v.cel[col('T')]).join('; '));
+  };
   for (let n = 1; n <= pdf.numPages; n++) {
     const randuri = [];
     (await (await pdf.getPage(n)).getTextContent()).items.filter(i => (i.str || '').trim()).forEach(i => {
       const x = i.transform[4], y = i.transform[5];
       let r = randuri.find(q => Math.abs(q.y - y) < 3);
       if (!r) randuri.push(r = { y, parti: [] });
-      r.parti.push({ x, s: i.str, w: i.width });
+      r.parti.push({ x, s: i.str, w: i.width, fs: Math.abs(i.transform[3]) || 0 });
     });
     if (!randuri.length) continue;
     randuri.sort((a, b) => b.y - a.y);
     const xMin = Math.min(...randuri.flatMap(r => r.parti.map(p => p.x)));
+    const marimi = randuri.flatMap(r => r.parti.map(p => p.fs)).sort((a, b) => a - b), fsText = marimi[Math.floor(marimi.length / 2)];
     randuri.forEach(r => {
       r.parti.sort((a, b) => a.x - b.x);
-      let t = '', capat = null;
-      r.parti.forEach(p => { if (capat !== null && p.x - capat > 1 && !/\s$/.test(t)) t += ' '; t += p.s; capat = p.x + p.w; });
-      t = t.trim();
+      let t = textRand(r.parti);
+      const fs = Math.max(...r.parti.map(p => p.fs));
+      if (/page \d+ of \d+|pagina \d+ (din|\/) \d+/i.test(t)) return;
+      // Antetul tabelului: coloanele încep unde se termină un grup de text (golul mare dintre celule).
+      //   Tabelul de variante are „Kcal” și „Macros”; cel de suplimente, „Supliment” și „Doz…”
+      const antetSupl = /^supliment/i.test(t) && /\bdoz/i.test(t);
+      if ((/\bkcal\b/i.test(t) && /macros/i.test(t)) || antetSupl) {
+        inchideVarianta();
+        const col = [];
+        r.parti.forEach((p, k) => { if (!k || p.x - (r.parti[k - 1].x + r.parti[k - 1].w) > 6) col.push({ x: p.x, s: p.s }); else col[col.length - 1].s += ' ' + p.s; });
+        const rol = col.map((c, k) => {
+          const f = faraDiacritice(c.s);
+          return !k ? 'V' : /fara/.test(f) ? 'R' : /zi cu/.test(f) ? 'A' : /kcal/.test(f) ? 'K' : /macro/.test(f) ? 'M' : /ingredient/.test(f) ? 'I' : 'T';
+        });
+        tabel = { col: col.map(c => c.x), rol, fs, v: null, tip: antetSupl ? 'supl' : 'variante' };
+        return;
+      }
+      // Titlul de secțiune (literă mai mare) încheie tabelul
+      if (tabel && fs > tabel.fs + 1) { inchideVarianta(); tabel = null; }
+      if (tabel) {
+        const celule = {};
+        r.parti.forEach(p => { let k = 0; tabel.col.forEach((x, j) => { if (p.x >= x - 3) k = j; }); (celule[k] = celule[k] || []).push(p); });
+        const c0 = celule[0] ? textRand(celule[0]) : '';
+        if (tabel.tip === 'supl' ? !!c0 : /^\d+\.\s*\S/.test(c0)) { inchideVarianta(); tabel.v = { titlu: c0.replace(/^\d+\.\s*/, ''), cel: {} }; }
+        else if (!tabel.v) return;
+        else if (c0) tabel.v.titlu += ' ' + c0;
+        Object.keys(celule).filter(k => +k).forEach(k => { (tabel.v.cel[k] = tabel.v.cel[k] || []).push(textRand(celule[k])); });
+        return;
+      }
+      if (fs >= fsText * 1.2 && /^\d+\.\s/.test(t)) return void linii.push('# ' + t);
       linii.push(r.parti[0].x - xMin > 10 && !/^[-•*]/.test(t) ? '- ' + t : t);
     });
   }
+  inchideVarianta();
   return linii.join('\n');
 }
 
@@ -9485,7 +10462,7 @@ function cantitateDinText(s) {
   const crud = s.match(new RegExp(`(?:uscat|crud)[a-zăâîșț]*\\s*~?\\s*${nr}\\s*(?:g|gr)${sfarsit}`, 'i'));
   if (crud) return { grame: medie(crud[1], crud[2]) };
   const paranteza = s.match(new RegExp(`\\(\\s*~?\\s*${nr}\\s*(?:g|gr|ml)${sfarsit}`, 'i'));
-  const m = s.match(new RegExp(`(?:^|\\s|~)${nr}\\s*(kg|grame|gr|g|ml|l|bucăți|bucati|bucată|bucata|buc|ouă|oua|ou|felii|felie|cupe|cupă|cupa|cups?|cană|cana|căni|cani|linguri[țt][ăa]|linguri[țt]e|lingur[ăa]|linguri|pcs|pieces?|slices?|eggs?|scoops?|tbsp|tsp)?${sfarsit}`, 'i'));
+  const m = s.match(new RegExp(`(?:^|[\\s~(])${nr}\\s*(kg|grame|gr|g|ml|l|bucăți|bucati|bucată|bucata|buc|ouă|oua|ou|felii|felie|cupe|cupă|cupa|cups?|cană|cana|căni|cani|linguri[țt][ăa]|linguri[țt]e|lingur[ăa]|linguri|pcs|pieces?|slices?|eggs?|scoops?|tbsp|tsp)?${sfarsit}`, 'i'));
   if (!m) return null;
   const val = medie(m[1], m[2]), u = faraDiacritice(m[3] || '');
   if (/^(g|gr|grame|ml)$/.test(u)) return { grame: val };
@@ -9500,9 +10477,11 @@ function cantitateDinText(s) {
 function parseazaPlanAlimText(text) {
   const plan = planAlimGol();
   plan.continut.instructiuni = '';
-  let masa = null, varianta = null, instr = [], inInstr = false;
+  let masa = null, varianta = null, instr = [], inInstr = false, inSuplimente = false;
+  const antet = [], supl = [];
   const tipMasa = s => {
-    const n = faraDiacritice(s).replace(/^[#*\s]+/, '');
+    // „2. Gustare 1 (masa 2)”: numărul secțiunii din față nu contează
+    const n = faraDiacritice(s).replace(/^[#*\s]+/, '').replace(/^\d+[.)]\s*/, '');
     return /^(mic dejun|breakfast)/.test(n) ? 'mic_dejun' : /^(pranz|lunch)/.test(n) ? 'pranz' : /^(cina|dinner)/.test(n) ? 'cina' : /^(gustar|snack)/.test(n) ? 'gustare' : null;
   };
   // Blocul de cod cerut în prompt: doar el, fără textul AI-ului din jur
@@ -9512,12 +10491,29 @@ function parseazaPlanAlimText(text) {
     const curat = r.replace(/\*\*/g, '');
     const titlu = curat.match(/^(?:titlu|title)\s*:\s*(.+)$/i);
     if (titlu) { plan.titlu = titlu[1].trim().slice(0, 120); return; }
-    const cod = curat.length <= 70 && (/^#(?!#)/.test(curat) || curat === curat.toUpperCase() || curat.length <= 40) ? tipMasa(curat) : null;
-    if (cod) { masa = plan.continut.mese.find(m => m.cod === cod); varianta = null; return; }
+    // Titlul mesei: scurt, cu # sau cu numele mesei cu majuscule („CINĂ Opțiuni ușoare & bogate în nutrienți”, din PDF)
+    const primul = curat.replace(/^#+\s*/, '').split(/\s/)[0];
+    const cod = curat.length <= 70 && (/^#(?!#)/.test(curat) || curat === curat.toUpperCase() || curat.length <= 40 || (primul.length > 2 && primul === primul.toUpperCase())) ? tipMasa(curat) : null;
+    // „Gustare 2” merge la a doua gustare
+    if (!cod && /^#(?!#)/.test(curat)) {
+      masa = null; varianta = null;
+      inSuplimente = /suplimente|supplements/i.test(curat);
+      return;
+    }
+    if (inSuplimente && !masa && !cod) {
+      // Rândul rupt din tabel continuă suplimentul de deasupra; antetul tabelului nu contează
+      if (/^supliment\w*\s+doz/i.test(curat)) return;
+      if (/^[-•]\s*/.test(curat) && supl.length) supl[supl.length - 1] += ' ' + curat.replace(/^[-•]\s*/, '');
+      else supl.push(curat);
+      return;
+    }
+    if (cod) { masa = plan.continut.mese.filter(m => m.cod === cod)[cod === 'gustare' && /^[\d.)#*\s]*(gustar\w*|snacks?)\s*2\b/.test(faraDiacritice(curat)) ? 1 : 0]; varianta = null; return; }
     const kcal = curat.match(/≈\s*(\d+(?:[.,]\d+)?)(?:\s*[–-]\s*(\d+(?:[.,]\d+)?))?\s*kcal/i);
-    const esteVar = /^##/.test(curat) || /^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]/i.test(curat);
+    // Varianta: „## ...”, „Varianta 1: ...” sau numerotată („1. Pui cu orez”, fără cantitate, altfel e aliment)
+    const esteVar = /^##/.test(curat) || /^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]/i.test(curat)
+      || (/^\d+[.)]\s+\S/.test(curat) && !cantitateDinText(curat.replace(/^\d+[.)]\s+/, '')));
     if (esteVar && masa) {
-      const nume = curat.replace(/^#+\s*/, '').replace(/^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]\s*/i, '').replace(/≈.*$/, '').trim();
+      const nume = curat.replace(/^#+\s*/, '').replace(/^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]\s*/i, '').replace(/^\d+[.)]\s+/, '').replace(/≈.*$/, '').trim();
       varianta = { titlu: nume.slice(0, 120), preparare: '', ingrediente: [] };
       if (kcal) varianta.ai_kcal = Math.round(kcal[2] ? (numarText(kcal[1]) + numarText(kcal[2])) / 2 : numarText(kcal[1]));
       masa.variante.push(varianta);
@@ -9525,58 +10521,158 @@ function parseazaPlanAlimText(text) {
     }
     if (!masa) {
       // Planurile din PDF au „Instrucțiuni generale”: atunci contează doar textul de sub titlu, nu antetul (data, profilul)
-      if (/^(instruc[țt]iuni generale|general instructions)$/i.test(curat)) { inInstr = true; instr = []; return; }
-      if (inInstr || /^[*•-]/.test(curat)) instr.push(curat);
+      antet.push(curat);
+      if (/^[-•*]?\s*(instruc[țt]iuni generale|general instructions)/i.test(curat)) { inInstr = true; instr = []; return; }
+      // Rândul rupt de PDF continuă propoziția de deasupra („... înainte de preparare,” / „- conform specificațiilor.”)
+      //   Fără rând de continuat, bucata cu literă mică e o celulă ruptă din tabelul de sus („- tonifiere musculară”): nu e instrucțiune
+      const ultim = instr[instr.length - 1], continuare = /^[-•]?\s*[a-zăâîșț]/.test(curat);
+      if (ultim && continuare && !/[.!?:]$/.test(ultim)) instr[instr.length - 1] = ultim + ' ' + curat.replace(/^[-•]\s*/, '');
+      else if (continuare && !inInstr) return;
+      else if (inInstr || /^[*•-]/.test(curat)) instr.push(curat);
       return;
     }
-    if (!varianta) return;
-    if (/^(proteine|protein)\s*:/i.test(curat) || /^cu .+:\s*proteine/i.test(curat)) return;
+    if (!varianta) { if (!/^[-•*]/.test(curat) && !masa.descriere) masa.descriere = curat.slice(0, 200); return; }
+    // Rândul de macro de sub ingrediente (din PDF vine cu bulină, fiind indentat)
+    const faraBulina0 = curat.replace(/^[-•*]\s*/, '');
+    if (/^(proteine|protein)\s*:/i.test(faraBulina0) || /^cu .+:\s*proteine/i.test(faraBulina0)) return;
+    const tranzit = curat.match(/^(?:tranzit|delega[țt]ie|on the go|travel)\s*:\s*(.+)$/i);
+    if (tranzit) { varianta.tranzit = tranzit[1].split(/\s*;\s*/).filter(Boolean).join('\n'); return; }
     const prep = curat.match(/^(?:preparare|mod de preparare|method)\s*:\s*(.+)$/i);
     if (prep) { varianta.preparare = (varianta.preparare ? varianta.preparare + ' ' : '') + prep[1]; return; }
     // Și rândurile fără bulină de forma „aliment — 100 g” (planuri vechi din PDF sau Word)
     const faraBulina = curat.length <= 100 && /\s[—–]\s/.test(curat) && cantitateDinText(curat.split(/\s[—–]\s/).pop());
     if (/^[-•*]\s*/.test(curat) || faraBulina) {
       // Alternativele „(SAU ...)” nu intră în calcul: rămâne primul aliment
-      const linie = curat.replace(/^[-•*]\s*/, '').replace(/\s*\((?:sau|or)\b[^)]*\)/gi, '').trim();
+      const linie = faraBulina0.replace(/^\d+[.)]\s+/, '').replace(/\s*\((?:sau|or)\b[^)]*\)/gi, '').trim();
       const parti = linie.split(/\s+[—–]\s+|\s+-\s+|:\s+/);
       const cant = cantitateDinText(parti.length > 1 ? parti[parti.length - 1] : linie);
-      if (!cant) { varianta.ingrediente.push({ nume: linie.slice(0, 120), text: true, cantitate_g: 0, kcal: 0, proteine: 0, carbo: 0, grasimi: 0 }); return; }
+      // „Condimente: 1 linguriță sos de soia, ghimbir” rămâne notă: cantitatea e a unui singur condiment
+      if (!cant || /^(condimente|seasoning|spices)\b/i.test(linie)) { varianta.ingrediente.push({ nume: linie.slice(0, 120), text: true, cantitate_g: 0, kcal: 0, proteine: 0, carbo: 0, grasimi: 0 }); return; }
+      // Numele fără cantitate, oriunde ar fi scrisă: „30 g fulgi de ovăz”, „2 ouă fierte”, „Somon 130 g”, „1 măr (150 g)”
       const nume = (parti.length > 1 ? parti.slice(0, -1).join(' ') : linie).replace(/\([^)]*\d[^)]*\)/g, '')
-        .replace(/^\s*~?\d+(?:[.,]\d+)?\s*(g|gr|ml|buc)\s+/i, '').replace(/\s{2,}/g, ' ').trim();
+        .replace(/^\s*~?\d+(?:[.,]\d+)?\s*(?:g|gr|grame|ml|kg|buc)?\.?\s+(?=\D)/i, '')
+        .replace(/\s+~?\d+(?:[.,]\d+)?(?:\s*[–-]\s*\d+(?:[.,]\d+)?)?\s*(?:g|gr|grame|ml|kg|buc)\.?$/i, '').replace(/\s{2,}/g, ' ').trim();
       varianta.ingrediente.push({ nume: (nume || linie).slice(0, 120), cant });
       return;
     }
     varianta.preparare = (varianta.preparare ? varianta.preparare + ' ' : '') + curat.replace(/^\*?\s*/, '');
   });
   plan.continut.instructiuni = instr.join('\n') || instructiuniPlanImplicite();
+  plan.continut.suplimente = supl.join('\n');
+  antetPlanAlim(plan, antet.join('\n'));
+  // Rămân doar mesele din text, cu procentele refăcute pe ziua întreagă
+  const pline = plan.continut.mese.filter(m => m.variante.length);
+  if (pline.length) {
+    const suma = pline.reduce((s, m) => s + m.procent, 0);
+    pline.forEach(m => { m.procent = Math.round(m.procent * 100 / suma); });
+    plan.continut.mese = pline;
+  }
   return plan;
+}
+
+// Antetul planului (PDF-ul nostru, cel de la Gemini, textul din prompt): clientul, profilul, obiectivul și țintele,
+// ca să nu le scrii din nou de mână. Ce nu se găsește rămâne cum era.
+function antetPlanAlim(plan, text) {
+  const n = faraDiacritice(text), pr = plan.continut.profil;
+  const client = text.match(/client[ăa]?\s*:\s*([^\n|]+)/i);
+  const c = client && (DB.clienti || []).find(x => cheieAliasAlim(x.nume) === cheieAliasAlim(client[1]));
+  if (c) plan.client_id = c.id;
+  const nr = re => { const m = n.match(re); return m ? m[1].replace(',', '.') : ''; };
+  pr.varsta = nr(/(\d{2})\s*(?:de\s*)?(?:ani|years)/) || pr.varsta;
+  pr.inaltime = nr(/(\d{3})\s*cm/) || pr.inaltime;
+  pr.greutate = nr(/(\d{2,3}(?:[.,]\d+)?)\s*kg\b/) || pr.greutate;
+  if (/\bclienta\b|feminin|female/.test(n)) pr.sex = 'f'; else if (/masculin|\bmale\b/.test(n)) pr.sex = 'm';
+  const camp = (n.match(/obiectiv[^:\n]*?:?\s*(slabire|recompozi|masa musculara|mentinere)/) || [])[1];
+  pr.obiectiv = camp ? { slabire: 'slabire', recompozi: 'recompozitie', 'masa musculara': 'masa', mentinere: 'mentinere' }[camp]
+    : /recompozi|recomposition/.test(n) ? 'recompozitie' : /slabire|deficit|fat loss|lose fat/.test(n) ? 'slabire'
+    : /masa musculara|build muscle|bulk/.test(n) ? 'masa' : pr.obiectiv;
+  pr.activitate = /sedentar/.test(n) ? 1.2 : /foarte activ|very active/.test(n) ? 1.725 : /moderat activ|moderately active/.test(n) ? 1.55
+    : /usor activ|lightly active/.test(n) ? 1.375 : pr.activitate;
+  // Macro-urile scrise (interval = media); caloriile din ele, ca să se potrivească între ele
+  const g = cuvant => { const m = n.match(new RegExp(`(?:${cuvant})\\s*:?\\s*~?\\s*(\\d+)(?:\\s*[–-]\\s*(\\d+))?\\s*g\\b`)); return m ? Math.round(m[2] ? (+m[1] + +m[2]) / 2 : +m[1]) : 0; };
+  const p = g('proteine|protein'), cb = g('carbohidrati|carbohydrates|carbs'), gr = g('grasimi|fat');
+  const rez = tinteDinProfil(pr);
+  const tipZi = cuvant => {
+    const m = n.match(new RegExp(`(?:${cuvant})[^\\n]*?~?([\\d.]{3,6})\\s*kcal\\s*(\\d+)\\s*g[^\\n]*?(\\d+)\\s*g[^\\n]*?(\\d+)\\s*g`));
+    return m ? { kcal: Math.round(+m[1].replace(/\./g, '')), proteine: +m[2], carbo: +m[3], grasimi: +m[4] } : null;
+  };
+  const zA = tipZi('zi cu antrenament|training day'), zR = tipZi('zi fara antrenament|rest day');
+  if (zA) { plan.continut.tinte = zA; plan.continut.tinteRepaus = zR; return; }
+  if (p && cb && gr) plan.continut.tinte = { kcal: Math.round((p * 4 + cb * 4 + gr * 9) / 10) * 10, proteine: p, carbo: cb, grasimi: gr };
+  else if (rez) plan.continut.tinte = { kcal: rez.kcal, proteine: rez.proteine, carbo: rez.carbo, grasimi: rez.grasimi };
 }
 
 const CUVINTE_IGNORATE_ALIMENT = new Set(['de', 'cu', 'si', 'sau', 'la', 'din', 'fara', 'pentru', 'proaspat', 'proaspata', 'proaspete', 'proaspeti', 'intreg', 'intregi',
   'fiert', 'fierte', 'fiarta', 'fierti', 'crud', 'cruda', 'crude', 'uscat', 'uscata', 'taiat', 'taiate', 'taiati', 'cubulete', 'cuburi', 'feliat', 'feliate', 'maruntit', 'maruntite',
   'simplu', 'simpla', 'light', 'ras', 'rasa', 'fin', 'fina', 'gatit', 'gatiti', 'gatite', 'copt', 'copti', 'grasime', 'zahar', 'adaugat', 'optional', 'superioara', 'inferioara',
+  'in', 'pe', 'tras', 'usor', 'subtire', 'decongelate', 'jumatati', 'preparat', 'spiralizati', 'scursa', 'tocat',
   // Planurile în engleză
   'with', 'and', 'or', 'of', 'the', 'fresh', 'plain', 'whole', 'raw', 'cooked', 'boiled', 'dry', 'sliced', 'chopped', 'diced', 'fillet', 'fillets', 'added', 'canned']);
 
-// Alimentul din bază pentru un nume liber: întâi toate cuvintele importante, apoi mai puține; sigur = s-au potrivit toate
-async function gasesteAlimentBaza(nume) {
-  const cuvinte = faraDiacritice(nume).replace(/\(.*?\)/g, ' ').replace(/\d+([.,]\d+)?\s*%/g, ' ').replace(/[^a-z\s]/g, ' ')
+// Cum scriu planurile (și AI-ul) alimentele pe care baza le are sub alt nume
+const SINONIME_ALIMENTE = [
+  [/lapte (?:vegetal )?de (migdale|ovaz|soia|cocos|orez)/g, 'bautura vegetala de $1'],
+  [/(?:pudra|izolat|praf) proteic\w*|proteina (?:pudra|praf)/g, 'proteina whey'],
+  [/cannellini/g, 'alba'],
+  [/\b(?:in )?suc propriu\b/g, 'apa'],
+  [/\bbaby\b|\bmix\b/g, ' ']
+];
+
+// Baza de alimente (~1.100 rânduri) se încarcă o dată pe sesiune, la primul import; potrivirea se face local, cu scor.
+// Se ține promisiunea: alimentele unui import se caută în paralel, dar baza se cere o singură dată (la eroare, data viitoare din nou)
+let alimenteBazaToate = null;
+function toateAlimenteleBaza() {
+  return alimenteBazaToate || (alimenteBazaToate = incarcaAlimenteBaza().catch(e => { alimenteBazaToate = null; throw e; }));
+}
+
+async function incarcaAlimenteBaza() {
+  const tot = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await supabaseClient.from('alimente_baza').select('*').range(de, de + 999);
+    if (error) throw error;
+    tot.push(...data);
+    if (data.length < 1000) break;
+  }
+  // cuvinte: tot ce se poate căuta (ro + en); principale: numele românesc până la „(” sau „,” („Ton în apă (conservă)” → ton, apa)
+  return tot.map(r => ({ r, cuvinte: faraDiacritice(r.cautare || r.nume).split(/[^a-z]+/).filter(Boolean),
+    principale: faraDiacritice(r.nume).split(/[(,]/)[0].split(/[^a-z]+/).filter(c => c.length >= 2 && !CUVINTE_IGNORATE_ALIMENT.has(c)) }));
+}
+
+// Starea alimentului („orez crud”, „fasole fiartă”): nu e obligatorie la potrivire, dar alege între variantele aceluiași aliment
+const STARI_ALIMENT = ['crud', 'fiert', 'fiart', 'uscat', 'copt', 'gatit', 'raw', 'cooked', 'boiled', 'dry'];
+
+// Alimentul din bază pentru un nume liber. Scor: cuvintele potrivite (la început de cuvânt, deci „ton” nu e în „crutoane”),
+// plus când primul cuvânt al alimentului e unul căutat și când e primul cuvânt scris („broccoli & usturoi” = broccoli),
+// plus starea potrivită, minus cuvintele lui în plus („Ciocolată cu lapte”). sigur = toate potrivite
+// Rădăcinile cuvintelor importante dintr-un text fără diacritice („Lipii integrale” → lip, integral)
+function radaciniAliment(text) {
+  return text.replace(/\(.*?\)/g, ' ').replace(/\d+([.,]\d+)?\s*%/g, ' ').replace(/[^a-z\s]/g, ' ')
     .split(/\s+/).filter(c => c.length >= 2 && !CUVINTE_IGNORATE_ALIMENT.has(c))
-    // Plurale englezești („carrots”, „potatoes”); căutarea e pe subșir, deci scurtarea doar lărgește
-    //   (nu și -as/-us/-is, tipic românești: „ananas”), apoi rădăcinile românești
+    // Plurale englezești („carrots”, „potatoes”), nu și -as/-us/-is, tipic românești („ananas”); apoi rădăcinile românești
     .map(c => c.length >= 4 ? c.replace(/oes$/, 'o').replace(/([^asuis])s$/, '$1') : c)
-    .map(c => c === 'oua' ? 'ou' : c === 'mere' ? 'mar' : c.length >= 5 ? c.replace(/uri$/, '').replace(/[aeiu]+$/, '') : c).slice(0, 3);
+    .map(c => c === 'oua' ? 'ou' : c === 'mere' ? 'mar' : c.length >= 5 ? c.replace(/uri$/, '').replace(/[aeiu]+$/, '') : c);
+}
+
+async function gasesteAlimentBaza(nume) {
+  let text = faraDiacritice(nume);
+  SINONIME_ALIMENTE.forEach(([re, s]) => { text = text.replace(re, s); });
+  const cuvinte = radaciniAliment(text);
+  if (!cuvinte.length) return null;
   // „Ouă” / „Eggs” simplu = oul întreg (nu jumări)
   if (cuvinte.length === 1 && ['ou', 'egg'].includes(cuvinte[0])) cuvinte.push('whole');
-  // Când nu se potrivesc toate, rămâne substantivul: primul cuvânt în română („linte roșie”), ultimul în engleză („red lentils”)
-  if (currentLang === 'en') cuvinte.reverse();
-  for (let n = cuvinte.length; n >= 1; n--) {
-    let q = supabaseClient.from('alimente_baza').select('*').limit(10);
-    cuvinte.slice(0, n).forEach(c => { q = q.ilike('cautare', `%${c}%`); });
-    const { data } = await q;
-    if (data && data.length) return { produs: produsBaza(data.sort((a, b) => a.nume.length - b.nume.length)[0]), sigur: n === cuvinte.length };
-  }
-  return null;
+  // „Iaurt grecesc 2%” preferă varianta cu 2%, nu pe cea cu 0%
+  const procent = (text.match(/\d+(?:[.,]\d+)?\s*%/) || [''])[0].replace(/\s/g, '');
+  const stari = STARI_ALIMENT.filter(st => new RegExp(`\\b${st}`).test(text));
+  let cel = null, scorCel = 5;
+  (await toateAlimenteleBaza()).forEach(a => {
+    const potrivite = cuvinte.filter(c => a.cuvinte.some(w => w.startsWith(c))).length;
+    if (!potrivite) return;
+    const scor = potrivite * 10 + (cuvinte.some(c => (a.principale[0] || '').startsWith(c)) ? 3 : 0) + (procent && a.r.nume.replace(/\s/g, '').includes(procent) ? 2 : 0)
+      + ((a.principale[0] || '').startsWith(cuvinte[0]) ? 2 : 0) + 2 * stari.filter(st => a.cuvinte.some(w => w.startsWith(st))).length
+      - 2 * a.principale.filter(w => !cuvinte.some(c => w.startsWith(c))).length - a.r.nume.length / 100;
+    if (scor > scorCel) { scorCel = scor; cel = { a, sigur: potrivite === cuvinte.length }; }
+  });
+  return cel ? { produs: produsBaza(cel.a.r), sigur: cel.sigur } : null;
 }
 
 // Alegerile antrenorului la import („Brânză cottage” → produsul ales), pe acest dispozitiv: la următorul import se potrivesc direct
@@ -9602,11 +10698,13 @@ async function aliasuriAlim() {
   return a;
 }
 
-function salveazaAliasAlim(nume, p) {
-  const k = cheieAliasAlim(nume);
-  if (!k) return;
-  const produs = { nume: p.nume, kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi, portii: p.portii || [], portie_g: p.portie_g || null, sursa: p.sursa || '' };
-  supabaseClient.from('aliasuri_alimente').upsert({ cheie: k.slice(0, 200), produs, updated_at: new Date().toISOString() }).then(() => {}, () => {});
+// perechi: [[numele din plan, produsul ales], ...], într-un singur apel
+function salveazaAliasAlim(perechi) {
+  const acum = new Date().toISOString();
+  const randuri = perechi.map(([nume, p]) => ({ cheie: cheieAliasAlim(nume).slice(0, 200), updated_at: acum,
+    produs: { nume: p.nume, kcal: p.kcal, proteine: p.proteine, carbo: p.carbo, grasimi: p.grasimi, portii: p.portii || [], portie_g: p.portie_g || null, sursa: p.sursa || '' } }))
+    .filter(r => r.cheie);
+  if (randuri.length) supabaseClient.from('aliasuri_alimente').upsert(randuri).then(() => {}, () => {});
 }
 
 // Ultima variantă la import, când baza nu are alimentul: primul produs Open Food Facts cu calorii (marcat „verifică”)
@@ -9631,10 +10729,22 @@ function portieDupaUnitate(portii, unitate) {
 async function importaPlanAlim(btn) {
   const text = (document.getElementById('planAlimImport').value || '').trim();
   const plan = parseazaPlanAlimText(text);
-  const ingrediente = plan.continut.mese.flatMap(m => m.variante.flatMap(v => v.ingrediente.filter(i => i.cant)));
-  if (!ingrediente.length) return showToast(tr('Nu am găsit mese și alimente. Folosește formatul din prompt (# MIC DEJUN, ## variantă, - aliment — 100 g).', 'No meals or foods found. Use the prompt format (# BREAKFAST, ## option, - food — 100 g).'), 'error');
+  if (!plan.continut.mese.some(m => m.variante.some(v => v.ingrediente.some(i => i.cant)))) return showToast(tr('Nu am găsit mese și alimente. Folosește formatul din prompt (# MIC DEJUN, ## variantă, - aliment — 100 g).', 'No meals or foods found. Use the prompt format (# BREAKFAST, ## option, - food — 100 g).'), 'error');
   btn.disabled = true;
   btn.innerText = tr('Caut alimentele în bază...', 'Looking up the foods...');
+  const ingrediente = await rezolvaIngredientePlan(plan);
+  btn.disabled = false;
+  const negasite = ingrediente.filter(i => i.negasit).length, deVerificat = ingrediente.filter(i => i.verifica).length;
+  planAlim.plan = plan;
+  planAlim.importText = '';
+  planAlim.vedere = 'editor';
+  randeazaPlanAlim();
+  showToast(negasite || deVerificat ? tr(`Importat. ${negasite} negăsite, ${deVerificat} de verificat (marcate).`, `Imported. ${negasite} not found, ${deVerificat} to check (marked).`) : tr('✓ Importat. Alege clientul de sus.', '✓ Imported. Pick the client at the top.'));
+}
+
+// Alimentele scrise în text („cant”) devin alimente din bază, cu gramele lor (aliasurile antrenorului întâi). Întoarce ingredientele rezolvate.
+async function rezolvaIngredientePlan(plan) {
+  const ingrediente = plan.continut.mese.flatMap(m => m.variante.flatMap(v => v.ingrediente.filter(i => i.cant)));
   const unice = [...new Set(ingrediente.map(i => faraDiacritice(i.nume)))];
   const gasite = {}, aliasuri = await aliasuriAlim();
   await Promise.all(unice.map(async n => {
@@ -9651,45 +10761,134 @@ async function importaPlanAlim(btn) {
       { cantitate_g: c.bucati ? c.bucati * gUnitate : c.grame, unitate: c.bucati ? { nume: c.unitate, g: gUnitate } : null });
     delete i.cant;
   });
-  btn.disabled = false;
-  const negasite = ingrediente.filter(i => i.negasit).length, deVerificat = ingrediente.filter(i => i.verifica).length;
-  planAlim.plan = plan;
-  planAlim.importText = '';
-  planAlim.vedere = 'editor';
-  randeazaPlanAlim();
-  showToast(negasite || deVerificat ? tr(`Importat. ${negasite} negăsite, ${deVerificat} de verificat (marcate).`, `Imported. ${negasite} not found, ${deVerificat} to check (marked).`) : tr('✓ Importat. Alege clientul de sus.', '✓ Imported. Pick the client at the top.'));
+  return ingrediente;
 }
 
 // ---- Citire: clientul în aplicație și linkul fără cont ----
 function htmlPlanAlimCitire(plan, laClient) {
-  const c = plan.continut, t = c.tinte, rez = tinteDinProfil(c.profil || {});
+  const c = plan.continut, repaus = !!(c.tinteRepaus && plan.repaus), t = repaus ? c.tinteRepaus : c.tinte, rez = tinteDinProfil(c.profil || {});
   const ob = OBIECTIVE_PLAN.find(o => o[0] === (c.profil || {}).obiectiv);
   const placa = (k, ro, en) => `<div class="nutritie-macro ${k}"><span>${tr(ro, en)}</span><b>${t[k]} g</b></div>`;
+  // Ziua cu / fără antrenament: aceleași variante, alte gramaje la carbohidrați
+  const zi = c.tinteRepaus ? `<div class="antr-pers-activitati" style="margin:8px 0 0;">
+      <button type="button" class="antr-pers-activitate${repaus ? '' : ' activ'}" onclick="comutaZiPlanAlim(false)">${tr('Zi cu antrenament', 'Training day')}</button>
+      <button type="button" class="antr-pers-activitate${repaus ? ' activ' : ''}" onclick="comutaZiPlanAlim(true)">${tr('Zi fără antrenament', 'Rest day')}</button></div>` : '';
+  const suplimente = String(c.suplimente || '').split('\n').map(x => x.trim()).filter(Boolean);
   let html = `<div class="card plan-alim-cap">
       <b class="nutritie-produs-nume">${escAttr(plan.titlu)}</b>
       ${ob ? `<div class="acasa-antrenament-detalii">${tr('Obiectiv', 'Goal')}: ${tr(ob[3], ob[4])}</div>` : ''}
+      ${zi}
       ${t ? `<div class="nutritie-ramase" style="margin:8px 0 6px;"><b>${t.kcal}</b><span>${tr('kcal pe zi', 'kcal a day')}${rez ? ` · ${tr('menținere', 'maintenance')} ~${rez.consum}` : ''}</span></div>
       <div class="nutritie-macro-uri">${placa('proteine', 'Proteine', 'Protein')}${placa('carbo', 'Carbohidrați', 'Carbohydrates')}${placa('grasimi', 'Grăsimi', 'Fat')}</div>` : ''}
       ${(c.instructiuni || '').trim() ? `<div class="plan-alim-instr">${htmlTextPlan(c.instructiuni)}</div>` : ''}
+      ${suplimente.length ? `<div class="checkin-eticheta" style="margin-top:8px;">${tr('Suplimente', 'Supplements')}</div><ul class="plan-text-lista">${suplimente.map(x => `<li>${escAttr(x)}</li>`).join('')}</ul>` : ''}
+      ${inlocuiriEchivalente(plan).map(x => `<div class="checkin-eticheta" style="margin-top:8px;">${tr('Înlocuiri echivalente', 'Equivalent swaps')} · ${x.et.toLowerCase()}</div><div class="acasa-antrenament-detalii"><b>${escAttr(x.ref)}</b> = ${x.echiv.map(escAttr).join(' = ')}</div>`).join('')}
       <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="exportaPlanAlimPdf(planAlimDeschis, planAlimDeschis.clienta || '')">${tr('Descarcă PDF', 'Download PDF')}</button>
-      ${laClient ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="cumparaturiSaptamanaPlanAlim()">🛒 ${tr('Cumpărăturile pe o săptămână', 'Shopping for one week')}</button>` : ''}
-    </div>`;
-  c.mese.forEach(m => {
+      ${laClient ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="cumparaturiSaptamanaPlanAlim()">🛒 ${tr('Cumpărăturile pe o săptămână', 'Shopping for one week')}</button>
+        <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="deschideCumparaturiDinPlan()">${tr('Vezi lista de cumpărături', 'See the shopping list')}${listaCumparaturi().length ? ` (${listaCumparaturi().filter(x => !x.bifat).length})` : ''}</button>` : ''}
+    </div>
+    ${htmlMeseAziPlanAlim(plan, laClient)}`;
+  c.mese.forEach((m, mi) => {
     if (!(m.variante || []).length) return;
-    html += `<div class="antr-pers-sectiune">${numeMasaPlan(m.cod)} <small>${m.variante.length > 1 ? tr(`${m.variante.length} variante, alegi una`, `${m.variante.length} options, pick one`) : ''}</small></div>`;
+    const nume = numeMasaInPlan(c.mese, mi);
+    html += `<div class="antr-pers-sectiune">${nume} <small>${m.variante.length > 1 ? tr(`${m.variante.length} variante, alegi una`, `${m.variante.length} options, pick one`) : ''}</small></div>
+      ${m.descriere ? `<div class="acasa-antrenament-detalii">${escAttr(m.descriere)}</div>` : ''}`;
     html += m.variante.map((v, vi) => {
-      const tot = valoriVariantaPlan(v);
-      return `<details class="card plan-alim-citire"${m.variante.length === 1 ? ' open' : ''}>
+      const ing = repaus ? ingredienteRepaus(plan, m, v) : (v.ingrediente || []), tot = valoriVariantaPlan({ ingrediente: ing });
+      const tranzit = String(v.tranzit || '').split('\n').map(x => x.trim()).filter(Boolean);
+      return `<details class="card plan-alim-citire" id="planAlimVar_${mi}_${vi}"${m.variante.length === 1 ? ' open' : ''}>
         <summary><span><span class="plan-alim-var-nr">${tr('Varianta', 'Option')} ${vi + 1}:</span> ${escAttr(v.titlu || '')}</span><b>≈ ${Math.round(tot.kcal)} kcal</b></summary>
-        <ul class="plan-text-lista">${(v.ingrediente || []).map(i => `<li>${escAttr(i.nume)}${i.text ? '' : ` — ${textCantitatePlan(i)}`}</li>`).join('')}</ul>
+        <ul class="plan-text-lista">${ing.map(i => `<li>${escAttr(i.nume)}${i.text ? '' : ` — ${textCantitatePlan(i)}`}</li>`).join('')}</ul>
         <div class="reteta-total">${tr('Proteine', 'Protein')} ~${Math.round(tot.proteine)} g · ${tr('Carbohidrați', 'Carbohydrates')} ~${Math.round(tot.carbo)} g · ${tr('Grăsimi', 'Fat')} ~${Math.round(tot.grasimi)} g</div>
         ${v.preparare ? `<div class="acasa-antrenament-detalii plan-alim-prep">${escAttr(v.preparare)}</div>` : ''}
-        ${laClient ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="noteazaVariantaPlanAlim('${m.cod}', ${vi}, this)">${tr(`Notează azi la ${numeMasaPlan(m.cod)}`, `Log today at ${numeMasaPlan(m.cod)}`)}</button>
-          <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="cumparaturiVariantaPlanAlim('${m.cod}', ${vi})">🛒 ${tr('Pune pe lista de cumpărături', 'Add to the shopping list')}</button>` : ''}
+        ${tranzit.length ? `<div class="checkin-eticheta" style="margin-top:8px;">${tr('În deplasare (supermarket)', 'On the go (supermarket)')}</div><ul class="plan-text-lista">${tranzit.map(x => `<li>${escAttr(x)}</li>`).join('')}</ul>` : ''}
+        ${laClient ? `<button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="noteazaVariantaPlanAlim(${mi}, ${vi}, this)">${tr(`Notează azi la ${nume}`, `Log today at ${nume}`)}</button>
+          <button type="button" class="btn btn-clear" style="width:100%; margin-top:8px;" onclick="cumparaturiVariantaPlanAlim(${mi}, ${vi})">🛒 ${tr('Pune pe lista de cumpărături', 'Add to the shopping list')}</button>` : ''}
       </details>`;
     }).join('');
   });
   return html;
+}
+
+// ---- Mesele de azi (ca „Today's Meals” la Everfit): o variantă propusă pe fiecare masă, cu Înlocuiește și Notează ----
+// Propunerea se rotește zilnic (altă combinație în fiecare zi); ce înlocuiește clientul rămâne pentru ziua de azi, pe acest telefon
+const CHEIE_MESE_AZI = 'BFIT_PLAN_ALIM_AZI';
+
+function aleseAziPlanAlim(plan) {
+  try {
+    const x = JSON.parse(localStorage.getItem(CHEIE_MESE_AZI) || 'null');
+    if (x && x.plan === plan.id && x.zi === aziIsoAntrPers()) return x.alese || {};
+  } catch (e) {}
+  return {};
+}
+
+function variantaAziPlanAlim(plan, mi) {
+  const n = plan.continut.mese[mi].variante.length, ales = aleseAziPlanAlim(plan)[mi];
+  if (ales >= 0 && ales < n) return ales;
+  return (Math.floor(dataDinIso(aziIsoAntrPers()).getTime() / 86400000) + mi) % n;
+}
+
+function htmlMeseAziPlanAlim(plan, laClient) {
+  const c = plan.continut, repaus = !!(c.tinteRepaus && plan.repaus), t = repaus ? c.tinteRepaus : c.tinte;
+  let total = 0;
+  const randuri = c.mese.map((m, mi) => {
+    if (!(m.variante || []).length) return '';
+    const vi = variantaAziPlanAlim(plan, mi), v = m.variante[vi];
+    const tot = valoriVariantaPlan({ ingrediente: repaus ? ingredienteRepaus(plan, m, v) : v.ingrediente || [] });
+    total += tot.kcal;
+    return `<div class="nutritie-rand plan-alim-azi">
+      <button type="button" class="nutritie-rand-text plan-alim-ingr-nume" onclick="deschideVariantaPlanAlim(${mi}, ${vi})">
+        <span class="acasa-antrenament-detalii">${numeMasaInPlan(c.mese, mi)}</span><span class="nutritie-rand-nume">${escAttr(v.titlu || '')}</span>
+        <span class="acasa-antrenament-detalii">≈ ${Math.round(tot.kcal)} kcal · P ${Math.round(tot.proteine)} g</span></button>
+      ${m.variante.length > 1 ? `<button type="button" class="verifica-titlu-btn" onclick="inlocuiesteAziPlanAlim(${mi})">↻ ${tr('Înlocuiește', 'Replace')}</button>` : ''}
+      ${laClient ? `<button type="button" class="verifica-titlu-btn" onclick="noteazaVariantaPlanAlim(${mi}, ${vi}, this)">✓ ${tr('Notează', 'Log')}</button>` : ''}
+    </div>`;
+  }).join('');
+  if (!randuri) return '';
+  return `<div class="antr-pers-sectiune">${tr('Mesele de azi', 'Today’s meals')} <small>${c.tinteRepaus ? (repaus ? tr('zi fără antrenament', 'rest day') : tr('zi cu antrenament', 'training day')) : ''}</small></div>
+    <div class="card">${randuri}
+      <div class="reteta-total">${tr('Total azi', 'Today’s total')} ≈ ${Math.round(total)} kcal${t ? ` · ${tr('ținta', 'target')} ${t.kcal} kcal` : ''}</div></div>`;
+}
+
+function inlocuiesteAziPlanAlim(mi) {
+  const plan = planAlimDeschis, alese = aleseAziPlanAlim(plan);
+  alese[mi] = (variantaAziPlanAlim(plan, mi) + 1) % plan.continut.mese[mi].variante.length;
+  try { localStorage.setItem(CHEIE_MESE_AZI, JSON.stringify({ plan: plan.id, zi: aziIsoAntrPers(), alese })); } catch (e) {}
+  rerandeazaPlanAlimDeschis();
+}
+
+// Din „Mesele de azi”: varianta întreagă (ingrediente, preparare, tranzit), deschisă mai jos
+function deschideVariantaPlanAlim(mi, vi) {
+  const el = document.getElementById(`planAlimVar_${mi}_${vi}`);
+  if (!el) return;
+  el.open = true;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Clientul în aplicație (#clientaContinut) sau linkul fără cont (#planAlimentarPublic)
+function rerandeazaPlanAlimDeschis() {
+  const el = document.getElementById(planAlimDeschis.laClient ? 'clientaContinut' : 'planAlimentarPublic');
+  if (el) el.innerHTML = htmlPlanAlimCitire(planAlimDeschis, planAlimDeschis.laClient);
+}
+
+function comutaZiPlanAlim(repaus) {
+  planAlimDeschis.repaus = repaus;
+  rerandeazaPlanAlimDeschis();
+}
+
+// Lista e a Rețetelor (aceeași pentru rețete și plan); Înapoi se întoarce în plan, nu în Rețete
+async function deschideCumparaturiDinPlan() {
+  if (retete.lista === null) await incarcaRetete();
+  retete.vedere = 'cumparaturi';
+  retete.dinPlan = true;
+  antrPers.ecran = 'nutritie-cumparaturi';
+  arataInapoiAntrPers();
+  randeazaRetete();
+}
+
+// Gramajele variantei pentru ziua aleasă în plan
+function ingredienteZiPlanAlim(m, v) {
+  return planAlimDeschis.repaus ? ingredienteRepaus(planAlimDeschis, m, v) : (v.ingrediente || []);
 }
 
 let planAlimDeschis = null;
@@ -9714,7 +10913,9 @@ function htmlPlanAlimInNutritie() {
 function deschidePlanAlimClient() {
   const p = (nutritie.planuriAlim || [])[0];
   if (!p) return;
-  planAlimDeschis = Object.assign({ clienta: (dateClienta.fisa || {}).nume || '' }, p);
+  // Azi fără antrenament (după antrenamentele din aplicație): gramajele de repaus
+  const repaus = !!(p.continut.tinteRepaus && !(nutritie.zileAntr && nutritie.zileAntr.has(aziIsoAntrPers())));
+  planAlimDeschis = Object.assign({ clienta: (dateClienta.fisa || {}).nume || '', laClient: true, repaus }, p);
   antrPers.ecran = 'nutritie-plan-alim';
   arataInapoiAntrPers();
   document.getElementById('clientaTitlu').innerText = tr('Planul alimentar', 'Meal plan');
@@ -9722,23 +10923,22 @@ function deschidePlanAlimClient() {
 }
 
 // Varianta aleasă intră în jurnalul de azi, aliment cu aliment (fără condimente și fără ce nu e în bază)
-async function noteazaVariantaPlanAlim(cod, vi, btn) {
-  const m = planAlimDeschis.continut.mese.find(x => x.cod === cod);
-  const v = m && m.variante[vi];
-  const lista = (v ? v.ingrediente : []).filter(i => !i.text && !i.negasit && Number(i.cantitate_g) > 0)
+async function noteazaVariantaPlanAlim(mi, vi, btn) {
+  const m = planAlimDeschis.continut.mese[mi], v = m && m.variante[vi], cod = m && m.cod;
+  const lista = (v ? ingredienteZiPlanAlim(m, v) : []).filter(i => !i.text && !i.negasit && Number(i.cantitate_g) > 0)
     .map(i => ({ produs: { nume: i.nume, marca: '', cod: null, imagine: '', kcal: i.kcal, proteine: i.proteine, carbo: i.carbo, grasimi: i.grasimi }, grame: Number(i.cantitate_g) }));
   if (!lista.length) return;
   btn.disabled = true;
   nutritie.zi = aziIsoAntrPers();
   const ok = await insereazaInJurnal(lista, cod);
   btn.disabled = false;
-  if (ok) showToast(tr(`✓ Notat la ${numeMasaPlan(cod)}`, `✓ Logged at ${numeMasaPlan(cod)}`));
+  if (ok) showToast(tr(`✓ Notat la ${numeMasaInPlan(planAlimDeschis.continut.mese, mi)}`, `✓ Logged at ${numeMasaInPlan(planAlimDeschis.continut.mese, mi)}`));
 }
 
 // Ingredientele variantei, o porție (condimentele fără cantitate rămân pe dinafară)
-function cumparaturiVariantaPlanAlim(cod, vi) {
-  const m = planAlimDeschis.continut.mese.find(x => x.cod === cod);
-  const lista = ((m && m.variante[vi]) || {}).ingrediente || [];
+function cumparaturiVariantaPlanAlim(mi, vi) {
+  const m = planAlimDeschis.continut.mese[mi], v = m && m.variante[vi];
+  const lista = v ? ingredienteZiPlanAlim(m, v) : [];
   puneIngredienteCumparaturi(lista.filter(i => !i.text && Number(i.cantitate_g) > 0), 1, tr(' (Rețete › Cumpărături)', ' (Recipes › Shopping)'));
 }
 
@@ -9748,7 +10948,7 @@ function cumparaturiSaptamanaPlanAlim() {
   planAlimDeschis.continut.mese.forEach(m => {
     const v = m.variante || [];
     for (let zi = 0; v.length && zi < 7; zi++) {
-      (v[zi % v.length].ingrediente || []).filter(i => !i.text && Number(i.cantitate_g) > 0).forEach(i => {
+      ingredienteZiPlanAlim(m, v[zi % v.length]).filter(i => !i.text && Number(i.cantitate_g) > 0).forEach(i => {
         const k = faraDiacritice(i.nume), x = total.get(k);
         if (x) x.cantitate_g += Number(i.cantitate_g); else total.set(k, Object.assign({}, i, { cantitate_g: Number(i.cantitate_g) }));
       });
@@ -9793,8 +10993,19 @@ function construiestePdfPlanAlim(plan, numeClient, culoare, logo) {
     ],
     margin: [0, 0, 0, 16]
   }, { text: plan.titlu, style: 'h1' }];
-  if (ob) continut.push({ text: tr(ob[3], ob[4]), color: gri, fontSize: 10.5, bold: true, margin: [0, 3, 0, 0] });
-  if (t) {
+  if (ob) continut.push({ text: tr(ob[3], ob[4]), color: gri, fontSize: 10.5, bold: true, alignment: 'center', margin: [0, 3, 0, 0] });
+  const antetTabel = x => ({ text: x, bold: true, color: '#ffffff', fillColor: culoare, margin: [3, 3, 3, 3] });
+  if (t && c.tinteRepaus) {
+    const randZi = (et, x) => [{ text: et, bold: true, margin: [3, 3, 3, 3] }, `~${x.kcal} kcal`, `${x.proteine} g`, `${x.carbo} g`, `${x.grasimi} g`];
+    continut.push({
+      table: { widths: ['*', 'auto', 'auto', 'auto', 'auto'], headerRows: 1, body: [
+        [tr('Tip zi', 'Day type'), tr('Calorii', 'Calories'), tr('Proteine', 'Protein'), tr('Carbohidrați', 'Carbs'), tr('Grăsimi', 'Fat')].map(antetTabel),
+        randZi(tr('Zi cu antrenament', 'Training day'), t), randZi(tr('Zi fără antrenament', 'Rest day'), c.tinteRepaus)
+      ] },
+      layout: { hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1', hLineWidth: () => 0.5, vLineWidth: () => 0.5, paddingTop: () => 3, paddingBottom: () => 3 },
+      margin: [0, 10, 0, 0], fontSize: 9
+    });
+  } else if (t) {
     continut.push({
       table: { widths: ['*', '*', '*'], body: [
         [celula(tr('Metabolism bazal', 'Basal metabolism'), rez ? `~${rez.bmr} kcal` : '–'), celula(tr('Menținere', 'Maintenance'), rez ? `~${rez.consum} kcal` : '–'), celula(tr('Țintă calorii', 'Calorie target'), `~${t.kcal} kcal`)],
@@ -9807,15 +11018,57 @@ function construiestePdfPlanAlim(plan, numeClient, culoare, logo) {
   const profil = [];
   if (pr.varsta || pr.inaltime || pr.greutate) profil.push({ text: [{ text: tr('Vârstă / Înălțime / Greutate: ', 'Age / Height / Weight: '), bold: true }, `${pr.varsta || '–'} ${tr('ani', 'years')} | ${pr.inaltime || '–'} cm | ${pr.greutate || '–'} kg`] });
   if (act) profil.push({ text: [{ text: tr('Nivel de activitate: ', 'Activity level: '), bold: true }, tr(act[1], act[2])] });
+  const excluderi = c.excluderi || (typeof DB !== 'undefined' && plan.client_id ? textRestrictii(restrictiiPlan(plan.client_id, c.preferinte)) : '');
+  if (excluderi) profil.push({ text: [{ text: tr('Alergii / excluderi: ', 'Allergies / exclusions: '), bold: true }, excluderi] });
   if (profil.length) continut.push({ text: tr('PROFIL', 'PROFILE'), style: 'h2' }, { ul: profil, margin: [6, 0, 0, 0] });
   if ((c.instructiuni || '').trim()) {
     continut.push({ text: tr('Instrucțiuni generale', 'General instructions'), style: 'h2' });
     parseazaTextPlan(c.instructiuni).forEach(r => continut.push({ text: (r.eticheta ? r.eticheta + ' ' : '') + r.rest, margin: [0, 0, 0, 3] }));
   }
-  c.mese.forEach(m => {
+  const inloc = inlocuiriEchivalente(plan);
+  if (inloc.length) {
+    continut.push({ text: tr('Înlocuiri echivalente', 'Equivalent swaps'), style: 'h2' });
+    inloc.forEach(x => continut.push({ text: [{ text: `${x.et}: `, bold: true }, { text: x.ref, bold: true }, ` = ${x.echiv.join(' = ')}`], margin: [0, 0, 0, 3] }));
+  }
+  // Suplimente: „Creatină — 5 g / zi — oricând” → supliment | doză | mod de administrare
+  // Coloanele se despart cu „—” (sau „ - ” scris de mână); liniuța scurtă rămâne în interval („200 – 300 mg”)
+  const suplimente = String(c.suplimente || '').split('\n').map(x => x.trim()).filter(Boolean).map(x => x.split(/\s+—\s+|\s+-\s+/));
+  if (suplimente.length) {
+    continut.push({ text: tr('Suplimente recomandate', 'Recommended supplements'), style: 'h2' }, {
+      table: { widths: ['auto', 'auto', '*'], headerRows: 1, body: [[tr('Supliment', 'Supplement'), tr('Doză zilnică', 'Daily dose'), tr('Mod de administrare', 'How to take')].map(antetTabel)]
+        .concat(suplimente.map(x => [{ text: x[0], bold: true }, x[1] || '', x.slice(2).join(' — ')])) },
+      layout: { hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1', hLineWidth: () => 0.5, vLineWidth: () => 0.5, paddingTop: () => 3, paddingBottom: () => 3 },
+      fontSize: 8.5
+    });
+  }
+  // Tabelul planurilor cu zile fără antrenament sau cu tranzit (formatul „Mix & Match”): o variantă pe rând
+  const tabel = !!c.tinteRepaus || c.mese.some(m => (m.variante || []).some(v => (v.tranzit || '').trim()));
+  const listaIngr = ing => ing.map(i => '- ' + (i.text ? i.nume : `${textCantitatePlan(i).replace(/&amp;/g, '&')} ${i.nume}`)).join('\n');
+  c.mese.forEach((m, mi) => {
     if (!(m.variante || []).length) return;
-    continut.push({ table: { widths: ['*'], body: [[{ text: numeMasaPlan(m.cod).toUpperCase(), bold: true, color: '#ffffff', fontSize: 11.5, margin: [6, 4, 6, 4] }]] },
+    continut.push({ table: { widths: ['*'], body: [[{ text: numeMasaInPlan(c.mese, mi).toUpperCase(), bold: true, color: '#ffffff', fontSize: 11.5, alignment: 'center', margin: [6, 4, 6, 4] }]] },
       layout: { fillColor: () => culoare, hLineWidth: () => 0, vLineWidth: () => 0 }, margin: [0, 16, 0, 6], headlineLevel: 1 });
+    if ((m.descriere || '').trim()) continut.push({ text: m.descriere.trim(), color: gri, alignment: 'center', margin: [0, 0, 0, 6] });
+    if (tabel) {
+      const cuTranzit = m.variante.some(v => (v.tranzit || '').trim());
+      const antet = [tr('Variantă', 'Option')].concat(c.tinteRepaus ? [tr('Zi fără antrenament', 'Rest day'), tr('Zi cu antrenament', 'Training day')] : [tr('Ingrediente', 'Ingredients')],
+        cuTranzit ? [tr('Tranzit / delegație', 'On the go')] : [], ['Kcal', 'Macros']);
+      const randuri = m.variante.map((v, vi) => {
+        const r = c.tinteRepaus ? ingredienteRepaus(plan, m, v) : v.ingrediente || [], totR = valoriVariantaPlan({ ingrediente: r }), totA = valoriVariantaPlan(v);
+        return [{ text: `${vi + 1}. ${v.titlu || ''}`, bold: true }].concat(c.tinteRepaus ? [listaIngr(r), listaIngr(v.ingrediente || [])] : [listaIngr(r)],
+          cuTranzit ? [String(v.tranzit || '').split('\n').map(x => x.trim()).filter(Boolean).map(x => '- ' + x).join('\n')] : [],
+          [c.tinteRepaus ? `${tr('Repaus', 'Rest')}: ${Math.round(totR.kcal)} kcal\n${tr('Antrenament', 'Training')}: ${Math.round(totA.kcal)} kcal` : `${Math.round(totA.kcal)} kcal`,
+            `${tr('Proteine', 'Protein')}: ${Math.round(totR.proteine)}g\n${tr('Carbo', 'Carbs')}: ${Math.round(totR.carbo)}g\n${tr('Grăsimi', 'Fat')}: ${Math.round(totR.grasimi)}g`]);
+      });
+      const nrCol = antet.length;
+      continut.push({
+        table: { headerRows: 1, dontBreakRows: true, widths: [62].concat(Array(nrCol - 3).fill('*'), [58, 54]), body: [antet.map(antetTabel)].concat(randuri) },
+        layout: { hLineColor: () => '#cbd5e1', vLineColor: () => '#cbd5e1', hLineWidth: () => 0.5, vLineWidth: () => 0.5, paddingTop: () => 4, paddingBottom: () => 4,
+          fillColor: (r) => r > 0 && r % 2 === 0 ? fundal : null },
+        fontSize: 8
+      });
+      return;
+    }
     m.variante.forEach((v, vi) => {
       const tot = valoriVariantaPlan(v);
       const bloc = [
@@ -9843,8 +11096,8 @@ function construiestePdfPlanAlim(plan, numeClient, culoare, logo) {
       margin: [40, 14, 40, 0]
     }),
     styles: {
-      h1: { fontSize: 20, bold: true, color: culoare },
-      h2: { fontSize: 11.5, bold: true, color: culoare, margin: [0, 14, 0, 5] }
+      h1: { fontSize: 20, bold: true, color: culoare, alignment: 'center' },
+      h2: { fontSize: 11.5, bold: true, color: culoare, alignment: 'center', margin: [0, 14, 0, 5] }
     },
     defaultStyle: { font: 'Roboto', fontSize: 9.5, color: '#1e293b', lineHeight: 1.2 }
   };
@@ -11924,6 +13177,8 @@ async function incarcaRezumatAcasa() {
   if (cardProprii && !antrPers.ecran) cardProprii.outerHTML = htmlAntrPersAcasa();
   const cardMasa = document.getElementById('acasaMasa');
   if (cardMasa && !antrPers.ecran) cardMasa.outerHTML = htmlMasaAcasa();
+  const obiceiuri = document.getElementById('acasaObiceiuri');
+  if (obiceiuri && !antrPers.ecran) obiceiuri.outerHTML = htmlObiceiuriAcasa();
 }
 
 // Link de acces expirat sau deja folosit: Supabase întoarce eroarea în adresă (#error_code=otp_expired). O citim și curățăm adresa.
@@ -11982,6 +13237,21 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 238, data: '2026-11-21',
+    client: [
+      ['Planul alimentar începe cu „Mesele de azi”: o variantă propusă pentru fiecare masă, cu „Înlocuiește” și „Notează”.', 'Your meal plan now starts with “Today’s meals”: one suggested option for each meal, with “Replace” and “Log”.'],
+      ['În zilele fără antrenament gramajele se schimbă singure (butoanele „Zi cu / fără antrenament”), iar pentru zilele în deplasare ai variante din supermarket.', 'On rest days the amounts change by themselves (the “Training / Rest day” buttons), and for days on the go you have supermarket options.'],
+      ['Obiceiuri zilnice: le bifezi pe Acasă › De făcut azi. Apa, mesele și proteinele se bifează singure. Poți bifa și ziua de ieri și îți poți adăuga obiceiurile tale.', 'Daily habits: tick them on Home › To do today. Water, meals and protein tick themselves. You can tick yesterday too and add your own habits.'],
+      ['Din planul alimentar ajungi direct la lista de cumpărături.', 'From your meal plan you go straight to your shopping list.']
+    ],
+    antrenor: [
+      ['Plan alimentar nou dintr-un singur ecran: alegi clientul, lipești lista lui de alimente și apeși „Generează planul”. Gramajele se potrivesc pe țintă, pentru zilele cu și fără antrenament.', 'A new meal plan from a single screen: pick the client, paste their food list and tap “Generate the plan”. Amounts fit the target, for training and rest days.'],
+      ['Planul se citește mai ușor: verificarea sus (totalul zilei, proteine puține, repetări), variantele se deschid la atingere, iar PDF-ul, linkul și restul sunt în „Mai mult”.', 'The plan is easier to read: the check at the top (day total, low protein, repeats), options open with a tap, and the PDF, the link and the rest are under “More”.'],
+      ['Importul din PDF citește și planurile cu tabel (repaus / antrenament / tranzit) și suplimentele. PDF-ul nou are tabelul, suplimentele, excluderile și înlocuirile echivalente.', 'PDF import now reads table plans (rest / training / on the go) and supplements. The new PDF has the table, supplements, exclusions and equivalent swaps.'],
+      ['Rețetele tale intră în Plan nou (bifezi „Potrivită pentru”), iar o variantă din plan se poate salva ca rețetă.', 'Your recipes go into New plan (tick “Good for”), and an option from a plan can be saved as a recipe.'],
+      ['Obiceiuri în fișa clientului: din bibliotecă sau scrise de tine, cu zilele lor, pentru unul sau mai mulți clienți. Vezi respectarea pe 7 și 30 de zile și seria.', 'Habits in the client card: from the library or your own, with their days, for one or more clients. See the 7- and 30-day adherence and the streak.'],
+      ['De verificat: în ziua fără antrenament ținta scade cu 50 g carbohidrați (200 kcal); gramajele scad întâi la carbohidrați (cel mult 40%), apoi la grăsimi (cel mult 30%). Biblioteca de start din Plan nou are 74 de rețete noi, cu variante de tranzit.', 'To review: on rest days the target drops by 50 g carbs (200 kcal); amounts drop first on carbs (at most 40%), then on fats (at most 30%). The starter library in New plan has 74 new recipes, with on-the-go options.']
+    ] },
   { v: 237, data: '2026-11-20',
     client: [
       ['Antrenorul îți poate trimite în chat un produs recomandat. Atingi cardul și vezi produsul, apoi îl poți nota în jurnal.', 'Your trainer can send you a recommended product in chat. Tap the card to see it, then add it to your log.']
@@ -12247,7 +13517,7 @@ const NOUTATI = [
     antrenor: [
       ['Planuri alimentare (meniu › Planuri alimentare): țintele se calculează din profilul clientului, iar cu „Potrivește gramajele” cantitățile se ajustează singure la țintă. Când înlocuiești un aliment, aplicația păstrează aceeași cantitate de proteine sau carbohidrați.', 'Meal plans (menu › Meal plans): the targets are worked out from the client’s profile, and “Fit the amounts” adjusts the quantities to the target for you. When you swap a food, the app keeps the same amount of protein or carbs.'],
       ['Un plan fără client rămâne șablon. Cu „Folosește pentru alt client” îl copiezi și gramajele se recalculează pentru noul client. Verifică sexul la „Profil și ținte”, pentru că fișa nu îl are.', 'A plan without a client stays a template. “Use for another client” copies it and recalculates the amounts for the new client. Check the sex under “Profile and targets”, since the client card doesn’t have it.'],
-      ['Ai deja planul făcut cu ChatGPT sau Gemini? „Importă din text” îl preia, iar „Copiază promptul pentru AI” îți dă formatul de cerut. Alimentele negăsite în bază apar cu roșu: atingi rândul și alegi alimentul.', 'Already made the plan with ChatGPT or Gemini? “Import from text” brings it in, and “Copy the AI prompt” gives you the format to ask for. Foods not found in the database show in red: tap the row and pick the food.'],
+      ['Ai deja planul făcut cu ChatGPT sau Gemini? „Importă din text” îl preia, iar butoanele Gemini și ChatGPT copiază promptul cu formatul de cerut. Alimentele negăsite în bază apar cu roșu: atingi rândul și alegi alimentul.', 'Already made the plan with ChatGPT or Gemini? “Import from text” brings it in, and the Gemini and ChatGPT buttons copy the prompt with the format to ask for. Foods not found in the database show in red: tap the row and pick the food.'],
       ['Clientul vede planul în aplicație. Clienților fără aplicație le trimiți linkul sau PDF-ul.', 'The client sees the plan in the app. For clients without the app, send the link or the PDF.']
     ] },
   { v: 186, data: '2026-11-11',
@@ -12725,6 +13995,8 @@ const MODALE_INAPOI = [
   ['modalFisaObiectiveBackdrop', () => inchideEditorFisa()],
   ['modalNoutatiBackdrop', () => inchideNoutati()],
   ['modalPozaProfilBackdrop', () => inchideFoaiePoza()],
+  ['modalPlanAlimActiuniBackdrop', () => inchideActiuniPlanAlim()],
+  ['modalObiceiBackdrop', () => inchideFoaieObicei()],
   ['modalSetariBackdrop', () => inchideFoaieSetari()]
 ];
 let ignoraPopstateGarda = false;
@@ -15620,6 +16892,7 @@ function afiseazaFisaClientaInstant() {
   // Alt client: progresul se încarcă de la deschiderea fișei (închis), ca Progres să se deschidă instant, cu datele gata.
   // La reîmprospătarea aceluiași client se reîncarcă doar dacă e deschis.
   incarcaProgresFisa(document.getElementById('progresFisaContinut').dataset.client !== client.id);
+  incarcaObiceiuriFisa();
   filtreazaIstoricFisaInstant();
 }
 
@@ -19607,6 +20880,8 @@ trageInJosCaSaInchizi(document.getElementById('cardNoutati'), inchideNoutati, '.
 trageInJosCaSaInchizi(document.getElementById('cardProgresEx'), inchideProgresExercitiu, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardObiectiv'), inchideFoaieObiectiv, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardPozaProfil'), inchideFoaiePoza);
+trageInJosCaSaInchizi(document.getElementById('cardPlanAlimActiuni'), inchideActiuniPlanAlim);
+trageInJosCaSaInchizi(document.getElementById('cardObicei'), inchideFoaieObicei, '.fisa-scurta-maner, .incasare-foaie-titlu');
 trageInJosCaSaInchizi(document.getElementById('cardSetari'), inchideFoaieSetari, '.fisa-scurta-maner, .incasare-foaie-titlu');
 
 function salveazaModificareIncasare() {
@@ -21882,7 +23157,7 @@ const RESTRICTII_ALIMENTARE = [
 // Restricțiile din fișa clientului care lovesc alimentul (nume scris + alimentul din bază): [{ id, ro, en }]
 // nota: textul liber („ciuperci, ardei”), fiecare element căutat după rădăcină
 function restrictiiAliment(i, restrictii, nota) {
-  const libere = String(nota || '').split(/[,;\n]| si | and /).map(x => faraDiacritice(x).replace(/[^a-z ]/g, '').trim()).filter(x => x.length >= 3);
+  const libere = String(nota || '').split(/[,;\n/]| si | and /).map(x => faraDiacritice(x).replace(/[^a-z ]/g, '').trim()).filter(x => x.length >= 3);
   if ((!restrictii.length && !libere.length) || i.text) return [];
   const text = faraDiacritice(`${i.nume || ''} | ${i.aliment || ''}`);
   const loveste = r => {

@@ -7709,6 +7709,8 @@ details[open] > summary .summary-sageata {
 #modalProgresExBackdrop,
 #modalObiectivBackdrop,
 #modalPozaProfilBackdrop,
+#modalPlanAlimActiuniBackdrop,
+#modalObiceiBackdrop,
 #modalSetariBackdrop {
   position: fixed;
   inset: 0;
@@ -12169,6 +12171,7 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 
 /* Poza de profil, fereastra din Setări și codul QR al link-ului de înscriere se deschid din meniu: deasupra lui */
 #modalPozaProfilBackdrop,
+#modalPlanAlimActiuniBackdrop,
 #modalSetariBackdrop,
 #modalQrBackdrop {
   z-index: 10002;
@@ -13399,12 +13402,48 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-masa-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 0; }
 .plan-alim-procent { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); font-weight: 700; }
 .plan-alim-procent .plan-ex-input { width: 58px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
+/* Planurile alimentare pe stilul nou: formularele și variantele în carduri de sticlă (.lista-sticla), cu spațiu înăuntru */
+.plan-alim-sticla { padding: 14px; }
+/* Containerul e flex pe coloană cu înălțimea sertarului: cardurile de sticlă (overflow: hidden) nu se strâng, pagina derulează */
+#planuriAlimAntrenor > *,
+#reteteAntrenor > * { flex-shrink: 0; }
+.plan-alim-sticla + .plan-alim-sticla { margin-top: 10px; }
+/* Editorul planului: secțiuni pliate (rânduri ca în Setări), variante-rând care se deschid, „Mai mult” în fereastra de jos */
+.plan-alim-sageata { flex-shrink: 0; color: var(--m-muted); font-size: 1.1rem; transition: transform 0.15s ease; }
+.plan-alim-sectiune.deschis .plan-alim-sageata,
+.plan-alim-varianta.deschisa .plan-alim-var-rand .plan-alim-sageata { transform: rotate(90deg); }
+.plan-alim-sectiune-continut { padding: 4px 14px 14px; border-bottom: 1px solid var(--m-divider); }
+.plan-alim-masa-setari { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; }
+.plan-alim-verificare .profil-rand-eticheta { font-size: 0.85rem; font-weight: 600; line-height: 1.35; }
+.plan-alim-var-pliata { border-bottom: 1px solid var(--m-divider); }
+/* Butonul × al notificărilor e absolut în listele de sticlă; aici stă în rândul lui, lângă gramaj */
+.plan-alim-varianta .notificare-x { position: static; transform: none; flex-shrink: 0; }
+.plan-alim-varianta .notificare-x:active { transform: scale(0.9); }
+.plan-alim-var-rand { flex: 1; width: 100%; box-sizing: border-box; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 0; background: none; color: var(--m-text); font: inherit; text-align: left; cursor: pointer; }
+.plan-alim-varianta .plan-alim-var-rand { padding: 0; }
+.plan-alim-var-titlu { flex: 1; min-width: 0; font-weight: 700; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-alim-varianta.deschisa { border-bottom: 1px solid var(--m-divider); }
+.plan-alim-adauga .profil-rand-eticheta { color: var(--m-accent-text); }
+.plan-alim-total { margin: 0; }
+/* Obiceiurile: ecranul clientului (7 zile ca pastile) și rândurile din fișa antrenorului */
+.obicei-card { display: flex; flex-direction: column; gap: 6px; }
+.obicei-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.obicei-zile { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 4px; }
+.obicei-zi { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; border: 1px solid var(--m-border); border-radius: 12px; background: var(--m-btn); box-shadow: var(--m-float-sm); color: var(--m-text); font: inherit; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+.obicei-zi small { font-size: 0.65rem; font-weight: 600; color: var(--m-muted); }
+.obicei-zi.facut { background: rgba(21, 128, 61, 0.16); color: #15803d; }
+.obicei-zi.liber { opacity: 0.4; cursor: default; }
+.obicei-fisa-rand .profil-rand-eticheta small { display: block; font-size: 0.74rem; font-weight: 500; color: var(--m-muted); }
+.obicei-fisa-rand .profil-rand-valoare { max-width: 60%; font-weight: 700; color: var(--m-text); }
+.obicei-fisa-rand .profil-rand-valoare small { font-weight: 500; color: var(--m-muted); }
+.obiceiuri-toate { width: 100%; border: 0; background: none; font: inherit; text-align: left; }
 .plan-alim-varianta { display: flex; flex-direction: column; gap: 6px; }
 .plan-alim-var-cap { display: flex; align-items: center; gap: 8px; }
-.plan-alim-var-nr { font-weight: 800; color: var(--primary); font-size: 0.82rem; }
+.plan-alim-var-nr { font-weight: 800; color: var(--primary); font-size: 0.82rem; white-space: nowrap; }
 .plan-alim-kcal { margin-left: auto; font-size: 0.88rem; color: #15803d; white-space: nowrap; }
 .plan-alim-kcal.departe { color: #b45309; }
 .plan-alim-kcal small { font-weight: 700; }
+.plan-alim-kcal .plan-alim-kcal-repaus { display: block; text-align: right; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
 .plan-alim-ai { font-style: italic; }
 .plan-alim-ingr { gap: 6px; }
 .plan-alim-ingr-nume { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 0; border: none; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
