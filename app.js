@@ -9368,15 +9368,14 @@ function randeazaPlanAlim() {
   if (planAlim.lista === null) return void (el.innerHTML = titlu + `<div class="progres-gol">${tr('Planurile nu sunt disponibile acum. Verifică internetul.', 'Meal plans are not available right now. Check your internet.')}</div>`);
   const rand = p => {
     const client = p.client_id ? numeClientPlan(p.client_id) : '';
-    const nrVar = (p.continut.mese || []).reduce((s, m) => s + (m.variante || []).length, 0);
-    return randPlanAlim(`deschidePlanAlim('${p.id}')`, 'plan', escAttr(client || p.titlu),
-      `${client ? escAttr(p.titlu) + ' · ' : ''}${p.continut.tinte ? `${p.continut.tinte.kcal} kcal · ` : ''}${nrVar} ${tr('variante', 'options')} · ${formatZiLuna(new Date(p.updated_at))}`);
+    const maiMulte = client && planAlim.lista.filter(x => x.client_id === p.client_id).length > 1;
+    return randPlanAlim(`deschidePlanAlim('${p.id}')`, 'plan', escAttr(client || p.titlu), maiMulte ? escAttr(p.titlu) : '');
   };
   const aleClientilor = planAlim.lista.filter(p => p.client_id), sabloane = planAlim.lista.filter(p => !p.client_id);
   el.innerHTML = `${titlu}
     <div class="lista-sticla">
       ${randPlanAlim('planNouGenerat()', 'nou', tr('Plan nou', 'New plan'))}
-      ${randPlanAlim("planAlim.vedere = 'import'; randeazaPlanAlim()", 'importa', tr('Importă', 'Import'))}
+      ${randPlanAlim("planAlim.vedere = 'import'; planAlim.aiDeschis = null; planAlim.importManual = false; randeazaPlanAlim()", 'importa', tr('Importă', 'Import'))}
       ${randPlanAlim('planNouAlim()', 'gol', tr('Plan gol', 'Blank plan'))}
     </div>
     <div class="lista-titlu">${tr('Planurile clienților', 'Client plans')}</div>
@@ -10343,18 +10342,40 @@ async function aplicaTintePlanLaClient(btn) {
 }
 
 // ---- Import din text (răspunsul unui AI sau textul copiat dintr-un plan) ----
+// Clientul ales pe pagina Importă: profilul și țintele din ultimul lui plan (altfel din fișă), ce nu mănâncă și ce preferă.
+//   Se pregătește la alegere, ca promptul să fie gata în aceeași atingere cu deschiderea chatului (copierea o cere)
+async function schimbaClientImport(id) {
+  if (!id) { planAlim.importClient = null; return randeazaPlanAlim(); }
+  const ultim = (planAlim.lista || []).find(x => x.client_id === id);
+  const c = ultim ? ultim.continut : null, pref = (c && c.preferinte) || {};
+  const profil = c ? c.profil : await profilDinClient(id);
+  const tinte = c && c.tinte ? c.tinte : tinteDinProfil(profil);
+  planAlim.importClient = { id, nume: numeClientPlan(id), profil, tinte, tinteRepaus: (c && c.tinteRepaus) || (tinte && tinteRepausDin(tinte)),
+    fara: [textRestrictii(restrictiiClient(id)), pref.nota].filter(Boolean).join(', '), prefera: String(pref.lista || '').split(/(?:ce sa nu fie|să nu fie|ce să nu fie)/i)[0].trim() };
+  randeazaPlanAlim();
+}
+
 function promptAiPlanAlim() {
-  const p = planAlim.plan && planAlim.vedere === 'editor' ? planAlim.plan : null;
-  const t = p && p.continut.tinte;
-  const fara = p ? textRestrictii(restrictiiClient(p.client_id)) : '';
+  const k = planAlim.importClient, pr = k && k.profil;
+  const ob = pr && OBIECTIVE_PLAN.find(o => o[0] === pr.obiectiv);
+  const zi = (t, en) => t ? (en ? `${t.kcal} kcal ${t.proteine} g protein, ${t.carbo} g carbs, ${t.grasimi} g fat` : `${t.kcal} kcal ${t.proteine} g proteine, ${t.carbo} g carbohidrați, ${t.grasimi} g grăsimi`)
+    : (en ? '<kcal> kcal <g> g protein, <g> g carbs, <g> g fat' : '<kcal> kcal <g> g proteine, <g> g carbohidrați, <g> g grăsimi');
+  const sex = en => pr && pr.sex ? (pr.sex === 'f' ? (en ? 'female' : 'feminin') : (en ? 'male' : 'masculin')) : (en ? '<female or male>' : '<feminin sau masculin>');
+  const camp = (v, ph) => v ? v : ph;
+  const antet = en => `${en ? 'TITLE' : 'TITLU'}: <${en ? 'plan title' : 'titlul planului'}>
+CLIENT: ${k ? k.nume : (en ? '<client name>' : '<numele clientului>')}
+${en ? 'PROFILE' : 'PROFIL'}: ${sex(en)} | ${camp(pr && pr.varsta, en ? '<age>' : '<vârsta>')} ${en ? 'years' : 'ani'} | ${camp(pr && pr.inaltime, en ? '<height>' : '<înălțimea>')} cm | ${camp(pr && pr.greutate, en ? '<weight>' : '<greutatea>')} kg | ${ob ? (en ? ob[4] : ob[3]) : (en ? '<goal>' : '<obiectivul>')}
+${en ? 'TRAINING DAY' : 'ZI CU ANTRENAMENT'}: ${zi(k && k.tinte, en)}
+${en ? 'REST DAY' : 'ZI FĂRĂ ANTRENAMENT'}: ${zi(k && k.tinteRepaus, en)}`;
+  const despre = en => k ? [
+    k.fara ? (en ? `The client doesn’t eat (allergies / restrictions): ${k.fara}. Do not use these foods at all.` : `Clientul nu mănâncă (alergii / restricții): ${k.fara}. Nu folosi deloc aceste alimente.`) : '',
+    k.prefera ? (en ? `The client likes: ${k.prefera}. Build most options from these.` : `Clientului îi plac: ${k.prefera}. Fă majoritatea variantelor din ele.`) : ''
+  ].filter(Boolean).map(x => '\n' + x).join('') : '';
   return tr(`Fă (sau convertește, dacă îți dau unul) un plan alimentar și scrie-l EXACT în formatul de mai jos, fără tabele și fără alt text.
 Nu-mi pune întrebări: dacă îți lipsesc date, presupune un adult activ cu plan de menținere și scrie planul direct.
 Pune tot planul într-un singur bloc de cod (între \`\`\`), ca să-l pot copia dintr-o atingere.
 
-TITLU: <titlul planului>
-CLIENT: <numele clientului>
-PROFIL: <feminin sau masculin> | <vârsta> ani | <înălțimea> cm | <greutatea> kg | <obiectivul>
-ȚINTE: Proteine: <g> g | Carbohidrați: <g> g | Grăsimi: <g> g
+${antet(false)}
 # MIC DEJUN
 ## <numele variantei>
 - <aliment> — <cantitate> g
@@ -10367,16 +10388,15 @@ Tranzit: <ce cumpără din supermarket când e plecat, separate prin ;>
 # PRÂNZ
 # GUSTARE 2
 # CINĂ
+# SUPLIMENTE
+<nume> — <doză> — <când și cum>
 
-Reguli: 3–8 variante pe masă; cantitățile în grame (pastele, orezul, quinoa, mălaiul și carnea cântărite crude); ouăle și feliile în buc; alimente simple, ușor de găsit în magazinele locale. Nu scrie calorii: le calculează aplicația.${t ? `\nȚinte pe zi: ${t.kcal} kcal, ${t.proteine} g proteine, ${t.carbo} g carbohidrați, ${t.grasimi} g grăsimi.` : ''}${fara ? `\nClientul nu mănâncă (alergii / restricții): ${fara}. Nu folosi deloc aceste alimente.` : ''}`,
+Reguli: 3–8 variante pe masă; gramajele pentru ziua cu antrenament (aplicația le micșorează singură în zilele fără antrenament); cantitățile în grame (pastele, orezul, quinoa, mălaiul și carnea cântărite crude); ouăle și feliile în buc; alimente simple, ușor de găsit în magazinele locale. Nu scrie calorii pe variante: le calculează aplicația. Secțiunea # SUPLIMENTE doar dacă planul pe care ți-l dau are suplimente; altfel o lași afară.${despre(false)}`,
   `Make (or convert, if I give you one) a meal plan and write it EXACTLY in the format below, with no tables and no other text.
 Don’t ask me questions: if details are missing, assume an active adult on a maintenance plan and write the plan straight away.
 Put the whole plan in a single code block (between \`\`\`) so I can copy it in one tap.
 
-TITLE: <plan title>
-CLIENT: <client name>
-PROFILE: <female or male> | <age> years | <height> cm | <weight> kg | <goal>
-TARGETS: Protein: <g> g | Carbs: <g> g | Fat: <g> g
+${antet(true)}
 # BREAKFAST
 ## <option name>
 - <food> — <amount> g
@@ -10389,11 +10409,12 @@ Travel: <what to buy at the supermarket when away, separated by ;>
 # LUNCH
 # SNACK 2
 # DINNER
+# SUPPLEMENTS
+<name> — <dose> — <when and how>
 
-Rules: 3–8 options per meal; amounts in grams (pasta, rice, quinoa and meat weighed raw); eggs and slices in pcs; simple, easy-to-find foods. Do not write calories: the app calculates them.${t ? `\nDaily targets: ${t.kcal} kcal, ${t.proteine} g protein, ${t.carbo} g carbs, ${t.grasimi} g fat.` : ''}${fara ? `\nThe client doesn’t eat (allergies / restrictions): ${fara}. Do not use these foods at all.` : ''}`);
+Rules: 3–8 options per meal; amounts for the training day (the app lowers them on rest days); amounts in grams (pasta, rice, quinoa and meat weighed raw); eggs and slices in pcs; simple, easy-to-find foods. Do not write calories per option: the app calculates them. Include # SUPPLEMENTS only if the plan I give you has supplements; otherwise leave it out.${despre(true)}`);
 }
 
-// Copierea pornește în aceeași atingere, înainte de deschidere (altfel browserul o blochează)
 // ChatGPT primește promptul în adresă și îl pune singur în chat (fără să-l trimită: apeși tu Trimite);
 // Gemini n-are așa ceva, deci promptul se copiază și îl lipești. Copierea pornește în aceeași atingere (altfel browserul o blochează)
 function deschideAiPlanAlim(chat) {
@@ -10406,14 +10427,32 @@ function deschideAiPlanAlim(chat) {
     window.open('https://gemini.google.com/app', '_blank', 'noopener');
     showToast(tr('✓ Prompt copiat: lipește-l în Gemini.', '✓ Prompt copied: paste it into Gemini.'));
   }
+  // La întoarcere, pasul următor e evident: rândul „Lipește răspunsul” spune ce copiezi din chat
+  planAlim.aiDeschis = chat === 'chatgpt' ? 'ChatGPT' : 'Gemini';
+  randeazaPlanAlim();
 }
 
-// Ca Planuri alimentare: rânduri de sticlă. Întâi planul gata făcut (fișier), apoi chatul cu AI, la final textul și „Importă”
+// Răspunsul chatului se ia din clipboard și se importă direct; fără acces la clipboard (sau gol), apare câmpul de text
+async function lipesteRaspunsAi() {
+  let text = '';
+  try { text = await navigator.clipboard.readText(); } catch (e) { /* browserul nu dă voie: rămâne câmpul */ }
+  if (!String(text).trim()) {
+    planAlim.importManual = true;
+    randeazaPlanAlim();
+    const ta = document.getElementById('planAlimImport');
+    if (ta) ta.focus();
+    return;
+  }
+  importaPlanAlim(null, text);
+}
+
+// Ca Planuri alimentare: rânduri de sticlă. Întâi planul gata făcut (fișier), apoi chatul cu AI pentru clientul ales, la final răspunsul lui
 function htmlImportPlanAlim() {
   const rand = (icon, titlu, desc, onclick) => `<div class="drawer-nav-card" onclick="${onclick}">
     <div class="drawer-nav-card-left"><div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONITE_PLAN_ALIM[icon]}</svg></div>
-      <div><div class="drawer-nav-title">${titlu}</div><div class="drawer-nav-desc">${desc}</div></div></div>
+      <div><div class="drawer-nav-title">${titlu}</div>${desc ? `<div class="drawer-nav-desc">${desc}</div>` : ''}</div></div>
     <div class="drawer-nav-arrow">›</div></div>`;
+  const k = planAlim.importClient, clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
   return `${titluPlanAlim(tr('Importă', 'Import'))}
     <div class="lista-sticla">
       <label class="drawer-nav-card">
@@ -10423,16 +10462,21 @@ function htmlImportPlanAlim() {
         <input type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden onchange="incarcaFisierPlanAlim(this)">
       </label>
     </div>
-    <div class="lista-titlu">${tr('Sau fă-l cu AI', 'Or make it with AI')}</div>
+    <div class="lista-titlu">${tr('Generează cu AI', 'Generate with AI')}</div>
     <div class="lista-sticla">
-      ${rand('ai', 'ChatGPT', tr('promptul e gata scris în chat', 'the prompt is already in the chat'), "deschideAiPlanAlim('chatgpt')")}
-      ${rand('ai', 'Gemini', tr('promptul se copiază, tu îl lipești', 'the prompt is copied, you paste it'), "deschideAiPlanAlim('gemini')")}
+      <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<select class="plan-ex-input" onchange="schimbaClientImport(this.value)">
+        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
+        ${clienti.map(x => `<option value="${escAttr(x.id)}"${k && x.id === k.id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
+      </select></label></div>
+      ${rand('ai', 'ChatGPT', '', "deschideAiPlanAlim('chatgpt')")}
+      ${rand('ai', 'Gemini', '', "deschideAiPlanAlim('gemini')")}
+      ${rand('importa', tr('Lipește aici', 'Paste here'), tr(`răspunsul generat de ${planAlim.aiDeschis || 'AI'}`, `the answer from ${planAlim.aiDeschis || 'the AI'}`), 'lipesteRaspunsAi()')}
     </div>
-    <div class="lista-titlu">${tr('Textul planului', 'The plan text')}</div>
-    <div class="lista-sticla plan-alim-sticla obiectiv-form">
-      <textarea id="planAlimImport" class="plan-ex-textarea" rows="10" maxlength="60000" placeholder="${tr('Lipește aici răspunsul din chat. Textul fișierului încărcat apare tot aici.', 'Paste the chat’s answer here. An uploaded file’s text shows here too.')}" oninput="planAlim.importText = this.value">${escAttr(planAlim.importText)}</textarea>
+    ${planAlim.importManual || planAlim.importText ? `<div class="lista-sticla plan-alim-sticla obiectiv-form plan-alim-import-text">
+      <textarea id="planAlimImport" class="plan-ex-textarea" rows="10" maxlength="60000" placeholder="${tr('Lipește aici răspunsul generat de AI', 'Paste the AI’s answer here')}" oninput="planAlim.importText = this.value">${escAttr(planAlim.importText)}</textarea>
       <button type="button" class="btn" onclick="importaPlanAlim(this)">${tr('Importă', 'Import')}</button>
-    </div>`;
+      <button type="button" class="btn btn-clear" onclick="planAlim.importManual = false; planAlim.importText = ''; randeazaPlanAlim()">${tr('Anulează', 'Cancel')}</button>
+    </div>` : ''}`;
 }
 
 // ---- Plan vechi din fișier: textul ajunge în câmpul de import (îl vezi și îl corectezi), apoi „Importă” ca la text ----
@@ -10447,10 +10491,7 @@ async function incarcaFisierPlanAlim(input) {
     const text = nume.endsWith('.pdf') || f.type === 'application/pdf' ? await textDinPdf(buf)
       : nume.endsWith('.docx') ? await textDinDocx(buf) : new TextDecoder().decode(buf);
     if (!text.trim()) return showToast(tr('Nu am găsit text în fișier. Dacă e o poză scanată, folosește promptul pentru AI.', 'No text found in the file. If it’s a scanned image, use the AI prompt.'), 'error');
-    planAlim.importText = text.slice(0, 60000);
-    const ta = document.getElementById('planAlimImport');
-    if (ta) ta.value = planAlim.importText;
-    showToast(tr('✓ Textul planului e în câmp. Verifică-l și apasă „Importă”.', '✓ The plan text is in the box. Check it and tap “Import”.'));
+    importaPlanAlim(null, text.slice(0, 60000));
   } catch (e) {
     console.error('Plan din fișier:', e);
     showToast(tr('Nu am putut citi fișierul. Merge cu PDF și Word (.docx).', 'Could not read the file. PDF and Word (.docx) work.'), 'error');
@@ -10851,14 +10892,20 @@ function portieDupaUnitate(portii, unitate) {
   return p ? Number(p.g) || null : null;
 }
 
-async function importaPlanAlim(btn) {
-  const text = (document.getElementById('planAlimImport').value || '').trim();
+// text = din fișier sau din clipboard; fără el, din câmp. Ce nu se poate citi ca plan rămâne în câmp, de corectat
+async function importaPlanAlim(btn, text) {
+  text = String(text || (document.getElementById('planAlimImport') || {}).value || '').trim();
+  if (!text) return showToast(tr('Lipește întâi planul.', 'Paste the plan first.'), 'error');
   const plan = parseazaPlanAlimText(text);
-  if (!plan.continut.mese.some(m => m.variante.some(v => v.ingrediente.some(i => i.cant)))) return showToast(tr('Nu am găsit mese și alimente. Folosește formatul din prompt (# MIC DEJUN, ## variantă, - aliment — 100 g).', 'No meals or foods found. Use the prompt format (# BREAKFAST, ## option, - food — 100 g).'), 'error');
-  btn.disabled = true;
-  btn.innerText = tr('Caut alimentele în bază...', 'Looking up the foods...');
+  if (!plan.continut.mese.some(m => m.variante.some(v => v.ingrediente.some(i => i.cant)))) {
+    planAlim.importText = text;
+    if (!btn) randeazaPlanAlim();
+    return showToast(tr('Nu am găsit un plan în text.', 'No plan found in the text.'), 'error');
+  }
+  if (btn) { btn.disabled = true; btn.innerText = tr('Caut alimentele în bază...', 'Looking up the foods...'); } else showToast(tr('Caut alimentele în bază...', 'Looking up the foods...'));
   const ingrediente = await rezolvaIngredientePlan(plan);
-  btn.disabled = false;
+  if (btn) btn.disabled = false;
+  planAlim.importManual = false;
   const negasite = ingrediente.filter(i => i.negasit).length, deVerificat = ingrediente.filter(i => i.verifica).length;
   planAlim.plan = plan;
   planAlim.importText = '';
@@ -13362,6 +13409,12 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 240, data: '2026-11-21',
+    client: [],
+    antrenor: [
+      ['Importă, „Generează cu AI”: alegi clientul, iar promptul pentru ChatGPT sau Gemini știe profilul, țintele, ce nu mănâncă și ce preferă.', 'Import, “Generate with AI”: pick the client, and the ChatGPT or Gemini prompt knows their profile, targets, what they don’t eat and what they like.'],
+      ['Copiezi planul din chat și atingi „Lipește aici”: se importă direct, fără să mai lipești textul într-un câmp.', 'Copy the plan from the chat and tap “Paste here”: it imports straight away, no text box needed.']
+    ] },
   { v: 239, data: '2026-11-21',
     client: [],
     antrenor: [
