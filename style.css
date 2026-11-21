@@ -13422,8 +13422,10 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-lipeste { margin-top: 10px; }
 .plan-alim-cauta-camp { position: relative; }
 .plan-alim-cauta-camp .plan-alim-cauta { padding-right: 36px; }
-.plan-alim-cauta-x { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); display: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--m-divider); color: var(--m-muted); font: inherit; font-size: 1rem; line-height: 1; cursor: pointer; }
-.plan-alim-cauta:not(:placeholder-shown) + .plan-alim-cauta-x { display: block; }
+/* × de golire: bulă mică de sticlă, cu semnul desenat (centrat exact, indiferent de font) */
+.plan-alim-cauta-x { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); display: none; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--m-border); border-radius: 50%; background: var(--m-btn); box-shadow: var(--m-float-sm); color: var(--m-muted); cursor: pointer; }
+.plan-alim-cauta-x svg { width: 12px; height: 12px; }
+.plan-alim-cauta:not(:placeholder-shown) + .plan-alim-cauta-x { display: flex; }
 .plan-alim-lipeste-btn { margin-top: 10px; padding: 0; color: var(--m-accent-text); font-size: 0.8rem; }
 .plan-alim-masa-setari { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; }
 .plan-alim-verificare .profil-rand-eticheta { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 700; line-height: 1.3; }

@@ -9555,7 +9555,7 @@ function htmlGenereazaPlanAlim() {
   // × apare cât e ceva scris (CSS, :placeholder-shown) și golește căutarea
   const cauta = (tip, camp, ph) => `<div class="plan-alim-cauta-camp"><input type="text" enterkeyhint="search" class="plan-ex-input plan-alim-cauta" value="${escAttr(g[camp] || '')}" placeholder="${bib ? ph : tr('Se încarcă biblioteca...', 'Loading the library...')}" ${bib ? '' : 'disabled'}
       oninput="planAlim.gen.${camp} = this.value; document.getElementById('genRezultate_${tip}').innerHTML = htmlRezultateGen('${tip}')">
-      <button type="button" class="plan-alim-cauta-x" aria-label="${tr('Golește', 'Clear')}" onclick="planAlim.gen.${camp} = ''; randeazaPlanAlim()">×</button></div>
+      <button type="button" class="plan-alim-cauta-x" aria-label="${tr('Golește', 'Clear')}" onclick="planAlim.gen.${camp} = ''; randeazaPlanAlim()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div id="genRezultate_${tip}" class="antr-pers-activitati plan-alim-alimente">${htmlRezultateGen(tip)}</div>`;
   // Lipirea: la Preferă, lista întreagă (ce e după „Ce să nu fie deloc:” trece la Nu mănâncă); la Nu mănâncă, totul e de scos
   const lipeste = (tip, ph) => g.lipeste === tip
@@ -9597,7 +9597,7 @@ function htmlGenereazaPlanAlim() {
       ${sectiunePref('genNu', tr('Nu mănâncă', 'Doesn’t eat'), '')}
     </div>
     <div class="nutritie-adauga-jos plan-alim-jos">
-      <button type="button" class="btn" ${bib && rez ? '' : 'disabled'} onclick="genereazaPlanAlim()">${tr('Generează planul', 'Generate the plan')}</button>
+      <button type="button" class="btn" onclick="genereazaPlanAlim()">${tr('Generează planul', 'Generate the plan')}</button>
     </div>`;
 }
 
@@ -9706,7 +9706,15 @@ function alegeVariantePlan(plan, m, n, folosite, nu, restr, tranzit, prefera) {
 
 function genereazaPlanAlim() {
   const g = planAlim.gen, rez = (g.dinJurnal && tinteDinJurnalPlan(g.client_id, g.profil)) || tinteDinProfil(g.profil);
-  if (!rez || !planAlim.biblioteca) return;
+  if (!planAlim.biblioteca) return showToast(tr('Se încarcă biblioteca, mai încearcă o dată.', 'The library is loading, try again.'));
+  // Butonul nu e niciodată mort: spune ce lipsește din profil și duce acolo
+  if (!rez) {
+    const pr = g.profil, lipsa = [[!pr.sex, tr('sexul', 'sex')], [!pr.varsta, tr('vârsta', 'age')], [!pr.inaltime, tr('înălțimea', 'height')], [!pr.greutate, tr('greutatea', 'weight')]].filter(x => x[0]).map(x => x[1]);
+    const el = document.querySelector('#planuriAlimAntrenor .calculator-tinte');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const si = cuv => lipsa.length > 1 ? lipsa.slice(0, -1).join(', ') + ` ${cuv} ` + lipsa[lipsa.length - 1] : lipsa[0];
+    return showToast(tr(`Completează ${si('și')}.`, `Fill in ${si('and')}.`), 'error');
+  }
   const plan = planAlimGol(), c = plan.continut;
   plan.client_id = g.client_id || null;
   if (plan.client_id) plan.titlu = tr(`Plan alimentar — ${numeClientPlan(plan.client_id)}`, `Meal plan — ${numeClientPlan(plan.client_id)}`).slice(0, 120);
