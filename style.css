@@ -11547,7 +11547,8 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 }
 
 .antr-pers-campuri .plan-ex-input,
-.antr-pers-adauga .plan-ex-input {
+.antr-pers-adauga .plan-ex-input,
+.plan-alim-cauta {
   font-size: 0.88rem;
   padding: 7px 8px;
   min-width: 0;
@@ -13266,7 +13267,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .cumparaturi-rand:first-child { border-top: none; }
 .cumparaturi-rand small { color: var(--text-muted); }
 .cumparaturi-rand.bifat span { text-decoration: line-through; color: var(--text-muted); }
-.plan-alim-fisier { display: flex; justify-content: center; width: 100%; margin: 6px 0 10px; cursor: pointer; }
 .plan-alim-zi { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: rgba(245, 176, 65, 0.18); color: #9a6408; white-space: nowrap; }
 .plan-alim-zi.is-tot { background: rgba(21, 128, 61, 0.12); color: #15803d; }
 .cumparaturi-raion {margin: 12px 0 2px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
@@ -13395,7 +13395,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 [data-theme="dark"] .fisa-scurta-alerta { color: #ef4444; background: rgba(220, 38, 38, 0.16); border-color: rgba(239, 68, 68, 0.45); }
 
 /* Planuri alimentare: editorul antrenorului (meniu), vederea clientului (Nutriție) și linkul fără cont */
-.plan-alim-actiuni { margin: 0; }
 .plan-alim-obiective .antr-pers-activitate { flex: 1 1 40%; }
 .plan-alim-tinte { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .plan-alim-tinte label { font-size: 0.68rem; }
@@ -13407,14 +13406,31 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 /* Containerul e flex pe coloană cu înălțimea sertarului: cardurile de sticlă (overflow: hidden) nu se strâng, pagina derulează */
 #planuriAlimAntrenor > *,
 #reteteAntrenor > * { flex-shrink: 0; }
+/* Zona care derulează taie tot ce iese din ea: loc pe laterale (cât marginea sertarului), ca umbrele cardurilor și ale butoanelor să nu pară tăiate */
+#planuriAlimAntrenor,
+#reteteAntrenor { padding: 0 12px; margin: 0 -12px; }
 .plan-alim-sticla + .plan-alim-sticla { margin-top: 10px; }
 /* Editorul planului: secțiuni pliate (rânduri ca în Setări), variante-rând care se deschid, „Mai mult” în fereastra de jos */
 .plan-alim-sageata { flex-shrink: 0; color: var(--m-muted); font-size: 1.1rem; transition: transform 0.15s ease; }
 .plan-alim-sectiune.deschis .plan-alim-sageata,
 .plan-alim-varianta.deschisa .plan-alim-var-rand .plan-alim-sageata { transform: rotate(90deg); }
 .plan-alim-sectiune-continut { padding: 4px 14px 14px; border-bottom: 1px solid var(--m-divider); }
+/* Generatorul, „Nu mănâncă”: alimentele scoase și rezultatele căutării, pastile mici care nu se întind pe rând */
+.plan-alim-alimente { margin: 8px 0 0; }
+.plan-alim-alimente:empty { display: none; }
+.plan-alim-alimente .antr-pers-activitate { flex: 0 0 auto; padding: 6px 10px; }
+.plan-alim-lipeste { margin-top: 10px; }
+.plan-alim-lipeste-btn { margin-top: 10px; padding: 0; color: var(--m-accent-text); font-size: 0.8rem; }
 .plan-alim-masa-setari { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; }
-.plan-alim-verificare .profil-rand-eticheta { font-size: 0.85rem; font-weight: 600; line-height: 1.35; }
+.plan-alim-verificare .profil-rand-eticheta { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 700; line-height: 1.3; }
+.plan-alim-verificare small { font-size: 0.78rem; font-weight: 500; color: var(--m-muted); overflow-wrap: anywhere; }
+.plan-alim-verificare small.profil-rand-rosu { color: #b91c1c; }
+[data-theme="dark"] .plan-alim-verificare small.profil-rand-rosu { color: #f87171; }
+/* Semnul din stânga problemei (portocaliu: de văzut, roșu: nu mănâncă, verde: totul e bine) și bifa „Corect” */
+.plan-alim-semn { flex-shrink: 0; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 0.8rem; font-weight: 800; color: #b45309; background: rgba(245, 176, 65, 0.2); }
+.plan-alim-semn.rosu { color: #b91c1c; background: rgba(185, 28, 28, 0.12); }
+.plan-alim-semn.bine { color: #15803d; background: rgba(21, 128, 61, 0.12); }
+.plan-alim-corect { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--m-border); background: var(--m-btn); box-shadow: var(--m-float-sm); color: #15803d; font: inherit; font-weight: 800; cursor: pointer; }
 .plan-alim-var-pliata { border-bottom: 1px solid var(--m-divider); }
 /* Butonul × al notificărilor e absolut în listele de sticlă; aici stă în rândul lui, lângă gramaj */
 .plan-alim-varianta .notificare-x { position: static; transform: none; flex-shrink: 0; }
@@ -13425,6 +13441,8 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-varianta.deschisa { border-bottom: 1px solid var(--m-divider); }
 .plan-alim-adauga .profil-rand-eticheta { color: var(--m-accent-text); }
 .plan-alim-total { margin: 0; }
+/* „Din jurnal” sub ținte: rând fără marginile listei, în cardul cu câmpuri */
+.plan-alim-jurnal { padding: 8px 0 0; border-bottom: 0; }
 /* Obiceiurile: ecranul clientului (7 zile ca pastile) și rândurile din fișa antrenorului */
 .obicei-card { display: flex; flex-direction: column; gap: 6px; }
 .obicei-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -13440,7 +13458,7 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-varianta { display: flex; flex-direction: column; gap: 6px; }
 .plan-alim-var-cap { display: flex; align-items: center; gap: 8px; }
 .plan-alim-var-nr { font-weight: 800; color: var(--primary); font-size: 0.82rem; white-space: nowrap; }
-.plan-alim-kcal { margin-left: auto; font-size: 0.88rem; color: #15803d; white-space: nowrap; }
+.plan-alim-kcal { margin-left: auto; font-size: 1.05rem; font-weight: 800; letter-spacing: -0.3px; color: #15803d; white-space: nowrap; }
 .plan-alim-kcal.departe { color: #b45309; }
 .plan-alim-kcal small { font-weight: 700; }
 .plan-alim-kcal .plan-alim-kcal-repaus { display: block; text-align: right; font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
@@ -13457,7 +13475,8 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-var-butoane .btn { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
 .plan-alim-cautare { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 .plan-alim-adauga-var { width: 100%; }
-.plan-alim-jos { margin-top: 4px; }
+/* Ultimul element din zona care derulează: loc dedesubt, ca umbra butonului să nu fie tăiată de marginea ei */
+.plan-alim-jos { margin-top: 4px; padding-bottom: 20px; }
 .plan-alim-instr { margin-top: 8px; font-size: 0.85rem; }
 .plan-alim-citire summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
 .plan-alim-citire summary b { white-space: nowrap; color: var(--primary); }

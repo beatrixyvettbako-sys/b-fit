@@ -689,4 +689,203 @@ Tranzit: 150 g friptură de porc slabă; salată de varză
 - Ulei de măsline — 5 g
 - Lămâie, usturoi
 Tranzit: 1 conservă de somon sau ton; 1 cartof copt; salată
+# MIC DEJUN
+## Hrișcă cu lapte, pară și nuci
+- Hrișcă — 40 g
+- Lapte 1,5% — 200 g
+- Pară — 100 g
+- Nuci — 10 g
+- Scorțișoară
+Preparare: Hrișca fiartă în lapte 10–12 minute; para tăiată cubulețe și nucile deasupra.
+Tranzit: 200 g iaurt grecesc; 1 pară; 1 pumn de nuci
+## Omletă cu cașcaval și ciuperci
+- Ouă — 2 buc
+- Albuș de ou — 60 g
+- Cașcaval — 20 g
+- Ciuperci — 80 g
+- Pâine de secară — 40 g
+Preparare: Ciupercile călite în puțină apă, apoi ouăle bătute; cașcavalul ras deasupra, cu capac.
+Tranzit: 2–3 ouă fierte; 1 felie pâine de secară; 1 bucată de cașcaval
+## Iaurt cu mango și semințe de in
+- Iaurt grecesc 0% — 250 g
+- Mango — 100 g
+- Fulgi de ovăz — 20 g
+- Semințe de in — 10 g
+Tranzit: 1 iaurt grecesc; 1 fruct; 1 pumn de semințe
+## Rondele de orez cu unt de migdale și cottage
+- Rondele de orez — 25 g
+- Unt de migdale — 15 g
+- Brânză cottage 2% — 150 g
+- Banană — 80 g
+Tranzit: 150 g brânză cottage; 2 rondele de orez; 1 banană
+## Ouă ochiuri cu sparanghel
+- Ouă — 2 buc
+- Sparanghel — 100 g
+- Ulei de măsline — 5 g
+- Pâine integrală — 40 g
+- Rucola — 30 g
+Preparare: Sparanghelul la tigaie 4–5 minute cu uleiul măsurat, apoi ouăle ochiuri alături.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală; legume crude
+## Mei cu iaurt, portocală și migdale
+- Mei, crud — 40 g
+- Iaurt grecesc 2% — 150 g
+- Portocală — 120 g
+- Migdale — 10 g
+Preparare: Meiul fiert în apă 15 minute, lăsat să se răcească; iaurtul, portocala și migdalele deasupra.
+Tranzit: 200 g iaurt grecesc; 1 portocală; 1 pumn de migdale
+## Sandviș cu telemea și legume
+- Pâine integrală — 60 g
+- Telemea — 40 g
+- Ouă — 1 buc
+- Roșii — 100 g
+- Castraveți — 100 g
+Tranzit: 1 sandviș cu brânză din pâine integrală; 1 ou fiert; roșii cherry
+# GUSTARE
+## Pară cu cottage și nuci
+- Brânză cottage 2% — 120 g
+- Pară — 120 g
+- Nuci — 10 g
+Tranzit: 1 iaurt proteic; 1 pară
+## Brânză de vaci cu struguri
+- Brânză de vaci — 120 g
+- Struguri — 100 g
+Tranzit: 1 iaurt proteic; 1 ciorchine mic de struguri
+## Iaurt cu ananas
+- Iaurt grecesc 0% — 200 g
+- Ananas — 120 g
+Tranzit: 1 iaurt grecesc; 1 caserolă de ananas
+## Iaurt cu curmale și alune
+- Iaurt grecesc 2% — 150 g
+- Curmale — 25 g
+- Alune de pădure — 10 g
+Tranzit: 1 iaurt grecesc; 2 curmale; 1 pumn mic de alune
+## Rondele de orez cu humus și pastramă
+- Rondele de orez — 20 g
+- Humus — 30 g
+- Pastramă de curcan — 50 g
+Tranzit: 1 pachet mic de pastramă de curcan; 2 rondele de orez
+## Iaurt cu cireșe
+- Iaurt grecesc 2% — 170 g
+- Cireșe — 120 g
+Tranzit: 1 iaurt grecesc; 1 caserolă de cireșe
+## Pepene galben cu telemea
+- Pepene galben — 200 g
+- Telemea — 40 g
+- Pâine integrală — 25 g
+Tranzit: 1 caserolă de pepene; 1 bucată de telemea
+# PRÂNZ
+## Macrou la cuptor cu cartofi și sfeclă
+- Macrou, crud — 130 g
+- Cartofi — 150 g
+- Sfeclă roșie — 100 g
+- Ulei de măsline — 5 g
+Preparare: Macroul și cartofii la cuptor 25 de minute; sfecla coaptă sau fiartă, tăiată felii.
+Tranzit: 1 conservă de macrou; 1 cartof copt; salată
+## Chiftele de curcan cu cușcuș
+- Carne tocată de curcan — 150 g
+- Cușcuș — 50 g
+- Castraveți — 100 g
+- Roșii — 100 g
+- Iaurt grecesc 2% — 50 g
+Preparare: Chiftelele la cuptor 20 de minute; cușcușul opărit cu apă fierbinte, 5 minute sub capac; iaurtul ca sos.
+Tranzit: 150 g piept de curcan la grătar; 1 salată cu cușcuș
+## Pui cu orez brun și mazăre
+- Piept de pui — 150 g
+- Orez brun — 50 g
+- Mazăre verde — 80 g
+- Morcovi — 60 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g piept de pui la grătar; 3–4 linguri de orez; legume
+## Vită cu hrișcă și ciuperci
+- Mușchi de vită — 140 g
+- Hrișcă — 50 g
+- Ciuperci — 100 g
+- Ceapă — 40 g
+- Ulei de măsline — 5 g
+Preparare: Carnea și ciupercile călite cu ceapa; hrișca fiartă separat 15 minute.
+Tranzit: 150 g vită la grătar; 1 garnitură de orez; legume
+## Somon cu quinoa și sparanghel
+- Somon — 140 g
+- Quinoa — 50 g
+- Sparanghel — 120 g
+- Lămâie
+Preparare: Somonul și sparanghelul la cuptor 15 minute, cu lămâie; quinoa fiartă 12 minute.
+Tranzit: 1 conservă de somon; 1 salată cu quinoa
+## Curcan cu orez brun și varză de Bruxelles
+- Piept de curcan — 150 g
+- Orez brun — 50 g
+- Varză de Bruxelles — 120 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g piept de curcan la grătar; 3–4 linguri de orez; legume la grătar
+## Tortilla cu pui, porumb și fasole
+- Tortilla integrală — 60 g
+- Piept de pui — 130 g
+- Porumb dulce — 50 g
+- Fasole roșie — 50 g
+- Ardei gras — 60 g
+- Salată verde — 40 g
+Tranzit: 1 wrap cu pui din supermarket; 1 fruct
+## Paste cu curcan tocat și sos de roșii
+- Paste integrale — 60 g
+- Carne tocată de curcan — 130 g
+- Sos de roșii — 100 g
+- Parmezan — 10 g
+Preparare: Carnea rumenită, apoi sosul, 10 minute la foc mic; pastele fierte al dente; parmezanul ras deasupra.
+Tranzit: 1 salată de paste cu pui
+# CINĂ
+## Hering cu cartofi și castraveți
+- Hering — 120 g
+- Cartofi — 120 g
+- Ceapă — 40 g
+- Castraveți — 100 g
+Tranzit: 1 conservă de pește; 1 cartof copt; salată
+## Salată cu ton, porumb și rucola
+- Ton în apă — 130 g
+- Porumb dulce — 50 g
+- Rucola — 50 g
+- Roșii cherry — 100 g
+- Ulei de măsline — 5 g
+- Pâine integrală — 30 g
+Tranzit: 1 salată cu ton; 1 felie pâine integrală
+## Pește alb cu praz și orez brun
+- Pește alb — 160 g
+- Praz — 100 g
+- Orez brun — 40 g
+- Ulei de măsline — 5 g
+Preparare: Prazul călit în puțină apă, peștele deasupra, cu capac, 10 minute; orezul fiert separat.
+Tranzit: 1 conservă de ton; 3–4 linguri de orez; salată
+## Pui cu dovleac copt și rucola
+- Piept de pui — 150 g
+- Dovleac — 200 g
+- Rucola — 40 g
+- Semințe de dovleac — 10 g
+Preparare: Puiul și dovleacul cubulețe la cuptor 25 de minute; rucola și semințele la final.
+Tranzit: 150 g piept de pui la grătar; salată cu semințe
+## Omletă cu praz și telemea
+- Ouă — 2 buc
+- Albuș de ou — 100 g
+- Praz — 80 g
+- Telemea — 30 g
+- Pâine de secară — 30 g
+Tranzit: 2–3 ouă fierte; 1 bucată de telemea; legume crude
+## Salată de vită cu varză roșie și cușcuș
+- Mușchi de vită — 130 g
+- Varză roșie — 120 g
+- Cușcuș — 40 g
+- Ulei de măsline — 5 g
+Tranzit: 150 g vită la grătar; 1 salată de varză
+## Curcan cu sfeclă coaptă și telemea
+- Piept de curcan — 150 g
+- Sfeclă roșie — 150 g
+- Telemea — 25 g
+- Rucola — 40 g
+Tranzit: 150 g piept de curcan la grătar; salată cu brânză
+## Tofu cu hrișcă și legume
+- Tofu — 150 g
+- Hrișcă — 40 g
+- Ardei gras — 80 g
+- Broccoli — 100 g
+- Ulei de măsline — 5 g
+Preparare: Tofu rumenit cu uleiul măsurat, apoi legumele la wok 5 minute; hrișca fiartă separat.
+Tranzit: 1 salată cu tofu sau edamame; 1 fruct
 `;
