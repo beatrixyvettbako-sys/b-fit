@@ -9552,8 +9552,10 @@ function htmlGenereazaPlanAlim() {
   // Cuvintele scoase din lista lipită („porc”) acoperă toate alimentele cu ele; se scot tot cu ×
   const cuvinteNu = (g.nota ? g.nota.split(', ') : []).map(w => pastila(true, `stergeCuvantNuGen('${escAttr(w)}')`, x(w[0].toUpperCase() + w.slice(1))));
   const pastile = arr => arr.length ? `<div class="antr-pers-activitati plan-alim-alimente">${arr.join('')}</div>` : '';
-  const cauta = (tip, camp, ph) => `<input type="text" enterkeyhint="search" class="plan-ex-input plan-alim-cauta" value="${escAttr(g[camp] || '')}" placeholder="${bib ? ph : tr('Se încarcă biblioteca...', 'Loading the library...')}" ${bib ? '' : 'disabled'}
+  // × apare cât e ceva scris (CSS, :placeholder-shown) și golește căutarea
+  const cauta = (tip, camp, ph) => `<div class="plan-alim-cauta-camp"><input type="text" enterkeyhint="search" class="plan-ex-input plan-alim-cauta" value="${escAttr(g[camp] || '')}" placeholder="${bib ? ph : tr('Se încarcă biblioteca...', 'Loading the library...')}" ${bib ? '' : 'disabled'}
       oninput="planAlim.gen.${camp} = this.value; document.getElementById('genRezultate_${tip}').innerHTML = htmlRezultateGen('${tip}')">
+      <button type="button" class="plan-alim-cauta-x" aria-label="${tr('Golește', 'Clear')}" onclick="planAlim.gen.${camp} = ''; randeazaPlanAlim()">×</button></div>
     <div id="genRezultate_${tip}" class="antr-pers-activitati plan-alim-alimente">${htmlRezultateGen(tip)}</div>`;
   // Lipirea: la Preferă, lista întreagă (ce e după „Ce să nu fie deloc:” trece la Nu mănâncă); la Nu mănâncă, totul e de scos
   const lipeste = (tip, ph) => g.lipeste === tip
@@ -9604,7 +9606,8 @@ function htmlRezultateGen(tip) {
   const g = planAlim.gen, q = faraDiacritice(String((tip === 'nu' ? g.cautaNu : g.cautaPref) || '').trim().toLowerCase());
   if (!q || !planAlim.biblioteca) return '';
   const gasite = [...alimenteBiblioteca(planAlim.biblioteca).entries()]
-    .filter(([k, a]) => !g.nu.includes(k) && !(g.prefera || []).includes(k) && faraDiacritice(a.nume.toLowerCase()).includes(q))
+    // De la începutul unui cuvânt („ou” nu e „macrou”); cu mai multe cuvinte, oriunde în nume
+    .filter(([k, a]) => { const n = faraDiacritice(a.nume); return !g.nu.includes(k) && !(g.prefera || []).includes(k) && (q.includes(' ') ? n.includes(q) : n.split(/[^a-z0-9%]+/).some(w => w.startsWith(q))); })
     .sort((a, b) => a[1].nume.localeCompare(b[1].nume)).slice(0, 12);
   const scris = escAttr(String((tip === 'nu' ? g.cautaNu : g.cautaPref) || '').trim());
   return gasite.length ? gasite.map(([k, a]) => `<button type="button" class="antr-pers-activitate" onclick="comutaAlimentGen('${escAttr(k)}', '${tip}')">${escAttr(a.nume)}</button>`).join('')
@@ -9641,11 +9644,15 @@ function aplicaListaGen(tip) {
   g.lista = text;
   const radDa = radaciniAliment(da.split('\n').map(fara).join(' '));
   const termeni = radDa.concat(radDa.flatMap(t => RUDE_LISTA_ALIM[t] || []));
-  const seamana = (w, t) => w === t || (w.length >= 3 && t.length >= 3 && (w.startsWith(t) || t.startsWith(w)));
-  g.prefera = radDa.length >= 3 ? [...alimenteBiblioteca(planAlim.biblioteca || []).entries()]
-    .filter(([, a]) => radaciniAliment(faraDiacritice(a.nume)).some(w => termeni.some(t => seamana(w, t)))).map(([k]) => k) : [];
+  // Prefixul cere minim 4 litere: „alb” nu e „albuș”, „ton” nu e „tonic”
+  const seamana = (w, t) => w === t || (w.length >= 4 && t.length >= 4 && (w.startsWith(t) || t.startsWith(w)));
+  // Orice număr de alimente; se adaugă la cele alese deja (fără ce e la Nu mănâncă)
+  const gasite = [...alimenteBiblioteca(planAlim.biblioteca || []).entries()]
+    .filter(([k, a]) => !g.nu.includes(k) && radaciniAliment(faraDiacritice(a.nume)).some(w => termeni.some(t => seamana(w, t)))).map(([k]) => k);
+  g.prefera = [...new Set((g.prefera || []).concat(gasite))];
   randeazaPlanAlim();
-  if (text.trim()) showToast(tr(`✓ Din listă: ${g.prefera.length} alimente preferate${g.nota ? ', plus ce nu mănâncă deloc' : ''}`, `✓ From the list: ${g.prefera.length} preferred foods${g.nota ? ', plus what they never eat' : ''}`));
+  if (text.trim()) showToast(gasite.length || libere.length ? tr(`✓ ${gasite.length} alimente preferate${libere.length ? ', plus ce nu mănâncă' : ''}`, `✓ ${gasite.length} preferred foods${libere.length ? ', plus what they don’t eat' : ''}`)
+    : tr('Nu am găsit alimentele în bibliotecă.', 'Couldn’t find these foods in the library.'), gasite.length || libere.length ? undefined : 'error');
 }
 
 function adaugaCuvantNuGen() {
