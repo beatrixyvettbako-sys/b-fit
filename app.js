@@ -628,19 +628,56 @@ function amprentaAici() {
 function tineMinteAmprenta(id) {
   try { id ? localStorage.setItem(CHEIE_AMPRENTA, id) : localStorage.removeItem(CHEIE_AMPRENTA); } catch (e) {}
 }
+
+// Contul de pe acest telefon, pentru ecranul de intrare cu amprenta („Bine ai revenit, Ana”): doar numele, emailul și poza
+const CHEIE_CONT_AMPRENTA = 'BFIT_CONT_AMPRENTA';
+function contAmprenta() {
+  try { return JSON.parse(localStorage.getItem(CHEIE_CONT_AMPRENTA) || 'null') || {}; } catch (e) { return {}; }
+}
+function tineMinteContAmprenta(nume, email, poza) {
+  try { localStorage.setItem(CHEIE_CONT_AMPRENTA, JSON.stringify({ nume, email, poza })); } catch (e) {}
+}
+// „an•••@gmail.com”: se vede al cui e contul, fără adresa întreagă pe ecran
+function emailAscuns(email) {
+  const [nume, domeniu] = String(email || '').split('@');
+  return domeniu ? `${nume.slice(0, 2)}${'•'.repeat(Math.max(2, Math.min(5, nume.length - 2)))}@${domeniu}` : '';
+}
+const IOS_AMPRENTA = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let incercariAmprenta = 0;
+
+function arataMesajAmprenta(text) {
+  const el = document.getElementById('authAmprentaMesaj');
+  el.textContent = text;
+  el.hidden = !text;
+}
 // Fereastra de amprentă închisă de utilizator: nu e o eroare de arătat
 function amprentaAnulata(err) {
   return err.code === 'ERROR_CEREMONY_ABORTED' || (err.cause && err.cause.name === 'NotAllowedError');
 }
 
-// Login cu amprenta activată aici: doar amprenta (și emailul contului), formularul e la „Intră cu parola sau alt cont”.
+// Login cu amprenta activată aici: contul („Bine ai revenit”, poza, emailul), un buton mare (Face ID pe iPhone, amprenta pe Android)
+// și, de la început, „Intră cu parola” și „Nu ești tu? Alt cont” (fără bucla de încercări de care se plâng utilizatorii altor aplicații).
 // porneste = la deschiderea aplicației fereastra de amprentă apare singură (o dată; nu și după ieșirea din cont)
 let amprentaPornitaAutomat = false;
 function aratAmprentaAuth(porneste) {
   const activa = !!amprentaAici();
   document.getElementById('authScreenOverlay').classList.toggle('cu-amprenta', activa);
-  document.getElementById('authAmprentaZona').hidden = !activa;
-  document.getElementById('authAmprentaEmail').innerText = document.getElementById('authEmail').value;
+  const zona = document.getElementById('authAmprentaZona');
+  zona.hidden = !activa;
+  const cont = contAmprenta();
+  const nume = (cont.nume || '').trim();
+  const prenume = nume.split(/\s+/)[0];
+  document.getElementById('authAmprentaSalut').innerText = prenume ? tr(`Bine ai revenit, ${prenume}`, `Welcome back, ${prenume}`) : tr('Bine ai revenit', 'Welcome back');
+  document.getElementById('authAmprentaEmail').innerText = emailAscuns(cont.email || document.getElementById('authEmail').value);
+  const initiale = nume.split(/\s+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'B';
+  document.getElementById('authAmprentaAvatar').innerHTML = escAttr(initiale)
+    + (cont.poza ? `<img src="${escAttr(cont.poza)}" alt="" onerror="this.remove()">` : '');
+  document.getElementById('authAmprentaIcon').innerHTML = IOS_AMPRENTA ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9v1.5M15 9v1.5M12 9v4h-1M9.5 16a3.5 3.5 0 0 0 5 0"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .13-5.35 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></svg>';
+  document.getElementById('authAmprentaText').innerText = IOS_AMPRENTA ? tr('Intră cu Face ID', 'Sign in with Face ID')
+    : /Android/.test(navigator.userAgent) ? tr('Intră cu amprenta', 'Sign in with fingerprint') : tr('Intră fără parolă', 'Sign in without a password');
+  incercariAmprenta = 0;
+  zona.classList.remove('parola-principala');
+  arataMesajAmprenta('');
   if (sessionStorage.getItem('BFIT_IESIRE')) {
     sessionStorage.removeItem('BFIT_IESIRE');
     porneste = false;
@@ -651,23 +688,45 @@ function aratAmprentaAuth(porneste) {
   }
 }
 
+// „Intră cu parola”: același cont (emailul completat), formularul cu parola
 function folosesteParolaAuth() {
   document.getElementById('authScreenOverlay').classList.remove('cu-amprenta');
   document.getElementById('authAmprentaZona').hidden = true;
+  const camp = document.getElementById('authEmail');
+  if (!camp.value) camp.value = contAmprenta().email || '';
+}
+
+// „Nu ești tu? Alt cont”: formularul gol (amprenta rămâne a contului de pe acest telefon)
+function altContAuth() {
+  folosesteParolaAuth();
+  const camp = document.getElementById('authEmail');
+  camp.value = '';
+  camp.focus();
 }
 
 async function intraCuAmprenta() {
   ascundeMesajAuthFeedback();
+  arataMesajAmprenta('');
+  const btn = document.getElementById('authAmprentaBtn');
+  const text = document.getElementById('authAmprentaText');
+  const inainte = text.innerText;
+  btn.disabled = true;
+  text.innerText = tr('Se verifică…', 'Checking…');
   const { error } = await supabaseClient.auth.signInWithPasskey();
+  btn.disabled = false;
+  text.innerText = inainte;
   // Conectat: aplicația se deschide prin onAuthStateChange. Fereastră închisă (sau pornită fără atingere, pe iPhone): rămâne butonul
   if (!error || amprentaAnulata(error)) return;
-  // Mesajele stau în formular: îl arătăm
-  folosesteParolaAuth();
   if (error.code === 'webauthn_credential_not_found') {
+    folosesteParolaAuth();
     tineMinteAmprenta('');
     return afiseazaMesajAuthFeedback(tr('Amprenta nu mai e activă. Intră cu emailul și activeaz-o din nou din Profil.', 'Fingerprint sign-in is no longer active. Sign in with your email and turn it on again in Profile.'));
   }
-  afiseazaMesajAuthFeedback(tr('Nu am putut intra cu amprenta. Încearcă din nou sau intră cu emailul.', 'Fingerprint sign-in failed. Try again or sign in with your email.'));
+  // Nerecunoscut: mesajul rămâne aici, cu „Încearcă din nou”; după a doua încercare, „Intră cu parola” devine butonul principal
+  incercariAmprenta++;
+  arataMesajAmprenta(tr('Nu te-am recunoscut. Încearcă din nou.', 'We couldn’t recognise you. Try again.'));
+  text.innerText = tr('Încearcă din nou', 'Try again');
+  if (incercariAmprenta >= 2) document.getElementById('authAmprentaZona').classList.add('parola-principala');
 }
 
 function actualizeazaProfilAmprenta() {
@@ -1020,6 +1079,7 @@ function actualizeazaDateProfilUI(user) {
   const numeComplet = meta.full_name || meta.name || user.email?.split('@')[0] || 'B-Fit';
   const prenume = numeComplet.trim().split(' ')[0] || 'B-Fit';
   const avatarUrl = pozaProfil(user);
+  tineMinteContAmprenta(numeComplet, user.email || '', avatarUrl);
 
   // Setările orarului din cont au prioritate față de copia locală (ex. schimbate pe alt dispozitiv)
   if (meta.setari_orar && !salvareSetariOrarInCurs && JSON.stringify(meta.setari_orar) !== JSON.stringify(setariOrar)) {
@@ -13389,7 +13449,7 @@ function inchideSplash() {
   splash.dataset.inchis = '1';
   const logo = splash.querySelector('.splash-logo');
   const tinta = document.getElementById('authLogoImg');
-  const peLogin = !document.getElementById('authScreenOverlay').classList.contains('auth-hidden');
+  const peLogin = !document.getElementById('authScreenOverlay').classList.contains('auth-hidden') && tinta.getClientRects().length > 0;
   const miscare = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   const curba = { duration: 460, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
   let gata;
@@ -13424,6 +13484,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 243, data: '2026-11-25',
+    client: [
+      ['Intrarea cu amprenta / Face ID arată nou: te întâmpină cu numele și poza ta, iar dacă nu te recunoaște poți încerca din nou sau intra cu parola, fără să o iei de la capăt.', 'Fingerprint / Face ID sign-in has a new look: it greets you with your name and photo, and if it doesn’t recognise you, you can try again or use your password without starting over.']
+    ],
+    antrenor: [
+      ['Intrarea cu amprenta / Face ID arată nou: te întâmpină cu numele și poza ta, iar dacă nu te recunoaște poți încerca din nou sau intra cu parola, fără să o iei de la capăt.', 'Fingerprint / Face ID sign-in has a new look: it greets you with your name and photo, and if it doesn’t recognise you, you can try again or use your password without starting over.']
+    ] },
   { v: 240, data: '2026-11-21',
     client: [],
     antrenor: [

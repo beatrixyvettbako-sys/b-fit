@@ -1095,6 +1095,9 @@ header {
 
 /* Amprentă / Face ID (pe telefonul unde e activată): în locul formularului, un buton rotund mare de sticlă */
 .cu-amprenta #authForm,
+.cu-amprenta .auth-app-icon-wrap,
+.cu-amprenta .auth-title,
+.cu-amprenta .auth-subtitle,
 .cu-amprenta .auth-cod,
 .cu-amprenta .auth-divider,
 .cu-amprenta .btn-google-sso,
@@ -1108,44 +1111,121 @@ header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   margin-top: 8px;
 }
 
-.auth-amprenta {
+/* Poza contului (sau inițialele), ca în Profil */
+.auth-amprenta-avatar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88px;
-  height: 88px;
+  width: 96px;
+  height: 96px;
+  margin-bottom: 10px;
+  overflow: hidden;
   border-radius: 50%;
-  border: 1px solid var(--m-border);
-  background: var(--m-card);
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  background: rgba(var(--accent-rgb), 0.16);
   box-shadow: var(--m-float);
   color: var(--m-accent-text);
-  cursor: pointer;
-  transition: transform 0.15s ease;
+  font-size: 2rem;
+  font-weight: 800;
 }
 
-.auth-amprenta:active {
-  transform: scale(0.94);
+.auth-amprenta-avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.auth-amprenta-text {
-  margin-top: 6px;
-  font-size: 0.95rem;
-  font-weight: 700;
+.auth-amprenta-salut {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
   color: var(--m-text);
   text-align: center;
 }
 
 .auth-amprenta-email {
-  font-size: 0.84rem;
+  margin-bottom: 22px;
+  font-size: 0.88rem;
   color: var(--m-muted);
 }
 
-.auth-amprenta-zona .auth-link-comutare {
-  margin-top: 14px;
+.auth-amprenta-zona .fisa-scurta-actiune.auth-amprenta {
+  order: 0;
+  flex: none;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  font-size: 1rem;
+}
+
+.auth-amprenta-icon {
+  display: flex;
+}
+
+.auth-amprenta-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.auth-amprenta-mesaj {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #b91c1c;
+  text-align: center;
+}
+
+[data-theme="dark"] .auth-amprenta-mesaj {
+  color: #f87171;
+}
+
+.auth-amprenta-mesaj[hidden] {
+  display: none;
+}
+
+.auth-amprenta-zona .auth-amprenta-parola {
+  margin-top: 10px;
+}
+
+/* După a doua încercare nereușită: „Intră cu parola” devine buton de sticlă, cel cu amprenta trece pe al doilea plan */
+.auth-amprenta-zona.parola-principala .auth-amprenta-parola {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 999px;
+  border: 1px solid var(--m-border);
+  box-shadow: var(--m-float-sm);
+  font-weight: 800;
+  background: rgba(var(--accent-rgb), 0.22);
+  border-color: rgba(var(--accent-light-rgb), 0.45);
+  color: var(--m-accent-text);
+}
+
+.auth-amprenta-zona.parola-principala .fisa-scurta-actiune.auth-amprenta {
+  background: var(--m-btn);
+  border-color: var(--m-border);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
+}
+
+.auth-amprenta-altcont {
+  margin-top: 18px;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: var(--m-muted);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .auth-status-msg {
