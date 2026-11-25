@@ -9672,7 +9672,7 @@ function htmlGenereazaPlanAlim() {
   const sectiunePref = (cod, titlu, desc) => randSectiunePlan(cod, titlu, desc) + (planAlim.sectiune === cod ? `<div class="plan-alim-sectiune-continut obiectiv-form">${continutPref[cod]}</div>` : '');
   return `${titluPlanAlim(tr('Plan nou', 'New plan'))}
     <div class="lista-sticla plan-alim-sticla obiectiv-form">
-      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(g.client_id || '')}" value="${escAttr(g.client_id ? numeClientPlan(g.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientGen)" onchange="alegeClientPlanCamp(this, null, schimbaClientGen)"></label></div>
+      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client (opțional)', 'Choose client (optional)')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(g.client_id || '')}" value="${escAttr(g.client_id ? numeClientPlan(g.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientGen)" onchange="alegeClientPlanCamp(this, null, schimbaClientGen)"></label></div>
       ${restr.lista.length || restr.nota ? `<div class="plan-alim-restrictii">⚠ ${tr('Nu mănâncă', 'Doesn’t eat')}: <b>${escAttr(textRestrictii(restr))}</b> · ${tr('le scot singur din plan', 'I leave them out')}</div>` : ''}
     </div>
     <div class="lista-titlu">${tr('Profil și ținte', 'Profile and targets')}</div>
@@ -9939,7 +9939,7 @@ function htmlEditorPlanAlim() {
   const descTinte = t ? '' : tr('de completat', 'to fill in');
   const continutSectiune = {
     detalii: `<div class="antr-pers-campuri"><label>${tr('Titlul planului', 'Plan title')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(p.titlu)}" oninput="planAlim.plan.titlu = this.value"></label></div>
-      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(p.client_id || '')}" value="${escAttr(p.client_id ? numeClientPlan(p.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientPlan)" onchange="alegeClientPlanCamp(this, null, schimbaClientPlan)"></label></div>`,
+      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client (opțional)', 'Choose client (optional)')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(p.client_id || '')}" value="${escAttr(p.client_id ? numeClientPlan(p.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientPlan)" onchange="alegeClientPlanCamp(this, null, schimbaClientPlan)"></label></div>`,
     profil: `${htmlProfilCampuri(pr, 'schimbaProfilPlan')}
       <div class="acasa-antrenament-detalii">${rez ? `${tr('Metabolism bazal', 'Basal metabolism')} ~${rez.bmr} kcal · ${tr('Menținere', 'Maintenance')} ~${rez.consum} kcal` : tr('Completează sexul, vârsta, înălțimea și greutatea ca să calculez țintele.', 'Fill in sex, age, height and weight to calculate the targets.')}</div>
       <div class="checkin-eticheta">${c.tinteRepaus ? tr('Zi cu antrenament', 'Training day') : tr('Ținta zilei', 'Daily target')}</div>
@@ -10574,7 +10574,7 @@ function htmlImportPlanAlim() {
     </div>
     <div class="lista-titlu">${tr('Generează cu AI', 'Generate with AI')}</div>
     <div class="lista-sticla">
-      <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr((k && k.id) || '')}" value="${escAttr((k && k.id) ? numeClientPlan((k && k.id)) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientImport)" onchange="alegeClientPlanCamp(this, null, schimbaClientImport)"></label></div>
+      <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client (opțional)', 'Choose client (optional)')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr((k && k.id) || '')}" value="${escAttr((k && k.id) ? numeClientPlan((k && k.id)) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientImport)" onchange="alegeClientPlanCamp(this, null, schimbaClientImport)"></label></div>
       ${rand('ai', 'ChatGPT', '', "deschideAiPlanAlim('chatgpt')")}
       ${rand('ai', 'Gemini', '', "deschideAiPlanAlim('gemini')")}
       ${rand('importa', tr('Lipește aici', 'Paste here'), tr(`răspunsul generat de ${planAlim.aiDeschis || 'AI'}`, `the answer from ${planAlim.aiDeschis || 'the AI'}`), 'lipesteRaspunsAi()')}

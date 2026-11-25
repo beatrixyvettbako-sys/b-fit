@@ -15572,6 +15572,25 @@ body.zile-lipite #tabOrar .day-selector::before {
   border-color: rgba(185, 28, 28, 0.35);
   background: rgba(185, 28, 28, 0.1);
   color: #b91c1c;
+  /* Simbolul ocupă cam 40% din cerc, ca ✕ din slot (× are desenul mai mic decât ✕, deci litera e mai mare) */
+  font-size: 1.03rem;
+}
+
+/* Cercuri mai mici decât ✕ / ✓ din slot, ca să nu domine; în antet, lângă eticheta de locuri, și mai mici */
+#tabOrar .btn-sterge-loc {
+  width: 24px;
+  height: 24px;
+  margin: 2px;
+}
+
+#tabOrar .hour-header :is(.btn-sterge-ora, .btn-adauga-loc) {
+  width: 22px;
+  height: 22px;
+  font-size: 0.95rem;
+}
+
+#tabOrar .hour-header .btn-adauga-loc {
+  font-size: 0.86rem;
 }
 
 /* × dispare cât ora / locul au client; revine la eliberare (seteazaStilSlotOcupat schimbă doar clasele rândului) */
