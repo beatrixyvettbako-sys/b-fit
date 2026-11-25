@@ -5065,7 +5065,8 @@ details:where(:not(.prog-hold, #detailsIstoricOrar, #detailsIstoricIncasari, .fi
   gap: 6px;
 }
 
-.btn-sterge-ora {
+.btn-sterge-ora,
+.btn-adauga-loc {
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -5231,7 +5232,8 @@ select.slot-select-type {
 
 /* Lista goală din formulare arată ca un placeholder: aceeași mărime ca input::placeholder.
    Înălțimea rândului e fixă, ca lista să nu-și schimbe înălțimea când se alege o valoare. */
-.form-control.select-faded {
+.form-control.select-faded,
+select.plan-ex-input.select-faded {
   font-size: 0.8rem;
 }
 
@@ -9268,6 +9270,17 @@ input.serie-camp {
   border-color: var(--accent-purple);
 }
 
+/* Listele din planuri: chevron subțire, gri, ca în stilul nou */
+select.plan-ex-input {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  line-height: 1.3rem;
+}
+
 .plan-tracking-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1.3fr;
@@ -11634,6 +11647,10 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   min-width: 0;
 }
 
+.antr-pers-campuri select.plan-ex-input {
+  padding-right: 32px;
+}
+
 .antr-pers-ex {
   padding: 8px 10px 10px;
 }
@@ -13500,6 +13517,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-alimente:empty { display: none; }
 .plan-alim-alimente .antr-pers-activitate { flex: 0 0 auto; padding: 6px 10px; }
 .plan-alim-lipeste { margin-top: 10px; }
+/* Săptămâna planului la client: 7 pastile pe un rând, litera zilei deasupra datei; azi în culoarea accentului */
+.plan-alim-zile { flex-wrap: nowrap; gap: 4px; }
+.plan-alim-zile .antr-pers-activitate { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; font-size: 0.9rem; }
+.plan-alim-zile .antr-pers-activitate small { font-size: 0.66rem; font-weight: 600; color: var(--m-muted); }
+.plan-alim-zile .antr-pers-activitate.azi:not(.activ) { color: var(--m-accent-text); }
 .plan-alim-cauta-camp { position: relative; }
 .plan-alim-cauta-camp .plan-alim-cauta { padding-right: 36px; }
 /* × de golire: bulă mică de sticlă, cu semnul desenat (centrat exact, indiferent de font) */
@@ -15529,8 +15551,10 @@ body.zile-lipite #tabOrar .day-selector::before {
 }
 
 
-/* × de pe ora suplimentară goală: la fel ca ✕ de eliberare slot */
-#tabOrar .btn-sterge-ora {
+/* + loc în antetul orei: cerc de sticlă ca butoanele din slot.
+   × de pe ora / locul suplimentar: același cerc, nuanțat roșu, ca să nu semene cu ✕ care golește slotul */
+#tabOrar .btn-sterge-ora,
+#tabOrar .btn-adauga-loc {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -15541,10 +15565,28 @@ body.zile-lipite #tabOrar .day-selector::before {
   padding: 0;
   font-size: 0.95rem;
   line-height: 1;
+  color: var(--primary);
+}
+
+#tabOrar .btn-sterge-ora {
+  border-color: rgba(185, 28, 28, 0.35);
+  background: rgba(185, 28, 28, 0.1);
   color: #b91c1c;
 }
 
-#tabOrar .btn-sterge-ora::before {
+/* × dispare cât ora / locul au client; revine la eliberare (seteazaStilSlotOcupat schimbă doar clasele rândului) */
+#tabOrar .hour-block:has(.slot-occupied) .hour-header .btn-sterge-ora,
+#tabOrar .slot-occupied .btn-sterge-loc,
+#tabOrar .slot-suplimentar.slot-free .btn-clear {
+  display: none;
+}
+
+#tabOrar .btn-sterge-loc {
+  order: -1;
+}
+
+#tabOrar .btn-sterge-ora::before,
+#tabOrar .btn-adauga-loc::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -15555,6 +15597,8 @@ body.zile-lipite #tabOrar .day-selector::before {
 }
 
 [data-theme="dark"] #tabOrar .btn-sterge-ora {
+  border-color: rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.12);
   color: #f87171;
 }
 
@@ -16070,7 +16114,7 @@ body.stil-nou,
 }
 
 /* Tema deschisă: lumina din stânga-sus vizibilă (pe alb, „soft-light” nu se vede) */
-html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, #clientaNav, .custom-modal-card )::before {
+html:not([data-theme="dark"]) :is( #tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card.is-expanded, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .btn-adauga-loc, .final-orb, :is(body.stil-nou #mainAppHeader, .stil-nou-antet) .header-icon-bubble-btn, body.stil-nou #bottomNav, #clientaNav, .custom-modal-card )::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
@@ -16081,7 +16125,7 @@ html:not([data-theme="dark"]) :is(#customToast)::after {
 }
 
 /* Butoanele de sticlă pe tema deschisă: margine luminoasă și umbră moale, ca reflexia de pe tema întunecată */
-html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .btn-sterge-ora, #mainAppHeader .header-icon-bubble-btn ) {
+html:not([data-theme="dark"]) body.pe-orar :is( #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn:not(.slot-deschis), :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .btn-adauga-loc, #mainAppHeader .header-icon-bubble-btn ) {
   border-color: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
@@ -16647,7 +16691,7 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 
 /* Lumina de sticlă pe tema întunecată: aceeași intensitate, fără amestec de culori */
-[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, #clientaNav, .custom-modal-card, .final-orb)::before {
+[data-theme="dark"] :is(#tabOrar .hour-block, .orar-cifra, #tabOrar .extra-hour-card, :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari), #tabOrar .calendar-expandable-card, #tabOrar .btn-save-check, #tabOrar .btn-clear, :is(#tabOrar, #detailsIstoricIncasari, .prog-hold) .btn-lock-hour, #tabOrar .slot-num-btn, #tabOrar .btn-bifeaza-ora, #tabOrar #btnAddOraCustomAction, :is(#tabOrar, .istoric-luna, .nutritie-rezumat-sus) .drawer-nav-btn, #tabOrar .drawer-btn-today, #tabOrar .btn-sterge-ora, #tabOrar .btn-adauga-loc, #tabOrar .orar-cauta-btn, #mainAppHeader .header-icon-bubble-btn, #bottomNav, #clientaNav, .custom-modal-card, .final-orb)::before {
   mix-blend-mode: normal;
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 42%);
 }

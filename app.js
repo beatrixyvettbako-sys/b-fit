@@ -2568,7 +2568,9 @@ async function executaActiuneSupabase(actionName, payload) {
       blocat: false,
       bifat: false,
       slotIndex: slotIdx,
-      client_id: ""
+      client_id: "",
+      // Peste numărul din Setări (ex. programare recurentă pe un loc suplimentar): rămâne loc suplimentar
+      suplimentar: slotIdx >= setariOrar.locuri
     };
     if (uid) slotNou.user_id = uid;
 
@@ -2647,7 +2649,8 @@ async function executaActiuneSupabase(actionName, payload) {
       bifat: !!o.bifat,
       slotIndex: Number(o.slotIndex) || 0,
       deschis: !!o.deschis,
-      rezervatOnline: !!o.rezervat_online
+      rezervatOnline: !!o.rezervat_online,
+      suplimentar: !!o.suplimentar
     }));
 
     const progActive = [];
@@ -2904,6 +2907,34 @@ async function executaActiuneSupabase(actionName, payload) {
     if ((gasite || []).some(s => (s.clienta || '').trim() || s.bifat)) return { success: false };
     if (gasite && gasite.length) await sb.from('orar').delete().in('row', gasite.map(s => s.row));
     return { success: true };
+  }
+
+  // Loc în plus doar pe ora aceasta: după toate locurile existente, chiar și cele ascunse de o setare mai mică
+  if (actionName === "adaugaLocSuplimentar") {
+    const oraNorm = normalizeazaOraUi(payload.ora);
+    const tagZi = construiesteTagZiLocal(payload.saptamanaCheie, payload.zi);
+    let q = sb.from('orar')
+      .select('slotIndex')
+      .in('ziRaw', payload.zi === "Marti" ? [tagZi, payload.saptamanaCheie + "_Marți"] : [tagZi])
+      .eq('ora', oraNorm);
+    if (uid) q = q.eq('user_id', uid);
+    const { data: gasite } = await q;
+    const item = {
+      ziRaw: tagZi, ora: oraNorm, clienta: "", antrenament: "", blocat: false, bifat: false, client_id: "", suplimentar: true,
+      slotIndex: Math.max(setariOrar.locuri, ...(gasite || []).map(s => (Number(s.slotIndex) || 0) + 1))
+    };
+    if (uid) item.user_id = uid;
+    const { data: randuri, error } = await sb.from('orar').insert(item).select();
+    if (error) throw error;
+    return { success: true, randuri: randuri || [] };
+  }
+
+  // Doar locul suplimentar gol: verificarea e în bază, între timp cineva putea rezerva locul
+  if (actionName === "stergeLocSuplimentar") {
+    const { data: sterse } = await sb.from('orar').delete()
+      .eq('row', payload.row).eq('suplimentar', true).eq('bifat', false).or('clienta.is.null,clienta.eq.')
+      .select('row');
+    return { success: !!(sterse && sterse.length) };
   }
 
   if (actionName === "inregistreazaAbonament") {
@@ -9557,6 +9588,17 @@ async function planNouGenerat() {
 }
 
 // Clientul aduce profilul din fișă și ce nu mănâncă din ultimul lui plan
+// Câmpul Client din planuri, ca „Alege client” din Orar: numele ales din listă trimite id-ul, câmpul golit = fără client
+function alegeClientPlanCamp(el, ev, fn) {
+  const c = gasesteClientaValida(el.value), id = c ? c.id : '';
+  if (ev && !(c && esteAlegereDinLista(el, ev))) return;
+  if (!c && el.value.trim()) { el.value = el.defaultValue; return showToast(tr('Alege clientul din listă.', 'Pick the client from the list.'), 'error'); }
+  if (id === el.dataset.id) return;
+  el.dataset.id = id;
+  el.blur();
+  fn(id);
+}
+
 async function schimbaClientGen(id) {
   const g = planAlim.gen;
   g.client_id = id;
@@ -9592,7 +9634,8 @@ function htmlProfilCampuri(pr, fn) {
   const camp = (id, et) => `<label>${et}<input type="number" inputmode="decimal" class="plan-ex-input" value="${escAttr(String(pr[id] || ''))}" onchange="${fn}('${id}', this.value)"></label>`;
   return `<div class="antr-pers-activitati">${buton('sex', 'f', tr('Feminin', 'Female'))}${buton('sex', 'm', tr('Masculin', 'Male'))}</div>
     <div class="antr-pers-campuri" style="margin-top:8px;">${camp('varsta', tr('Vârsta', 'Age'))}${camp('inaltime', tr('Înălțimea (cm)', 'Height (cm)'))}${camp('greutate', tr('Greutatea (kg)', 'Weight (kg)'))}</div>
-    <div class="antr-pers-campuri"><label>${tr('Activitate', 'Activity')}<select class="plan-ex-input" onchange="${fn}('activitate', this.value)">
+    <div class="antr-pers-campuri"><label>${tr('Activitate', 'Activity')}<select class="plan-ex-input${pr.activitate ? '' : ' select-faded'}" onchange="actualizeazaStilSelect(this); ${fn}('activitate', this.value)">
+      <option value="" disabled${pr.activitate ? '' : ' selected'}>${tr('Alege activitatea', 'Pick the activity')}</option>
       ${ACTIVITATI_CALCULATOR.map(([f, ro, en]) => `<option value="${f}"${Number(pr.activitate) === f ? ' selected' : ''}>${tr(ro, en)}</option>`).join('')}</select></label></div>
     <div class="checkin-eticheta" style="margin-top:8px;">${tr('Obiectivul', 'Goal')}</div>
     <div class="antr-pers-activitati plan-alim-obiective">${OBIECTIVE_PLAN.map(o => buton('obiectiv', o[0], tr(o[3], o[4]))).join('')}</div>`;
@@ -9600,7 +9643,6 @@ function htmlProfilCampuri(pr, fn) {
 
 function htmlGenereazaPlanAlim() {
   const g = planAlim.gen, bib = planAlim.biblioteca, tj = g.dinJurnal && tinteDinJurnalPlan(g.client_id, g.profil), rez = tj || tinteDinProfil(g.profil), tR = rez && tinteRepausDin(rez);
-  const clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
   const restr = restrictiiPlan(g.client_id, g);
   const pastila = (activ, onclick, et) => `<button type="button" class="antr-pers-activitate${activ ? ' activ' : ''}" onclick="${onclick}">${et}</button>`;
   const comutator = (camp, et, sub) => `<label class="setare-notificare"><span><b>${et}</b><small>${sub}</small></span>
@@ -9630,10 +9672,7 @@ function htmlGenereazaPlanAlim() {
   const sectiunePref = (cod, titlu, desc) => randSectiunePlan(cod, titlu, desc) + (planAlim.sectiune === cod ? `<div class="plan-alim-sectiune-continut obiectiv-form">${continutPref[cod]}</div>` : '');
   return `${titluPlanAlim(tr('Plan nou', 'New plan'))}
     <div class="lista-sticla plan-alim-sticla obiectiv-form">
-      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<select class="plan-ex-input" onchange="schimbaClientGen(this.value)">
-        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
-        ${clienti.map(x => `<option value="${escAttr(x.id)}"${x.id === g.client_id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
-      </select></label></div>
+      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(g.client_id || '')}" value="${escAttr(g.client_id ? numeClientPlan(g.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientGen)" onchange="alegeClientPlanCamp(this, null, schimbaClientGen)"></label></div>
       ${restr.lista.length || restr.nota ? `<div class="plan-alim-restrictii">⚠ ${tr('Nu mănâncă', 'Doesn’t eat')}: <b>${escAttr(textRestrictii(restr))}</b> · ${tr('le scot singur din plan', 'I leave them out')}</div>` : ''}
     </div>
     <div class="lista-titlu">${tr('Profil și ținte', 'Profile and targets')}</div>
@@ -9890,7 +9929,6 @@ function randSectiunePlan(cod, titlu, desc) {
 
 function htmlEditorPlanAlim() {
   const p = planAlim.plan, c = p.continut, pr = c.profil, t = c.tinte, rez = tinteDinProfil(pr);
-  const clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
   // Alergiile / restricțiile din fișa clientului: avertisment în verificare și alimentele cu probleme marcate cu roșu
   const restr = restrictiiPlan(p.client_id, c.preferinte);
   planAlim.restrictii = restr;
@@ -9901,10 +9939,7 @@ function htmlEditorPlanAlim() {
   const descTinte = t ? '' : tr('de completat', 'to fill in');
   const continutSectiune = {
     detalii: `<div class="antr-pers-campuri"><label>${tr('Titlul planului', 'Plan title')}<input type="text" class="plan-ex-input" maxlength="120" value="${escAttr(p.titlu)}" oninput="planAlim.plan.titlu = this.value"></label></div>
-      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<select class="plan-ex-input" onchange="schimbaClientPlan(this.value)">
-        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
-        ${clienti.map(x => `<option value="${escAttr(x.id)}"${x.id === p.client_id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
-      </select></label></div>`,
+      <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(p.client_id || '')}" value="${escAttr(p.client_id ? numeClientPlan(p.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientPlan)" onchange="alegeClientPlanCamp(this, null, schimbaClientPlan)"></label></div>`,
     profil: `${htmlProfilCampuri(pr, 'schimbaProfilPlan')}
       <div class="acasa-antrenament-detalii">${rez ? `${tr('Metabolism bazal', 'Basal metabolism')} ~${rez.bmr} kcal · ${tr('Menținere', 'Maintenance')} ~${rez.consum} kcal` : tr('Completează sexul, vârsta, înălțimea și greutatea ca să calculez țintele.', 'Fill in sex, age, height and weight to calculate the targets.')}</div>
       <div class="checkin-eticheta">${c.tinteRepaus ? tr('Zi cu antrenament', 'Training day') : tr('Ținta zilei', 'Daily target')}</div>
@@ -10527,7 +10562,7 @@ function htmlImportPlanAlim() {
     <div class="drawer-nav-card-left"><div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONITE_PLAN_ALIM[icon]}</svg></div>
       <div><div class="drawer-nav-title">${titlu}</div>${desc ? `<div class="drawer-nav-desc">${desc}</div>` : ''}</div></div>
     <div class="drawer-nav-arrow">›</div></div>`;
-  const k = planAlim.importClient, clienti = (DB.clienti || []).slice().sort((a, b) => a.nume.localeCompare(b.nume));
+  const k = planAlim.importClient;
   return `${titluPlanAlim(tr('Importă', 'Import'))}
     <div class="lista-sticla">
       <label class="drawer-nav-card">
@@ -10539,10 +10574,7 @@ function htmlImportPlanAlim() {
     </div>
     <div class="lista-titlu">${tr('Generează cu AI', 'Generate with AI')}</div>
     <div class="lista-sticla">
-      <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<select class="plan-ex-input" onchange="schimbaClientImport(this.value)">
-        <option value="">${tr('Alege clientul (opțional)', 'Pick the client (optional)')}</option>
-        ${clienti.map(x => `<option value="${escAttr(x.id)}"${k && x.id === k.id ? ' selected' : ''}>${escAttr(x.nume)}</option>`).join('')}
-      </select></label></div>
+      <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client', 'Choose client')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr((k && k.id) || '')}" value="${escAttr((k && k.id) ? numeClientPlan((k && k.id)) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientImport)" onchange="alegeClientPlanCamp(this, null, schimbaClientImport)"></label></div>
       ${rand('ai', 'ChatGPT', '', "deschideAiPlanAlim('chatgpt')")}
       ${rand('ai', 'Gemini', '', "deschideAiPlanAlim('gemini')")}
       ${rand('importa', tr('Lipește aici', 'Paste here'), tr(`răspunsul generat de ${planAlim.aiDeschis || 'AI'}`, `the answer from ${planAlim.aiDeschis || 'the AI'}`), 'lipesteRaspunsAi()')}
@@ -11061,22 +11093,35 @@ function htmlPlanAlimCitire(plan, laClient) {
 // Propunerea se rotește zilnic (altă combinație în fiecare zi); ce înlocuiește clientul rămâne pentru ziua de azi, pe acest telefon
 const CHEIE_MESE_AZI = 'BFIT_PLAN_ALIM_AZI';
 
-function aleseAziPlanAlim(plan) {
+// Săptămâna planului (luni–duminică, ca la Everfit / Trainerize): fiecare zi are variantele ei, pe rând, din aceeași rotație;
+//   înlocuirile clientului se țin minte pe zi, doar pentru săptămâna curentă (zilele mai vechi se șterg singure)
+function zileSaptamanaPlanAlim() {
+  const azi = dataDinIso(aziIsoAntrPers()), luni = new Date(azi);
+  luni.setDate(azi.getDate() - (azi.getDay() + 6) % 7);
+  return Array.from({ length: 7 }, (_, i) => { const d = new Date(luni); d.setDate(luni.getDate() + i); return isoDinData(d); });
+}
+
+function aleseZiPlanAlim(plan, zi) {
   try {
     const x = JSON.parse(localStorage.getItem(CHEIE_MESE_AZI) || 'null');
-    if (x && x.plan === plan.id && x.zi === aziIsoAntrPers()) return x.alese || {};
+    if (x && x.plan === plan.id && x.zile) return x.zile[zi] || {};
   } catch (e) {}
   return {};
 }
 
-function variantaAziPlanAlim(plan, mi) {
-  const n = plan.continut.mese[mi].variante.length, ales = aleseAziPlanAlim(plan)[mi];
+function variantaAziPlanAlim(plan, mi, zi) {
+  zi = zi || plan.zi || aziIsoAntrPers();
+  const n = plan.continut.mese[mi].variante.length, ales = aleseZiPlanAlim(plan, zi)[mi];
   if (ales >= 0 && ales < n) return ales;
-  return (Math.floor(dataDinIso(aziIsoAntrPers()).getTime() / 86400000) + mi) % n;
+  return (Math.floor(dataDinIso(zi).getTime() / 86400000) + mi) % n;
 }
 
 function htmlMeseAziPlanAlim(plan, laClient) {
   const c = plan.continut, repaus = !!(c.tinteRepaus && plan.repaus), t = repaus ? c.tinteRepaus : c.tinte;
+  const azi = aziIsoAntrPers(), zi = plan.zi || azi, zile = zileSaptamanaPlanAlim();
+  const litere = tr('L,M,M,J,V,S,D', 'M,T,W,T,F,S,S').split(',');
+  const bara = `<div class="antr-pers-activitati plan-alim-zile">${zile.map((z, i) => `<button type="button" class="antr-pers-activitate${z === zi ? ' activ' : ''}${z === azi ? ' azi' : ''}" onclick="planAlimDeschis.zi = '${z}'; rerandeazaPlanAlimDeschis()">
+    <small>${litere[i]}</small>${dataDinIso(z).getDate()}</button>`).join('')}</div>`;
   let total = 0;
   const randuri = c.mese.map((m, mi) => {
     if (!(m.variante || []).length) return '';
@@ -11088,19 +11133,25 @@ function htmlMeseAziPlanAlim(plan, laClient) {
         <span class="acasa-antrenament-detalii">${numeMasaInPlan(c.mese, mi)}</span><span class="nutritie-rand-nume">${escAttr(v.titlu || '')}</span>
         <span class="acasa-antrenament-detalii">≈ ${Math.round(tot.kcal)} kcal · P ${Math.round(tot.proteine)} g</span></button>
       ${m.variante.length > 1 ? `<button type="button" class="verifica-titlu-btn" onclick="inlocuiesteAziPlanAlim(${mi})">↻ ${tr('Înlocuiește', 'Replace')}</button>` : ''}
-      ${laClient ? `<button type="button" class="verifica-titlu-btn" onclick="noteazaVariantaPlanAlim(${mi}, ${vi}, this)">✓ ${tr('Notează', 'Log')}</button>` : ''}
+      ${laClient && zi === azi ? `<button type="button" class="verifica-titlu-btn" onclick="noteazaVariantaPlanAlim(${mi}, ${vi}, this)">✓ ${tr('Notează', 'Log')}</button>` : ''}
     </div>`;
   }).join('');
   if (!randuri) return '';
-  return `<div class="antr-pers-sectiune">${tr('Mesele de azi', 'Today’s meals')} <small>${c.tinteRepaus ? (repaus ? tr('zi fără antrenament', 'rest day') : tr('zi cu antrenament', 'training day')) : ''}</small></div>
+  return `<div class="antr-pers-sectiune">${zi === azi ? tr('Mesele de azi', 'Today’s meals') : tr('Mesele zilei', 'The day’s meals')} <small>${c.tinteRepaus ? (repaus ? tr('zi fără antrenament', 'rest day') : tr('zi cu antrenament', 'training day')) : ''}</small></div>
+    ${bara}
     <div class="card">${randuri}
-      <div class="reteta-total">${tr('Total azi', 'Today’s total')} ≈ ${Math.round(total)} kcal${t ? ` · ${tr('ținta', 'target')} ${t.kcal} kcal` : ''}</div></div>`;
+      <div class="reteta-total">${tr('Total', 'Total')} ≈ ${Math.round(total)} kcal${t ? ` · ${tr('ținta', 'target')} ${t.kcal} kcal` : ''}</div></div>`;
 }
 
 function inlocuiesteAziPlanAlim(mi) {
-  const plan = planAlimDeschis, alese = aleseAziPlanAlim(plan);
-  alese[mi] = (variantaAziPlanAlim(plan, mi) + 1) % plan.continut.mese[mi].variante.length;
-  try { localStorage.setItem(CHEIE_MESE_AZI, JSON.stringify({ plan: plan.id, zi: aziIsoAntrPers(), alese })); } catch (e) {}
+  const plan = planAlimDeschis, zi = plan.zi || aziIsoAntrPers(), zile = zileSaptamanaPlanAlim();
+  let toate = {};
+  try { const x = JSON.parse(localStorage.getItem(CHEIE_MESE_AZI) || 'null'); if (x && x.plan === plan.id && x.zile) toate = x.zile; } catch (e) {}
+  const alese = toate[zi] || {};
+  alese[mi] = (variantaAziPlanAlim(plan, mi, zi) + 1) % plan.continut.mese[mi].variante.length;
+  toate[zi] = alese;
+  Object.keys(toate).forEach(z => { if (!zile.includes(z)) delete toate[z]; });
+  try { localStorage.setItem(CHEIE_MESE_AZI, JSON.stringify({ plan: plan.id, zile: toate })); } catch (e) {}
   rerandeazaPlanAlimDeschis();
 }
 
@@ -11189,17 +11240,17 @@ function cumparaturiVariantaPlanAlim(mi, vi) {
   puneIngredienteCumparaturi(lista.filter(i => !i.text && Number(i.cantitate_g) > 0), 1, tr(' (Rețete › Cumpărături)', ' (Recipes › Shopping)'));
 }
 
-// O săptămână din plan: la fiecare masă, variantele pe rând (ziua 1 varianta 1, ziua 2 varianta 2...), adunate pe ingredient
+// Săptămâna din plan: variantele fiecărei zile (cele afișate, cu înlocuirile clientului), adunate pe ingredient
 function cumparaturiSaptamanaPlanAlim() {
   const total = new Map();
-  planAlimDeschis.continut.mese.forEach(m => {
+  planAlimDeschis.continut.mese.forEach((m, mi) => {
     const v = m.variante || [];
-    for (let zi = 0; v.length && zi < 7; zi++) {
-      ingredienteZiPlanAlim(m, v[zi % v.length]).filter(i => !i.text && Number(i.cantitate_g) > 0).forEach(i => {
+    if (v.length) zileSaptamanaPlanAlim().forEach(zi => {
+      ingredienteZiPlanAlim(m, v[variantaAziPlanAlim(planAlimDeschis, mi, zi)]).filter(i => !i.text && Number(i.cantitate_g) > 0).forEach(i => {
         const k = faraDiacritice(i.nume), x = total.get(k);
         if (x) x.cantitate_g += Number(i.cantitate_g); else total.set(k, Object.assign({}, i, { cantitate_g: Number(i.cantitate_g) }));
       });
-    }
+    });
   });
   puneIngredienteCumparaturi([...total.values()], 1, tr(' pentru 7 zile (Rețete › Cumpărături)', ' for 7 days (Recipes › Shopping)'));
 }
@@ -13484,6 +13535,15 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 244, data: '2026-11-25',
+    client: [
+      ['Planul alimentar arată toată săptămâna: atingi o zi și îi vezi mesele. Ce înlocuiești rămâne ținut minte pe fiecare zi.', 'Your meal plan shows the whole week: tap a day to see its meals. What you swap is remembered for each day.']
+    ],
+    antrenor: [
+      ['Orar: „+” din dreptul orei adaugă un loc în plus doar la ora aceea, fără să schimbi Setările. Locul gol se scoate cu „×” roșu.', 'Schedule: “+” next to the hour adds one extra spot to that hour only, without changing Settings. An empty extra spot is removed with the red “×”.'],
+      ['Planul alimentar arată toată săptămâna, zi cu zi.', 'The meal plan shows the whole week, day by day.'],
+      ['În planurile alimentare, clientul se alege cu căutare, ca în Orar.', 'In meal plans, you pick the client by searching, like in the Schedule.']
+    ] },
   { v: 243, data: '2026-11-25',
     client: [
       ['Intrarea cu amprenta / Face ID arată nou: te întâmpină cu numele și poza ta, iar dacă nu te recunoaște poți încerca din nou sau intra cu parola, fără să o iei de la capăt.', 'Fingerprint / Face ID sign-in has a new look: it greets you with your name and photo, and if it doesn’t recognise you, you can try again or use your password without starting over.']
@@ -15572,10 +15632,11 @@ function randeazaOrarInstant() {
   let nrLocuri = setariOrar.locuri;
   Object.keys(grupuriOre).forEach(ora => {
     let indexuri = Array.from({ length: nrLocuri }, (_, i) => i);
-    // Dacă numărul de locuri s-a micșorat, locurile de peste rămân vizibile cât au clientă, prezență sau sunt deschise
+    // Dacă numărul de locuri s-a micșorat, locurile de peste rămân vizibile cât au clientă, prezență sau sunt deschise;
+    // locul suplimentar (+ din antetul orei) rămâne și gol
     grupuriOre[ora].forEach(s => {
       let i = Number(s.slotIndex) || 0;
-      if (i >= nrLocuri && (s.clienta || s.bifat || s.deschis) && !indexuri.includes(i)) indexuri.push(i);
+      if (i >= nrLocuri && (s.clienta || s.bifat || s.deschis || s.suplimentar) && !indexuri.includes(i)) indexuri.push(i);
     });
     indexuri.sort((a, b) => a - b);
     grupuriOre[ora] = indexuri.map(i => {
@@ -15619,8 +15680,8 @@ function randeazaOrarInstant() {
     }
 
     let lockTitle = esteBlocat ? (currentLang === 'en' ? 'Unlock hour' : 'Deblochează ora') : (currentLang === 'en' ? 'Block hour' : 'Blochează ora');
-    // Oră suplimentară goală: se poate șterge (stergeOraCustom)
-    let stergeOraHtml = !oreStandard.includes(ora) && ocupate === 0 && !sloturiOra.some(s => s && s.bifat)
+    // Oră suplimentară: × o șterge cât e goală (stergeOraCustom); cu client pe ea, CSS-ul îl ascunde fără redesenare
+    let stergeOraHtml = !oreStandard.includes(ora)
       ? `<button class="btn-sterge-ora" onclick="stergeOraCustom('${ziCurentaCheie}', '${ora}')" title="${tr('Șterge ora suplimentară', 'Remove extra hour')}" aria-label="${tr('Șterge ora suplimentară', 'Remove extra hour')}">×</button>`
       : '';
 
@@ -15637,6 +15698,7 @@ function randeazaOrarInstant() {
           <div class="hour-header-dreapta">
             ${clientsBadgeHtml}
             ${badgeHtml}
+            ${esteBlocat ? '' : `<button type="button" class="btn-adauga-loc" onclick="adaugaLocSuplimentar('${ziCurentaCheie}', '${ora}')" title="${tr('Adaugă un loc la această oră', 'Add a spot to this hour')}" aria-label="${tr('Adaugă un loc la această oră', 'Add a spot to this hour')}">+</button>`}
             ${stergeOraHtml}
           </div>
         </div>
@@ -15661,6 +15723,8 @@ function randeazaOrarInstant() {
       if (isOccupied && !slot.bifat) nebifati++;
       let antVal = (slot && slot.antrenament) ? slot.antrenament : "";
       let slotDomKey = `${ora.replace(':', '')}_${slotIdx}`;
+      // Loc adăugat cu „+”, doar cât e peste numărul din Setări (după o mărire în Setări devine loc obișnuit)
+      let esteLocSuplimentar = slot.suplimentar && slot.row && slotIdx >= nrLocuri;
 
       let colorCls = culoareAntrenament(antVal);
 
@@ -15691,12 +15755,13 @@ function randeazaOrarInstant() {
       let clearBtnClass = slotEsteCompletGol ? 'btn btn-clear btn-clear-disabled' : 'btn btn-clear';
 
       // Loc liber: numărul e și comutator „deschis pentru rezervări"; loc rezervat de clientă: număr marcat
-      let slotNumHtml = `<div class="slot-num">${slotIdx + 1}</div>`;
+      // Numărul arată poziția în oră, nu indexul: după ștergerea unui loc suplimentar din mijloc nu rămân goluri
+      let slotNumHtml = `<div class="slot-num">${idx + 1}</div>`;
       if (!isOccupied && !slot.bifat) {
         let titluDeschis = slot.deschis ? tr('Deschis pentru rezervări (apasă ca să închizi)', 'Open for booking (tap to close)') : tr('Închis pentru rezervări (apasă ca să deschizi)', 'Closed for booking (tap to open)');
-        slotNumHtml = `<button type="button" class="slot-num slot-num-btn ${slot.deschis ? 'slot-deschis' : ''}" title="${titluDeschis}" onclick="comutaSlotDeschis('${ziCurentaCheie}', '${ora}', ${slotIdx})">${slotIdx + 1}</button>`;
+        slotNumHtml = `<button type="button" class="slot-num slot-num-btn ${slot.deschis ? 'slot-deschis' : ''}" title="${titluDeschis}" onclick="comutaSlotDeschis('${ziCurentaCheie}', '${ora}', ${slotIdx})">${idx + 1}</button>`;
       } else if (slot.rezervatOnline) {
-        slotNumHtml = `<div class="slot-num slot-num-online" title="${tr('Rezervat de client', 'Booked by the client')}">${slotIdx + 1}</div>`;
+        slotNumHtml = `<div class="slot-num slot-num-online" title="${tr('Rezervat de client', 'Booked by the client')}">${idx + 1}</div>`;
       }
       // Loc ocupat: inițialele clientului sau poza de profil, dacă și-a pus una în cont
       if (isOccupied) {
@@ -15716,7 +15781,7 @@ function randeazaOrarInstant() {
       }
 
       html += `
-        <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}" data-stare="${!clientaCurata ? 'liber' : slot.bifat ? 'prezent' : 'programat'}">
+        <div class="slot-row ${isOccupied ? 'slot-occupied' : 'slot-free'}${esteLocSuplimentar ? ' slot-suplimentar' : ''}" data-stare="${!clientaCurata ? 'liber' : slot.bifat ? 'prezent' : 'programat'}">
           ${slotNumHtml}
           <div class="slot-info">
             <input type="text" id="cli_${slotDomKey}" class="slot-input" value="${escAttr(clientaCurata)}" placeholder="${clientPlaceholder}" list="listaClienteVizibile" autocomplete="off" oninput="peSchimbareNumeClienta('${ziCurentaCheie}', '${ora}', ${slotIdx}, event)">
@@ -15725,6 +15790,7 @@ function randeazaOrarInstant() {
           <div style="display:flex; gap:4px;">
             <button id="btn_save_${slotDomKey}" class="${saveBtnClass}" ${saveBtnDisabledAttr} title="${saveBtnTitlu}" aria-label="${saveBtnTitlu}" onclick="${saveBtnClic}">✓</button>
             <button id="btn_clear_${slotDomKey}" class="${clearBtnClass}" ${clearBtnDisabledAttr} title="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" aria-label="${tr('Golește slotul și șterge din istoric', 'Clear the slot and remove it from history')}" onclick="anuleazaSlot('${ziCurentaCheie}', '${ora}', ${slotIdx})">✕</button>
+            ${esteLocSuplimentar ? `<button type="button" class="btn-sterge-ora btn-sterge-loc" onclick="stergeLocSuplimentar('${ziCurentaCheie}', '${ora}', ${slot.row})" title="${tr('Șterge locul suplimentar', 'Remove extra spot')}" aria-label="${tr('Șterge locul suplimentar', 'Remove extra spot')}">×</button>` : ''}
           </div>
         </div>
       `;
@@ -16563,6 +16629,46 @@ function stergeOraCustom(zi, ora) {
       if (ziCurentaCheie === zi && esteAzi) autoScrollLaOraCurenta();
       else if (ziCurentaCheie === zi && inainte) aratOraInOrar(inainte);
       showToast(tr(`Ora ${ora} a fost ștearsă`, `${ora} removed`));
+      incarcaBazaDateSilencios();
+    });
+  });
+  document.getElementById('modalBtnConfirm').innerText = tr('Șterge', 'Remove');
+}
+
+// „+” / „×” pe loc: ora apăsată rămâne în același loc pe ecran. Cardul de final preia diferența de înălțime,
+// ca pagina să rămână la fel de lungă (altfel, jos de tot, browserul ar sări în sus la ștergere)
+function redeseneazaOrarPeLoc(ora) {
+  const cont = document.getElementById('sloturiContainer');
+  const endCard = document.getElementById('endScheduleCard');
+  const sel = `.hour-block[data-ora="${ora}"]`;
+  const hInainte = cont.offsetHeight;
+  const topInainte = cont.querySelector(sel)?.getBoundingClientRect().top;
+  randeazaOrarInstant();
+  if (endCard && endCard.style.minHeight) {
+    endCard.style.minHeight = Math.max(0, parseFloat(endCard.style.minHeight) - (cont.offsetHeight - hInainte)) + 'px';
+  }
+  const bloc = cont.querySelector(sel);
+  if (bloc && topInainte !== undefined) window.scrollBy(0, bloc.getBoundingClientRect().top - topInainte);
+}
+
+function adaugaLocSuplimentar(zi, ora) {
+  callBackend("adaugaLocSuplimentar", { saptamanaCheie: getSaptamanaCheie(), zi: zi, ora: ora }, function(res) {
+    DB.orarSloturi = (DB.orarSloturi || []).concat(res.randuri);
+    if (ziCurentaCheie === zi) redeseneazaOrarPeLoc(ora);
+    incarcaBazaDateSilencios();
+  });
+}
+
+function stergeLocSuplimentar(zi, ora, row) {
+  customConfirm(tr('Ștergi locul suplimentar?', 'Remove the extra spot?'), tr(`Locul dispare de la ora ${ora}.`, `The spot is removed from ${ora}.`), () => {
+    callBackend("stergeLocSuplimentar", { row: row }, function(res) {
+      if (!res.success) {
+        showToast(tr('Locul are deja o programare și nu se poate șterge.', 'This spot already has a booking and cannot be removed.'), 'error');
+        incarcaBazaDateSilencios();
+        return;
+      }
+      DB.orarSloturi = (DB.orarSloturi || []).filter(s => s.row !== row);
+      if (ziCurentaCheie === zi) redeseneazaOrarPeLoc(ora);
       incarcaBazaDateSilencios();
     });
   });
@@ -21521,14 +21627,14 @@ function construiesteOptiuniListaProprie(panel, sel, faraOptiuneGoala, laAlegere
   });
 }
 
-// Listele de alegere din formulare (select.form-control) se deschid în lista proprie a aplicației, nu în cea a telefonului.
+// Toate listele de alegere (<select>) se deschid în lista proprie a aplicației, nu în cea a telefonului.
 // Select-ul rămâne la locul lui (aceeași mărime, același text afișat); doar lista deschisă e înlocuită.
 (function () {
   let panel = null;
   let selDeschis = null;
 
-  // Listele din formulare, pastilele de status (Confirmata / În așteptare / Absenta, status exerciții) și Tip antrenament din sloturi
-  const esteLista = (el) => el && el.tagName === 'SELECT' && (el.classList.contains('form-control') || el.classList.contains('pill-select') || el.classList.contains('slot-select-type')) && el.id !== 'selectPlanExistent' && !el.disabled;
+  // Toate listele din aplicație (formulare, pastilele de status, Tip antrenament, planurile alimentare, filtre), ca în Orar
+  const esteLista = (el) => el && el.tagName === 'SELECT' && el.id !== 'selectPlanExistent' && !el.disabled;
 
   const inchide = () => {
     if (panel) panel.classList.remove('is-open');
