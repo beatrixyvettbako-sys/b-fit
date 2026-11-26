@@ -13561,6 +13561,14 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 261, data: '2026-11-26',
+    client: [],
+    antrenor: [
+      ['Anunțul către mai mulți clienți poate avea acum și poză, poză făcută pe loc sau mesaj vocal; fiecare client îl primește în conversația lui.', 'Messages to several clients can now include a photo, a new camera photo or a voice message; each client gets it in their own conversation.'],
+      ['În anunț ai emoticoane și răspunsuri rapide; {prenume} se completează cu prenumele fiecărui client.', 'Messages to several clients have emoji and quick replies; {prenume} becomes each client’s first name.'],
+      ['În conversație, atinge poza sau numele clientului: vezi fișa pe scurt și poți programa, încasa, vedea pozele și vocalele, căuta în mesaje, suna sau scrie pe WhatsApp.', 'In a conversation, tap the client’s photo or name: see their summary and book, collect a payment, browse photos and voice messages, search the chat, call or message on WhatsApp.'],
+    ]
+  },
   { v: 260, data: '2026-11-26',
     client: [
       ['Mesajele vocale arată acum unda vocii: vezi cât s-a ascultat, atingi unda ca să sari la un moment anume și poți asculta mai repede (1×, 1.5×, 2×).', 'Voice messages now show a waveform: see how much you have heard, tap the waveform to jump to any moment and play faster (1×, 1.5×, 2×).'],
@@ -15295,7 +15303,7 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
       + cifra(plata ? formateazaSuma(plata.suma) : '–', plata && parseazaDataOraRo(plata.data) ? `${tr('Ultima plată', 'Last payment')}, ${formatZiLuna(new Date(parseazaDataOraRo(plata.data)))}` : tr('Ultima plată', 'Last payment'));
   } else grila = ramase + abonament + ultimaPrezenta + valabil;
   const buton = (id, svg, text, principal) => `<button type="button" class="fisa-scurta-actiune${principal ? ' fisa-scurta-actiune-principala' : ''}" id="${id}">${svg}${text}</button>`;
-  const actiuni = pagina === 'pauza' ? ''
+  const actiuni = pagina === 'pauza' || pagina === 'chat' ? ''
     : pagina === 'incasari'
     ? buton('btnFisaIncaseaza', ICON_ISTORIC_PLATA, tr('Încasează', 'Collect'), true)
     : pagina === 'istoric'
@@ -15314,7 +15322,7 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
       <div class="slot-num">${avatarSlotHtml(c)}</div>
       <b>${escAttr(c.nume)}</b>
     </div>${alerta}
-    <div class="fisa-scurta-grila">${grila}</div>
+    <div class="fisa-scurta-grila">${grila}</div>${pagina === 'chat' ? htmlActiuniChat(c) : ''}
     <div class="fisa-scurta-actiuni">
       ${actiuni}
       ${dinSlot ? `<button type="button" class="fisa-scurta-actiune" id="btnRepetaSaptamanal" title="${tr('Același loc în următoarele 4 săptămâni', 'Same spot for the next 4 weeks')}"><svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${tr('Repetă săptămânal', 'Repeat weekly')}</button>` : ''}
@@ -15336,12 +15344,105 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
   };
   foaie.querySelector('#btnFisaCompleta').onclick = () => {
     inchideFisaScurta();
+    if (pagina === 'chat') inchidePanouMesaje();
     comutaTab('tabFisa', 'Clienți', document.getElementById('navBtnFisa'), 'fisa', 2);
     deschideClientaDinLista(c.nume);
   };
+  // Din chat: deasupra panoului de mesaje (ca celelalte ferestre ale conversației)
+  if (pagina === 'chat') { fundal.classList.add('fundal-peste-chat'); foaie.classList.add('foaie-peste-chat'); }
   trageInJosCaSaInchizi(foaie, inchideFisaScurta); // de oriunde de pe fișă, nu doar de mâner
   adaugaFoaieJos(fundal, foaie, inchideFisaScurta);
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+// ---- Din chat (antrenorul atinge poza / numele din antet): fișa pe scurt cu acțiunile potrivite conversației ----
+function arataFisaDinChat() {
+  if (rolUtilizator === 'clienta' || !conversatie) return;
+  arataFisaScurta(conversatie.clientId, null, null, null, 'chat');
+}
+
+const SVG_CHAT_ACTIUNI = {
+  programeaza: '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M12 12.5v5M9.5 15h5"/></svg>',
+  poze: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>',
+  cauta: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
+  suna: '<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>',
+  whatsapp: '<svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>'
+};
+
+// Grila de acțiuni: Programează, Încasează, Poze și vocale, Caută; Sună și WhatsApp doar dacă fișa are telefon
+function htmlActiuniChat(c) {
+  const tel = (c.telefon || '').replace(/[^\d+]/g, '');
+  let cifre = tel.replace(/[^\d]/g, '');
+  if (cifre.startsWith('0')) cifre = '40' + cifre.slice(1); // număr românesc → format internațional pentru WhatsApp
+  const b = (actiune, svg, text) => `<button type="button" class="fisa-scurta-actiune" onclick="actiuneChat('${actiune}')">${svg}<span>${text}</span></button>`;
+  const a = (href, svg, text, extern) => `<a class="fisa-scurta-actiune" href="${escAttr(href)}"${extern ? ' target="_blank" rel="noopener"' : ''}>${svg}<span>${text}</span></a>`;
+  return `<div class="fisa-scurta-chat">
+      ${b('programeaza', SVG_CHAT_ACTIUNI.programeaza, tr('Programează', 'Book'))}
+      ${b('incaseaza', ICON_ISTORIC_PLATA, tr('Încasează', 'Collect'))}
+      ${b('poze', SVG_CHAT_ACTIUNI.poze, tr('Poze și vocale', 'Media'))}
+      ${b('cauta', SVG_CHAT_ACTIUNI.cauta, tr('Caută', 'Search'))}
+      ${tel ? a(`tel:${tel}`, SVG_CHAT_ACTIUNI.suna, tr('Sună', 'Call')) + a(`https://wa.me/${cifre}`, SVG_CHAT_ACTIUNI.whatsapp, 'WhatsApp', true) : ''}
+    </div>`;
+}
+
+function actiuneChat(actiune) {
+  const c = conversatie && (DB.clienti || []).find(x => x && x.id === conversatie.clientId);
+  if (!c) return;
+  inchideFisaScurta();
+  if (actiune === 'incaseaza') return deschideIncasareNoua({ nume: c.nume, tip: c.tipAbonament });
+  if (actiune === 'poze') return deschidePozeVocaleChat();
+  if (actiune === 'cauta') return deschideCautareChat();
+  // Programează: Orarul, cu clientul deja căutat (ca „Programează” din toastul de la „În pauză”)
+  inchidePanouMesaje();
+  comutaTab('tabOrar', tr('Orar', 'Schedule'), document.getElementById('navBtnOrar'), 'orar', 0);
+  deschideCautareClient();
+  const camp = document.querySelector('.cautare-client-camp');
+  camp.value = c.nume;
+  camp.dispatchEvent(new Event('input'));
+}
+
+// Data scurtă a unui mesaj în listele de mai jos (azi = ora)
+const dataScurtaMesaj = m => {
+  const d = new Date(m.created_at);
+  return d.toDateString() === new Date().toDateString() ? d.toLocaleTimeString(currentLang === 'en' ? 'en-GB' : 'ro-RO', { hour: '2-digit', minute: '2-digit' }) : formatZiLuna(d);
+};
+
+// Mergi la mesaj: fereastra coboară, apoi conversația derulează la el și îl evidențiază
+function mergiLaMesajChat(id) {
+  inchideFisaScurta();
+  setTimeout(() => aratMesajCitat(id), 280);
+}
+
+// Poze și vocale: pozele într-o grilă (atinse = pe tot ecranul), vocalele într-o listă (atinse = la mesaj)
+function deschidePozeVocaleChat() {
+  const mesaje = (conversatie && conversatie.mesaje || []).filter(m => !m._stare);
+  const poze = mesaje.filter(m => m.tip === 'poza' && m.context && m.context.poza).reverse();
+  const vocale = mesaje.filter(m => m.tip === 'voce' && m.context && m.context.voce).reverse();
+  const foaie = deschideFoaieChat(`<h3 class="incasare-foaie-titlu">${tr('Poze și vocale', 'Media')}</h3>
+    ${!poze.length && !vocale.length ? `<div class="mesaje-gol">${tr('Nicio poză sau mesaj vocal încă.', 'No photos or voice messages yet.')}</div>` : ''}
+    ${poze.length ? `<div class="lista-titlu">${tr('Poze', 'Photos')} (${poze.length})</div>
+      <div class="chat-poze-grila">${poze.map(m => `<img class="mesaj-poza" data-poza-chat="${escAttr(m.context.poza)}"${m.context.comun ? ' data-comun="1"' : ''}${pozeChatGata.has(m.context.poza) ? ` src="${pozeChatGata.get(m.context.poza)}"` : ''} alt="" onclick="aratPozaMesaj(this)">`).join('')}</div>` : ''}
+    ${vocale.length ? `<div class="lista-titlu">${tr('Mesaje vocale', 'Voice messages')} (${vocale.length})</div>
+      <div class="lista-sticla">${vocale.map(m => `<button type="button" class="raspuns-rapid-rand" onclick="mergiLaMesajChat('${escAttr(m.id)}')"><span>🎤 ${durataVocal(m.context.durata)} · ${escAttr(m.autor === autorulMeu() ? tr('tu', 'you') : numeAutorMesaj(m))}</span><small>${escAttr(dataScurtaMesaj(m))}</small></button>`).join('')}</div>` : ''}`, 'chat-media-foaie');
+  umplePozeChat(foaie);
+}
+
+// Caută în conversație: mesajele care conțin textul (fără diacritice), cele mai noi primele; atinse = la mesaj
+function deschideCautareChat() {
+  const foaie = deschideFoaieChat(`<h3 class="incasare-foaie-titlu">${tr('Caută în conversație', 'Search conversation')}</h3>
+    <input type="search" class="cautare-client-camp conversatii-cauta" enterkeyhint="search" placeholder="${tr('Cuvânt, greutate, exercițiu...', 'Word, weight, exercise...')}">
+    <div class="chat-cautare-rezultate"></div>`, 'chat-cautare-foaie');
+  const camp = foaie.querySelector('input'), rez = foaie.querySelector('.chat-cautare-rezultate');
+  const fara = t => (t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  camp.oninput = () => {
+    const q = fara(camp.value.trim());
+    if (q.length < 2) { rez.innerHTML = ''; return; }
+    const gasite = (conversatie && conversatie.mesaje || []).filter(m => !m._stare && fara(textScurtMesaj(m)).includes(q)).reverse().slice(0, 50);
+    rez.innerHTML = gasite.length
+      ? `<div class="lista-sticla">${gasite.map(m => `<button type="button" class="raspuns-rapid-rand" onclick="mergiLaMesajChat('${escAttr(m.id)}')"><span>${escAttr(textScurtMesaj(m).slice(0, 120))}</span><small>${escAttr(dataScurtaMesaj(m))}</small></button>`).join('')}</div>`
+      : `<div class="mesaje-gol">${tr('Nimic găsit.', 'Nothing found.')}</div>`;
+  };
+  setTimeout(() => camp.focus(), 300);
 }
 
 // Fereastra de jos creată pe loc: fundalul și fereastra alături în pagină, ca la plata nouă. Nu în fundal: când el se stinge,
@@ -17707,7 +17808,7 @@ async function aratAvizNotificari(clientId) {
   const aviz = document.getElementById('panouMesajeNotif');
   aviz.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M2 2l20 20"/></svg>${tr(`${prenume} are notificările oprite`, `${prenume} has notifications off`)}`;
   aviz.onclick = () => anuntaMesajPeTelefon(clientId);
-  aviz.hidden = false;
+  aviz.hidden = false; // plutește peste listă (style.css): lista nu se mișcă
 }
 
 function anuntaMesajPeTelefon(clientId) {
@@ -17795,10 +17896,10 @@ function randeazaConversatie() {
     const reactiiHtml = reactii.length ? `<span class="mesaj-reactii">${[...new Set(reactii)].map(e => e + (reactii.filter(x => x === e).length > 1 ? '<i>2</i>' : '')).join('')}</span>` : '';
     // Poza: proporțiile vin din mesaj, ca lista să nu sară cât se încarcă; „📷” = poză fără descriere
     const poza = m.tip === 'poza' && cx.poza
-      ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}"${pozeChatGata.has(cx.poza) ? ` src="${pozeChatGata.get(cx.poza)}"` : ''} alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
+      ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}"${cx.comun ? ' data-comun="1"' : ''}${pozeChatGata.has(cx.poza) ? ` src="${pozeChatGata.get(cx.poza)}"` : ''} alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
     // Vocal: ▶ / ⏸, bara de progres și durata (redaVocal)
     const vocal = m.tip === 'voce' && cx.voce
-      ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-unda-bula" onclick="event.stopPropagation(); cautaVocal(event, this)">${bareUndaVocal(cx)}</span><span class="vocal-jos"><span class="vocal-durata">${durataVocal(cx.durata)}</span><button type="button" class="vocal-viteza" onclick="event.stopPropagation(); schimbaVitezaVocal()">${vitezaVocal}×</button></span></div>` : '';
+      ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"${cx.comun ? ' data-comun="1"' : ''}><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-unda-bula" onclick="event.stopPropagation(); cautaVocal(event, this)">${bareUndaVocal(cx)}</span><span class="vocal-jos"><span class="vocal-durata">${durataVocal(cx.durata)}</span><button type="button" class="vocal-viteza" onclick="event.stopPropagation(); schimbaVitezaVocal()">${vitezaVocal}×</button></span></div>` : '';
     // Produs (Verifică un produs › Trimite în chat): card cu poza, numele, caloriile și Nutri-Score; atingerea îl deschide
     const produs = m.tip === 'produs' && cx.nume ? htmlCardProdusMesaj(cx, i) : '';
     const text = (poza && m.text === '📷') || vocal || produs ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
@@ -17894,13 +17995,14 @@ const cachePozeChat = new Map(); // uuid -> Promise<object URL>
 const pozeChatGata = new Map(); // uuid -> object URL deja încărcat: intră direct în HTML, fără pâlpâire la redesenare
 
 // Parametrii fișierului unui mesaj (poză sau vocal) pentru ruta /chat-poza a Worker-ului
-const parametriFisierChat = (clientId, m) => m.tip === 'voce'
-  ? { client: clientId, p: m.context.voce, f: 'voce' }
-  : { client: clientId, p: m.context.poza };
+// comun: fișierul unui anunț către mai mulți, urcat o singură dată (chat/<antrenor>/comun/ în Worker)
+const parametriFisierChat = (clientId, m) => Object.assign(
+  m.tip === 'voce' ? { client: clientId, p: m.context.voce, f: 'voce' } : { client: clientId, p: m.context.poza },
+  m.context.comun ? { comun: 1 } : {});
 
-function cerePozaChat(clientId, p, voce) {
+function cerePozaChat(clientId, p, voce, comun) {
   if (!cachePozeChat.has(p)) {
-    cachePozeChat.set(p, cerePozeAntr('GET', '/chat-poza', voce ? { client: clientId, p, f: 'voce' } : { client: clientId, p })
+    cachePozeChat.set(p, cerePozeAntr('GET', '/chat-poza', Object.assign(voce ? { client: clientId, p, f: 'voce' } : { client: clientId, p }, comun ? { comun: 1 } : {}))
       .then(r => r && r.ok ? r.blob() : null)
       .then(b => {
         const url = b ? URL.createObjectURL(b) : '';
@@ -17914,7 +18016,7 @@ function cerePozaChat(clientId, p, voce) {
 // Odată cu mesajele preîncărcate: și ultimele poze, ca prima deschidere a conversației să fie instant
 function preincarcaPozeChat(clientId, mesaje) {
   (mesaje || []).filter(m => m.tip === 'poza' && m.context && m.context.poza).slice(-12)
-    .forEach(m => cerePozaChat(clientId, m.context.poza));
+    .forEach(m => cerePozaChat(clientId, m.context.poza, false, m.context.comun));
 }
 
 async function alegePozaMesaj(input) {
@@ -17952,8 +18054,11 @@ const MAX_VOCAL_SEC = 300;
 let inregistrare = null; // { rec, flux, bucati, tip, start, timer }
 const durataVocal = s => `${Math.floor((Number(s) || 0) / 60)}:${String((Number(s) || 0) % 60).padStart(2, '0')}`;
 
-async function pornesteVocal() {
-  if (!conversatie || inregistrare) return;
+// buton = microfonul apăsat: în conversație sau în anunțul către mai mulți (fiecare formular are bara lui)
+async function pornesteVocal(buton) {
+  const scrie = (buton && buton.closest('.mesaje-scrie')) || document.querySelector('#panouMesaje .mesaje-scrie');
+  const anunt = !!scrie.closest('#conversatiiContinut');
+  if ((!conversatie && !anunt) || inregistrare) return;
   const tip = ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/webm;codecs=opus', 'audio/webm']
     .find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t));
   if (!tip || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -17965,16 +18070,16 @@ async function pornesteVocal() {
   } catch (e) {
     return showToast(tr('Aplicația nu are acces la microfon. Permite-l din setările telefonului.', 'The app has no microphone access. Allow it in your phone settings.'), 'error');
   }
-  if (!conversatie) { flux.getTracks().forEach(t => t.stop()); return; }
+  if (!conversatie && !anunt) { flux.getTracks().forEach(t => t.stop()); return; }
   const rec = new MediaRecorder(flux, { mimeType: tip, audioBitsPerSecond: 32000 });
-  const r = inregistrare = { rec, flux, bucati: [], toate: [], tip: tip.split(';')[0], start: Date.now() };
+  const r = inregistrare = { rec, flux, bucati: [], toate: [], tip: tip.split(';')[0], start: Date.now(), scrie, anunt };
   rec.ondataavailable = e => { if (e.data && e.data.size) r.bucati.push(e.data); };
   rec.start(1000);
   if (mesajEditat) seteazaEditareMesaj(null);
-  document.querySelector('.mesaj-inregistrare').classList.remove('anulata');
-  document.querySelector('.mesaje-scrie').classList.add('inregistreaza');
+  scrie.querySelector('.mesaj-inregistrare').classList.remove('anulata');
+  scrie.classList.add('inregistreaza');
   pornesteUndaVocal(r);
-  const ceas = document.getElementById('mesajVocalTimp');
+  const ceas = scrie.querySelector('.vocal-timp');
   const tick = () => {
     const s = Math.floor((Date.now() - r.start) / 1000);
     ceas.textContent = durataVocal(s);
@@ -17993,7 +18098,7 @@ function opresteVocal(trimite) {
   clearInterval(r.timer);
   cancelAnimationFrame(r.cadru);
   if (r.ac) r.ac.close().catch(() => {});
-  const scrie = document.querySelector('.mesaje-scrie'), bara = document.querySelector('.mesaj-inregistrare');
+  const scrie = r.scrie, bara = scrie.querySelector('.mesaj-inregistrare');
   // Anulat: bara se strânge spre coș, apoi revine câmpul; trimis: câmpul revine imediat (vocalul apare în conversație)
   if (trimite || !scrie.classList.contains('inregistreaza')) scrie.classList.remove('inregistreaza');
   else {
@@ -18005,7 +18110,9 @@ function opresteVocal(trimite) {
   const conv = conversatie;
   r.rec.onstop = () => {
     r.flux.getTracks().forEach(t => t.stop());
-    if (!trimite || durata < 1 || !conv || conversatie !== conv) return;
+    if (!trimite || durata < 1) return;
+    if (r.anunt) return trimiteFisierAnunt('voce', new Blob(r.bucati, { type: r.tip }), { durata: Math.min(durata, MAX_VOCAL_SEC), unda: rezumatUnda(r.toate) || undefined });
+    if (!conv || conversatie !== conv) return;
     trimiteVocal(new Blob(r.bucati, { type: r.tip }), durata, rezumatUnda(r.toate));
   };
   r.rec.stop();
@@ -18013,7 +18120,7 @@ function opresteVocal(trimite) {
 
 // Unda vocii, live: volumul microfonului (Web Audio) devine bare care curg spre stânga, ca să se vadă că se aude
 function pornesteUndaVocal(r) {
-  const canvas = document.getElementById('mesajVocalUnda');
+  const canvas = r.scrie.querySelector('.vocal-unda');
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!canvas || !AC) return;
   try {
@@ -18136,7 +18243,7 @@ async function redaVocal(btn) {
   opresteRedareVocal();
   vocalActiv = el;
   el.classList.add('reda', 'activ', 'se-incarca');
-  const src = await cerePozaChat(conversatie && conversatie.clientId, el.dataset.voce, true);
+  const src = await cerePozaChat(conversatie && conversatie.clientId, el.dataset.voce, true, el.dataset.comun);
   el.classList.remove('se-incarca');
   if (vocalActiv !== el) return;
   if (!src) {
@@ -18162,7 +18269,7 @@ vocalAudio.addEventListener('ended', opresteRedareVocal);
 function umplePozeChat(radacina) {
   const clientId = conversatie && conversatie.clientId;
   radacina.querySelectorAll('img[data-poza-chat]:not([src])').forEach(async img => {
-    const src = await cerePozaChat(clientId, img.dataset.pozaChat);
+    const src = await cerePozaChat(clientId, img.dataset.pozaChat, false, img.dataset.comun);
     if (src) img.src = src;
     else img.classList.add('poza-lipsa');
   });
@@ -18340,8 +18447,11 @@ function alegeReactie(m) {
 }
 
 // 😊 din câmpul de scris: emoticonul ales intră în text, unde era cursorul (fereastra se închide, ca textul să se vadă)
+// Câmpul în care se scrie acum: al anunțului către mai mulți, dacă e deschis, altfel al conversației
+const campMesajActiv = () => (selectieMesaj && document.getElementById('mesajNouText')) || document.getElementById('mesajText');
+
 function deschideEmojiMesaj() {
-  const camp = document.getElementById('mesajText');
+  const camp = campMesajActiv();
   const de = camp.selectionStart ?? camp.value.length, pana = camp.selectionEnd ?? camp.value.length;
   const foaie = deschideFoaieChat(`<div class="lista-titlu">${tr('Emoticoane', 'Emoji')}</div>
     <div class="reactii-grila">${EMOJI_CHAT.map(e => `<button type="button" data-e="${e}">${e}</button>`).join('')}</div>`, 'foaie-reactii');
@@ -18479,8 +18589,11 @@ function deschideConversatii() {
 
 function inchidePanouConversatii() {
   document.getElementById('panouConversatii').classList.add('auth-hidden');
+  // Ieșit din „Mesaj nou” / anunț: lista revine acum, ca la redeschidere să nu apară o clipă ecranul vechi
+  const eraMesajNou = !!selectieMesaj;
   selectieMesaj = null;
   anuntMesaj = false;
+  if (eraMesajNou) randeazaConversatii();
 }
 
 async function incarcaConversatii() {
@@ -18630,7 +18743,21 @@ function deschideAnuntMesaj() {
     <div class="mesaj-nou-scrie">
       <div class="mesaj-nou-info" id="mesajNouInfo">${tr('Alege cui trimiți. Fiecare îl primește în conversația lui.', 'Choose who gets it. Each client receives it in their own conversation.')}</div>
       <form class="mesaje-scrie" onsubmit="event.preventDefault(); trimiteMesajNou();">
-        <textarea id="mesajNouText" class="form-control" rows="1" maxlength="2000" placeholder="${tr('Scrie un mesaj...', 'Write a message...')}" oninput="potrivesteCampMesaj(this)"></textarea>
+        <div class="mesaj-camp">
+          <button type="button" class="mesaj-camp-emoji" onclick="deschideEmojiMesaj()" aria-label="${tr('Emoticoane', 'Emoji')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/></svg></button>
+          <textarea id="mesajNouText" class="form-control" rows="1" maxlength="2000" placeholder="${tr('Scrie un mesaj...', 'Write a message...')}" oninput="potrivesteCampMesaj(this)"></textarea>
+          <span class="mesaj-camp-poze">
+            <button type="button" class="mesaj-camp-dispare" onclick="deschideRaspunsuriRapide()" aria-label="${tr('Răspunsuri rapide', 'Quick replies')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></button>
+            <label aria-label="${tr('Poză din galerie', 'Photo from gallery')}"><input type="file" accept="image/*" hidden onchange="alegePozaAnunt(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/></svg></label>
+            <label class="mesaj-camp-dispare" aria-label="${tr('Fă o poză', 'Take a photo')}"><input type="file" accept="image/*" capture="environment" hidden onchange="alegePozaAnunt(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg></label>
+          </span>
+        </div>
+        <div class="mesaj-inregistrare">
+          <button type="button" class="vocal-anuleaza" onclick="opresteVocal(false)" aria-label="${tr('Anulează', 'Cancel')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button>
+          <i class="vocal-punct"></i><span class="vocal-timp">0:00</span>
+          <canvas class="vocal-unda" aria-hidden="true"></canvas>
+        </div>
+        <button type="button" class="btn btn-trimite-mesaj btn-microfon" onclick="pornesteVocal(this)" aria-label="${tr('Mesaj vocal', 'Voice message')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><path d="M12 18v4"/></svg></button>
         <button type="submit" class="btn btn-trimite-mesaj" id="btnTrimiteMesajNou" aria-label="${tr('Trimite', 'Send')}"><svg class="icon-trimite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg></button>
       </form>
     </div>`;
@@ -18670,14 +18797,57 @@ function actualizeazaInfoMesajNou() {
     : tr('Alege cui trimiți. Fiecare îl primește în conversația lui.', 'Choose who gets it. Each client receives it in their own conversation.');
 }
 
+// Anunț cu poză sau vocal: fișierul se urcă o singură dată (comun), apoi fiecare client ales primește mesajul cu el
+async function alegePozaAnunt(input) {
+  const fisier = input.files && input.files[0];
+  input.value = '';
+  if (!fisier) return;
+  if (!selectieMesaj || !selectieMesaj.size) return showToast(tr('Alege cel puțin un client.', 'Choose at least one client.'), 'error');
+  let blob, bmp;
+  try {
+    blob = await micsoreazaPozaJpeg(fisier);
+    bmp = await createImageBitmap(blob);
+  } catch (e) {
+    return showToast(tr('Poza nu a putut fi citită. Încearcă alta.', 'The photo could not be read. Try another one.'), 'error');
+  }
+  const dim = { w: bmp.width, h: bmp.height };
+  bmp.close();
+  trimiteFisierAnunt('poza', blob, dim);
+}
+
+async function trimiteFisierAnunt(tip, blob, extra) {
+  const ids = [...(selectieMesaj || [])];
+  if (!ids.length) return showToast(tr('Alege cel puțin un client.', 'Choose at least one client.'), 'error');
+  const camp = document.getElementById('mesajNouText');
+  const descriere = tip === 'poza' && camp ? camp.value.trim().slice(0, 2000) : '';
+  const p = crypto.randomUUID();
+  const context = Object.assign(tip === 'voce' ? { voce: p } : { poza: p }, extra, { comun: true });
+  showToast(tr('Se trimite...', 'Sending...'));
+  const r = await cerePozeAntr('PUT', '/chat-poza', parametriFisierChat(ids[0], { tip, context }), blob);
+  if (!r || !r.ok) return showToast(tr('Fișierul nu s-a trimis. Verifică internetul și reîncearcă.', 'The file was not sent. Check your internet and try again.'), 'error');
+  const prenumeClient = id => ((DB.clienti || []).find(x => x.id === id)?.nume || '').trim().split(/\s+/)[0];
+  const text = tip === 'voce' ? '🎤' : descriere || '📷';
+  const { error } = await supabaseClient.from('mesaje').insert(ids.map(id => ({ user_id: utilizatorCurent.id, client_id: id, autor: 'antrenor',
+    tip, context, text: text.replace(/\{prenume\}/g, prenumeClient(id)) })));
+  if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
+  if (camp && tip === 'poza') { camp.value = ''; camp.style.height = ''; }
+  showToast(ids.length === 1 ? tr('✓ Mesaj trimis', '✓ Message sent') : tr(`✓ Trimis la ${ids.length} clienți`, `✓ Sent to ${ids.length} clients`));
+  selectieMesaj = null;
+  anuntMesaj = false;
+  await incarcaConversatii();
+}
+
 async function trimiteMesajNou() {
+  if (inregistrare && inregistrare.anunt) return opresteVocal(true); // Trimite, în timpul înregistrării: vocalul pleacă
   const text = document.getElementById('mesajNouText').value.trim();
   const ids = [...(selectieMesaj || [])];
   if (!ids.length) return showToast(tr('Alege cel puțin un client.', 'Choose at least one client.'), 'error');
   if (!text) return;
   const btn = document.getElementById('btnTrimiteMesajNou');
   btn.disabled = true;
-  const { error } = await supabaseClient.from('mesaje').insert(ids.map(id => ({ user_id: utilizatorCurent.id, client_id: id, autor: 'antrenor', text })));
+  // {prenume} (din răspunsurile rapide) se completează pentru fiecare client
+  const prenumeClient = id => ((DB.clienti || []).find(x => x.id === id)?.nume || '').trim().split(/\s+/)[0];
+  const { error } = await supabaseClient.from('mesaje').insert(ids.map(id => ({ user_id: utilizatorCurent.id, client_id: id, autor: 'antrenor', text: text.replace(/\{prenume\}/g, prenumeClient(id)) })));
   btn.disabled = false;
   if (error) return showToast(tr('Mesajul nu s-a trimis. Verifică internetul și reîncearcă.', 'The message was not sent. Check your internet and try again.'), 'error');
   showToast(ids.length === 1 ? tr('✓ Mesaj trimis', '✓ Message sent') : tr(`✓ Trimis la ${ids.length} clienți`, `✓ Sent to ${ids.length} clients`));
@@ -18695,7 +18865,7 @@ async function trimiteMesajNou() {
   if (!fara.length) return;
   customConfirm(tr(`${fara.length} ${fara.length === 1 ? 'client nu are' : 'clienți nu au'} notificările pornite`, `${fara.length} ${fara.length === 1 ? 'client has' : 'clients have'} notifications off`),
     tr(`${fara.map(c => c.nume).join(', ')}: văd anunțul abia când deschid aplicația. Trimite-l și pe telefon.`, `${fara.map(c => c.nume).join(', ')}: they see it only when they open the app. Send it to their phone too.`),
-    () => partajeaza(text, URL_APLICATIE));
+    () => partajeaza(text.replace(/\{prenume\}/g, '').replace(/\s+([,!?.])/g, '$1'), URL_APLICATIE));
   document.getElementById('modalBtnConfirm').innerText = tr('Distribuie', 'Share');
 }
 
@@ -18772,7 +18942,8 @@ function raspunsuriPotrivite() {
 
 function deschideRaspunsuriRapide() {
   const rand = (text, atr, extra = '') => `<button type="button" class="raspuns-rapid-rand" ${atr}><span>${escAttr(cuPrenume(text))}</span>${extra}</button>`;
-  const potrivite = raspunsuriPotrivite();
+  const anunt = campMesajActiv().id === 'mesajNouText';
+  const potrivite = anunt ? [] : raspunsuriPotrivite();
   const ale = raspunsuriRapide();
   const foaie = deschideFoaieChat(`
     <h3 class="incasare-foaie-titlu">${tr('Răspunsuri rapide', 'Quick replies')}</h3>
@@ -18791,8 +18962,8 @@ function deschideRaspunsuriRapide() {
 
 function folosesteRaspunsRapid(text) {
   inchideFisaScurta();
-  const camp = document.getElementById('mesajText');
-  const t = cuPrenume(text);
+  const camp = campMesajActiv();
+  const t = camp.id === 'mesajNouText' ? text : cuPrenume(text); // în anunț, {prenume} rămâne și se completează la trimitere
   camp.value = camp.value.trim() ? camp.value.trim() + ' ' + t : t;
   potrivesteCampMesaj(camp);
   camp.focus();
@@ -21300,11 +21471,14 @@ function deschideIncasareNoua(pre) {
   actualizeazaSumaIncasare();
   actualizeazaPastileDateIncasare();
   opresteCoborarea(foaie);
+  // Deschisă din chat (fișa pe scurt › Încasează): deasupra conversației, care rămâne deschisă dedesubt
+  const pesteChat = !document.getElementById('panouMesaje').classList.contains('auth-hidden');
+  foaie.classList.toggle('foaie-peste-chat', pesteChat);
   foaie.hidden = false;
   foaie.scrollTop = 0; // fereastra rămâne în pagină între deschideri: pornește mereu de sus, nu de unde a rămas
   if (!document.getElementById('incasareFundal')) {
     const fundal = document.createElement('div');
-    fundal.className = 'fisa-scurta-fundal';
+    fundal.className = 'fisa-scurta-fundal' + (pesteChat ? ' fundal-peste-chat' : '');
     fundal.id = 'incasareFundal';
     fundal.onclick = inchideIncasareNoua;
     document.body.append(fundal);

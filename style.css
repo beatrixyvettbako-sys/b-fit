@@ -7624,6 +7624,12 @@ input.bifa-sticla,
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
+/* Tema deschisă: cercul alb pe card alb abia se vedea; conturul în accent îl desenează (bifat are regula lui, mai jos) */
+html:not([data-theme="dark"]) :is(#checkArataArhivate, input.bifa-sticla, .trimite-plan-rand input[type="checkbox"], .checkin-bifa input[type="checkbox"], .inscriere-acord input[type="checkbox"]):not(:checked) {
+  border-color: rgba(var(--accent-rgb), 0.4);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
 #checkArataArhivate:checked::after,
 input.bifa-sticla:checked::after,
 .trimite-plan-rand input[type="checkbox"]:checked::after,
@@ -10473,7 +10479,7 @@ html:not([data-theme="dark"]) .mesaj:not(.al-meu) {
   display: none;
 }
 
-.mesaj-camp:has(#mesajText:not(:placeholder-shown)) textarea {
+.mesaj-camp:has(:is(#mesajText, #mesajNouText):not(:placeholder-shown)) textarea {
   padding-right: 44px;
 }
 
@@ -10598,14 +10604,14 @@ html:not([data-theme="dark"]) .mesaj:not(.al-meu) {
   50% { opacity: 0.3; }
 }
 
-.mesaje-scrie:has(#mesajText:not(:placeholder-shown)) .btn-microfon,
-.mesaje-scrie:has(#mesajText:placeholder-shown) #btnTrimiteMesaj,
+.mesaje-scrie:has(:is(#mesajText, #mesajNouText):not(:placeholder-shown)) .btn-microfon,
+.mesaje-scrie:has(:is(#mesajText, #mesajNouText):placeholder-shown) :is(#btnTrimiteMesaj, #btnTrimiteMesajNou),
 .mesaje-scrie.inregistreaza :is(.mesaj-camp, .btn-microfon) {
   display: none;
 }
 
 .mesaje-scrie.inregistreaza .mesaj-inregistrare,
-.mesaje-scrie.inregistreaza:has(#mesajText) #btnTrimiteMesaj {
+.mesaje-scrie.inregistreaza:has(:is(#mesajText, #mesajNouText)) :is(#btnTrimiteMesaj, #btnTrimiteMesajNou) {
   display: flex;
 }
 
@@ -10835,6 +10841,62 @@ html:not([data-theme="dark"]) .mesaj-bife.citit {
   margin: 8px 6px 0;
   font-size: 0.74rem;
   color: var(--m-muted);
+}
+
+/* Antetul conversației (antrenor): poza și numele se ating pentru fișa pe scurt cu acțiunile din chat */
+.mesaje-antet-centru {
+  cursor: pointer;
+}
+
+/* Fișa pe scurt din chat: acțiunile în grilă (iconița deasupra textului), ca la contactele din telefon */
+.fisa-scurta-chat {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fisa-scurta-chat .fisa-scurta-actiune {
+  flex-direction: column;
+  justify-content: center;
+  height: 64px;
+  padding: 0 4px;
+  gap: 5px;
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+
+.fisa-scurta-chat .fisa-scurta-actiune svg {
+  width: 20px;
+  height: 20px;
+  color: var(--m-accent-text);
+}
+
+/* Poze și vocale: grilă de pătrate */
+.chat-poze-grila {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.chat-poze-grila img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  background: var(--m-btn);
+  cursor: pointer;
+}
+
+/* Rândurile din Poze și vocale / Caută: textul și data în dreapta */
+:is(.chat-media-foaie, .chat-cautare-foaie) .raspuns-rapid-rand small {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  color: var(--m-muted);
+}
+
+.chat-cautare-foaie .conversatii-cauta {
+  margin-top: 4px;
 }
 
 /* Ferestrele de jos ale conversației stau deasupra panoului de mesaje (z-index 5000) */
@@ -11101,12 +11163,23 @@ html:not([data-theme="dark"]) .mesaj-bife.citit {
   color: var(--m-text);
 }
 
+/* Jos, lipit: fără fundal plin (făcea un chenar pe fundalul cu pete de lumină); ce trece pe sub el se estompează,
+   iar marginea de sus se topește în pagină */
 .mesaj-nou-scrie {
   position: sticky;
   bottom: 0;
   margin: 10px -12px 0;
-  padding-top: 6px;
-  background: var(--bg);
+  padding-top: 14px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 12px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 12px);
+}
+
+/* Anunțul are în dreapta câmpului ⚡, agrafa și camera (ca antrenorul în conversație) */
+/* (cât se scrie, ⚡ și camera dispar: regula cu :not(:placeholder-shown) de mai sus) */
+.mesaj-camp:has(#mesajNouText) textarea {
+  padding-right: 116px;
 }
 
 /* Anunț către mai mulți: rândurile ca lista conversațiilor (poza, numele), bifa rotundă de sticlă în dreapta */
@@ -15755,17 +15828,23 @@ body.zile-lipite #tabOrar .day-selector::before {
 }
 
 /* Chat: clientul are notificările oprite. Toast cât unul obișnuit, cu clopoțel în loc de punct; rămâne sub antet,
-   iar atins trimite linkul aplicației */
+   iar atins trimite linkul aplicației. Plutește peste listă (nu în rând cu ea): apare după verificarea din bază,
+   iar dacă ar ocupa loc, lista s-ar micșora și ar sări */
 .mesaje-notif-toast {
-  position: relative;
+  position: absolute;
+  top: calc(var(--header-height) + 8px);
+  left: 50%;
+  z-index: 3;
+  transform: translateX(-50%);
   isolation: isolate; /* lumina de sticlă (::after) stă sub text */
   display: flex;
   align-items: center;
   gap: 8px;
-  align-self: center;
+  width: max-content;
   max-width: calc(100% - 24px);
   min-height: 44px;
-  margin: 8px auto 6px;
+  margin: 0;
+  animation: notifToastIntra 0.25s ease-out;
   padding: 10px 16px 10px 14px;
   box-sizing: border-box;
   border-radius: 18px;
@@ -15792,7 +15871,11 @@ body.zile-lipite #tabOrar .day-selector::before {
 }
 
 .mesaje-notif-toast:active {
-  transform: scale(0.97);
+  transform: translateX(-50%) scale(0.97);
+}
+
+@keyframes notifToastIntra {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
 }
 
 .toast-text {
