@@ -15342,9 +15342,6 @@ function opresteCoborarea(foaie) {
   foaie.style.pointerEvents = '';
 }
 
-// Fereastra de jos urmează degetul trasă în jos și se închide după 60px; butoanele și câmpurile rămân ale lor.
-// `zona` (opțional): doar de acolo se trage, la ferestrele care derulează.
-// animation = 'none': animația de intrare ține transformarea ocupată și fereastra n-ar urma degetul.
 // Ca foile native: se închide după o tragere lungă (`prag`) sau după una scurtă dar rapidă în jos (viteza în px/ms,
 // din ultima mișcare a degetului), ca să nu revină sus și să trebuiască trasă din nou
 function urmaresteVitezaTragere() {
@@ -15356,11 +15353,15 @@ function urmaresteVitezaTragere() {
   };
 }
 
+// Fereastra de jos urmează trasă în jos și se închide (vezi urmaresteVitezaTragere).
+// Cu degetul: prin touch (trageInJosDinConținut), ca plata nouă; pe telefon tragerea prin pointer rămânea o clipă în urmă.
+// Cu mouse-ul: prin pointer, de pe `zona` dacă e dată (la ferestrele care derulează), altfel de oriunde; butoanele și câmpurile rămân ale lor.
+// animation = 'none': animația de intrare ține transformarea ocupată și fereastra n-ar urma degetul.
 function trageInJosCaSaInchizi(foaie, inchide, zona) {
   let y0 = null;
   const viteza = urmaresteVitezaTragere();
   foaie.addEventListener('pointerdown', e => {
-    if (e.target.closest('button, textarea, input, select') || (zona && !e.target.closest(zona))) return;
+    if (e.pointerType === 'touch' || e.target.closest('button, textarea, input, select') || (zona && !e.target.closest(zona))) return;
     y0 = e.clientY; foaie.style.animation = 'none'; foaie.style.transition = 'none';
     viteza.start(e.clientY, e.timeStamp);
     try { foaie.setPointerCapture(e.pointerId); } catch (x) {}
@@ -15379,17 +15380,19 @@ function trageInJosCaSaInchizi(foaie, inchide, zona) {
   };
   foaie.addEventListener('pointerup', gata);
   foaie.addEventListener('pointercancel', gata);
-  if (zona) trageInJosDinConținut(foaie, inchide, zona);
+  trageInJosDinConținut(foaie, inchide, zona);
 }
 
-// Ferestrele care derulează (plata nouă, editarea plății): pe telefon se trag în jos și din conținut, ca în aplicațiile native,
-// dar doar când sunt derulate sus și degetul coboară; altfel derulează normal. Prin touch, pentru că derularea ia
-// evenimentele pointer (pointercancel) înainte ca fereastra să le poată urma.
+// Pe telefon, de oriunde (și din conținut, ca în aplicațiile native): din `zona` mereu, din rest doar când fereastra e
+// derulată sus și degetul coboară; altfel derulează normal. Prin touch, pentru că derularea ia evenimentele pointer
+// (pointercancel) înainte ca fereastra să le poată urma.
 function trageInJosDinConținut(foaie, inchide, zona) {
-  let y0 = null, trage = false;
+  let x0 = 0, y0 = null, trage = false, dinZona = false;
   const viteza = urmaresteVitezaTragere();
   foaie.addEventListener('touchstart', e => {
-    y0 = e.touches.length === 1 && !e.target.closest(zona) ? e.touches[0].clientY : null;
+    y0 = e.touches.length === 1 ? e.touches[0].clientY : null;
+    x0 = y0 === null ? 0 : e.touches[0].clientX;
+    dinZona = !!(zona && e.target.closest(zona));
     trage = false;
     if (y0 !== null) viteza.start(y0, e.timeStamp);
   }, { passive: true });
@@ -15397,7 +15400,8 @@ function trageInJosDinConținut(foaie, inchide, zona) {
     if (y0 === null) return;
     const dy = e.touches[0].clientY - y0;
     if (!trage) {
-      if (foaie.scrollTop > 0 || dy <= 0) { y0 = null; return; }
+      // Doar în jos și mai mult vertical decât lateral (o glisare laterală în fereastră nu o mișcă)
+      if ((!dinZona && foaie.scrollTop > 0) || dy <= 0 || Math.abs(e.touches[0].clientX - x0) > dy) { y0 = null; return; }
       trage = true;
       foaie.style.animation = 'none'; foaie.style.transition = 'none';
     }
