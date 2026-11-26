@@ -20006,7 +20006,7 @@ async function dezaboneazaPush() {
 function htmlCardPush() {
   const esteIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const instalata = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  let text = '', buton = '';
+  let titlu = '', text = '', buton = '', icon = ICON_SECTIUNE.general;
   // Mesajul „blocate” închis cu ×: nu mai apare pe acest dispozitiv cât notificările rămân blocate
   const blocate = suportaPush() && Notification.permission === 'denied';
   try {
@@ -20015,17 +20015,22 @@ function htmlCardPush() {
   } catch (e) {}
   if (!suportaPush()) {
     if (!esteIos || instalata) return '';
-    text = tr('Pe iPhone, notificările ajung doar dacă adaugi aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'On iPhone, notifications only arrive if you add the app to your home screen: Share › “Add to Home Screen”.');
+    titlu = tr('Notificări pe iPhone', 'Notifications on iPhone');
+    text = tr('Ajung doar dacă adaugi aplicația pe ecranul principal: Partajează › „Adaugă pe ecranul principal”.', 'They only arrive if you add the app to your home screen: Share › “Add to Home Screen”.');
   } else if (Notification.permission === 'default') {
-    text = tr('Primește notificările pe acest dispozitiv, chiar și cu aplicația închisă.', 'Get notifications on this device, even with the app closed.');
+    titlu = tr('Pornește notificările', 'Turn on notifications');
+    text = tr('Le primești pe acest dispozitiv, chiar și cu aplicația închisă.', 'Get them on this device, even with the app closed.');
     buton = `<button type="button" class="btn" onclick="activeazaPush()">${tr('Pornește', 'Turn on')}</button>`;
   } else if (Notification.permission === 'denied') {
-    text = tr('Notificările sunt blocate pentru B-Fit. Le poți porni din setările browserului sau ale telefonului.', 'Notifications are blocked for B-Fit. You can turn them on in your browser or phone settings.');
+    titlu = tr('Notificările sunt blocate', 'Notifications are blocked');
+    text = tr('Le poți porni din setările telefonului sau ale browserului.', 'You can turn them on in your phone or browser settings.');
+    icon = '<svg viewBox="0 0 24 24"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M2 2l20 20"/></svg>';
     buton = `<button type="button" class="notificare-x card-push-x" onclick="ascundeMesajPushBlocat()" aria-label="${tr('Închide', 'Close')}">×</button>`;
   } else {
     return '';
   }
-  return `<div class="lista-sticla card-push${blocate ? ' card-push-blocat' : ''}"><span>${text}</span>${buton}</div>`;
+  return `<div class="lista-sticla card-push${blocate ? ' card-push-blocat' : ''}"><span class="card-push-icon">${icon}</span>
+    <span class="card-push-text"><b>${titlu}</b><span>${text}</span></span>${buton}</div>`;
 }
 
 // Setări › Notificări: starea pe acest telefon și pornirea / oprirea lor (și după ce cardul de la clopoțel a fost închis)
@@ -20304,7 +20309,7 @@ function arataNotificariRapid() {
       const [titlu, mesaj] = textNotificare(n);
       // Același rând ca în pagina completă de notificări (bulina colorată după tip, ora), fără ×
       return `<button type="button" class="notificare necitita notif-rapid-rand" data-id="${escAttr(n.id)}">
-        <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
+        ${iconNotificare(n.tip)}
         <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span><small>${escAttr(cand(n.created_at))}</small></span></button>`;
     }).join('')}</div>
     <button type="button" class="notif-rapid-toate">${tr('Vezi toate', 'See all')}</button>`;
@@ -20369,6 +20374,46 @@ function inchidePanouNotificari() {
   document.getElementById('panouNotificari').classList.add('auth-hidden');
 }
 
+// Iconița din stânga notificării = iconița secțiunii în care te duce (Orar, Confirmări, Încasări, Mesaje, Progres, Plan,
+// Nutriție, Fișa de obiective, Clienți, Obiceiuri); culoarea spune ce s-a întâmplat: verde = venit / programat,
+// roșu = anulat / lipsă, portocaliu = abonament, accent = restul
+const SECTIUNE_NOTIFICARE = {
+  orar: ['rezervare', 'anulare', 'ziua_maine', 'programare_maine', 'loc_liber', 'programari_saptamana'],
+  confirmari: ['programari_lipsa'],
+  incasari: ['abonament_expira', 'abonamente_expira', 'sedinte_putine'],
+  mesaje: ['mesaj_nou', 'nota_noua'],
+  progres: ['checkin_nou', 'checkin_memento', 'lipsa_checkin'],
+  plan: ['plan_nou'],
+  nutritie: ['plan_alimentar_nou', 'masa_nenotata'],
+  fisa: ['fisa_modificata'],
+  clienti: ['cerere_noua'],
+  obiceiuri: ['obiectiv_saptamana', 'serie_pericol']
+};
+const CULOARE_NOTIFICARE = {
+  'nf-verde': ['rezervare', 'checkin_nou', 'programare_maine', 'programari_saptamana', 'ziua_maine', 'loc_liber'],
+  'nf-rosu': ['anulare', 'lipsa_checkin', 'programari_lipsa', 'serie_pericol'],
+  'nf-portocaliu': ['abonament_expira', 'abonamente_expira', 'sedinte_putine']
+};
+const ICON_SECTIUNE = {
+  orar: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="4.5"/><path d="M16 2v4M8 2v4M3 9h18"/></svg>',
+  confirmari: '<svg viewBox="0 0 24 24"><rect x="4.5" y="4" width="15" height="17.5" rx="4"/><path d="M9 4V3.2c0-.4.3-.7.7-.7h4.6c.4 0 .7.3.7.7V4"/><path d="M8.8 13l2.3 2.3 4.2-4.4"/></svg>',
+  incasari: '<svg viewBox="0 0 24 24"><ellipse cx="10" cy="6.5" rx="6.5" ry="3"/><path d="M3.5 6.5v4.5c0 1.7 2.9 3 6.5 3"/><path d="M3.5 11v4.5c0 1.7 2.9 3 6.5 3"/><path d="M16.5 6.5v2.3"/><ellipse cx="15" cy="13" rx="5.5" ry="2.6"/><path d="M9.5 13v4.4c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6V13"/></svg>',
+  mesaje: '<svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>',
+  progres: '<svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>',
+  plan: '<svg viewBox="0 0 24 24"><path d="M6.5 6.5h11M6.5 17.5h11"/><path d="M3 9.5v5M21 9.5v5M6.5 4v16M17.5 4v16"/></svg>',
+  nutritie: '<svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="7"/><path d="M12 11V5a2 2 0 0 1 2-2h2v1a2 2 0 0 1-2 2h-2"/><path d="M10 10.5c1.3.7 2.7.7 4 0"/></svg>',
+  fisa: '<svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>',
+  clienti: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="9.8" r="3"/><path d="M6.4 18.4c1.2-2.3 3.2-3.5 5.6-3.5s4.4 1.2 5.6 3.5"/></svg>',
+  obiceiuri: '<svg viewBox="0 0 24 24"><path d="m5 12 5 5L20 7"/></svg>',
+  general: '<svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>'
+};
+const cheieDupaTip = (harta, tip, implicit) => Object.keys(harta).find(k => harta[k].includes(tip)) || implicit;
+
+// Bula iconiței unei notificări (în pagina Notificări și în fereastra rapidă de la clopoțel)
+function iconNotificare(tip) {
+  return `<span class="notificare-icon ${cheieDupaTip(CULOARE_NOTIFICARE, tip, '')}">${ICON_SECTIUNE[cheieDupaTip(SECTIUNE_NOTIFICARE, tip, 'general')]}</span>`;
+}
+
 function randeazaNotificari() {
   const corp = document.getElementById('notificariContinut');
   document.getElementById('btnStergeNotificari').style.visibility = notificari.length ? '' : 'hidden';
@@ -20393,7 +20438,7 @@ function randeazaNotificari() {
     const actiune = areDestinatieNotificare(n) || esteClientSters(n) ? `onclick="deschideNotificare('${n.id}')"` : 'disabled';
     grupuri[grupa(n)].push(`<div class="notificare-rand">
       <button type="button" class="notificare${n.citit ? '' : ' necitita'}" ${actiune}>
-        <span class="notificare-icon tip-${escAttr(n.tip)}"></span>
+        ${iconNotificare(n.tip)}
         <span class="notificare-text"><b>${escAttr(titlu)}</b><span>${escAttr(mesaj)}</span><small>${escAttr(cand(n.created_at))}</small></span>
       </button>
       <button type="button" class="notificare-x" onclick="ascundeNotificare('${n.id}')" aria-label="${tr('Șterge notificarea', 'Remove notification')}">×</button>

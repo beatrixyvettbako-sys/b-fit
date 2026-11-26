@@ -3110,8 +3110,60 @@ html[data-rol="clienta"] #bottomNav {
   padding: 12px 14px;
 }
 
+/* Iconița într-o bulă (clopoțel; tăiat și portocaliu la „blocate”), apoi titlul și explicația */
 .card-push > span {
   position: relative;
+}
+
+.card-push-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--m-accent-text);
+}
+
+.card-push-blocat .card-push-icon {
+  background: rgba(245, 176, 65, 0.18);
+  color: #d68910;
+}
+
+[data-theme="dark"] .card-push-blocat .card-push-icon {
+  color: #f5b041;
+}
+
+.card-push-icon svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-push-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-push-text b {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--m-text);
+}
+
+.card-push-text span {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--m-muted);
 }
 
 /* Notificări blocate: × în colțul din dreapta-sus (același stil ca la notificări) */
@@ -3120,10 +3172,8 @@ html[data-rol="clienta"] #bottomNav {
   padding-right: 36px;
 }
 
-.card-push .card-push-x {
-  top: 6px;
-  bottom: auto;
-  padding: 0;
+.lista-sticla .card-push-x {
+  top: 50%;
 }
 
 /* Setări › Notificări: un rând pe tip, cu comutator */
@@ -3323,7 +3373,7 @@ html:not([data-theme="dark"]) .lista-sticla::before {
 .notificare {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
   padding: 12px 40px 12px 14px;
   border: none;
@@ -3386,9 +3436,9 @@ html:not([data-theme="dark"]) .lista-sticla::before {
   background: var(--border);
 }
 
-/* Necitită: fundal de accent, titlu îngroșat, bulină plină; citită: titlu normal, bulina estompată */
+/* Necitită: fundal de accent, titlu îngroșat și punctul de accent pe iconiță; citită: aceeași iconiță, clară (nu estompată) */
 .notificare.necitita {
-  background: rgba(var(--accent-rgb), 0.12);
+  background: rgba(var(--accent-rgb), 0.1);
 }
 
 .notificare.necitita .notificare-text b {
@@ -3396,30 +3446,60 @@ html:not([data-theme="dark"]) .lista-sticla::before {
 }
 
 .notificare:not(.necitita) .notificare-text b {
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.notificare:not(.necitita) .notificare-icon {
-  opacity: 0.3;
-}
-
+/* Iconița secțiunii (în care duce notificarea) într-o bulă colorată: verde = venit / programat, roșu = anulat / lipsă,
+   portocaliu = abonament, accent = restul (vezi iconNotificare în app.js) */
 .notificare-icon {
+  --nf: var(--accent-rgb);
+  position: relative;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(var(--nf), 0.14);
+  color: rgb(var(--nf));
+}
+
+.notificare-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.notificare-icon.nf-verde { --nf: 21, 128, 61; }
+.notificare-icon.nf-rosu { --nf: 185, 28, 28; }
+.notificare-icon.nf-portocaliu { --nf: 214, 137, 16; }
+
+[data-theme="dark"] .notificare-icon.nf-verde { --nf: 74, 222, 128; }
+[data-theme="dark"] .notificare-icon.nf-rosu { --nf: 248, 113, 113; }
+[data-theme="dark"] .notificare-icon.nf-portocaliu { --nf: 245, 176, 65; }
+[data-theme="dark"] .notificare-icon:not(.nf-verde, .nf-rosu, .nf-portocaliu) { color: var(--m-accent-text); }
+
+/* Necitită: punctul de accent în colțul bulei */
+.notificare.necitita .notificare-icon::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
   width: 10px;
   height: 10px;
-  margin-top: 5px;
   border-radius: 50%;
   background: var(--accent-purple);
+  box-shadow: 0 0 0 2px var(--m-card-solid, #fff);
 }
 
-.notificare-icon.tip-anulare,
-.notificare-icon.tip-lipsa_checkin { background: #b91c1c; }
-.notificare-icon.tip-abonament_expira,
-.notificare-icon.tip-abonamente_expira,
-.notificare-icon.tip-sedinte_putine { background: #f5b041; }
-.notificare-icon.tip-checkin_nou,
-.notificare-icon.tip-rezervare { background: #15803d; }
-.notificare-icon.tip-mesaj_nou { background: var(--primary); }
+[data-theme="dark"] .notificare.necitita .notificare-icon::after {
+  box-shadow: 0 0 0 2px #1e2a34;
+}
 
 .notificare-text {
   flex: 1;
@@ -3430,8 +3510,8 @@ html:not([data-theme="dark"]) .lista-sticla::before {
 }
 
 .notificare-text b {
-  font-size: 0.88rem;
-  color: var(--text);
+  font-size: 0.9rem;
+  color: var(--m-text);
 }
 
 /* Mesajul pe cel mult două rânduri */
@@ -3442,7 +3522,7 @@ html:not([data-theme="dark"]) .lista-sticla::before {
   overflow: hidden;
   font-size: 0.8rem;
   line-height: 1.35;
-  color: var(--text-muted);
+  color: var(--m-muted);
 }
 
 /* Ora: sub mesaj, mică și discretă (în dreapta rămâne doar ×) */
@@ -3450,8 +3530,7 @@ html:not([data-theme="dark"]) .lista-sticla::before {
   margin-top: 3px;
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--text-muted);
-  opacity: 0.85;
+  color: var(--m-muted);
 }
 
 /* Check-in-uri lipsă (din notificare): înapoi la Notificări ca pastilă, rândurile ca la Încasări › De reînnoit */
