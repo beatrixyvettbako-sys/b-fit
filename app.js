@@ -15316,13 +15316,15 @@ function coboaraFereastra(foaie, fundal, gata) {
   fundal?.removeAttribute('id');
   if (fundal) fundal.style.pointerEvents = 'none';
   if (!foaie || foaie.hidden || !foaie.getClientRects().length || matchMedia('(prefers-reduced-motion: reduce)').matches) { fundal?.remove(); gata(); return; }
-  const de = getComputedStyle(foaie).transform;
+  // De unde a lăsat-o degetul, tot ca translateY: din matrix() spre translateY(%) animația nu mai rula separat de pagină
+  // (cadrele așteptau după pagină, pe Orar mai ales), deci după tragere fereastra stătea o clipă și sacada
+  const de = `translateY(${new DOMMatrix(getComputedStyle(foaie).transform).m42}px)`;
   foaie.style.animation = 'none';
   foaie.style.pointerEvents = 'none';
   // Aceeași curbă ca la urcare (fisaIntra): pornește repede, încetinește doar când e deja aproape ieșită din ecran.
   // Cu o curbă care pornea încet, ferestrele scurte (fișa pe scurt) păreau că abia se mișcă la început
   const durata = { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
-  const a = foaie.animate([{ transform: de === 'none' ? 'translateY(0)' : de }, { transform: 'translateY(105%)' }], durata);
+  const a = foaie.animate([{ transform: de }, { transform: 'translateY(105%)' }], durata);
   // Fundalul (cu fereastra în el) se stinge uniform, ca la editarea plății; cu curba ferestrei dispărea aproape tot din primele cadre
   fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], { duration: durata.duration, fill: 'forwards' });
   foaie._coborare = a;

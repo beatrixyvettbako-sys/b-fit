@@ -16541,9 +16541,18 @@ body.orar-titlu-strans #mainAppHeader .orar-cauta-antet {
   order: -1;
 }
 
-/* Fișa pe scurt se trage în jos de oriunde (nu doar de mâner) ca să se închidă */
+/* Fișa pe scurt (și ferestrele din chat / Confirmări) ca plata nouă: fereastră cu derulare, fără bară, pan-y.
+   Se trage în jos de oriunde: tragerea prin touch (trageInJosDinConținut) oprește derularea când degetul coboară */
 #fisaScurta:not(.cautare-client):not(.notif-rapid) {
-  touch-action: none;
+  max-height: 88dvh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+#fisaScurta:not(.cautare-client):not(.notif-rapid)::-webkit-scrollbar {
+  display: none;
 }
 
 .fisa-scurta-actiune {
