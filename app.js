@@ -15315,17 +15315,23 @@ function adaugaFoaieJos(fundal, foaie, inchide) {
 function coboaraFereastra(foaie, fundal, gata) {
   fundal?.removeAttribute('id');
   if (fundal) fundal.style.pointerEvents = 'none';
+  const v = foaie?._vitezaInchidere;
+  if (foaie) foaie._vitezaInchidere = null;
   if (!foaie || foaie.hidden || !foaie.getClientRects().length || matchMedia('(prefers-reduced-motion: reduce)').matches) { fundal?.remove(); gata(); return; }
   // De unde a lăsat-o degetul, tot ca translateY: din matrix() spre translateY(%) animația nu mai rula separat de pagină
   // (cadrele așteptau după pagină, pe Orar mai ales), deci după tragere fereastra stătea o clipă și sacada
-  const de = `translateY(${new DOMMatrix(getComputedStyle(foaie).transform).m42}px)`;
+  const y = new DOMMatrix(getComputedStyle(foaie).transform).m42;
+  const de = `translateY(${y}px)`;
   foaie.style.animation = 'none';
   foaie.style.pointerEvents = 'none';
-  // Aceeași curbă ca la urcare (fisaIntra): pornește repede, încetinește doar când e deja aproape ieșită din ecran.
-  // Cu o curbă care pornea încet, ferestrele scurte (fișa pe scurt) păreau că abia se mișcă la început
-  const durata = { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
-  const a = foaie.animate([{ transform: de }, { transform: 'translateY(105%)' }], durata);
-  // Fundalul (cu fereastra în el) se stinge uniform, ca la editarea plății; cu curba ferestrei dispărea aproape tot din primele cadre
+  // Atingere în afară / Înapoi: aceeași curbă ca la urcare (fisaIntra), pornește repede.
+  // După tragere (_vitezaInchidere, px/ms): coboară uniform cu viteza degetului (cel puțin 1,6 px/ms), ca foile native;
+  // cu curba de mai sus pornea brusc și apoi se târa ultima bucată vizibilă, adică se închidea „în două etape”
+  const durata = v != null
+    ? { duration: Math.min(240, Math.max(120, (foaie.offsetHeight - y) / Math.max(v, 1.6))), easing: 'linear', fill: 'forwards' }
+    : { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
+  const a = foaie.animate([{ transform: de }, { transform: v != null ? 'translateY(100%)' : 'translateY(105%)' }], durata);
+  // Fundalul se stinge uniform, în același timp cu fereastra (nu rămâne întunecat după ce ea a ieșit)
   fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], { duration: durata.duration, fill: 'forwards' });
   foaie._coborare = a;
   foaie._fundalIesire = fundal;
@@ -15353,7 +15359,13 @@ function urmaresteVitezaTragere() {
   return {
     start(yy, tt) { y = yy; t = tt; v = 0; },
     misca(yy, tt) { if (tt > t) { v = (yy - y) / (tt - t); y = yy; t = tt; } },
-    inchide: (dy, prag) => dy > prag || (dy > 12 && v > 0.35)
+    // Închide și dă ferestrei viteza degetului, ca coborârea să continue cu ea (coboaraFereastra)
+    inchide(dy, prag, foaie, inchide) {
+      if (!(dy > prag || (dy > 12 && v > 0.35))) return false;
+      foaie._vitezaInchidere = Math.max(0, v);
+      inchide();
+      return true;
+    }
   };
 }
 
@@ -15380,7 +15392,7 @@ function trageInJosCaSaInchizi(foaie, inchide, zona) {
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (viteza.inchide(dy, 60)) inchide(); else foaie.style.transform = '';
+    if (!viteza.inchide(dy, 60, foaie, inchide)) foaie.style.transform = '';
   };
   foaie.addEventListener('pointerup', gata);
   foaie.addEventListener('pointercancel', gata);
@@ -15418,7 +15430,7 @@ function trageInJosDinConținut(foaie, inchide, zona) {
     const dy = e.changedTouches[0].clientY - y0;
     y0 = null; trage = false;
     foaie.style.transition = '';
-    if (viteza.inchide(dy, 80)) inchide(); else foaie.style.transform = '';
+    if (!viteza.inchide(dy, 80, foaie, inchide)) foaie.style.transform = '';
   };
   foaie.addEventListener('touchend', gata);
   foaie.addEventListener('touchcancel', gata);
@@ -19944,8 +19956,8 @@ function arataNotificariRapid() {
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (viteza.inchide(dy, 90)) inchideNotificariRapid();
-    else if (dy < -50) { inchideNotificariRapid(); deschidePanouNotificariComplet(); }
+    if (viteza.inchide(dy, 90, foaie, inchideNotificariRapid)) return;
+    if (dy < -50) { inchideNotificariRapid(); deschidePanouNotificariComplet(); }
     else foaie.style.transform = '';
   };
   maner.addEventListener('pointerup', gata);
