@@ -15323,7 +15323,8 @@ function coboaraFereastra(foaie, fundal, gata) {
   // Cu o curbă care pornea încet, ferestrele scurte (fișa pe scurt) păreau că abia se mișcă la început
   const durata = { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
   const a = foaie.animate([{ transform: de === 'none' ? 'translateY(0)' : de }, { transform: 'translateY(105%)' }], durata);
-  fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], durata);
+  // Fundalul (cu fereastra în el) se stinge uniform, ca la editarea plății; cu curba ferestrei dispărea aproape tot din primele cadre
+  fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], { duration: durata.duration, fill: 'forwards' });
   foaie._coborare = a;
   foaie._fundalIesire = fundal;
   a.finished.then(() => {
