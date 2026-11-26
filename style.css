@@ -14641,7 +14641,6 @@ body.zile-lipite #tabOrar > #orarCifre::before {
   inset: 0;
   z-index: 3000;
   background: rgba(0, 0, 0, 0.35);
-  animation: fisaFundal 0.3s ease both;
 }
 
 .fisa-scurta {
@@ -14984,7 +14983,7 @@ body.zile-lipite #tabOrar > #orarCifre::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fisa-scurta, .fisa-scurta-fundal, .eticheta-offline i { animation: none; }
+  .fisa-scurta, .eticheta-offline i { animation: none; }
 }
 
 /* „Bifează toată ora” jos pe card */

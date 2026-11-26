@@ -13535,6 +13535,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 247, data: '2026-11-26',
+    client: [],
+    antrenor: [
+      ['Fișa pe scurt (atingi poza clientului) arată ce contează pe pagina pe care ești: în Orar ultimul antrenament, în Istoric prezențele lui, în „De reînnoit” ultima plată și butonul „Încasează”.', 'The quick profile (tap a client’s photo) shows what matters on the page you’re on: the last workout on the Schedule, their attendance in History, the last payment and a “Collect” button in “Due for renewal”.'],
+      ['În fișa pe scurt, data de expirare e roșie când abonamentul a expirat și portocalie cu 7 zile înainte, iar ultima prezență apare ca „acum 3 zile”.', 'In the quick profile, the expiry date turns red once the membership has expired and orange 7 days before, and the last attendance shows as “3 days ago”.']
+    ]
+  },
   { v: 244, data: '2026-11-25',
     client: [
       ['Planul alimentar arată toată săptămâna: atingi o zi și îi vezi mesele. Ce înlocuiești rămâne ținut minte pe fiecare zi.', 'Your meal plan shows the whole week: tap a day to see its meals. What you swap is remembered for each day.']
@@ -15189,8 +15196,10 @@ function avatarLipsa(id, img) {
   img.remove();
 }
 
-// Fișa pe scurt (apăsare pe inițialele / poza clientului din Orar): doar citește datele, nu schimbă nimic
-function arataFisaScurta(idClient, zi, ora, slotIdx) {
+// Fișa pe scurt (apăsare pe inițialele / poza clientului): doar citește datele, nu schimbă nimic.
+// Cifrele și butoanele depind de pagină: slotul din Orar = ședința, 'istoric' = prezențele, 'incasari' = abonamentul și plata;
+// fără pagină (Confirmări, care își adaugă blocul ei) rămâne varianta de bază.
+function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
   const c = (DB.clienti || []).find(x => x && x.id === idClient);
   if (!c) return;
   const dinSlot = !!(zi && ora && typeof slotIdx === 'number');
@@ -15200,21 +15209,58 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
     const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec((d || '').trim());
     return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : (d || '');
   };
-  const ultima = (DB.prezente || [])
+  const prezenteLui = (DB.prezente || [])
     .filter(p => p && p.clienta && p.clienta.trim().toLowerCase() === numeMic)
-    .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)))[0];
+    .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)));
+  const ultima = prezenteLui[0];
   // Alerta de sănătate din fișa de obiective (ca în antetul fișei): ce are și detaliile, pe scurt
   const fisa = c.fisaInscriere || {};
   const probleme = problemeSanatate(fisa);
   // Câte un rând pe problemă, întreg (nu tăiat): ce are și detaliile scrise de client
   const alerta = probleme.length ? `<div class="fisa-scurta-alerta">${probleme.map(id => `<div>⚠ <b>${escAttr(textInscriere(ETICHETE_SCURTE_INSCRIERE[id]))}</b>${fisa[id + 'Detalii'] ? `: ${escAttr(fisa[id + 'Detalii'])}` : ''}</div>`).join('')}</div>` : '';
   const ramaseText = c.incluse > 0 ? String(c.ramase) : '–';
-  const ramaseCls = c.incluse > 0 && c.ramase <= 0 ? ' rosu' : (c.incluse > 0 && c.ramase === 1 ? ' portocaliu' : '');
+  const ramaseCls = c.incluse > 0 && c.ramase <= 0 ? 'rosu' : (c.incluse > 0 && c.ramase === 1 ? 'portocaliu' : '');
+  const cifra = (val, eticheta, cls) => `<div><b${cls ? ` class="${cls}"` : ''}>${escAttr(String(val ?? ''))}</b><span>${eticheta}</span></div>`;
+  const ramase = cifra(ramaseText, tr('Ședințe rămase', 'Sessions left'), ramaseCls);
+  const abonament = cifra(numeAbonamentClienta(c.tipAbonament), tr('Abonament', 'Membership'));
+  // Zile de azi până la o dată din bază (negativ = în trecut), pentru ultima prezență și expirare
+  const azi0 = new Date().setHours(0, 0, 0, 0);
+  const zileDeAzi = d => { const t = parseazaDataOraRo(d); return t ? Math.round((new Date(t).setHours(0, 0, 0, 0) - azi0) / 86400000) : null; };
+  const inUrma = ultima ? -zileDeAzi(ultima.data) : null;
+  const ultimaText = inUrma === null || isNaN(inUrma) ? (ultima ? ultima.data : '–')
+    : inUrma === 0 ? tr('azi', 'today') : inUrma === 1 ? tr('ieri', 'yesterday')
+    : tr(`acum ${inUrma} zile`, `${inUrma} days ago`);
+  const ultimaPrezenta = cifra(ultimaText, tr('Ultima prezență', 'Last attendance'));
+  // Ca în „De reînnoit”: roșu = expirat, portocaliu = expiră în cel mult 7 zile
+  const zileExp = c.incluse > 0 ? zileDeAzi(c.dataExpirare) : null;
+  const valabil = cifra(c.dataExpirare, tr('Valabil până la', 'Valid until'), zileExp === null ? '' : zileExp < 0 ? 'rosu' : zileExp <= 7 ? 'portocaliu' : '');
+  let grila;
+  if (dinSlot) {
+    const antUltim = prezenteLui.find(p => p.antrenament && p.antrenament.trim() !== '-');
+    grila = ramase + cifra(antUltim ? traduceValoare(antUltim.antrenament) : '–', tr('Ultimul antrenament', 'Last workout')) + ultimaPrezenta + valabil;
+  } else if (pagina === 'istoric') {
+    const azi = new Date();
+    const lunaAsta = isoDinData(azi).slice(0, 7);
+    const acum28 = isoDinData(new Date(azi.getFullYear(), azi.getMonth(), azi.getDate() - 28));
+    const peSapt = Math.round(prezenteLui.filter(p => cheieData(p.data) > acum28).length / 4 * 10) / 10;
+    grila = cifra(prezenteLui.filter(p => cheieData(p.data).startsWith(lunaAsta)).length, tr('Prezențe luna asta', 'Attended this month'))
+      + cifra(String(peSapt).replace('.', currentLang === 'en' ? '.' : ','), tr('Pe săpt. (4 săpt.)', 'Per week (4 wks)')) + ultimaPrezenta + ramase;
+  } else if (pagina === 'incasari') {
+    const plata = (DB.incasari || []).filter(i => i && i.data && (i.client_id === c.id || cheieNume(i.clienta || '') === cheieNume(c.nume)))
+      .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)))[0];
+    grila = abonament + ramase + valabil
+      + cifra(plata ? formateazaSuma(plata.suma) : '–', plata ? `${tr('Ultima plată', 'Last payment')} · ${escAttr(plata.data.replace(/\.\d{4}$/, ''))}` : tr('Ultima plată', 'Last payment'));
+  } else grila = ramase + abonament + ultimaPrezenta + valabil;
+  const buton = (id, svg, text, principal) => `<button type="button" class="fisa-scurta-actiune${principal ? ' fisa-scurta-actiune-principala' : ''}" id="${id}">${svg}${text}</button>`;
+  const actiuni = pagina === 'incasari'
+    ? buton('btnFisaIncaseaza', ICON_ISTORIC_PLATA, tr('Încasează', 'Collect'), true)
+    : pagina === 'istoric'
+      ? buton('btnFisaDoarClient', '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>', tr('Doar acest client', 'Only this client'))
+      : buton('btnAdaugaAntrenament', '<svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>', tr('Adaugă antrenament', 'Add workout'));
 
   const fundal = document.createElement('div');
   fundal.className = 'fisa-scurta-fundal';
   fundal.id = 'fisaScurtaFundal';
-  fundal.onclick = inchideFisaScurta;
   const foaie = document.createElement('div');
   foaie.className = 'fisa-scurta';
   foaie.id = 'fisaScurta';
@@ -15224,22 +15270,25 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
       <div class="slot-num">${avatarSlotHtml(c)}</div>
       <b>${escAttr(c.nume)}</b>
     </div>${alerta}
-    <div class="fisa-scurta-grila">
-      <div><b class="${ramaseCls.trim()}">${ramaseText}</b><span>${tr('Ședințe rămase', 'Sessions left')}</span></div>
-      <div><b>${escAttr(traduceValoare(c.tipAbonament))}</b><span>${tr('Abonament', 'Membership')}</span></div>
-      <div><b>${ultima ? escAttr(ultima.data) : '–'}</b><span>${tr('Ultima prezență', 'Last attendance')}</span></div>
-      <div><b>${escAttr(c.dataExpirare)}</b><span>${tr('Valabil până la', 'Valid until')}</span></div>
-    </div>
+    <div class="fisa-scurta-grila">${grila}</div>
     <div class="fisa-scurta-actiuni">
-      <button type="button" class="fisa-scurta-actiune" id="btnAdaugaAntrenament"><svg viewBox="0 0 24 24"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>${tr('Adaugă antrenament', 'Add workout')}</button>
+      ${actiuni}
       ${dinSlot ? `<button type="button" class="fisa-scurta-actiune" id="btnRepetaSaptamanal" title="${tr('Același loc în următoarele 4 săptămâni', 'Same spot for the next 4 weeks')}"><svg viewBox="0 0 24 24"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>${tr('Repetă săptămânal', 'Repeat weekly')}</button>` : ''}
-      <button type="button" class="fisa-scurta-actiune fisa-scurta-actiune-principala" id="btnFisaCompleta">${tr('Fișa completă', 'Full profile')}<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+      <button type="button" class="fisa-scurta-actiune${pagina === 'incasari' ? '' : ' fisa-scurta-actiune-principala'}" id="btnFisaCompleta">${tr('Fișa completă', 'Full profile')}<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
     </div>`;
   if (dinSlot) foaie.querySelector('#btnRepetaSaptamanal').onclick = () => { inchideFisaScurta(); repetaSaptamanal(c, zi, ora, slotIdx); };
-  foaie.querySelector('#btnAdaugaAntrenament').onclick = () => {
+  const btnAntrenament = foaie.querySelector('#btnAdaugaAntrenament');
+  if (btnAntrenament) btnAntrenament.onclick = () => {
     const antEl = dinSlot ? document.getElementById(`ant_${normalizeazaOraUi(ora).replace(':', '')}_${slotIdx}`) : null;
     inchideFisaScurta();
     adaugaAntrenamentPentru(c, antEl ? (antEl.dataset.valoare ?? antEl.value) : '');
+  };
+  if (pagina === 'incasari') foaie.querySelector('#btnFisaIncaseaza').onclick = () => { inchideFisaScurta(); deschideIncasareNoua({ nume: c.nume, tip: c.tipAbonament }); };
+  if (pagina === 'istoric') foaie.querySelector('#btnFisaDoarClient').onclick = () => {
+    inchideFisaScurta();
+    const camp = document.getElementById('filtruClientaOrar');
+    camp.value = c.nume;
+    camp.dispatchEvent(new Event('input', { bubbles: true })); // filtrează lista și arată × din câmp, ca la scris
   };
   foaie.querySelector('#btnFisaCompleta').onclick = () => {
     inchideFisaScurta();
@@ -15247,8 +15296,17 @@ function arataFisaScurta(idClient, zi, ora, slotIdx) {
     deschideClientaDinLista(c.nume);
   };
   trageInJosCaSaInchizi(foaie, inchideFisaScurta); // de oriunde de pe fișă, nu doar de mâner
-  document.body.append(fundal, foaie);
+  adaugaFoaieJos(fundal, foaie, inchideFisaScurta);
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
+}
+
+// Fereastra de jos creată pe loc stă în fundalul ei, ca editarea plății: la închidere coboară și se stinge împreună cu el,
+// iar blurul ferestrei nu se mai recalculează la fiecare cadru peste un fundal care se stinge (sacada pe telefon).
+// Atingerea închide doar în afara ferestrei.
+function adaugaFoaieJos(fundal, foaie, inchide) {
+  fundal.onclick = e => { if (e.target === fundal) inchide(); };
+  fundal.append(foaie);
+  document.body.append(fundal);
 }
 
 // Închiderea ferestrelor de jos: coboară lin de unde se află (și după ce a fost trasă cu degetul), fundalul se stinge,
@@ -15389,7 +15447,6 @@ function deschideCautareClient() {
   const fundal = document.createElement('div');
   fundal.className = 'fisa-scurta-fundal';
   fundal.id = 'fisaScurtaFundal';
-  fundal.onclick = inchideFisaScurta;
   const foaie = document.createElement('div');
   foaie.className = 'fisa-scurta cautare-client';
   foaie.id = 'fisaScurta';
@@ -15472,7 +15529,7 @@ function deschideCautareClient() {
     vv.addEventListener('resize', urca);
     vv.addEventListener('scroll', urca);
   }
-  document.body.append(fundal, foaie);
+  adaugaFoaieJos(fundal, foaie, inchideFisaScurta);
   sincronizeazaIstoricInapoi();
   setTimeout(() => camp.focus(), 60);
 }
@@ -16801,7 +16858,7 @@ function filtreazaIstoricOrarInstant() {
       <div class="lista-sticla">${z.randuri.map(p => {
         const c = (DB.clienti || []).find(x => x && x.id === p.client_id) || gasesteClientaValida(p.clienta);
         const ant = traduceValoare(p.antrenament && p.antrenament !== '-' ? p.antrenament : antrenamentDinOrar(p));
-        return `<div class="prog-row${c ? ' prog-row-client' : ''}"${c ? ` onclick="arataFisaScurta('${escAttr(c.id)}')"` : ''}>
+        return `<div class="prog-row${c ? ' prog-row-client' : ''}"${c ? ` onclick="arataFisaScurta('${escAttr(c.id)}', null, null, null, 'istoric')"` : ''}>
           <div class="slot-num">${c ? avatarSlotHtml(c) : ''}</div>
           <div class="prog-info">
             <span class="prog-name">${escAttr(p.clienta)}</span>
@@ -17912,13 +17969,12 @@ function deschideFoaieChat(continut, clasa) {
   const fundal = document.createElement('div');
   fundal.className = 'fisa-scurta-fundal fundal-peste-chat';
   fundal.id = 'fisaScurtaFundal';
-  fundal.onclick = inchideFisaScurta;
   const foaie = document.createElement('div');
   foaie.className = `fisa-scurta foaie-peste-chat ${clasa}`;
   foaie.id = 'fisaScurta';
   foaie.innerHTML = `<div class="fisa-scurta-maner"><span></span></div>${continut}`;
   trageInJosCaSaInchizi(foaie, inchideFisaScurta);
-  document.body.append(fundal, foaie);
+  adaugaFoaieJos(fundal, foaie, inchideFisaScurta);
   sincronizeazaIstoricInapoi();
   return foaie;
 }
@@ -19823,7 +19879,6 @@ function arataNotificariRapid() {
   const fundal = document.createElement('div');
   fundal.className = 'fisa-scurta-fundal';
   fundal.id = 'notifRapidFundal';
-  fundal.onclick = inchideNotificariRapid;
   const foaie = document.createElement('div');
   foaie.className = 'fisa-scurta notif-rapid';
   foaie.id = 'notifRapid';
@@ -19863,7 +19918,7 @@ function arataNotificariRapid() {
   };
   maner.addEventListener('pointerup', gata);
   maner.addEventListener('pointercancel', gata);
-  document.body.append(fundal, foaie);
+  adaugaFoaieJos(fundal, foaie, inchideNotificariRapid);
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
   marcheazaNotificariCitite();
 }
@@ -20959,7 +21014,7 @@ function randeazaReinnoiri() {
   if (!incReinnoireLista.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="lista-titlu">${tr('De reînnoit', 'Due for renewal')} (${incReinnoireLista.length})</div>
     <div class="lista-sticla">${incReinnoireLista.map(({ c, s }, i) => `
-      <div class="prog-row prog-row-client" onclick="arataFisaScurta('${escAttr(c.id)}')">
+      <div class="prog-row prog-row-client" onclick="arataFisaScurta('${escAttr(c.id)}', null, null, null, 'incasari')">
         <div class="slot-num">${avatarSlotHtml(c)}</div>
         <div class="prog-info">
           <span class="prog-name">${escAttr(c.nume)}</span>
