@@ -21332,14 +21332,17 @@ function deschideFoaieCuFundal(fundal, foaie) {
 function inchideFoaieCuFundal(fundal, foaie) {
   if (foaie._coborare) return;
   fundal.style.pointerEvents = 'none';
-  const durata = { duration: 260, fill: 'forwards' };
-  const stinge = fundal.style.display === 'flex' ? fundal.animate([{ opacity: 1 }, { opacity: 0 }], durata) : null;
+  let stinge = null;
   coboaraFereastra(foaie, null, () => {
     stinge?.cancel();
     fundal.style.display = 'none';
     fundal.style.pointerEvents = '';
     foaie.style.transform = foaie.style.animation = ''; // după tragere: la următoarea deschidere urcă iar de jos
   });
+  // Cât coboară fereastra (după tragere poate fi mai scurt), ca fundalul să nu dispară brusc la jumătatea stingerii
+  if (foaie._coborare && fundal.style.display === 'flex') {
+    stinge = fundal.animate([{ opacity: 1 }, { opacity: 0 }], { duration: foaie._coborare.effect.getTiming().duration, fill: 'forwards' });
+  }
 }
 
 trageInJosCaSaInchizi(document.getElementById('cardEditareIncasare'), inchideModalEditareIncasare, '.fisa-scurta-maner, .incasare-foaie-titlu');
