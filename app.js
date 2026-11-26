@@ -15328,9 +15328,11 @@ function coboaraFereastra(foaie, fundal, gata) {
   // După tragere (_vitezaInchidere, px/ms): coboară uniform cu viteza degetului (cel puțin 1,6 px/ms), ca foile native;
   // cu curba de mai sus pornea brusc și apoi se târa ultima bucată vizibilă, adică se închidea „în două etape”
   const durata = v != null
-    ? { duration: Math.min(240, Math.max(120, (foaie.offsetHeight - y) / Math.max(v, 1.6))), easing: 'linear', fill: 'forwards' }
+    ? { duration: Math.min(240, Math.max(80, (foaie.offsetHeight - y) / Math.max(v, 1.6))), easing: 'linear', fill: 'forwards' }
     : { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
   const a = foaie.animate([{ transform: de }, { transform: v != null ? 'translateY(100%)' : 'translateY(105%)' }], durata);
+  // După tragere pornește din primul cadru deja în mișcare (altfel stătea un cadru pe loc la ridicarea degetului)
+  if (v != null) a.currentTime = 16;
   // Fundalul se stinge uniform, în același timp cu fereastra (nu rămâne întunecat după ce ea a ieșit)
   fundal?.animate([{ opacity: getComputedStyle(fundal).opacity }, { opacity: 0 }], { duration: durata.duration, fill: 'forwards' });
   foaie._coborare = a;
@@ -15354,11 +15356,18 @@ function opresteCoborarea(foaie) {
 
 // Ca foile native: se închide după o tragere lungă (`prag`) sau după una scurtă dar rapidă în jos (viteza în px/ms,
 // din ultima mișcare a degetului), ca să nu revină sus și să trebuiască trasă din nou
+// Viteza = pe ultimele ~100 ms ale degetului, nu pe ultima mișcare: la ridicare degetul frânează, iar fereastra ar fi
+// continuat mai încet decât era trasă (o „întrerupere” la mijlocul coborârii)
 function urmaresteVitezaTragere() {
-  let y = 0, t = 0, v = 0;
+  let puncte = [], v = 0;
   return {
-    start(yy, tt) { y = yy; t = tt; v = 0; },
-    misca(yy, tt) { if (tt > t) { v = (yy - y) / (tt - t); y = yy; t = tt; } },
+    start(yy, tt) { puncte = [[tt, yy]]; v = 0; },
+    misca(yy, tt) {
+      puncte.push([tt, yy]);
+      while (puncte.length > 2 && tt - puncte[0][0] > 100) puncte.shift();
+      const [t0, y0] = puncte[0];
+      if (tt > t0) v = (yy - y0) / (tt - t0);
+    },
     // Închide și dă ferestrei viteza degetului, ca coborârea să continue cu ea (coboaraFereastra)
     inchide(dy, prag, foaie, inchide) {
       if (!(dy > prag || (dy > 12 && v > 0.35))) return false;
