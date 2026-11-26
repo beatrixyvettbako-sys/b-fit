@@ -13561,6 +13561,18 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 260, data: '2026-11-26',
+    client: [
+      ['Mesajele vocale arată acum unda vocii: vezi cât s-a ascultat, atingi unda ca să sari la un moment anume și poți asculta mai repede (1×, 1.5×, 2×).', 'Voice messages now show a waveform: see how much you have heard, tap the waveform to jump to any moment and play faster (1×, 1.5×, 2×).'],
+      ['Când înregistrezi un vocal, vezi unda vocii în timp real, iar coșul din stânga anulează înregistrarea.', 'While recording a voice message you see your voice as a live waveform; the bin on the left cancels it.'],
+    ],
+    antrenor: [
+      ['Mesajele vocale arată acum unda vocii: vezi cât s-a ascultat, atingi unda ca să sari la un moment anume și poți asculta mai repede (1×, 1.5×, 2×).', 'Voice messages now show a waveform: see how much you have heard, tap the waveform to jump to any moment and play faster (1×, 1.5×, 2×).'],
+      ['Când înregistrezi un vocal, vezi unda vocii în timp real, iar coșul din stânga anulează înregistrarea.', 'While recording a voice message you see your voice as a live waveform; the bin on the left cancels it.'],
+      ['În Orar, la săptămânile trecute poți completa sau schimba tipul antrenamentului, dacă ai uitat să-l alegi.', 'In the Schedule, past weeks now let you add or change the workout type if you forgot to choose it.'],
+      ['În chat, dacă un client are notificările oprite, apare un mesaj sub antet; atinge-l ca să-i trimiți linkul aplicației.', 'In chat, if a client has notifications off, a note shows under the header; tap it to send them the app link.'],
+    ]
+  },
   { v: 257, data: '2026-11-26',
     client: [],
     antrenor: [
@@ -15704,8 +15716,6 @@ function randeazaOrarInstant() {
           <div class="hour-slots-wrapper">
       `;
       lista.forEach((s, idx) => {
-        let colorCls = culoareAntrenament(s.antrenament);
-
         if (!s.bifat) {
           // Aceleași ID-uri ca în orarul curent: bifeazaPrezentaSlot / anuleazaSlot citesc numele și antrenamentul din ele
           let cheie = `${ora.replace(':', '')}_${s.slotIndex}`;
@@ -15713,8 +15723,8 @@ function randeazaOrarInstant() {
           <div class="slot-row slot-occupied">
             <div class="slot-num">${idx + 1}</div>
             <div class="slot-info">
-              <input type="text" id="cli_${cheie}" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
-              <input type="text" id="ant_${cheie}" class="slot-input ${colorCls}" value="${escAttr(traduceValoare(s.antrenament))}" data-valoare="${escAttr(s.antrenament)}" placeholder="-" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+              <input type="text" id="cli_${cheie}" class="slot-input" value="${escAttr(s.clienta)}" readonly tabindex="-1" style="font-weight:700;">
+              ${htmlSelectAntrenament(`ant_${cheie}`, s.antrenament, `peSchimbareAntrenament('${ziCurentaCheie}', '${ora}', ${s.slotIndex})`)}
             </div>
             <div style="display:flex; gap:4px;">
               <button id="btn_save_${cheie}" class="btn btn-save-check" title="${tr('Confirmă prezența (scade o ședință)', 'Confirm attendance (deducts a session)')}" onclick="bifeazaPrezentaSlot('${ziCurentaCheie}', '${ora}', ${s.slotIndex})">✓</button>
@@ -15729,8 +15739,8 @@ function randeazaOrarInstant() {
           <div class="slot-row slot-occupied">
             <div class="slot-num">${idx + 1}</div>
             <div class="slot-info">
-              <input type="text" class="slot-input" value="${escAttr(s.clienta)}" readonly style="font-weight:700;">
-              <input type="text" class="slot-input ${colorCls}" value="${escAttr(traduceValoare(s.antrenament) || '-')}" readonly style="font-size:0.75rem; font-weight:700; margin-top:2px;">
+              <input type="text" class="slot-input" value="${escAttr(s.clienta)}" readonly tabindex="-1" style="font-weight:700;">
+              ${htmlSelectAntrenament('', s.antrenament, `schimbaAntrenamentIstoric('${dataCalendarCurenta}', '${ora}', '${escAttr(s.clienta).replace(/'/g, "\\'")}', this.value)`)}
             </div>
             <div style="font-size:0.82rem; font-weight:800; color:#15803d; padding:0 8px; white-space:nowrap;">${historyText}</div>
           </div>
@@ -15861,21 +15871,9 @@ function randeazaOrarInstant() {
       // Loc adăugat cu „+”, doar cât e peste numărul din Setări (după o mărire în Setări devine loc obișnuit)
       let esteLocSuplimentar = slot.suplimentar && slot.row && slotIdx >= nrLocuri;
 
-      let colorCls = culoareAntrenament(antVal);
-
-      let tipAntrenamentPlaceholder = currentLang === 'en' ? 'Workout type' : 'Tip antrenament';
       let clientPlaceholder = currentLang === 'en' ? 'Choose client' : 'Alege client';
 
-      let selectAntHtml = `<select id="ant_${slotDomKey}" class="slot-select-type ${antVal ? 'select-active ' + colorCls : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); peSchimbareAntrenament('${ziCurentaCheie}', '${ora}', ${slotIdx})">`;
-      selectAntHtml += `<option value="" ${!antVal ? 'selected' : ''}>${tipAntrenamentPlaceholder}</option>`;
-      // Tip șters sau redenumit între timp: rămâne în listă cât e salvat pe slot
-      let tipuriSlot = optiuniAntrenamentConfig.map(opt => opt.text);
-      if (antVal && !tipuriSlot.includes(antVal)) tipuriSlot.push(antVal);
-      tipuriSlot.forEach(text => {
-        let selected = (antVal === text) ? 'selected' : '';
-        selectAntHtml += `<option value="${escAttr(text)}" ${selected}>${escAttr(traduceValoare(text))}</option>`;
-      });
-      selectAntHtml += `</select>`;
+      let selectAntHtml = htmlSelectAntrenament(`ant_${slotDomKey}`, antVal, `peSchimbareAntrenament('${ziCurentaCheie}', '${ora}', ${slotIdx})`);
 
       // Bifa verde (prezent) rămâne apăsabilă: atingerea ei anulează prezența, după confirmare
       let prezent = isOccupied && slot.bifat;
@@ -16228,6 +16226,25 @@ function mesajAntrenamentRepetat(numeExact, antrenament, saptamanaCheie, oraNorm
     (s.antrenament || '').trim().toLowerCase() === ant &&
     !(s.ziRaw === tagZi && normalizeazaOraUi(s.ora) === oraNorm && Number(s.slotIndex) === Number(slotIdx)));
   return repetat ? tr(`${numeExact} are deja un antrenament de ${traduceValoare(antrenament)} în această săptămână.`, `${numeExact} already has a ${traduceValoare(antrenament)} workout this week.`) : '';
+}
+
+// Selectorul tipului de antrenament de pe un loc din Orar (săptămâna curentă și cea trecută, ca să se poată completa ulterior)
+function htmlSelectAntrenament(id, antVal, laSchimbare) {
+  antVal = antVal && antVal !== '-' ? antVal : ''; // „-” = salvat la bifare fără tip
+  // Tip șters sau redenumit între timp: rămâne în listă cât e salvat pe slot
+  const tipuri = optiuniAntrenamentConfig.map(opt => opt.text);
+  if (antVal && !tipuri.includes(antVal)) tipuri.push(antVal);
+  return `<select${id ? ` id="${id}"` : ''} class="slot-select-type ${antVal ? 'select-active ' + culoareAntrenament(antVal) : 'select-faded'}" onchange="aplicaCuloareAntrenament(this); ${laSchimbare}">`
+    + `<option value="" ${antVal ? '' : 'selected'}>${tr('Tip antrenament', 'Workout type')}</option>`
+    + tipuri.map(text => `<option value="${escAttr(text)}" ${antVal === text ? 'selected' : ''}>${escAttr(traduceValoare(text))}</option>`).join('')
+    + `</select>`;
+}
+
+// Săptămâna trecută, prezență deja confirmată: tipul antrenamentului se schimbă doar în istoric (ședințele rămân la fel)
+async function schimbaAntrenamentIstoric(data, ora, clienta, antrenament) {
+  await actualizeazaAntrenamentPrezenta(data, ora, clienta, antrenament);
+  try { localStorage.setItem("BFIT_DB_LOCAL", JSON.stringify(DB)); } catch(e) {}
+  showToast(antrenament ? t('toastWorkoutSaved') : tr('✓ Antrenament scos', '✓ Workout removed'));
 }
 
 function peSchimbareAntrenament(zi, ora, slotIdx) {
@@ -17643,15 +17660,16 @@ async function deschideMesaje(clientId, userId, titlu) {
   const detalii = document.getElementById('panouMesajeDetalii');
   detalii.textContent = client ? detaliiClientConversatie(client) : '';
   detalii.hidden = !detalii.textContent;
+  // Panoul se arată înainte de mesaje: ascuns, lista nu se poate derula jos și prima imagine ar fi începutul conversației
+  document.getElementById('panouMesaje').classList.remove('auth-hidden');
   // Deschidere instant: mesajele de data trecută (din această sesiune) apar pe loc, apoi se actualizează din bază
   const dinSesiune = mesajeSesiune.get(clientId);
   if (dinSesiune) { conversatie.mesaje = dinSesiune; randeazaConversatie(); }
   else document.getElementById('mesajeLista').innerHTML = `<div class="mesaje-gol">${tr('Se încarcă...', 'Loading...')}</div>`;
-  document.getElementById('mesajeAviz').hidden = true;
+  document.getElementById('panouMesajeNotif').hidden = true;
   if (rolUtilizator !== 'clienta') aratAvizNotificari(clientId);
   seteazaRaspunsMesaj(null);
   document.getElementById('btnRaspunsuriRapide').hidden = rolUtilizator === 'clienta';
-  document.getElementById('panouMesaje').classList.remove('auth-hidden');
   sincronizeazaIstoricInapoi();
   await incarcaConversatie();
 }
@@ -17680,14 +17698,15 @@ function detaliiClientConversatie(c) {
   return s.text || '';
 }
 
-// Clientul fără notificări vede mesajele abia când deschide aplicația: „Anunță-l” îi trimite pe telefon că are un mesaj
+// Clientul fără notificări vede mesajele abia când deschide aplicația: sub antet rămâne un toast
+// „X are notificările oprite”; atins, deschide meniul de partajare cu „Ți-am scris în aplicație”
 async function aratAvizNotificari(clientId) {
   const c = (DB.clienti || []).find(x => x && x.id === clientId);
   if (!c || (await clientAreNotificari(clientId)) !== false || !conversatie || conversatie.clientId !== clientId) return;
-  const prenume = c.nume.trim().split(/\s+/)[0];
-  const aviz = document.getElementById('mesajeAviz');
-  aviz.innerHTML = `<span>${tr(`${escAttr(prenume)} nu are notificările pornite: vede mesajele când deschide aplicația.`, `${escAttr(prenume)} has notifications off: they see messages when they open the app.`)}</span>
-    <button type="button" class="istoric-toate" onclick="anuntaMesajPeTelefon('${clientId}')">${tr('Anunță-l', 'Notify')}</button>`;
+  const prenume = escAttr(c.nume.trim().split(/\s+/)[0]);
+  const aviz = document.getElementById('panouMesajeNotif');
+  aviz.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="M2 2l20 20"/></svg>${tr(`${prenume} are notificările oprite`, `${prenume} has notifications off`)}`;
+  aviz.onclick = () => anuntaMesajPeTelefon(clientId);
   aviz.hidden = false;
 }
 
@@ -17696,6 +17715,16 @@ function anuntaMesajPeTelefon(clientId) {
   const prenume = c ? c.nume.trim().split(/\s+/)[0] : '';
   partajeaza(tr(`Bună, ${prenume}! Ți-am scris în aplicație:`, `Hi ${prenume}! I sent you a message in the app:`), URL_APLICATIE);
 }
+
+// Lista rămâne lipită jos cât se schimbă înălțimea ei (apare toast-ul „notificări oprite”, tastatura, bara de răspuns),
+// dacă era deja jos; altfel ultimul mesaj ar ajunge sub câmpul de scris
+const listaMesajeJos = () => { const l = document.getElementById('mesajeLista'); return l.scrollHeight - l.scrollTop - l.clientHeight < 40; };
+let mesajeErauJos = true;
+document.getElementById('mesajeLista').addEventListener('scroll', () => { mesajeErauJos = listaMesajeJos(); }, { passive: true });
+new ResizeObserver(() => {
+  const l = document.getElementById('mesajeLista');
+  if (mesajeErauJos && l) l.scrollTop = l.scrollHeight;
+}).observe(document.getElementById('mesajeLista'));
 
 async function incarcaConversatie() {
   if (!conversatie) return;
@@ -17769,11 +17798,11 @@ function randeazaConversatie() {
       ? `<img class="mesaj-poza" data-poza-chat="${escAttr(cx.poza)}"${pozeChatGata.has(cx.poza) ? ` src="${pozeChatGata.get(cx.poza)}"` : ''} alt="" style="aspect-ratio:${Number(cx.w) || 4} / ${Number(cx.h) || 3}" onclick="aratPozaMesaj(this)">` : '';
     // Vocal: ▶ / ⏸, bara de progres și durata (redaVocal)
     const vocal = m.tip === 'voce' && cx.voce
-      ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-bara"><i></i></span><span class="vocal-durata">${durataVocal(cx.durata)}</span></div>` : '';
+      ? `<div class="mesaj-vocal" data-voce="${escAttr(cx.voce)}"><button type="button" class="vocal-reda" onclick="event.stopPropagation(); redaVocal(this)" aria-label="${tr('Ascultă', 'Play')}"><svg class="vocal-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><svg class="vocal-pauza" viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg></button><span class="vocal-unda-bula" onclick="event.stopPropagation(); cautaVocal(event, this)">${bareUndaVocal(cx)}</span><span class="vocal-jos"><span class="vocal-durata">${durataVocal(cx.durata)}</span><button type="button" class="vocal-viteza" onclick="event.stopPropagation(); schimbaVitezaVocal()">${vitezaVocal}×</button></span></div>` : '';
     // Produs (Verifică un produs › Trimite în chat): card cu poza, numele, caloriile și Nutri-Score; atingerea îl deschide
     const produs = m.tip === 'produs' && cx.nume ? htmlCardProdusMesaj(cx, i) : '';
     const text = (poza && m.text === '📷') || vocal || produs ? '' : `<div class="mesaj-text">${escAttr(m.text)}</div>`;
-    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${produs ? ' mesaj-cu-produs' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
+    const cls = `mesaj${alMeu ? ' al-meu' : ''}${antet ? ' mesaj-' + m.tip : ''}${poza ? ' mesaj-cu-poza' : ''}${vocal ? ' mesaj-cu-vocal' : ''}${produs ? ' mesaj-cu-produs' : ''}${mesajEditat && mesajEditat.id === m.id ? ' in-editare' : ''}${cuPrecedentul ? ' grup-sus' : ''}${cuUrmatorul ? ' grup-jos' : ''}${m._stare ? ' mesaj-' + m._stare : ''}${reactiiHtml ? ' cu-reactii' : ''}`;
     return `${separator}<div class="${cls}" data-id="${escAttr(m.id)}"${clic}>${citat}${context}${poza}${vocal}${produs}${text}${subsol}${reactiiHtml}</div>`;
   }).join('');
   umplePozeChat(lista);
@@ -17781,6 +17810,7 @@ function randeazaConversatie() {
   const vocalNou = vocalActiv && lista.querySelector(`.mesaj-vocal[data-voce="${vocalActiv.dataset.voce}"]`);
   if (vocalNou) { vocalNou.className = vocalActiv.className; vocalActiv = vocalNou; }
   lista.scrollTop = lista.scrollHeight;
+  mesajeErauJos = true;
 }
 
 // Enter trimite (ca în WhatsApp); Shift+Enter face rând nou. Nu în timpul scrierii cu diacritice / predicție (isComposing)
@@ -17937,11 +17967,13 @@ async function pornesteVocal() {
   }
   if (!conversatie) { flux.getTracks().forEach(t => t.stop()); return; }
   const rec = new MediaRecorder(flux, { mimeType: tip, audioBitsPerSecond: 32000 });
-  const r = inregistrare = { rec, flux, bucati: [], tip: tip.split(';')[0], start: Date.now() };
+  const r = inregistrare = { rec, flux, bucati: [], toate: [], tip: tip.split(';')[0], start: Date.now() };
   rec.ondataavailable = e => { if (e.data && e.data.size) r.bucati.push(e.data); };
   rec.start(1000);
   if (mesajEditat) seteazaEditareMesaj(null);
+  document.querySelector('.mesaj-inregistrare').classList.remove('anulata');
   document.querySelector('.mesaje-scrie').classList.add('inregistreaza');
+  pornesteUndaVocal(r);
   const ceas = document.getElementById('mesajVocalTimp');
   const tick = () => {
     const s = Math.floor((Date.now() - r.start) / 1000);
@@ -17959,24 +17991,99 @@ function opresteVocal(trimite) {
   if (!r) return;
   inregistrare = null;
   clearInterval(r.timer);
-  document.querySelector('.mesaje-scrie').classList.remove('inregistreaza');
+  cancelAnimationFrame(r.cadru);
+  if (r.ac) r.ac.close().catch(() => {});
+  const scrie = document.querySelector('.mesaje-scrie'), bara = document.querySelector('.mesaj-inregistrare');
+  // Anulat: bara se strânge spre coș, apoi revine câmpul; trimis: câmpul revine imediat (vocalul apare în conversație)
+  if (trimite || !scrie.classList.contains('inregistreaza')) scrie.classList.remove('inregistreaza');
+  else {
+    bara.classList.add('anulata');
+    bara.addEventListener('animationend', () => { if (!inregistrare) scrie.classList.remove('inregistreaza'); bara.classList.remove('anulata'); }, { once: true });
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
   const durata = Math.round((Date.now() - r.start) / 1000);
   const conv = conversatie;
   r.rec.onstop = () => {
     r.flux.getTracks().forEach(t => t.stop());
     if (!trimite || durata < 1 || !conv || conversatie !== conv) return;
-    trimiteVocal(new Blob(r.bucati, { type: r.tip }), durata);
+    trimiteVocal(new Blob(r.bucati, { type: r.tip }), durata, rezumatUnda(r.toate));
   };
   r.rec.stop();
 }
 
-function trimiteVocal(blob, durata) {
+// Unda vocii, live: volumul microfonului (Web Audio) devine bare care curg spre stânga, ca să se vadă că se aude
+function pornesteUndaVocal(r) {
+  const canvas = document.getElementById('mesajVocalUnda');
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!canvas || !AC) return;
+  try {
+    r.ac = new AC();
+    const an = r.ac.createAnalyser();
+    an.fftSize = 512;
+    r.ac.createMediaStreamSource(r.flux).connect(an);
+    const date = new Uint8Array(an.fftSize), niveluri = [];
+    let ultim = 0, maxim = 0;
+    const pas = t => {
+      if (inregistrare !== r) return;
+      an.getByteTimeDomainData(date);
+      let s = 0;
+      for (const v of date) s += (v - 128) * (v - 128);
+      maxim = Math.max(maxim, Math.sqrt(s / date.length) / 128);
+      if (t - ultim > 70) { const n = Math.min(1, maxim * 4); niveluri.push(n); r.toate.push(n); maxim = 0; ultim = t; deseneazaUndaVocal(canvas, niveluri); }
+      r.cadru = requestAnimationFrame(pas);
+    };
+    r.cadru = requestAnimationFrame(pas);
+  } catch (e) {}
+}
+
+function deseneazaUndaVocal(canvas, niveluri) {
+  const dpr = window.devicePixelRatio || 1, w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w) return;
+  if (canvas.width !== Math.round(w * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = getComputedStyle(canvas).getPropertyValue('--m-accent-text').trim() || '#8b5cf6';
+  const latime = 3, spatiu = 2, cate = Math.floor(w / (latime + spatiu));
+  if (niveluri.length > cate) niveluri.splice(0, niveluri.length - cate);
+  // Barele noi intră din dreapta; cele vechi se estompează spre stânga
+  niveluri.forEach((n, i) => {
+    const x = w - (niveluri.length - i) * (latime + spatiu), bh = Math.max(3, n * h);
+    ctx.globalAlpha = 0.35 + 0.65 * ((i + 1) / niveluri.length);
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, (h - bh) / 2, latime, bh, 1.5) : ctx.rect(x, (h - bh) / 2, latime, bh);
+    ctx.fill();
+  });
+}
+
+// Unda salvată cu vocalul: BARE_VOCAL cifre 0–9 (cel mai tare punct din fiecare bucată a înregistrării)
+const BARE_VOCAL = 30;
+function rezumatUnda(niveluri) {
+  if (!niveluri.length) return '';
+  let s = '';
+  for (let i = 0; i < BARE_VOCAL; i++) {
+    const bucata = niveluri.slice(Math.floor(i * niveluri.length / BARE_VOCAL), Math.max(Math.floor((i + 1) * niveluri.length / BARE_VOCAL), Math.floor(i * niveluri.length / BARE_VOCAL) + 1));
+    s += Math.min(9, Math.round(Math.max(0, ...bucata) * 9));
+  }
+  return s;
+}
+
+// Barele din bulă: unda reală dacă e salvată, altfel una fixă din id-ul vocalului (vocalele vechi)
+function bareUndaVocal(cx) {
+  const unda = /^[0-9]{30}$/.test(cx.unda || '') ? cx.unda
+    : (cx.voce || '').replace(/[^0-9a-f]/g, '').slice(0, BARE_VOCAL).replace(/./g, c => 2 + parseInt(c, 16) % 7);
+  // În bula mică încap 20 de bare: din cele 30 salvate, una din 1,5
+  const cifre = unda.padEnd(BARE_VOCAL, '3');
+  return Array.from({ length: 20 }, (_, i) => `<i style="--h:${18 + cifre[Math.floor(i * BARE_VOCAL / 20)] * 9}%"></i>`).join('');
+}
+
+function trimiteVocal(blob, durata, unda) {
   const p = crypto.randomUUID();
   const url = URL.createObjectURL(blob);
   cachePozeChat.set(p, Promise.resolve(url));
   pozeChatGata.set(p, url);
   const temp = { id: 'tmp' + Date.now(), autor: autorulMeu(), text: '🎤', created_at: new Date().toISOString(), citit: false, tip: 'voce',
-    context: { voce: p, durata: Math.min(durata, MAX_VOCAL_SEC) }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _fisier: blob };
+    context: { voce: p, durata: Math.min(durata, MAX_VOCAL_SEC), ...(unda ? { unda } : {}) }, raspuns_la: raspunsLa ? raspunsLa.id : null, _stare: 'trimite', _fisier: blob };
   conversatie.mesaje.push(temp);
   seteazaRaspunsMesaj(null); // randează și conversația
   trimiteMesajTemporar(temp, conversatie);
@@ -17986,11 +18093,33 @@ function trimiteVocal(blob, durata) {
 const vocalAudio = new Audio();
 let vocalActiv = null; // elementul .mesaj-vocal care se aude
 
+// Viteza de redare (1× → 1,5× → 2×), aceeași pentru toate vocalele din sesiune
+let vitezaVocal = 1;
+function schimbaVitezaVocal() {
+  vitezaVocal = vitezaVocal === 1 ? 1.5 : vitezaVocal === 1.5 ? 2 : 1;
+  vocalAudio.playbackRate = vocalAudio.defaultPlaybackRate = vitezaVocal;
+  document.querySelectorAll('.vocal-viteza').forEach(b => { b.textContent = `${vitezaVocal}×`; });
+}
+
+// Atingerea undei: sare acolo (pornește redarea dacă vocalul nu se aude încă)
+function cautaVocal(ev, unda) {
+  const el = unda.closest('.mesaj-vocal'), b = unda.getBoundingClientRect();
+  const parte = Math.min(1, Math.max(0, (ev.clientX - b.left) / b.width));
+  if (vocalActiv !== el) { el._salt = parte; return redaVocal(el.querySelector('.vocal-reda')); }
+  if (vocalAudio.duration) vocalAudio.currentTime = parte * vocalAudio.duration;
+  if (vocalAudio.paused) { vocalAudio.play().catch(() => {}); el.classList.add('reda'); }
+}
+
+function marcheazaUndaVocal(el, parte) {
+  const bare = el.querySelectorAll('.vocal-unda-bula i'), pana = Math.round(parte * bare.length);
+  bare.forEach((b, i) => b.classList.toggle('auzit', i < pana));
+}
+
 function opresteRedareVocal() {
   vocalAudio.pause();
   if (vocalActiv) {
-    vocalActiv.classList.remove('reda');
-    vocalActiv.querySelector('.vocal-bara i').style.width = '0';
+    vocalActiv.classList.remove('reda', 'activ');
+    marcheazaUndaVocal(vocalActiv, 0);
     const m = conversatie && conversatie.mesaje.find(x => x.context && x.context.voce === vocalActiv.dataset.voce);
     vocalActiv.querySelector('.vocal-durata').textContent = durataVocal(m && m.context.durata);
   }
@@ -18006,7 +18135,7 @@ async function redaVocal(btn) {
   }
   opresteRedareVocal();
   vocalActiv = el;
-  el.classList.add('reda', 'se-incarca');
+  el.classList.add('reda', 'activ', 'se-incarca');
   const src = await cerePozaChat(conversatie && conversatie.clientId, el.dataset.voce, true);
   el.classList.remove('se-incarca');
   if (vocalActiv !== el) return;
@@ -18015,6 +18144,8 @@ async function redaVocal(btn) {
     return showToast(tr('Mesajul vocal nu s-a putut încărca.', 'The voice message could not be loaded.'), 'error');
   }
   vocalAudio.src = src;
+  vocalAudio.playbackRate = vocalAudio.defaultPlaybackRate = vitezaVocal;
+  if (el._salt) vocalAudio.addEventListener('loadedmetadata', () => { vocalAudio.currentTime = el._salt * vocalAudio.duration; el._salt = 0; }, { once: true });
   vocalAudio.play().catch(() => opresteRedareVocal());
 }
 
@@ -18022,7 +18153,7 @@ vocalAudio.addEventListener('timeupdate', () => {
   if (!vocalActiv) return;
   const m = conversatie && conversatie.mesaje.find(x => x.context && x.context.voce === vocalActiv.dataset.voce);
   const total = (m && Number(m.context.durata)) || vocalAudio.duration || 1;
-  vocalActiv.querySelector('.vocal-bara i').style.width = Math.min(100, vocalAudio.currentTime / total * 100) + '%';
+  marcheazaUndaVocal(vocalActiv, Math.min(1, vocalAudio.currentTime / total));
   vocalActiv.querySelector('.vocal-durata').textContent = durataVocal(Math.max(0, Math.round(total - vocalAudio.currentTime)));
 });
 vocalAudio.addEventListener('ended', opresteRedareVocal);
