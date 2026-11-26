@@ -6845,7 +6845,7 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.12) 30%, rgba(255, 255, 255, 0) 48%);
 }
 
-:is(.prog-table-container, .hold-header) > * {
+.prog-table-container > * {
   position: relative;
 }
 
@@ -7019,33 +7019,20 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   display: block;
 }
 
-/* „În pauză”: ca istoricele, sticla e pe secțiune cât e închisă, nu pe antet.
-   Așa umbra nu e tăiată de animația de înălțime, iar finalul închiderii nu mai „sare” */
+/* „În pauză”: exact ca Istoricul prezențelor de pe Orar (margini, titlu, sticla doar cât e închisă, fără estompare) */
 .prog-hold {
   position: relative;
-  margin-top: 4px;
+  margin-top: 10px;
+  padding: 12px;
   border-radius: 22px;
   border: 1px solid transparent;
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .prog-hold:not([open]) {
   background: var(--m-card);
   border-color: var(--m-border);
   box-shadow: var(--m-shadow);
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
-}
-
-.hold-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  list-style: none;
-  cursor: pointer;
-  padding: 12px;
 }
 
 /* Motivul pauzei stă sub nume, ca starea de la Încasări › De reînnoit; se scrie direct pe rând.
@@ -7096,17 +7083,13 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   fill: currentColor;
 }
 
-.hold-header::-webkit-details-marker {
-  display: none;
-}
-
 /* Deschis: titlul rămâne titlul secțiunii (fără număr), iar lista e cardul ei */
 .prog-hold[open] #progHoldNr {
   display: none;
 }
 
 .prog-hold .prog-table-container {
-  margin-top: 6px; /* cu cei 12px de sub titlu: 18px, ca la istorice */
+  margin-top: 18px; /* ca la istorice */
   border-radius: 22px;
 }
 
@@ -15171,24 +15154,17 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
   -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
-/* Închis e o bară de sticlă; deschis rămâne doar titlul, iar zilele își au cardurile lor (fără sticlă peste sticlă) */
+/* Închis e o bară de sticlă; deschis rămâne doar titlul, iar zilele își au cardurile lor (fără sticlă peste sticlă).
+   Fără estompare, ca toate cardurile din Orar (vezi „Fluiditate”): se sting doar fundalul, chenarul și umbra */
 :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari) {
   border: 1px solid transparent;
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
-}
-
-/* Cât se deschide / se închide, estomparea barei se stinge odată cu sticla (din „none” ar dispărea dintr-odată, cu o clipire) */
-:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari, .prog-hold)[data-animatie] {
-  backdrop-filter: blur(0px) saturate(100%);
-  -webkit-backdrop-filter: blur(0px) saturate(100%);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari):not([open]) {
   background: var(--m-card);
   border-color: var(--m-border);
   box-shadow: var(--m-shadow);
-  backdrop-filter: blur(24px) saturate(185%);
-  -webkit-backdrop-filter: blur(24px) saturate(185%);
 }
 
 #tabOrar .hour-block {
@@ -16175,7 +16151,7 @@ html:not([data-theme="dark"]) body.pe-orar :is(#tabOrar, #detailsIstoricIncasari
 
 /* Conținutul cardurilor stă deasupra luminii de sticlă, ca textul (ora, cifrele) să nu pară șters */
 #tabOrar :is(.hour-block, .extra-hour-card, #detailsIstoricOrar, .calendar-expandable-card) > *,
-#detailsIstoricIncasari > *,
+:is(#detailsIstoricIncasari, .prog-hold) > *,
 .orar-cifra > * {
   position: relative;
   z-index: 1;

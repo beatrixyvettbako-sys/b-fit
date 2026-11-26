@@ -3683,7 +3683,7 @@ function peComutareIstoricOrar(detailsEl) {
 
 // Secțiunile cu săgeată (istoricele, Hold, secțiunile din Fișă): se desfășoară / se strâng mereu la fel
 document.addEventListener('click', (ev) => {
-  let summary = ev.target.closest('summary:is(.summary-toggle-clean, .hold-header)');
+  let summary = ev.target.closest('summary.summary-toggle-clean');
   let det = summary && summary.parentElement;
   if (!det || det.tagName !== 'DETAILS' || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   ev.preventDefault();
@@ -3710,6 +3710,7 @@ document.addEventListener('click', (ev) => {
   } else {
     // ontoggle-ul secțiunii (dacă are) randează întâi conținutul, apoi se măsoară înălțimea reală
     det.addEventListener('toggle', () => {
+      det.style.height = '';
       animaInaltime(det, inchis, det.offsetHeight);
       continut().forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out', fill: 'backwards' }));
       det._deschisLa = Date.now();
@@ -3717,6 +3718,9 @@ document.addEventListener('click', (ev) => {
     }, { once: true });
     det.dataset.animatie = '1'; // până la toggle: o a doua atingere nu mai pornește nimic
     document.documentElement.style.overflowAnchor = 'none'; // vezi animaInaltime
+    // „toggle” vine abia după un cadru: până atunci secțiunea rămâne la înălțimea închisă (altfel lista apare toată o clipă)
+    det.style.height = inchis + 'px';
+    det.style.overflow = 'hidden';
     det.open = true;
   }
 });
