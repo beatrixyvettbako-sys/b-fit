@@ -15300,13 +15300,11 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
   sincronizeazaIstoricInapoi(); // „Înapoi” de pe telefon închide fereastra
 }
 
-// Fereastra de jos creată pe loc stă în fundalul ei, ca editarea plății: la închidere coboară și se stinge împreună cu el,
-// iar blurul ferestrei nu se mai recalculează la fiecare cadru peste un fundal care se stinge (sacada pe telefon).
-// Atingerea închide doar în afara ferestrei.
+// Fereastra de jos creată pe loc: fundalul și fereastra alături în pagină, ca la plata nouă. Nu în fundal: când el se stinge,
+// fereastra s-ar stinge cu el și și-ar pierde blurul din primul cadru (prin ea s-ar vedea pagina), ceea ce pare sacadat.
 function adaugaFoaieJos(fundal, foaie, inchide) {
-  fundal.onclick = e => { if (e.target === fundal) inchide(); };
-  fundal.append(foaie);
-  document.body.append(fundal);
+  fundal.onclick = inchide;
+  document.body.append(fundal, foaie);
 }
 
 // Închiderea ferestrelor de jos: coboară lin de unde se află (și după ce a fost trasă cu degetul), fundalul se stinge,
