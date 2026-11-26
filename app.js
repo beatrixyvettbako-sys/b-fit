@@ -13537,6 +13537,12 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 257, data: '2026-11-26',
+    client: [],
+    antrenor: [
+      ['În lista „În pauză”, atingi clientul și vezi fișa pe scurt: motivul pauzei (îl poți edita), butonul „Revine” și, dacă abonamentul curge în continuare, opțiunea „Îngheață abonamentul”.', 'In the “On hold” list, tap a client to see the quick profile: the reason for the pause (editable), the “Resume” button and, if the subscription is still running, a “Freeze subscription” option.']
+    ]
+  },
   { v: 247, data: '2026-11-26',
     client: [],
     antrenor: [
@@ -15206,13 +15212,12 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
   if (!c) return;
   const dinSlot = !!(zi && ora && typeof slotIdx === 'number');
   inchideFisaScurta();
-  const numeMic = c.nume.trim().toLowerCase();
   const cheieData = d => {
     const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec((d || '').trim());
     return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : (d || '');
   };
-  const prezenteLui = (DB.prezente || [])
-    .filter(p => p && p.clienta && p.clienta.trim().toLowerCase() === numeMic)
+  // După legătura cu fișa (client_id), apoi după nume: un client redenumit își păstrează prezențele vechi
+  const prezenteLui = prezenteleClientului(c)
     .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)));
   const ultima = prezenteLui[0];
   // Alerta de sănătate din fișa de obiective (ca în antetul fișei): ce are și detaliile, pe scurt
@@ -15251,10 +15256,11 @@ function arataFisaScurta(idClient, zi, ora, slotIdx, pagina) {
     const plata = (DB.incasari || []).filter(i => i && i.data && (i.client_id === c.id || cheieNume(i.clienta || '') === cheieNume(c.nume)))
       .sort((a, b) => cheieData(b.data).localeCompare(cheieData(a.data)))[0];
     grila = abonament + ramase + valabil
-      + cifra(plata ? formateazaSuma(plata.suma) : '–', plata ? `${tr('Ultima plată', 'Last payment')} · ${escAttr(plata.data.replace(/\.\d{4}$/, ''))}` : tr('Ultima plată', 'Last payment'));
+      + cifra(plata ? formateazaSuma(plata.suma) : '–', plata && parseazaDataOraRo(plata.data) ? `${tr('Ultima plată', 'Last payment')}, ${formatZiLuna(new Date(parseazaDataOraRo(plata.data)))}` : tr('Ultima plată', 'Last payment'));
   } else grila = ramase + abonament + ultimaPrezenta + valabil;
   const buton = (id, svg, text, principal) => `<button type="button" class="fisa-scurta-actiune${principal ? ' fisa-scurta-actiune-principala' : ''}" id="${id}">${svg}${text}</button>`;
-  const actiuni = pagina === 'incasari'
+  const actiuni = pagina === 'pauza' ? ''
+    : pagina === 'incasari'
     ? buton('btnFisaIncaseaza', ICON_ISTORIC_PLATA, tr('Încasează', 'Collect'), true)
     : pagina === 'istoric'
       ? buton('btnFisaDoarClient', '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>', tr('Doar acest client', 'Only this client'))
@@ -15325,10 +15331,10 @@ function coboaraFereastra(foaie, fundal, gata) {
   foaie.style.animation = 'none';
   foaie.style.pointerEvents = 'none';
   // Atingere în afară / Înapoi: aceeași curbă ca la urcare (fisaIntra), pornește repede.
-  // După tragere (_vitezaInchidere, px/ms): coboară uniform cu viteza degetului (cel puțin 1,6 px/ms), ca foile native;
+  // După tragere (_vitezaInchidere, px/ms): coboară uniform cu viteza degetului (cel puțin 2,6 px/ms, cât coboară plata nouă, care e înaltă), ca foile native;
   // cu curba de mai sus pornea brusc și apoi se târa ultima bucată vizibilă, adică se închidea „în două etape”
   const durata = v != null
-    ? { duration: Math.min(240, Math.max(80, (foaie.offsetHeight - y) / Math.max(v, 1.6))), easing: 'linear', fill: 'forwards' }
+    ? { duration: Math.min(240, Math.max(80, (foaie.offsetHeight - y) / Math.max(v, 2.6))), easing: 'linear', fill: 'forwards' }
     : { duration: 260, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' };
   const a = foaie.animate([{ transform: de }, { transform: v != null ? 'translateY(100%)' : 'translateY(105%)' }], durata);
   // După tragere pornește din primul cadru deja în mișcare (altfel stătea un cadru pe loc la ridicarea degetului)
@@ -16987,16 +16993,19 @@ function randeazaProgramariInstant() {
   if (holdContainer) {
     let holdHtml = '';
     let pausePlaceholder = currentLang === 'en' ? 'Pause reason' : 'Motiv pauză';
-    // În Hold motivul pauzei e chiar rostul rândului, deci câmpul rămâne mereu vizibil
-    // Rândurile ca la Încasări › De reînnoit: avatar, nume, motivul dedesubt (se scrie direct pe rând), acțiunea ca pastilă
+    // Rândurile ca la Încasări › De reînnoit: avatar, nume, motivul dedesubt (cel mult 2 rânduri, ca mențiunea), acțiunea ca pastilă.
+    // Cu client în listă, rândul deschide fișa pe scurt (motivul se scrie acolo); rândurile vechi, fără client, păstrează câmpul pe rând
     randuriHold().forEach(item => {
-      const c = (DB.clienti || []).find(x => randulClientei(item, x, item.nume)) || { nume: item.nume };
+      const c = (DB.clienti || []).find(x => randulClientei(item, x, item.nume));
+      const motiv = c
+        ? (item.mentiuni ? `<span class="prog-sub prog-mentiune">${escAttr(item.mentiuni)}</span>` : '')
+        : `<textarea rows="1" class="prog-mentiuni-textarea" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>`;
       holdHtml += `
-        <div class="prog-row">
-          <div class="slot-num">${avatarSlotHtml(c)}</div>
+        <div class="prog-row${c ? ' prog-row-client' : ''}"${c ? ` onclick="arataFisaPauza(${item.row}, event)"` : ''}>
+          <div class="slot-num">${avatarSlotHtml(c || { nume: item.nume })}</div>
           <div class="prog-info">
             <span class="prog-name">${escAttr(item.nume)}</span>
-            <textarea rows="1" class="prog-mentiuni-textarea" placeholder="${pausePlaceholder}" onblur="schimbaMentiune(${item.row}, this.value)">${escAttr(item.mentiuni)}</textarea>
+            ${motiv}
           </div>
           <button type="button" class="istoric-toate hold-revine" onclick="stergeProgramareDefinitiv(${item.row})" title="${tr('Scoate din pauză', 'Resume')}"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${tr('Revine', 'Resume')}</button>
         </div>`;
@@ -17066,21 +17075,54 @@ function arataFisaConfirmari(i, e) {
       <span>${tr('Programat săptămâna asta', 'Booked this week')}</span>
       <div>${ore.length ? ore.map(o => `<em class="${o.bifat ? 'bifat' : ''}">${o.bifat ? '✓ ' : ''}${zileNume[o.zi] || ''} ${o.ora}</em>`).join('') : `<small>${tr('Nicio oră încă', 'No sessions yet')}</small>`}</div>
     </div>
-    ${r.tinta ? `<button type="button" class="fisa-scurta-rand" id="btnFisaTinta"><span>${tr('Ședințe pe săptămână', 'Sessions per week')}</span><b>${r.tinta}${r.c.sedinteSaptamana ? '' : ` <small>${tr('automat', 'auto')}</small>`}</b></button>` : ''}
-    <textarea rows="2" class="fisa-scurta-mentiune" placeholder="${tr('Mențiune', 'Note')}">${escAttr(r.conf ? r.conf.mentiuni : '')}</textarea>`;
-  const camp = bloc.querySelector('textarea');
-  // Ultima valoare trimisă: a doua ieșire din câmp nu mai salvează (altfel prima mențiune ar crea două rânduri)
-  let salvat = r.conf ? r.conf.mentiuni : '';
-  camp.onblur = () => {
-    if (camp.value === salvat) return;
-    salvat = camp.value;
-    schimbaMentiuneSaptamana(i, camp.value);
-    randeazaProgramariInstant();
-  };
+    ${r.tinta ? `<button type="button" class="fisa-scurta-rand" id="btnFisaTinta"><span>${tr('Ședințe pe săptămână', 'Sessions per week')}</span><b>${r.tinta}${r.c.sedinteSaptamana ? '' : ` <small>${tr('automat', 'auto')}</small>`}</b></button>` : ''}`;
+  bloc.append(campNotitaFisa(r.conf ? r.conf.mentiuni : '', tr('Mențiune', 'Note'), val => schimbaMentiuneSaptamana(i, val)));
   if (r.tinta) bloc.querySelector('#btnFisaTinta').onclick = () => { inchideFisaScurta(); seteazaTintaSaptamana(i); };
   actiuni.before(bloc);
   actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaHold">${SVG_PAUZA_HOLD}${tr('Pune în pauză', 'Pause')}</button>`);
   actiuni.querySelector('#btnFisaHold').onclick = () => { inchideFisaScurta(); mutaInHoldSaptamana(i); };
+}
+
+// Câmpul de notiță din fișa pe scurt (mențiunea din Confirmări, motivul pauzei): se salvează la ieșire, o singură dată
+// pe valoare (altfel prima mențiune ar crea două rânduri), apoi lista se redesenează cu textul nou
+function campNotitaFisa(valoare, placeholder, salveaza) {
+  const camp = document.createElement('textarea');
+  camp.rows = 2;
+  camp.className = 'fisa-scurta-mentiune';
+  camp.placeholder = placeholder;
+  camp.value = valoare || '';
+  let salvat = camp.value;
+  camp.onblur = () => {
+    if (camp.value === salvat) return;
+    salvat = camp.value;
+    salveaza(camp.value);
+    randeazaProgramariInstant();
+  };
+  return camp;
+}
+
+// Fișa pe scurt din „În pauză”: datele clientului, motivul pauzei (editabil) și „Revine”; fără „Adaugă antrenament”
+function arataFisaPauza(row, e) {
+  const item = (DB.progHold || []).find(p => p.row === row);
+  if (!item || (e && e.target.closest('button'))) return;
+  const c = (DB.clienti || []).find(x => randulClientei(item, x, item.nume));
+  if (!c) return;
+  arataFisaScurta(c.id, null, null, null, 'pauza');
+  const actiuni = document.querySelector('#fisaScurta .fisa-scurta-actiuni');
+  if (!actiuni) return;
+  actiuni.before(campNotitaFisa(item.mentiuni, tr('Motiv pauză', 'Pause reason'), val => schimbaMentiune(row, val)));
+  actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaRevine"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg>${tr('Revine', 'Resume')}</button>`);
+  actiuni.querySelector('#btnFisaRevine').onclick = () => { inchideFisaScurta(); stergeProgramareDefinitiv(row); };
+  // Pauza de aici doar mută clientul în listă; zilele abonamentului se opresc numai prin înghețare (aceeași ca în fișa completă)
+  const stare = stareAbonamentClienta(c);
+  if (poateInghetaSauRelua(c, stare)) {
+    const inghetat = stare.tip === 'inghetat';
+    actiuni.insertAdjacentHTML('beforebegin', `<div class="setari-lista-nota">${inghetat
+      ? tr(`${stare.text}: zilele abonamentului sunt oprite.`, `${stare.text}: the subscription days are stopped.`)
+      : tr('Abonamentul curge în continuare. Îngheață-l ca să oprești zilele; ședințele rămase se păstrează.', 'The subscription keeps running. Freeze it to stop the days; the remaining sessions are kept.')}</div>`);
+    actiuni.insertAdjacentHTML('beforeend', `<button type="button" class="fisa-scurta-actiune" id="btnFisaIngheata"><svg viewBox="0 0 24 24"><path d="M12 2.5v19M3.8 7.25l16.4 9.5M20.2 7.25l-16.4 9.5M9.5 4.5 12 7l2.5-2.5M9.5 19.5 12 17l2.5 2.5"/></svg>${inghetat ? tr('Reia abonamentul', 'Resume subscription') : tr('Îngheață abonamentul', 'Freeze subscription')}</button>`);
+    actiuni.querySelector('#btnFisaIngheata').onclick = () => { inchideFisaScurta(); comutaInghetareAbonament(c.nume); };
+  }
 }
 
 // bifate = ședințele făcute deja săptămâna asta (scăzute din `ramase`): se adaugă înapoi, ca ținta să nu scadă în timpul săptămânii
@@ -17319,8 +17361,7 @@ function afiseazaFisaClientaInstant() {
   // Îngheață / Reia: doar cât există un abonament propriu-zis în desfășurare (sau deja înghețat)
   const btnIngh = document.getElementById('btnInghetareAbonament');
   if (btnIngh) {
-    const poate = stare.tip === 'inghetat' || (['activ', 'curand'].includes(stare.tip) && regulaAbonament(client.tipAbonament).fel === 'abonament');
-    document.getElementById('blocInghetareAbonament').hidden = !poate;
+    document.getElementById('blocInghetareAbonament').hidden = !poateInghetaSauRelua(client, stare);
     btnIngh.innerText = stare.tip === 'inghetat' ? tr('Reia abonamentul', 'Resume subscription') : tr('Îngheață abonamentul', 'Freeze subscription');
     document.getElementById('notaInghetareAbonament').innerText = stare.tip === 'inghetat'
       ? tr(`${stare.text}. Zilele de pauză se adaugă la expirare când îl reiei.`, `${stare.text}. The paused days are added to the expiry when you resume.`)
@@ -20778,9 +20819,14 @@ function refuzaDacaInghetat(nume) {
   return true;
 }
 
-// Fișă › Îngheață / Reia abonamentul
-function comutaInghetareAbonament() {
-  const nume = (document.getElementById('selectClientaFisa').value || '').trim();
+// Îngheață / Reia: doar cât există un abonament propriu-zis în desfășurare (sau deja înghețat)
+function poateInghetaSauRelua(c, stare = stareAbonamentClienta(c)) {
+  return stare.tip === 'inghetat' || (['activ', 'curand'].includes(stare.tip) && regulaAbonament(c.tipAbonament).fel === 'abonament');
+}
+
+// Fișă › Îngheață / Reia abonamentul (`numeDat`: din fișa pe scurt de pauză; altfel clientul ales în fișă)
+function comutaInghetareAbonament(numeDat) {
+  const nume = (numeDat || document.getElementById('selectClientaFisa').value || '').trim();
   const client = gasesteClientaValida(nume);
   if (!client) return;
   const reia = esteInghetat(client);

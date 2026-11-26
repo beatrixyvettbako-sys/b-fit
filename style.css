@@ -436,11 +436,6 @@ html, body {
     background-color: rgba(var(--accent-rgb), 0.6);
   }
 
-  /* În câmpurile de text rotunjite bara stă departe de colțuri, nu iese peste ele */
-  textarea::-webkit-scrollbar-track {
-    margin-block: 10px;
-  }
-
   /* Firefox nu are pseudo-elementele de mai sus */
   @supports not selector(::-webkit-scrollbar) {
     html {
@@ -448,6 +443,23 @@ html, body {
       scrollbar-color: rgba(var(--accent-rgb), 0.45) transparent;
     }
   }
+}
+
+/* Câmpurile de text (notițe, mențiuni, chat, planuri): bară subțire în culoarea aplicației, în interiorul chenarului,
+   departe de colțurile rotunjite, și pe telefon (bara sistemului era groasă și ieșea peste chenar).
+   Fără scrollbar-width aici: Chrome ar ignora atunci stilul de mai jos */
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: transparent;
+  margin-block: 12px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.4);
 }
 
 body {
@@ -6953,8 +6965,15 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   text-overflow: ellipsis;
 }
 
+/* Mențiunea în listă: cel mult 2 rânduri, apoi „…” (textul întreg în fișa pe scurt) */
 .prog-mentiune {
   font-style: italic;
+  white-space: normal;
+  overflow-wrap: anywhere; /* și un cuvânt foarte lung trece pe rândul 2, apoi „…” */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* Pastila „programat X din Y”: apăsată, trimite reminderul */
@@ -7453,11 +7472,6 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
 
 .pastile-alegere .istoric-toate {
   height: 34px;
-}
-
-/* Pastilele din fereastră și din formulare stau pe carduri albe: umbra mică de sticlă le desparte de card pe tema deschisă */
-:is(.incasare-foaie, .checkin-card) .istoric-toate {
-  box-shadow: var(--m-float-sm);
 }
 
 /* Abonamentele: plăci pe două coloane, numele și prețul dedesubt */
@@ -14595,6 +14609,8 @@ body.zile-lipite #tabOrar > #orarCifre::before {
   border: 1px solid var(--m-border);
   background: var(--m-btn);
   color: var(--m-text);
+  /* Pastilele stau pe carduri albe: umbra mică de sticlă le desparte de card pe tema deschisă */
+  box-shadow: var(--m-float-sm);
   font-family: inherit;
   font-size: 0.82rem;
   font-weight: 700;
@@ -14884,6 +14900,13 @@ body.zile-lipite #tabOrar > #orarCifre::before {
 
 :is(.fisa-scurta-mentiune, .nota-client-text):focus {
   border-color: var(--accent-purple);
+}
+
+/* Mențiunea din fișa pe scurt crește cu textul (2–5 rânduri), apoi derulează (bara: regula comună textarea) */
+.fisa-scurta-mentiune {
+  field-sizing: content;
+  min-height: calc(2.7em + 22px);
+  max-height: calc(6.75em + 22px);
 }
 
 .fisa-scurta-buton {
