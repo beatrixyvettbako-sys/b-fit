@@ -3343,6 +3343,7 @@ function customConfirm(titlu, text, onConfirm, camp) {
   modalIesire = [];
   fundalModal.style.pointerEvents = '';
   fundalModal.style.display = 'flex';
+  fundalModal.classList.add('deschis');
   document.getElementById('modalBtnAlt').style.display = 'none';
   modalCallback = onConfirm;
   modalAltCallback = null;
@@ -3352,6 +3353,7 @@ let modalIesire = [];
 function closeCustomModal(confirmed) {
   const fundal = document.getElementById('customModalBackdrop');
   const card = fundal.querySelector('.custom-modal-card');
+  fundal.classList.remove('deschis');
   if (matchMedia('(prefers-reduced-motion: reduce)').matches || !card) fundal.style.display = 'none';
   else {
     fundal.style.pointerEvents = 'none';

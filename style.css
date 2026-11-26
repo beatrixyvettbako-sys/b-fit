@@ -16955,15 +16955,17 @@ html[data-theme] #tabOrar .day-selector {
   top: calc(var(--header-height) - 1px);
 }
 
-/* Cât e deschisă o fereastră (fișa pe scurt, căutarea, notificările de jos, confirmarea), pagina din spate nu se derulează */
+/* Cât e deschisă o fereastră (fișa pe scurt, căutarea, notificările de jos, confirmarea), pagina din spate nu se derulează.
+   Confirmarea, după clasa `deschis`, nu după atributul style: un :has pe html cu [style] reverifica toată pagina
+   la fiecare mișcare a ferestrei trase cu degetul (sacada, mai ales pe Orar) */
 html:has(.fisa-scurta-fundal),
-html:has(#customModalBackdrop[style*="flex"]) {
+html:has(#customModalBackdrop.deschis) {
   overflow: hidden;
 }
 
 /* body nu devine container de derulare, altfel antetul lipit (sticky) pleacă odată cu pagina */
 html:has(.fisa-scurta-fundal) body,
-html:has(#customModalBackdrop[style*="flex"]) body {
+html:has(#customModalBackdrop.deschis) body {
   overflow: visible;
 }
 
