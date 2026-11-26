@@ -3645,18 +3645,29 @@ function urcaSubAntet(el, deasupra, doarCatTrebuie) {
       el._potriveste = () => { if (el.open) potriveste(); }; // la finalul fiecărei animații de înălțime (animaInaltime)
       el.addEventListener('toggle', () => { if (!el.open) spatiu.style.height = '0'; }, { once: true });
     }
-    window.scrollTo({ top: tinta, behavior: 'smooth' });
+    deruleazaLaCurba(tinta);
   });
 }
 
-// La deschidere: Hold, Prezențe și plăți și Fișa de obiective (secțiuni mari) urcă sub antet; celelalte secțiuni ale fișei
-// (Plan, Progres, Cont și contact) se derulează doar cât să se vadă
+// Derularea merge pe aceeași curbă și durată ca secțiunea care crește, deci titlul și lista se mișcă împreună
+// (derularea „smooth” a browserului are alt ritm: pe distanțe mari titlul fugea înaintea listei)
+function deruleazaLaCurba(tinta) {
+  const de = window.pageYOffset, curba = document.documentElement.animate([], { duration: 320, easing: CURBA_SECTIUNI });
+  const pas = () => {
+    window.scrollTo(0, de + (tinta - de) * (curba.effect.getComputedTiming().progress ?? 1));
+    if (curba.playState === 'running') requestAnimationFrame(pas);
+  };
+  requestAnimationFrame(pas);
+}
+
+// La deschidere: Prezențe și plăți și Fișa de obiective (secțiuni mari) urcă sub antet; „În pauză”, istoricele și celelalte
+// secțiuni ale fișei (Plan, Progres, Cont și contact) se derulează doar cât să se vadă (pagina nu sare peste ce încape deja)
 document.addEventListener('toggle', e => {
   const det = e.target;
   if (!det.open || !det.classList) return;
   const antet = document.getElementById('mainAppHeader')?.offsetHeight || 50;
-  if (det.classList.contains('prog-hold') || det.id === 'detailsIstoricFisa' || det.id === 'detailsFisaInscriere') urcaSubAntet(det, antet);
-  else if (det.classList.contains('fisa-sectiune')) urcaSubAntet(det, antet, true);
+  if (det.id === 'detailsIstoricFisa' || det.id === 'detailsFisaInscriere') urcaSubAntet(det, antet);
+  else if (det.classList.contains('fisa-sectiune') || det.classList.contains('prog-hold')) urcaSubAntet(det, antet, true);
 }, true);
 
 function peComutareIstoricOrar(detailsEl) {
@@ -3665,7 +3676,7 @@ function peComutareIstoricOrar(detailsEl) {
     let headerEl = document.getElementById('mainAppHeader');
     let daySelector = document.getElementById('dayButtonsContainer');
     // Bara zilelor lipită stă cu 1px peste header (top: calc(var(--header-height) - 1px))
-    urcaSubAntet(detailsEl, (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45) + inaltimeFiltreOrar());
+    urcaSubAntet(detailsEl, (headerEl ? headerEl.offsetHeight - 1 : 50) + (daySelector ? daySelector.offsetHeight : 45) + inaltimeFiltreOrar(), true);
   }
   // La închidere pagina rămâne unde e (fără salt la ora curentă, care te scotea din locul în care erai)
 }
@@ -3680,11 +3691,12 @@ document.addEventListener('click', (ev) => {
   let cs = getComputedStyle(det);
   // Înălțimea închisă: până sub titlu (cu marginea lui, ca la Hold), plus spațiul de jos al secțiunii
   let inchis = summary.getBoundingClientRect().bottom - det.getBoundingClientRect().top + parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
-  // Conținutul (tot ce e sub titlu) apare treptat la deschidere și dispare întâi la închidere, nu e „dezvelit” de margine
+  // Conținutul (tot ce e sub titlu) apare odată cu bara care se stinge (fără gol între ele) și se vede cum coboară;
+  // la închidere urcă întâi vizibil și se stinge spre final
   const continut = () => det.querySelectorAll(':scope > :not(summary)');
   if (det.open) {
     observatorSectiuni.unobserve(det);
-    const stingeri = [...continut()].map(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out', fill: 'forwards' }));
+    const stingeri = [...continut()].map(el => el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, delay: 140, easing: 'ease-in', fill: 'forwards' }));
     animaInaltime(det, det.offsetHeight, inchis, () => {
       det.open = false;
       stingeri.forEach(a => a.cancel());
@@ -3692,28 +3704,36 @@ document.addEventListener('click', (ev) => {
     // Spațiul lăsat la final pentru urcarea sub antet se strânge în aceeași mișcare (altfel, jos în pagină, totul sare la final)
     const spatiu = det.closest('.tab-content')?.querySelector(':scope > .spatiu-sub-antet');
     if (spatiu && spatiu.offsetHeight) {
-      spatiu.animate([{ height: spatiu.offsetHeight + 'px' }, { height: '0px' }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+      spatiu.animate([{ height: spatiu.offsetHeight + 'px' }, { height: '0px' }], { duration: 320, easing: CURBA_SECTIUNI });
       spatiu.style.height = '0';
     }
   } else {
     // ontoggle-ul secțiunii (dacă are) randează întâi conținutul, apoi se măsoară înălțimea reală
     det.addEventListener('toggle', () => {
       animaInaltime(det, inchis, det.offsetHeight);
-      continut().forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 260, delay: 60, easing: 'ease-out', fill: 'backwards' }));
+      continut().forEach(el => el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out', fill: 'backwards' }));
       det._deschisLa = Date.now();
       observatorSectiuni.observe(det);
     }, { once: true });
     det.dataset.animatie = '1'; // până la toggle: o a doua atingere nu mai pornește nimic
+    document.documentElement.style.overflowAnchor = 'none'; // vezi animaInaltime
     det.open = true;
   }
 });
 
+// Curbă echilibrată: secțiunea se vede cum coboară / urcă (curba foii de jos o deschidea aproape toată în primele ~70 ms)
+const CURBA_SECTIUNI = 'cubic-bezier(0.4, 0, 0.2, 1)';
+
+// Cât crește / se strânge secțiunea, browserul nu „ancorează” derularea de ce e sub ea: altfel pagina sare dintr-odată
+// cu toată diferența de înălțime (depinde ce element ia ca reper, de aceea doar uneori)
 function animaInaltime(det, de, la, laFinal) {
   det.dataset.animatie = '1';
+  document.documentElement.style.overflowAnchor = 'none';
   det.style.overflow = 'hidden';
-  det.animate([{ height: de + 'px' }, { height: la + 'px' }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }).onfinish = () => {
+  det.animate([{ height: de + 'px' }, { height: la + 'px' }], { duration: 320, easing: CURBA_SECTIUNI }).onfinish = () => {
     if (laFinal) laFinal();
     det.style.overflow = '';
+    document.documentElement.style.overflowAnchor = '';
     delete det.dataset.animatie;
     det._inaltime = la; // dacă s-a schimbat conținutul între timp, observatorul vede diferența și continuă lin
     det._potriveste?.();
@@ -21014,11 +21034,11 @@ function getSumaSelectata() {
 let incLuna = (() => { const d = new Date(); return { an: d.getFullYear(), luna: d.getMonth() }; })();
 let incReinnoireLista = [];
 
-// Ca Istoricul de pe Orar: la deschidere se desenează (închis n-avea lățime) și ajunge sus, sub antet; închiderea nu mută pagina
+// Ca Istoricul de pe Orar: la deschidere se desenează (închis n-avea lățime) și se derulează cât să se vadă; închiderea nu mută pagina
 function peComutareIstoricIncasari(detailsEl) {
   if (!detailsEl.open) return;
   filtreazaIstoricIncasariInstant();
-  urcaSubAntet(detailsEl, document.getElementById('mainAppHeader')?.offsetHeight || 50);
+  urcaSubAntet(detailsEl, document.getElementById('mainAppHeader')?.offsetHeight || 50, true);
 }
 
 function schimbaLunaIncasari(pas) {

@@ -7026,7 +7026,7 @@ html:not([data-theme="dark"]) .prog-hold:not([open])::before {
   margin-top: 4px;
   border-radius: 22px;
   border: 1px solid transparent;
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
 }
 
 .prog-hold:not([open]) {
@@ -15174,7 +15174,13 @@ body.stil-nou #mainAppHeader #headerIconOrarBtn {
 /* Închis e o bară de sticlă; deschis rămâne doar titlul, iar zilele își au cardurile lor (fără sticlă peste sticlă) */
 :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari) {
   border: 1px solid transparent;
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease, -webkit-backdrop-filter 0.3s ease;
+}
+
+/* Cât se deschide / se închide, estomparea barei se stinge odată cu sticla (din „none” ar dispărea dintr-odată, cu o clipire) */
+:is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari, .prog-hold)[data-animatie] {
+  backdrop-filter: blur(0px) saturate(100%);
+  -webkit-backdrop-filter: blur(0px) saturate(100%);
 }
 
 :is(#tabOrar #detailsIstoricOrar, #detailsIstoricIncasari):not([open]) {
