@@ -15347,20 +15347,37 @@ function opresteCoborarea(foaie) {
 // Fereastra de jos urmează degetul trasă în jos și se închide după 60px; butoanele și câmpurile rămân ale lor.
 // `zona` (opțional): doar de acolo se trage, la ferestrele care derulează.
 // animation = 'none': animația de intrare ține transformarea ocupată și fereastra n-ar urma degetul.
+// Ca foile native: se închide după o tragere lungă (`prag`) sau după una scurtă dar rapidă în jos (viteza în px/ms,
+// din ultima mișcare a degetului), ca să nu revină sus și să trebuiască trasă din nou
+function urmaresteVitezaTragere() {
+  let y = 0, t = 0, v = 0;
+  return {
+    start(yy, tt) { y = yy; t = tt; v = 0; },
+    misca(yy, tt) { if (tt > t) { v = (yy - y) / (tt - t); y = yy; t = tt; } },
+    inchide: (dy, prag) => dy > prag || (dy > 12 && v > 0.35)
+  };
+}
+
 function trageInJosCaSaInchizi(foaie, inchide, zona) {
   let y0 = null;
+  const viteza = urmaresteVitezaTragere();
   foaie.addEventListener('pointerdown', e => {
     if (e.target.closest('button, textarea, input, select') || (zona && !e.target.closest(zona))) return;
     y0 = e.clientY; foaie.style.animation = 'none'; foaie.style.transition = 'none';
+    viteza.start(e.clientY, e.timeStamp);
     try { foaie.setPointerCapture(e.pointerId); } catch (x) {}
   });
-  foaie.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+  foaie.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    foaie.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`;
+    viteza.misca(e.clientY, e.timeStamp);
+  });
   const gata = e => {
     if (y0 === null) return;
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (dy > 60) inchide(); else foaie.style.transform = '';
+    if (viteza.inchide(dy, 60)) inchide(); else foaie.style.transform = '';
   };
   foaie.addEventListener('pointerup', gata);
   foaie.addEventListener('pointercancel', gata);
@@ -15372,9 +15389,11 @@ function trageInJosCaSaInchizi(foaie, inchide, zona) {
 // evenimentele pointer (pointercancel) înainte ca fereastra să le poată urma.
 function trageInJosDinConținut(foaie, inchide, zona) {
   let y0 = null, trage = false;
+  const viteza = urmaresteVitezaTragere();
   foaie.addEventListener('touchstart', e => {
     y0 = e.touches.length === 1 && !e.target.closest(zona) ? e.touches[0].clientY : null;
     trage = false;
+    if (y0 !== null) viteza.start(y0, e.timeStamp);
   }, { passive: true });
   foaie.addEventListener('touchmove', e => {
     if (y0 === null) return;
@@ -15386,13 +15405,14 @@ function trageInJosDinConținut(foaie, inchide, zona) {
     }
     e.preventDefault();
     foaie.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    viteza.misca(e.touches[0].clientY, e.timeStamp);
   }, { passive: false });
   const gata = e => {
     if (!trage) { y0 = null; return; }
     const dy = e.changedTouches[0].clientY - y0;
     y0 = null; trage = false;
     foaie.style.transition = '';
-    if (dy > 80) inchide(); else foaie.style.transform = '';
+    if (viteza.inchide(dy, 80)) inchide(); else foaie.style.transform = '';
   };
   foaie.addEventListener('touchend', gata);
   foaie.addEventListener('touchcancel', gata);
@@ -19906,14 +19926,19 @@ function arataNotificariRapid() {
   // Trage de mâner: în jos închide, în sus deschide pagina completă
   const maner = foaie.querySelector('.fisa-scurta-maner');
   let y0 = null;
-  maner.addEventListener('pointerdown', e => { y0 = e.clientY; maner.setPointerCapture(e.pointerId); foaie.style.animation = 'none'; foaie.style.transition = 'none'; });
-  maner.addEventListener('pointermove', e => { if (y0 !== null) foaie.style.transform = `translateY(${Math.max(-60, e.clientY - y0)}px)`; });
+  const viteza = urmaresteVitezaTragere();
+  maner.addEventListener('pointerdown', e => { y0 = e.clientY; viteza.start(e.clientY, e.timeStamp); maner.setPointerCapture(e.pointerId); foaie.style.animation = 'none'; foaie.style.transition = 'none'; });
+  maner.addEventListener('pointermove', e => {
+    if (y0 === null) return;
+    foaie.style.transform = `translateY(${Math.max(-60, e.clientY - y0)}px)`;
+    viteza.misca(e.clientY, e.timeStamp);
+  });
   const gata = e => {
     if (y0 === null) return;
     const dy = e.clientY - y0;
     y0 = null;
     foaie.style.transition = '';
-    if (dy > 90) inchideNotificariRapid();
+    if (viteza.inchide(dy, 90)) inchideNotificariRapid();
     else if (dy < -50) { inchideNotificariRapid(); deschidePanouNotificariComplet(); }
     else foaie.style.transform = '';
   };
