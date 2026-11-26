@@ -19997,13 +19997,9 @@ function deschideNotificare(id) {
   }
   if (n.tip === 'rezervare' || n.tip === 'anulare') return mergiLaOraDinOrar((n.date || {}).zi, (n.date || {}).ora);
   if (n.tip === 'programari_lipsa') { document.getElementById('navBtnProg').click(); return; }
-  // Ziua de mâine: Orarul pe săptămâna curentă, pe ziua următoare (dacă e în aceeași săptămână)
-  if (n.tip === 'ziua_maine') {
-    document.getElementById('navBtnOrar').click();
-    if (!esteSaptamanaActiva()) revinoLaSaptamanaCurenta();
-    setTimeout(() => mergiLaZiVecina(1), 300);
-    return;
-  }
+  // Ziua de mâine: Orarul pe data din notificare, nu pe „ziua de după cea afișată”
+  // (notificarea deschisă a doua zi ar sări încă o zi)
+  if (n.tip === 'ziua_maine') return mergiLaOraDinOrar((n.date || {}).data, '');
   document.getElementById('navBtnFisa').click();
   if (n.tip === 'cerere_noua') {
     // Cererile noi stau sus, deasupra listei de clienți
