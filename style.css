@@ -5453,7 +5453,7 @@ select.form-control {
   color: var(--m-text);
 }
 
-:is(#detaliiFisa :is(.fisa-sectiune, .fisa-cont), :is(#foaieProgresCorp, .client-sticla)) :is(.form-control, .plan-ex-input, .greutate-sala, .btn, .plan-zi-card) {
+:is(#detaliiFisa :is(.fisa-sectiune, .fisa-cont), :is(#foaieProgresCorp, .client-sticla)) :is(.form-control, .plan-ex-input, .plan-ex-textarea, .greutate-sala, .btn, .plan-zi-card) {
   background: var(--m-btn);
   border: 1px solid var(--m-border);
   border-radius: 12px;
@@ -11888,6 +11888,12 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
   font-size: 0.72rem;
   font-weight: 800;
   color: var(--text-muted);
+  /* Eticheta începe unde începe textul din căsuță (padding 8px + chenarul de 1px), nu pe marginea ei */
+  text-indent: 9px;
+}
+
+.antr-pers-campuri label > * {
+  text-indent: 0;
 }
 
 .antr-pers-campuri .plan-ex-input,
@@ -12893,14 +12899,22 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 }
 
 /* Fără cameră (permisiune refuzată): doar fereastra de jos, peste pagină */
+/* Fără cameră e o fereastră de jos ca celelalte: se închide atingând fundalul, fără × plutind peste pagină */
 .scanare-strat.fara-camera video,
-.scanare-strat.fara-camera .scanare-cadru {
+.scanare-strat.fara-camera .scanare-cadru,
+.scanare-strat.fara-camera .scanare-inchide {
   display: none;
 }
 
 .scanare-strat.fara-camera {
   justify-content: flex-end;
   background: rgba(0, 0, 0, 0.45);
+}
+
+.scanare-jos .fisa-scurta-maner {
+  align-self: stretch;
+  margin-top: -10px;
+  padding-top: 0;
 }
 
 .scanare-strat.fara-camera .scanare-icon {
@@ -13747,6 +13761,36 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-tinte { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .plan-alim-tinte label { font-size: 0.68rem; }
 .plan-alim-masa-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 0; }
+.plan-alim-masa-cap > span:first-child { min-width: 0; }
+.plan-alim-masa-cap small { margin-left: 6px; font-size: 0.72rem; font-weight: 600; color: var(--m-muted); text-transform: none; letter-spacing: 0; }
+.plan-alim-masa-act { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.plan-alim-masa-act .notificare-x { position: static; }
+.plan-alim-nume-masa { flex: 1; min-width: 0; padding: 6px 10px; font-size: 0.9rem; }
+.plan-alim-adauga-masa { margin-top: 14px; }
+/* Cât din ținta mesei acoperă varianta: textul și bara (portocalie peste țintă) */
+.plan-alim-progres { display: flex; flex-direction: column; gap: 6px; }
+.plan-alim-progres-text { display: flex; flex-direction: column; gap: 2px; }
+.plan-alim-progres-text b { font-size: 0.9rem; color: var(--m-text); }
+.plan-alim-progres-text span { font-size: 0.78rem; color: var(--m-muted); }
+.plan-alim-bara { height: 6px; border-radius: 3px; background: var(--m-divider); overflow: hidden; }
+.plan-alim-bara i { display: block; height: 100%; border-radius: 3px; background: rgb(var(--accent-rgb)); transition: width 0.25s ease; }
+.plan-alim-progres.peste .plan-alim-bara i { background: #f5b041; }
+.plan-alim-cautare-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.plan-alim-cautare-cap .verifica-titlu-btn { flex-shrink: 0; }
+.plan-alim-cautare-cap b { font-size: 0.95rem; color: var(--m-text); }
+/* „Din bibliotecă”: grupele pe un rând care derulează, rețetele ca rânduri într-un card de sticlă, cu bulă de adăugare */
+.plan-alim-bib { gap: 8px; }
+.plan-alim-bib-filtre { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: 0 -2px; }
+.plan-alim-bib-filtre::-webkit-scrollbar { display: none; }
+.plan-alim-bib-filtre .antr-pers-activitate { flex: 0 0 auto; }
+.plan-alim-bib-rand { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px; border: 0; border-bottom: 1px solid var(--m-divider); background: none; font: inherit; text-align: left; color: var(--m-text); cursor: pointer; }
+.plan-alim-bib-rand:last-child { border-bottom: 0; }
+.plan-alim-bib-rand:active { background: rgba(var(--accent-rgb), 0.06); }
+.plan-alim-bib-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.plan-alim-bib-text b { font-size: 0.92rem; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.plan-alim-bib-text small { font-size: 0.78rem; color: var(--m-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plan-alim-bib-adauga { flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(var(--accent-rgb), 0.12); border: 1px solid rgba(var(--accent-rgb), 0.25); color: var(--m-accent-text); }
+.plan-alim-bib-adauga svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 .plan-alim-procent { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; color: var(--text-muted); font-weight: 700; }
 .plan-alim-procent .plan-ex-input { width: 58px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
 /* Planurile alimentare pe stilul nou: formularele și variantele în carduri de sticlă (.lista-sticla), cu spațiu înăuntru */
@@ -13765,7 +13809,16 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-sectiune-continut { padding: 4px 14px 14px; border-bottom: 1px solid var(--m-divider); }
 /* Doar la Preferințe alimentare (nu și la Activitate): fundal ușor diferit, subtitluri mici și gri */
 .plan-alim-sectiune-continut:not(.plan-alim-activitate) { padding-top: 12px; background: rgba(var(--accent-rgb), 0.04); }
-.plan-alim-sectiune-continut:not(.plan-alim-activitate) .checkin-eticheta { font-size: 0.72rem; font-weight: 700; color: var(--m-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.plan-alim-sectiune-continut:not(.plan-alim-activitate) .checkin-eticheta, .plan-alim-varianta .checkin-eticheta, .plan-alim-start .checkin-eticheta { font-size: 0.72rem; font-weight: 700; color: var(--m-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+/* Titlurile mici deasupra câmpurilor încep odată cu textul din căsuță (padding + chenar) */
+.plan-alim-sectiune-continut .checkin-eticheta:has(+ .plan-ex-textarea) { padding-left: 11px; }
+:is(.plan-alim-varianta, .plan-alim-sectiune-continut) .plan-ex-textarea { padding: 8px 10px; font-size: 0.85rem; line-height: 1.35; resize: vertical; }
+/* Prepararea și tranzitul variantei: rânduri scurte (eticheta, începutul textului), deschise la atingere */
+.plan-alim-var-campuri { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--m-divider); padding-top: 4px; }
+.plan-alim-var-camp { padding: 8px 0; min-height: 40px; border-bottom: 0; }
+.plan-alim-var-camp .profil-rand-eticheta { flex-shrink: 0; font-weight: 600; font-size: 0.88rem; }
+.plan-alim-var-camp .profil-rand-valoare { flex: 1; min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--m-muted); font-size: 0.82rem; }
+.plan-alim-start .checkin-eticheta { padding-left: 9px; }
 /* Rândul deschis nu are linie sub el: titlul și conținutul lui sunt un singur bloc */
 .plan-alim-sectiune.deschis { border-bottom: 0; }
 /* Generatorul, „Nu mănâncă”: alimentele scoase și rezultatele căutării, pastile mici care nu se întind pe rând */
@@ -13869,8 +13922,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-grame .plan-ex-input { width: 62px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
 .plan-alim-negasit { color: #b91c1c; font-weight: 700; }
 .plan-alim-verifica { color: #b45309; font-weight: 700; }
-.plan-alim-var-butoane { display: flex; flex-wrap: wrap; gap: 6px; }
-.plan-alim-var-butoane .btn { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }
 .plan-alim-cautare { display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid var(--border); }
 .plan-alim-adauga-var { width: 100%; }
 /* Ultimul element din zona care derulează: loc dedesubt, ca umbra butonului să nu fie tăiată de marginea ei */
@@ -16312,6 +16363,19 @@ body:has(#calendarExpandableCard.is-expanded) #mainAppHeader #headerIconOrarBtn 
   color: #5f7076;
   font-size: 0.9rem;
   margin-bottom: 20px;
+}
+
+/* Câmpul ferestrei (ex. „Condimente sau notă”): sticlă, ca butoanele de sub el */
+#modalInput {
+  position: relative;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 16px;
+  border: 1px solid var(--m-border);
+  background: var(--m-btn);
+  box-shadow: var(--m-float-sm);
+  color: var(--m-text);
+  font-size: 0.95rem;
 }
 
 .custom-modal-actions {

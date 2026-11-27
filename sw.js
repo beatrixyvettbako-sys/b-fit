@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v269';
+const CACHE_NAME = 'bfit-cache-v270';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
