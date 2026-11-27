@@ -13761,6 +13761,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-zile .antr-pers-activitate { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; font-size: 0.9rem; }
 .plan-alim-zile .antr-pers-activitate small { font-size: 0.66rem; font-weight: 600; color: var(--m-muted); }
 .plan-alim-zile .antr-pers-activitate.azi:not(.activ) { color: var(--m-accent-text); }
+/* Luna planului: ‹ Săptămâna 2 › cu datele dedesubt */
+.plan-alim-sapt b { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+.plan-alim-sapt small { font-size: 0.72rem; font-weight: 600; color: var(--m-muted); }
+/* Zi cu antrenament (din Orar și antrenamentele clientului): punct mic sub dată */
+.plan-alim-zile .antr-pers-activitate.antr::after { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--m-accent-text); margin-top: 1px; }
 .plan-alim-cauta-camp { position: relative; }
 .plan-alim-cauta-camp .plan-alim-cauta { padding-right: 36px; }
 /* × de golire: bulă mică de sticlă, cu semnul desenat (centrat exact, indiferent de font) */
@@ -13828,11 +13833,37 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-adauga-var { width: 100%; }
 /* Ultimul element din zona care derulează: loc dedesubt, ca umbra butonului să nu fie tăiată de marginea ei */
 .plan-alim-jos { margin-top: 4px; padding-bottom: 20px; }
-.plan-alim-instr { margin-top: 8px; font-size: 0.85rem; }
-.plan-alim-citire summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; font-weight: 700; font-size: 0.9rem; }
-.plan-alim-citire summary b { white-space: nowrap; color: var(--primary); }
-.plan-alim-citire .plan-text-lista { margin-top: 8px; }
+.plan-alim-instr { font-size: 0.85rem; }
 .plan-alim-prep { margin-top: 6px; font-style: italic; }
+/* Planul la client: taburile, cardul de sus cu caloriile zilei, mesele care se deschid pe loc, cumpărăturile pe zile */
+.plan-alim-taburi { margin-bottom: 12px; }
+.plan-alim-taburi small { margin-left: 4px; padding: 1px 6px; border-radius: 999px; background: rgba(var(--accent-rgb), 0.18); color: var(--m-accent-text); font-size: 0.7rem; font-weight: 800; }
+.plan-alim-erou { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.plan-alim-erou > small { color: var(--m-muted); font-size: 0.75rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plan-alim-erou-kcal { display: flex; align-items: baseline; gap: 8px; }
+.plan-alim-erou-kcal b { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; color: var(--m-text); line-height: 1; }
+.plan-alim-erou-kcal span { font-size: 0.82rem; color: var(--m-muted); }
+.plan-alim-erou .nutritie-macro { background: var(--m-btn); border-color: var(--m-border); border-radius: 14px; }
+.plan-alim-erou .nutritie-macro span { font-size: 0.72rem; color: var(--m-muted); }
+.plan-alim-erou .nutritie-macro b { font-size: 1rem; color: var(--m-text); }
+.plan-alim-erou .nutritie-macro b small { font-size: 0.7rem; font-weight: 600; color: var(--m-muted); }
+.plan-alim-masa-zi { border-bottom: 1px solid var(--m-divider); }
+.plan-alim-masa-zi:last-child { border-bottom: 0; }
+.plan-alim-masa-zi summary { display: flex; align-items: center; gap: 10px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.plan-alim-masa-zi summary::-webkit-details-marker { display: none; }
+.plan-alim-masa-zi[open] .plan-alim-sageata { transform: rotate(90deg); }
+.plan-alim-masa-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.plan-alim-masa-text small { font-size: 0.72rem; font-weight: 700; color: var(--m-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.plan-alim-masa-text b { font-size: 0.95rem; color: var(--m-text); }
+.plan-alim-masa-text span { font-size: 0.8rem; color: var(--m-muted); }
+.plan-alim-masa-zi > :not(summary) { margin-left: 14px; margin-right: 14px; }
+.plan-alim-masa-zi > :last-child { margin-bottom: 12px; }
+.plan-alim-noteaza { width: calc(100% - 28px); margin-top: 8px; }
+.plan-alim-spre-cump { width: 100%; margin-top: 12px; text-align: left; font: inherit; }
+.plan-alim-cump-alege { display: flex; flex-direction: column; gap: 8px; }
+.plan-alim-cump-alege > b { font-size: 0.95rem; color: var(--m-text); }
+.plan-alim-cump-alege > small { font-size: 0.8rem; color: var(--m-muted); }
+.plan-alim-cump-alege .istoric-luna { margin-bottom: 0; }
 .plan-alim-public { max-width: 760px; margin: 0 auto; padding: 0 0 24px; display: flex; flex-direction: column; gap: 10px; }
 
 /* ===================== REDESIGN ORAR (v192): stilurile redesignului, contopite (o regulă per selector, unde nu schimbă rezultatul) */
