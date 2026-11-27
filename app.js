@@ -9545,6 +9545,11 @@ const ICONITE_PLAN_ALIM = {
   nou: '<path d="M12 5v14M5 12h14"/>',
   importa: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3 3 3-3"/>',
   gol: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  // Ecranul Importă: fișier urcat, ChatGPT (bulă de chat), Gemini (steluța în 4 colțuri), lipire (clipboard)
+  incarca: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/>',
+  chat: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+  stea: '<path d="M12 3c.6 4.6 3.9 7.9 8.5 8.5-4.6.6-7.9 3.9-8.5 8.5-.6-4.6-3.9-7.9-8.5-8.5C8.1 10.9 11.4 7.6 12 3z"/>',
+  lipeste: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>',
   ai: '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
   reteta: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
   plan: '<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>'
@@ -11060,7 +11065,7 @@ function htmlImportPlanAlim() {
   return `${titluPlanAlim(tr('Importă', 'Import'))}
     <div class="lista-sticla">
       <label class="drawer-nav-card">
-        <div class="drawer-nav-card-left"><div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONITE_PLAN_ALIM.importa}</svg></div>
+        <div class="drawer-nav-card-left"><div class="drawer-nav-icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONITE_PLAN_ALIM.incarca}</svg></div>
           <div><div class="drawer-nav-title">${tr('Încarcă plan', 'Upload a plan')}</div><div class="drawer-nav-desc">${tr('PDF, Word sau text', 'PDF, Word or text')}</div></div></div>
         <div class="drawer-nav-arrow">›</div>
         <input type="file" accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden onchange="incarcaFisierPlanAlim(this)">
@@ -11069,9 +11074,9 @@ function htmlImportPlanAlim() {
     <div class="lista-titlu">${tr('Generează cu AI', 'Generate with AI')}</div>
     <div class="lista-sticla">
       <div class="plan-alim-sticla antr-pers-campuri"><label>${tr('Pentru', 'For')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client (opțional)', 'Choose client (optional)')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr((k && k.id) || '')}" value="${escAttr((k && k.id) ? numeClientPlan((k && k.id)) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientImport)" onchange="alegeClientPlanCamp(this, null, schimbaClientImport)"></label></div>
-      ${rand('ai', 'ChatGPT', '', "deschideAiPlanAlim('chatgpt')")}
-      ${rand('ai', 'Gemini', '', "deschideAiPlanAlim('gemini')")}
-      ${rand('importa', tr('Lipește aici', 'Paste here'), tr(`răspunsul generat de ${planAlim.aiDeschis || 'AI'}`, `the answer from ${planAlim.aiDeschis || 'the AI'}`), 'lipesteRaspunsAi()')}
+      ${rand('chat', 'ChatGPT', '', "deschideAiPlanAlim('chatgpt')")}
+      ${rand('stea', 'Gemini', '', "deschideAiPlanAlim('gemini')")}
+      ${rand('lipeste', tr('Lipește aici', 'Paste here'), tr(`răspunsul generat de ${planAlim.aiDeschis || 'AI'}`, `the answer from ${planAlim.aiDeschis || 'the AI'}`), 'lipesteRaspunsAi()')}
     </div>
     ${planAlim.importManual || planAlim.importText ? `<div class="lista-sticla plan-alim-sticla obiectiv-form plan-alim-import-text">
       <textarea id="planAlimImport" class="plan-ex-textarea" rows="10" maxlength="60000" placeholder="${tr('Lipește aici răspunsul generat de AI', 'Paste the AI’s answer here')}" oninput="planAlim.importText = this.value">${escAttr(planAlim.importText)}</textarea>
@@ -11244,49 +11249,82 @@ function cantitateDinText(s) {
 function parseazaPlanAlimText(text) {
   const plan = planAlimGol();
   plan.continut.instructiuni = '';
-  let masa = null, varianta = null, instr = [], inInstr = false, inSuplimente = false;
-  const antet = [], supl = [];
+  // inBloc: „Tranzit:” / „Preparare:” fără nimic după, cu rândurile de dedesubt; necunoscut: titlul de masă nerecunoscut
+  let masa = null, varianta = null, instr = [], inInstr = false, inSuplimente = false, inBloc = null, necunoscut = '';
+  const antet = [], supl = [], ordine = [], pierdute = new Set();
+  // Blocul de cod cerut în prompt: doar el, fără textul AI-ului din jur
+  const bloc = String(text || '').match(/```[^\n]*\n([\s\S]*?)```/);
+  const textPlan = bloc ? bloc[1] : String(text || '');
+  // „Masa 1 … Masa 5”: mesele se pun după structura cu tot atâtea mese (5 = mic dejun, gustare, prânz, gustare, cină)
+  const nrMeseN = Math.max(0, ...[...faraDiacritice(textPlan).matchAll(/^[#*\s]*(?:masa|meal)\s*(\d+)\b/gim)].map(m => +m[1]));
+  const structuraN = nrMeseN ? STRUCTURI_MESE_PLAN[Math.min(6, Math.max(2, nrMeseN))].map(x => x[0]) : [];
+  while (structuraN.length < nrMeseN) structuraN.push('gustare');
+  // { cod, nr (a câta masă cu acel cod, 0 = următoarea liberă), desc }
   const tipMasa = s => {
     // „2. Gustare 1 (masa 2)”: numărul secțiunii din față nu contează
     const n = faraDiacritice(s).replace(/^[#*\s]+/, '').replace(/^\d+[.)]\s*/, '');
-    return /^(mic dejun|breakfast)/.test(n) ? 'mic_dejun' : /^(pranz|lunch)/.test(n) ? 'pranz' : /^(cina|dinner)/.test(n) ? 'cina' : /^(gustar|snack)/.test(n) ? 'gustare' : null;
+    const g = n.match(/^(?:gustar\w*|snacks?)\s*(\d)?/);
+    if (g) return { cod: 'gustare', nr: g[1] ? +g[1] : 0 };
+    if (/^(mic dejun|breakfast)/.test(n)) return { cod: 'mic_dejun', nr: 1 };
+    if (/^(pranz|lunch)/.test(n)) return { cod: 'pranz', nr: 1 };
+    if (/^(cina|dinner)/.test(n)) return { cod: 'cina', nr: 1 };
+    // Pre- / post-antrenament: o gustare în plus, cu numele în descriere
+    if (/^(pre|post)[- ]?(antrenament|workout|training)\s*(\(.*\))?$/.test(n)) return { cod: 'gustare', nr: 0, desc: s.replace(/^[#*\s]+/, '').trim() };
+    const m = n.match(/^(?:masa|meal)\s*(\d+)\b/), cod = m && structuraN[m[1] - 1];
+    return cod ? { cod, nr: structuraN.slice(0, m[1]).filter(c => c === cod).length } : null;
   };
-  // Blocul de cod cerut în prompt: doar el, fără textul AI-ului din jur
-  const bloc = String(text || '').match(/```[^\n]*\n([\s\S]*?)```/);
-  (bloc ? bloc[1] : String(text || '')).split('\n').map(r => r.trim()).filter(Boolean).forEach(r => {
+  // Masa din plan; „Gustare 3” sau o gustare în plus se adaugă. Ordinea finală e cea din text
+  const gasesteMasa = ({ cod, nr, desc }) => {
+    const toate = plan.continut.mese.filter(m => m.cod === cod);
+    let i = nr ? nr - 1 : toate.findIndex(m => !ordine.includes(m));
+    if (i < 0) i = toate.length;
+    while (toate.length <= i) { const noua = { cod, procent: cod === 'gustare' ? 10 : 25, variante: [] }; plan.continut.mese.push(noua); toate.push(noua); }
+    const m = toate[i];
+    if (desc && !m.descriere) m.descriere = desc.slice(0, 200);
+    if (!ordine.includes(m)) ordine.push(m);
+    return m;
+  };
+  textPlan.split('\n').map(r => r.trim()).filter(Boolean).forEach(r => {
     if (/page \d+ of \d+|pagina \d+ (din|\/) \d+/i.test(r) || r.startsWith('```')) return;
     const curat = r.replace(/\*\*/g, '');
     const titlu = curat.match(/^(?:titlu|title)\s*:\s*(.+)$/i);
     if (titlu) { plan.titlu = titlu[1].trim().slice(0, 120); return; }
     // Titlul mesei: scurt, cu # sau cu numele mesei cu majuscule („CINĂ Opțiuni ușoare & bogate în nutrienți”, din PDF)
     const primul = curat.replace(/^#+\s*/, '').split(/\s/)[0];
-    const cod = curat.length <= 70 && (/^#(?!#)/.test(curat) || curat === curat.toUpperCase() || curat.length <= 40 || (primul.length > 2 && primul === primul.toUpperCase())) ? tipMasa(curat) : null;
-    // „Gustare 2” merge la a doua gustare
-    if (!cod && /^#(?!#)/.test(curat)) {
+    // Din PDF-ul nostru titlul mesei vine cu bulină („- MIC DEJUN”): atunci doar cu majuscule, să nu fie un aliment
+    const cuBulina = /^[-•]\s*/.test(curat), titluMasa = curat.replace(/^[-•]\s*/, '');
+    const tip = curat.length <= 70 && (cuBulina ? titluMasa === titluMasa.toUpperCase()
+      : /^#(?!#)/.test(curat) || curat === curat.toUpperCase() || curat.length <= 40 || (primul.length > 2 && primul === primul.toUpperCase())) ? tipMasa(titluMasa) : null;
+    // Titlul de secțiune: cu # sau, din PDF-ul nostru, „- Suplimente recomandate”
+    if (!tip && (/^#(?!#)/.test(curat) || (curat.length <= 40 && /^(suplimente|supplements)\b/i.test(titluMasa)))) {
       masa = null; varianta = null;
       inSuplimente = /suplimente|supplements/i.test(curat);
+      necunoscut = inSuplimente ? '' : curat.replace(/^#+\s*/, '').trim();
       return;
     }
-    if (inSuplimente && !masa && !cod) {
+    if (inSuplimente && !masa && !tip) {
       // Rândul rupt din tabel continuă suplimentul de deasupra; antetul tabelului nu contează
       if (/^supliment\w*\s+doz/i.test(curat)) return;
       if (/^[-•]\s*/.test(curat) && supl.length) supl[supl.length - 1] += ' ' + curat.replace(/^[-•]\s*/, '');
       else supl.push(curat);
       return;
     }
-    if (cod) { masa = plan.continut.mese.filter(m => m.cod === cod)[cod === 'gustare' && /^[\d.)#*\s]*(gustar\w*|snacks?)\s*2\b/.test(faraDiacritice(curat)) ? 1 : 0]; varianta = null; return; }
+    if (tip) { inBloc = null; necunoscut = ''; masa = gasesteMasa(tip); varianta = null; return; }
     const kcal = curat.match(/≈\s*(\d+(?:[.,]\d+)?)(?:\s*[–-]\s*(\d+(?:[.,]\d+)?))?\s*kcal/i);
-    // Varianta: „## ...”, „Varianta 1: ...” sau numerotată („1. Pui cu orez”, fără cantitate, altfel e aliment)
-    const esteVar = /^##/.test(curat) || /^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]/i.test(curat)
+    // Varianta: „## ...”, „Varianta 1: ...”, „Opțiunea A: ...” sau numerotată („1. Pui cu orez”, fără cantitate, altfel e aliment)
+    const reVar = /^(varianta|opțiunea|optiunea|option)\s*(?:\d+|[a-z])?\s*[:.)–-]\s*/i;
+    const esteVar = /^##/.test(curat) || reVar.test(curat)
       || (/^\d+[.)]\s+\S/.test(curat) && !cantitateDinText(curat.replace(/^\d+[.)]\s+/, '')));
     if (esteVar && masa) {
-      const nume = curat.replace(/^#+\s*/, '').replace(/^(varianta|opțiunea|optiunea|option)\s*\d*\s*[:.)–-]\s*/i, '').replace(/^\d+[.)]\s+/, '').replace(/≈.*$/, '').trim();
-      varianta = { titlu: nume.slice(0, 120), preparare: '', ingrediente: [] };
+      const nume = curat.replace(/^#+\s*/, '').replace(reVar, '').replace(/^\d+[.)]\s+/, '').replace(/≈.*$/, '').trim();
+      varianta = { titlu: nume.slice(0, 120), preparare: '', ingrediente: [] }; inBloc = null;
       if (kcal) varianta.ai_kcal = Math.round(kcal[2] ? (numarText(kcal[1]) + numarText(kcal[2])) / 2 : numarText(kcal[1]));
       masa.variante.push(varianta);
       return;
     }
     if (!masa) {
+      // Variante sub un titlu de masă nerecunoscut („# BRUNCH”): nu intră în plan, se spune după import
+      if (necunoscut && esteVar) { pierdute.add(necunoscut); return; }
       // Planurile din PDF au „Instrucțiuni generale”: atunci contează doar textul de sub titlu, nu antetul (data, profilul)
       antet.push(curat);
       if (/^[-•*]?\s*(instruc[țt]iuni generale|general instructions)/i.test(curat)) { inInstr = true; instr = []; return; }
@@ -11302,10 +11340,15 @@ function parseazaPlanAlimText(text) {
     // Rândul de macro de sub ingrediente (din PDF vine cu bulină, fiind indentat)
     const faraBulina0 = curat.replace(/^[-•*]\s*/, '');
     if (/^(proteine|protein)\s*:/i.test(faraBulina0) || /^cu .+:\s*proteine/i.test(faraBulina0)) return;
-    const tranzit = curat.match(/^(?:tranzit|delega[țt]ie|on the go|travel)\s*:\s*(.+)$/i);
-    if (tranzit) { varianta.tranzit = tranzit[1].split(/\s*;\s*/).filter(Boolean).join('\n'); return; }
-    const prep = curat.match(/^(?:preparare|mod de preparare|method)\s*:\s*(.+)$/i);
-    if (prep) { varianta.preparare = (varianta.preparare ? varianta.preparare + ' ' : '') + prep[1]; return; }
+    // „Tranzit: a; b” / „Preparare: …”, și cu bulină, cu paranteză („Tranzit (supermarket):”), cu „–”
+    //   sau cu textul pe rândurile cu bulină de dedesubt
+    const tranzit = faraBulina0.match(/^(?:tranzit|delega[țt]ie|on the go|travel)\b[^:–—]{0,30}?\s*[:–—]\s*(.*)$/i);
+    if (tranzit) { varianta.tranzit = tranzit[1].split(/\s*;\s*/).filter(Boolean).join('\n'); inBloc = varianta.tranzit ? null : 'tranzit'; return; }
+    const prep = faraBulina0.match(/^(?:preparare|mod de preparare|method|preparation)\b[^:–—]{0,30}?\s*[:–—]\s*(.*)$/i);
+    if (prep) { varianta.preparare = [varianta.preparare, prep[1]].filter(Boolean).join(' '); inBloc = prep[1] ? null : 'preparare'; return; }
+    if (inBloc === 'tranzit' && /^[-•*]/.test(curat)) { varianta.tranzit = [varianta.tranzit, faraBulina0].filter(Boolean).join('\n'); return; }
+    if (inBloc === 'preparare' && /^[-•*]/.test(curat)) { varianta.preparare = [varianta.preparare, faraBulina0].filter(Boolean).join(' '); return; }
+    inBloc = null;
     // Și rândurile fără bulină de forma „aliment — 100 g” (planuri vechi din PDF sau Word)
     const faraBulina = curat.length <= 100 && /\s[—–]\s/.test(curat) && cantitateDinText(curat.split(/\s[—–]\s/).pop());
     if (/^[-•*]\s*/.test(curat) || faraBulina) {
@@ -11327,13 +11370,14 @@ function parseazaPlanAlimText(text) {
   plan.continut.instructiuni = instr.join('\n') || instructiuniPlanImplicite();
   plan.continut.suplimente = supl.join('\n');
   antetPlanAlim(plan, antet.join('\n'));
-  // Rămân doar mesele din text, cu procentele refăcute pe ziua întreagă
-  const pline = plan.continut.mese.filter(m => m.variante.length);
+  // Rămân doar mesele din text, în ordinea din text, cu procentele refăcute pe ziua întreagă
+  const pline = ordine.filter(m => m.variante.length);
   if (pline.length) {
     const suma = pline.reduce((s, m) => s + m.procent, 0);
     pline.forEach(m => { m.procent = Math.round(m.procent * 100 / suma); });
     plan.continut.mese = pline;
   }
+  plan.pierdute = [...pierdute];
   return plan;
 }
 
@@ -11511,11 +11555,14 @@ async function importaPlanAlim(btn, text) {
   if (btn) btn.disabled = false;
   planAlim.importManual = false;
   const negasite = ingrediente.filter(i => i.negasit).length, deVerificat = ingrediente.filter(i => i.verifica).length;
+  const pierdute = plan.pierdute;
+  delete plan.pierdute;
   planAlim.plan = plan;
   planAlim.importText = '';
   planAlim.vedere = 'editor';
   randeazaPlanAlim();
-  showToast(negasite || deVerificat ? tr(`Importat. ${negasite} negăsite, ${deVerificat} de verificat (marcate).`, `Imported. ${negasite} not found, ${deVerificat} to check (marked).`) : tr('✓ Importat. Alege clientul de sus.', '✓ Imported. Pick the client at the top.'));
+  showToast((negasite || deVerificat ? tr(`Importat. ${negasite} negăsite, ${deVerificat} de verificat (marcate).`, `Imported. ${negasite} not found, ${deVerificat} to check (marked).`) : tr('✓ Importat. Alege clientul de sus.', '✓ Imported. Pick the client at the top.'))
+    + (pierdute.length ? ' ' + tr(`N-am înțeles masa: ${pierdute.join(', ')} (lipsește din plan).`, `Meal not recognised: ${pierdute.join(', ')} (left out).`) : ''), pierdute.length ? 'error' : undefined, [], pierdute.length ? 6000 : undefined);
 }
 
 // Alimentele scrise în text („cant”) devin alimente din bază, cu gramele lor (aliasurile antrenorului întâi). Întoarce ingredientele rezolvate.
