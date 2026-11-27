@@ -9746,9 +9746,9 @@ async function schimbaClientGen(id) {
     const text = [f.imiPlace, f.meseObisnuite].filter(x => String(x || '').trim()).join('\n');
     if (!ultim && text) {
       await incarcaBibliotecaAlim();
-      const a = analizeazaListaClient(text), sug = await sugestiiBazaPlan(a.necunoscute);
+      const a = await analizaListaCuBaza(text);
       Object.assign(g, { lista: text, prefera: a.prefera, nota: a.nu.join(', '), restrictii: a.restrictii, mese: a.mese,
-        preferaBaza: sug.filter(Boolean), neintelese: a.necunoscute.filter((w, i) => !sug[i]) });
+        preferaBaza: a.sugestii.filter(Boolean), neintelese: a.necunoscute.filter((w, i) => !a.sugestii[i]) });
       showToast(tr('✓ Preferințele din fișa clientului', '✓ Preferences from the client’s form'));
     }
   }
@@ -9949,6 +9949,8 @@ function restrictiiPlan(clientId, pref) {
 //   și pe rândurile de sub el), restul e preferat. Ce mănâncă e o listă de preferințe, nu una completă: rețetele cu alimentele ei vin primele.
 // Cuvântul din listă acoperă și rudele lui din bibliotecă („ouă” → albușuri; „oaie” / „berbec” → miel)
 const RUDE_LISTA_ALIM = { ou: ['albus'], branz: ['ricott', 'parmezan'], oaie: ['miel'], berbec: ['miel'] };
+// Bucățile care înseamnă tot alimentul („Piept de pui” = pui, „Fulgi de ovăz” = ovăz)
+const BUCATI_LISTA_ALIM = 'piept pulpa pulpe file fileu muschi muschiulet cotlet ceafa carne fulgi tocatura aripi aripioare spata antricot';
 const NEG_LISTA_ALIM = /\b(?:nu (?:prea |chiar )?(?:mananc|manca|vreau|consum|beau|suport|tolerez|imi plac?e?|ii plac?e?)|nu-?mi plac?e?|nici|fara|alergi\w*(?: la)?|intoleran\w*(?: la)?|evit|exclud\w*|excluderi|sa nu fie|urasc|i (?:do not|don'?t|can'?t|cannot|never) (?:eat|like|have|drink)|don'?t (?:eat|like)|do not (?:eat|like)|dislike|avoid|not|no|without|allergic to|allergy to|intolerant to|hate|except)\b/;
 const POZ_LISTA_ALIM = /\b(?:mananc|imi plac?e?|prefer|ador|de obicei|i (?:eat|like|love|prefer|usually eat)|love|like|usually)\b/;
 // Restricțiile întregi recunoscute în text (aceleași ca în fișă)
@@ -9975,16 +9977,34 @@ const UMPLUTURA_LISTA_ALIM = /\b(?:deloc|prea|mult|multe|foarte|uneori|cateodata
 function analizeazaListaClient(text) {
   const alim = [...alimenteBiblioteca(planAlim.biblioteca || []).entries()].map(([k, a]) => [k, radaciniAliment(faraDiacritice(a.nume.toLowerCase()))]);
   // Prefixul cere minim 4 litere și cel mult 2 în plus: „alb” nu e „albuș”, „paste” nu e „pastramă”, dar „orezul” e „orez”
+  const bucati = new Set(radaciniAliment(BUCATI_LISTA_ALIM));
   const seamana = (w, t) => w === t || (w.length >= 4 && t.length >= 4 && Math.abs(w.length - t.length) <= 2 && (w.startsWith(t) || t.startsWith(w)));
+  // Un singur cuvânt („pui”, „orez”) = alimentul însuși („Orez brun”, „Somon afumat”) sau o bucată din el („Piept de pui”),
+  //   nu un produs făcut din el („Ficat de pui”, „Rondele de orez”, „Sos de roșii”, „Fasole roșie”)
   const gaseste = item => {
     const rad = radaciniAliment(item);
     if (!rad.length) return [];
-    const toate = alim.filter(([, r]) => rad.every(t => r.some(w => seamana(w, t)))).map(([k]) => k);
-    if (toate.length || rad.length > 1) return toate;
-    const rude = RUDE_LISTA_ALIM[rad[0]] || [];
-    return alim.filter(([, r]) => r.some(w => seamana(w, rad[0]) || rude.some(x => seamana(w, x)))).map(([k]) => k);
+    if (rad.length > 1) return alim.filter(([, r]) => rad.every(t => r.some(w => seamana(w, t)))).map(([k]) => k);
+    const t = rad[0], cap = r => r[0] || '';
+    const rude = RUDE_LISTA_ALIM[t] || [];
+    return alim.filter(([, r]) => seamana(cap(r), t) || rude.some(x => seamana(cap(r), x)) || (bucati.has(cap(r)) && r.some(w => seamana(w, t)))).map(([k]) => k);
   };
-  const rez = { prefera: [], nu: [], restrictii: [], necunoscute: [], mese: [] };
+  // Forma cu articol („puiul”, „ouăle”, „roșiile”, „peștele”), încercată doar când forma scrisă nu se găsește
+  const faraArticol = x => x.split(' ').map(w => w.length >= 5 ? w.replace(/(?:ului|ul|le)$/, '') : w).join(' ');
+  // Greșeala de o literă (lipsă, în plus sau alta: „pete”, „brocoli”, „rosi”), la cuvintele de minim 4 litere.
+  //   Se folosește abia după baza de alimente (analizaListaCuBaza), ca „somn” să nu devină „somon”
+  const oLitera = (a, b) => {
+    if (Math.abs(a.length - b.length) > 1) return false;
+    let i = 0;
+    while (i < a.length && a[i] === b[i]) i++;
+    return a.slice(i + 1) === b.slice(i + 1) || a.slice(i) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i);
+  };
+  const cuvinteAlim = [...alimenteBiblioteca(planAlim.biblioteca || []).entries()].map(([k, a]) => [k, faraDiacritice(a.nume.toLowerCase()).split(/[^a-z]+/)]);
+  const aproape = x => {
+    const ws = x.split(' ').filter(Boolean);
+    return ws.some(w => w.length >= 4) ? cuvinteAlim.filter(([, n]) => ws.every(w => n.some(t => t === w || (w.length >= 4 && oLitera(w, t))))).map(([k]) => k) : [];
+  };
+  const rez = { prefera: [], nu: [], restrictii: [], necunoscute: [], mese: [], aproape: {} };
   let mod = 'da';
   let curat = faraDiacritice(String(text).toLowerCase()).replace(/[’`´]/g, "'");
   EN_RO_LISTA_ALIM.forEach(([en, ro]) => { curat = curat.replace(new RegExp(`\\b${en}\\b`, 'g'), ro); });
@@ -10010,15 +10030,22 @@ function analizeazaListaClient(text) {
         if (item.length < 2) return;
         const restr = RESTRICTII_LISTA_ALIM.find(([, re]) => re.test(item));
         if (semn === 'nu') {
-          if (restr && !/\b(?:pui|vita|porc|curcan|somon|ton)\b/.test(item)) rez.restrictii.push(restr[0]);
-          else if (item.length >= 3) rez.nu.push(item);
+          // „ciupercile”, „peștele” → ciuperci, pește (altfel nu se potrivesc cu alimentele)
+          const deScos = faraArticol(item), restrNu = RESTRICTII_LISTA_ALIM.find(([, re]) => re.test(deScos));
+          if (restrNu && !/\b(?:pui|vita|porc|curcan|somon|ton)\b/.test(deScos)) rez.restrictii.push(restrNu[0]);
+          else if (deScos.length >= 3) rez.nu.push(deScos);
           return;
         }
         if (restr && (restr[0] === 'vegan' || restr[0] === 'vegetarian') && /vegan|vegetarian/.test(item)) return void rez.restrictii.push(restr[0]);
         // „orez cu somon”: masă obișnuită (pentru mesele făcute din alimentele clientului) + fiecare aliment preferat
         const parti = item.split(/\b(?:cu|with)\b/).map(x => x.trim()).filter(Boolean);
         if (parti.length > 1) rez.mese.push(item);
-        parti.forEach(x => { const k = gaseste(x); if (k.length) rez.prefera.push(...k); else if (x.length >= 3) rez.necunoscute.push(x); });
+        parti.forEach(x => {
+          let k = gaseste(x);
+          if (!k.length) k = gaseste(faraArticol(x));
+          if (k.length) rez.prefera.push(...k);
+          else if (x.length >= 3) { rez.necunoscute.push(x); rez.aproape[x] = aproape(x); }
+        });
       });
     });
   });
@@ -10035,20 +10062,33 @@ function analizeazaListaClient(text) {
 // „Analizează”: arată ce a înțeles, ca pastile; antrenorul mută ce e greșit și apoi aplică
 // Rezerva: ce nu e în rețete se caută în toată baza de alimente („tofu afumat” → Tofu); ce nu se găsește nici acolo rămâne notat.
 //   Sugestia contează doar dacă se potrivesc toate cuvintele sau primul, nu un cuvânt oarecare („ciorbă de burtă” ≠ burtă de porc)
-function sugestiiBazaPlan(cuvinte) {
-  return Promise.all(cuvinte.map(async w => {
-    const r = await gasesteAlimentBaza(w), primul = radaciniAliment(w)[0] || '';
-    return r && (r.sigur || faraDiacritice(r.produs.nume.toLowerCase()).startsWith(primul)) ? r.produs.nume : '';
-  }));
+//   Ce nu e aliment deloc („bună ziua”, „lucrez la birou”) se lasă deoparte: rămân doar cuvintele cu o sugestie, cu o greșeală
+//   de o literă față de o rețetă (devin preferate) sau cu un cuvânt care e aliment în bază („ciorbă de burtă”, ca notă)
+async function analizaListaCuBaza(text) {
+  const a = analizeazaListaClient(text);
+  const baza = await toateAlimenteleBaza().catch(() => []);
+  const radBaza = new Set(baza.flatMap(x => radaciniAliment(x.cuvinte.join(' '))));
+  const gasite = await Promise.all(a.necunoscute.map(w => gasesteAlimentBaza(w).catch(() => null)));
+  const necunoscute = [], sugestii = [];
+  a.necunoscute.forEach((w, i) => {
+    const r = gasite[i], primul = radaciniAliment(w)[0] || '';
+    // Primul cuvânt contează de la 3 litere („am doi copii” nu e amarant)
+    const sug = r && (r.sigur || (primul.length >= 3 && faraDiacritice(r.produs.nume.toLowerCase()).startsWith(primul))) ? r.produs.nume : '';
+    if (sug) { necunoscute.push(w); sugestii.push(sug); }
+    else if (a.aproape[w].length) a.prefera.push(...a.aproape[w].filter(k => !a.prefera.includes(k)));
+    else if (radaciniAliment(w).some(c => c.length >= 4 && radBaza.has(c))) { necunoscute.push(w); sugestii.push(''); }
+  });
+  Object.assign(a, { necunoscute, sugestii });
+  delete a.aproape;
+  return a;
 }
 
 async function analizeazaListaGen() {
   const g = planAlim.gen, text = String((document.getElementById('genLipeste') || {}).value || '').trim();
   if (!text) return showToast(tr('Lipește întâi lista.', 'Paste the list first.'), 'error');
   g.lista = text;
-  const a = analizeazaListaClient(text);
+  const a = await analizaListaCuBaza(text);
   a.preferaBaza = [];
-  a.sugestii = await sugestiiBazaPlan(a.necunoscute);
   g.analiza = a;
   randeazaPlanAlim();
 }
