@@ -3484,21 +3484,49 @@ html:not([data-theme="dark"]) .lista-sticla::before {
 [data-theme="dark"] .notificare-icon.nf-portocaliu { --nf: 245, 176, 65; }
 [data-theme="dark"] .notificare-icon:not(.nf-verde, .nf-rosu, .nf-portocaliu) { color: var(--m-accent-text); }
 
-/* Necitită: punctul de accent în colțul bulei */
+/* Necitită: punctul de accent în colțul bulei, ca o mărgea de sticlă; la deschiderea listei apare cu un mic salt
+   și trimite de 3 ori un inel care se stinge (::before). Doar transform și opacity, apoi se oprește */
+.notificare.necitita .notificare-icon::before,
 .notificare.necitita .notificare-icon::after {
   content: "";
   position: absolute;
-  top: -1px;
-  right: -1px;
-  width: 10px;
-  height: 10px;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
+  pointer-events: none;
+}
+
+.notificare.necitita .notificare-icon::before {
   background: var(--accent-purple);
-  box-shadow: 0 0 0 2px var(--m-card-solid, #fff);
+  opacity: 0;
+  animation: punctNouInel 1.6s ease-out 0.4s 3;
+}
+
+.notificare.necitita .notificare-icon::after {
+  background: radial-gradient(circle at 35% 30%, var(--accent-purple-light) 0%, var(--accent-purple) 70%);
+  box-shadow: 0 0 0 2px var(--m-card-solid, #fff), 0 2px 5px rgba(var(--accent-rgb), 0.45);
+  animation: punctNouApare 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
 }
 
 [data-theme="dark"] .notificare.necitita .notificare-icon::after {
-  box-shadow: 0 0 0 2px #1e2a34;
+  box-shadow: 0 0 0 2px #1e2a34, 0 2px 6px rgba(var(--accent-rgb), 0.6);
+}
+
+@keyframes punctNouApare {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+@keyframes punctNouInel {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notificare.necitita .notificare-icon::before,
+  .notificare.necitita .notificare-icon::after { animation: none; }
 }
 
 .notificare-text {
@@ -13734,10 +13762,15 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-sectiune.deschis .plan-alim-sageata,
 .plan-alim-varianta.deschisa .plan-alim-var-rand .plan-alim-sageata { transform: rotate(90deg); }
 .plan-alim-sectiune-continut { padding: 4px 14px 14px; border-bottom: 1px solid var(--m-divider); }
+/* Doar la Preferințe alimentare (nu și la Activitate): fundal ușor diferit, subtitluri mici și gri */
+.plan-alim-sectiune-continut:not(.plan-alim-activitate) { padding-top: 12px; background: rgba(var(--accent-rgb), 0.04); }
+.plan-alim-sectiune-continut:not(.plan-alim-activitate) .checkin-eticheta { font-size: 0.72rem; font-weight: 700; color: var(--m-muted); text-transform: uppercase; letter-spacing: 0.3px; }
+/* Rândul deschis nu are linie sub el: titlul și conținutul lui sunt un singur bloc */
+.plan-alim-sectiune.deschis { border-bottom: 0; }
 /* Generatorul, „Nu mănâncă”: alimentele scoase și rezultatele căutării, pastile mici care nu se întind pe rând */
 .plan-alim-alimente { margin: 8px 0 0; }
 .plan-alim-alimente:empty { display: none; }
-.plan-alim-alimente .antr-pers-activitate { flex: 0 0 auto; padding: 6px 10px; }
+.plan-alim-alimente .antr-pers-activitate { flex: 0 0 auto; padding: 5px 10px; font-size: 0.78rem; border-radius: 13px; }
 .plan-alim-lipeste { margin-top: 10px; }
 /* Săptămâna planului la client: 7 pastile pe un rând, litera zilei deasupra datei; azi în culoarea accentului */
 .plan-alim-zile { flex-wrap: nowrap; gap: 4px; }
@@ -13775,6 +13808,15 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-lipeste-act { display: flex; gap: 8px; margin-top: 10px; }
 /* Ce n-a recunoscut din lista lipită: cuvântul, apoi ce poate însemna */
 .plan-alim-necunoscut { margin-top: 8px; font-size: 0.85rem; color: var(--m-text); }
+/* Ce mănâncă: „Lipește lista” e o acțiune (culoarea de accent); pe rândurile închise se vede pe scurt ce e ales */
+.plan-alim-actiune { color: var(--m-accent-text); }
+/* Tip de alimentație și intoleranțe: „Toate ›” ca legătură discretă, grupele cu titlu mic */
+.plan-alim-mai-multe { display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-style: dashed; background: transparent; box-shadow: none; color: var(--m-muted); }
+.plan-alim-mai-multe svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.plan-alim-obiective .plan-alim-mai-multe { flex-basis: 100%; }
+/* Intoleranțele: două coloane egale, ca tipurile; numele lungi trec pe al doilea rând în pastilă */
+.plan-alim-intol .antr-pers-activitate { white-space: normal; line-height: 1.2; }
+.plan-alim-grupa { margin: 10px 0 6px; font-size: 0.72rem; font-weight: 600; color: var(--m-muted); }
 .plan-alim-necunoscut .plan-alim-alimente { margin-top: 4px; }
 .plan-alim-lipeste-act .btn { flex: 1; }
 .plan-alim-masa-setari { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; }
@@ -13825,7 +13867,6 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-grame { flex-shrink: 0; display: flex; align-items: center; gap: 3px; font-size: 0.75rem; color: var(--text-muted); font-weight: 700; }
 .plan-alim-grame .plan-ex-input { width: 62px; padding: 5px 6px; font-size: 0.85rem; text-align: right; }
 .plan-alim-negasit { color: #b91c1c; font-weight: 700; }
-.plan-alim-restrictii { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(185, 28, 28, 0.08); color: #b91c1c; font-size: 0.85rem; line-height: 1.35; }
 .plan-alim-verifica { color: #b45309; font-weight: 700; }
 .plan-alim-var-butoane { display: flex; flex-wrap: wrap; gap: 6px; }
 .plan-alim-var-butoane .btn { flex: 1 1 auto; padding-left: 10px; padding-right: 10px; white-space: nowrap; }

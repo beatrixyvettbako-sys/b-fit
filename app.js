@@ -9327,6 +9327,7 @@ function meseDupaStructura(nr) {
 
 // Ținta zilei fără antrenament, din cea cu antrenament
 function tinteRepausDin(t) {
+  if (t && t.carbo <= CARBO_MINUS_REPAUS) return Object.assign({}, t);
   return t ? { kcal: Math.max(0, t.kcal - CARBO_MINUS_REPAUS * 4), proteine: t.proteine, carbo: Math.max(0, t.carbo - CARBO_MINUS_REPAUS), grasimi: t.grasimi } : null;
 }
 
@@ -9346,9 +9347,12 @@ function tinteDinProfil(p) {
   const kcal = Math.max(1200, Math.round(consum * ob[1] / 10) * 10);
   // Proteinele din greutatea de referință (IMC 25) când greutatea reală e peste ea, altfel ar ieși prea multe
   const gReferinta = Math.min(g, 25 * (h / 100) * (h / 100));
-  const proteine = Math.round(gReferinta * ob[2]);
-  const grasimi = Math.round(kcal * 0.25 / 9);
-  const carbo = Math.max(0, Math.round((kcal - proteine * 4 - grasimi * 9) / 4));
+  // Împărțirea macro: echilibrat (25% grăsimi), mai puțini carbohidrați (40%), mai puține grăsimi (20%), proteic (+20% proteine),
+  //   mediteranean (35% grăsimi, mai ales din ulei de măsline și pește), keto (~30 g carbohidrați, restul din grăsimi)
+  const proteine = Math.round(gReferinta * ob[2] * (p.macro === 'proteic' ? 1.2 : 1));
+  const grasimi = p.macro === 'keto' ? Math.max(0, Math.round((kcal - proteine * 4 - 30 * 4) / 9))
+    : Math.round(kcal * ({ lowcarb: 0.4, lowfat: 0.2, mediteranean: 0.35 }[p.macro] || 0.25) / 9);
+  const carbo = p.macro === 'keto' ? 30 : Math.max(0, Math.round((kcal - proteine * 4 - grasimi * 9) / 4));
   return { bmr: Math.round(bmr / 10) * 10, consum: Math.round(consum / 10) * 10, kcal, proteine, carbo, grasimi };
 }
 
@@ -9729,6 +9733,7 @@ async function schimbaClientGen(id) {
     g.nota = ultim ? ultim.continut.preferinte.nota || '' : '';
     g.prefera = ultim ? (ultim.continut.preferinte.prefera || []).slice() : [];
     g.restrictii = ultim ? (ultim.continut.preferinte.restrictii || []).slice() : [];
+    g.dieta = ultim ? ultim.continut.preferinte.dieta || '' : '';
     g.mese = ultim ? (ultim.continut.preferinte.mese || []).slice() : [];
     g.preferaBaza = ultim ? (ultim.continut.preferinte.preferaBaza || []).slice() : [];
     g.neintelese = ultim ? (ultim.continut.preferinte.neintelese || []).slice() : [];
@@ -9822,6 +9827,10 @@ function schimbaAltaActivitatePlan(fn, i, camp, d) {
   window[fn]('alte', alte);
 }
 
+// Împărțirea macro din profil (keto și mediteranean vin din tipul de alimentație, dar se pot alege și de aici); nealeasă = echilibrat
+const MACRO_PLAN = [['echilibrat', 'Echilibrat', 'Balanced'], ['lowcarb', 'Mai puțini carbohidrați', 'Lower carb'], ['lowfat', 'Mai puține grăsimi', 'Lower fat'],
+  ['proteic', 'Proteic', 'High protein'], ['mediteranean', 'Mediteranean', 'Mediterranean'], ['keto', 'Keto', 'Keto']];
+
 // Profilul (sex, vârstă, înălțime, greutate, activitate, obiectiv), comun editorului și generatorului; fn = funcția care primește (câmp, valoare)
 function htmlProfilCampuri(pr, fn) {
   const buton = (camp, val, et) => `<button type="button" class="antr-pers-activitate${String(pr[camp]) === String(val) ? ' activ' : ''}" onclick="${fn}('${camp}', '${val}')">${et}</button>`;
@@ -9830,7 +9839,9 @@ function htmlProfilCampuri(pr, fn) {
     <div class="antr-pers-campuri" style="margin-top:8px;">${camp('varsta', tr('Vârsta', 'Age'))}${camp('inaltime', tr('Înălțimea (cm)', 'Height (cm)'))}${camp('greutate', tr('Greutatea (kg)', 'Weight (kg)'))}</div>
     <div class="lista-sticla plan-alim-activ-sticla">${htmlActivitatePlan(pr, fn)}</div>
     <div class="checkin-eticheta" style="margin-top:8px;">${tr('Obiectivul', 'Goal')}</div>
-    <div class="antr-pers-activitati plan-alim-obiective">${OBIECTIVE_PLAN.map(o => buton('obiectiv', o[0], tr(o[3], o[4]))).join('')}</div>`;
+    <div class="antr-pers-activitati plan-alim-obiective">${OBIECTIVE_PLAN.map(o => buton('obiectiv', o[0], tr(o[3], o[4]))).join('')}</div>
+    <div class="checkin-eticheta" style="margin-top:8px;">${tr('Macronutrienți', 'Macros')}</div>
+    <div class="antr-pers-activitati plan-alim-obiective">${MACRO_PLAN.map(([k, ro, en]) => buton('macro', k, tr(ro, en))).join('')}</div>`;
 }
 
 function htmlGenereazaPlanAlim() {
@@ -9872,37 +9883,36 @@ function htmlGenereazaPlanAlim() {
       <div class="plan-alim-lipeste-act"><button type="button" class="btn" onclick="analizeazaListaGen()">${tr('Analizează', 'Analyse')}</button></div>`;
   const continutPref = {
     genLipire: lipire,
+    genDieta: htmlDietaGen(g, pastila),
     genLista: pastile(alese(g.prefera, 'prefera').concat((g.preferaBaza || []).map((n, i) => pastila(true, `stergeListaGen('preferaBaza', ${i})`, x(n)))))
       + ((g.neintelese || []).length ? `<div class="checkin-eticheta">${tr('Notate, neînțelese', 'Noted, not recognised')}</div>${pastile((g.neintelese || []).map((w, i) => pastila(false, `stergeListaGen('neintelese', ${i})`, x(mare(w)))))}` : '')
       + cauta('prefera', 'cautaPref', tr('Caută un aliment preferat', 'Search a favourite food')),
-    genNu: pastile(alese(g.nu, 'nu').concat(cuvinteNu)) + cauta('nu', 'cautaNu', tr('Caută un aliment de scos', 'Search a food to leave out'))
+    genNu: pastile(alese(g.nu, 'nu').concat(cuvinteNu)) + cauta('nu', 'cautaNu', tr('Caută un aliment de scos', 'Search a food to leave out')),
+    genStructura: `<div class="checkin-eticheta">${tr('Mese pe zi', 'Meals a day')}</div>
+      <div class="antr-pers-activitati">${[2, 3, 4, 5, 6].map(n => pastila(g.nrMese === n, `planAlim.gen.nrMese = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
+      <div class="checkin-eticheta">${tr('Variante la fiecare masă', 'Options per meal')}</div>
+      <div class="antr-pers-activitati">${[2, 3, 4, 5, 7].map(n => pastila(g.nrVar === n, `planAlim.gen.nrVar = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
+      ${comutator('repaus', tr('Zile fără antrenament', 'Rest days'), tr('Gramaje mai mici la carbohidrați în zilele fără antrenament', 'Smaller carb amounts on rest days'))}
+      ${comutator('tranzit', tr('Variante pentru tranzit', 'On-the-go options'), tr('Ce cumpără din supermarket când e plecat', 'What to buy at the supermarket when away'))}`
   };
   const sectiunePref = (cod, titlu, desc) => randSectiunePlan(cod, titlu, desc) + (planAlim.sectiune === cod ? `<div class="plan-alim-sectiune-continut obiectiv-form">${continutPref[cod]}</div>` : '');
   return `${titluPlanAlim(tr('Plan nou', 'New plan'))}
     <div class="lista-sticla plan-alim-sticla obiectiv-form">
       <div class="antr-pers-campuri"><label>${tr('Client', 'Client')}<input type="text" class="plan-ex-input" placeholder="${tr('Alege client (opțional)', 'Choose client (optional)')}" list="listaClienteVizibile" autocomplete="off" data-id="${escAttr(g.client_id || '')}" value="${escAttr(g.client_id ? numeClientPlan(g.client_id) : '')}" oninput="alegeClientPlanCamp(this, event, schimbaClientGen)" onchange="alegeClientPlanCamp(this, null, schimbaClientGen)"></label></div>
-      ${restr.lista.length || restr.nota ? `<div class="plan-alim-restrictii">⚠ ${tr('Nu mănâncă', 'Doesn’t eat')}: <b>${escAttr(textRestrictii(restr))}</b> · ${tr('le scot singur din plan', 'I leave them out')}</div>` : ''}
     </div>
     <div class="lista-titlu">${tr('Profil și ținte', 'Profile and targets')}</div>
     <div class="lista-sticla plan-alim-sticla obiectiv-form calculator-tinte">${htmlProfilCampuri(g.profil, 'schimbaProfilGen')}
       ${rez ? `<div class="acasa-antrenament-detalii" style="margin-top:8px;">${tr('Zi cu antrenament', 'Training day')} <b>~${rez.kcal} kcal</b>${g.repaus ? ` · ${tr('fără antrenament', 'rest day')} <b>~${tR.kcal} kcal</b>` : ''} · ${tr('proteine', 'protein')} ${rez.proteine} g</div>` : ''}
       ${htmlTintaJurnalPlan(g.client_id, g.profil, 'planAlim.gen.dinJurnal = !planAlim.gen.dinJurnal; randeazaPlanAlim()', g.dinJurnal)}
     </div>
-    <div class="lista-titlu">${tr('Structura zilei', 'Day structure')}</div>
-    <div class="lista-sticla plan-alim-sticla obiectiv-form">
-      <div class="checkin-eticheta">${tr('Mese pe zi', 'Meals a day')}</div>
-      <div class="antr-pers-activitati">${[2, 3, 4, 5, 6].map(n => pastila(g.nrMese === n, `planAlim.gen.nrMese = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
-      <div class="checkin-eticheta">${tr('Variante la fiecare masă', 'Options per meal')}</div>
-      <div class="antr-pers-activitati">${[2, 3, 4, 5, 7].map(n => pastila(g.nrVar === n, `planAlim.gen.nrVar = ${n}; randeazaPlanAlim()`, n)).join('')}</div>
-      ${comutator('repaus', tr('Zile fără antrenament', 'Rest days'), tr('Gramaje mai mici la carbohidrați în zilele fără antrenament', 'Smaller carb amounts on rest days'))}
-      ${comutator('tranzit', tr('Variante pentru tranzit', 'On-the-go options'), tr('Ce cumpără din supermarket când e plecat', 'What to buy at the supermarket when away'))}
-    </div>
-    <div class="lista-titlu">${tr('Ce mănâncă', 'What they eat')}</div>
+    <div class="lista-titlu">${tr('Preferințe alimentare', 'Food preferences')}</div>
     <div class="lista-sticla">
-      ${sectiunePref('genLipire', tr('Lipește lista clientului', 'Paste the client’s list'), '')}
+      ${sectiunePref('genDieta', tr('Tip de alimentație', 'Diet type'), '')}
+      ${sectiunePref('genLipire', `<span class="plan-alim-actiune">${tr('Lipește lista clientului', 'Paste the client’s list')}</span>`, '')}
       ${sectiunePref('genLista', tr('Preferă', 'Prefers'), '')}
       ${sectiunePref('genNu', tr('Nu mănâncă', 'Doesn’t eat'), '')}
     </div>
+    <div class="lista-sticla">${sectiunePref('genStructura', tr('Structura zilei', 'Day structure'), '')}</div>
     <div class="nutritie-adauga-jos plan-alim-jos">
       <button type="button" class="btn" onclick="genereazaPlanAlim()">${tr('Generează planul', 'Generate the plan')}</button>
     </div>`;
@@ -9925,7 +9935,8 @@ function htmlRezultateGen(tip) {
 // Restricțiile planului: cele din fișa clientului plus ce nu mănâncă din lista lipită în generator (pref.nota)
 function restrictiiPlan(clientId, pref) {
   const r = restrictiiClient(clientId), nota = (pref && pref.nota) || '';
-  return { lista: [...new Set(r.lista.concat((pref && pref.restrictii) || []))], nota: [r.nota, nota].filter(Boolean).join(', ') };
+  const dieta = (DIETE_PLAN.find(d => d[0] === (pref && pref.dieta)) || [])[3] || [];
+  return { lista: [...new Set(r.lista.concat((pref && pref.restrictii) || [], dieta))], nota: [r.nota, nota].filter(Boolean).join(', ') };
 }
 
 // Lista clientului lipită, în orice format, RO sau EN („Nu mănânc soia. Îmi place orezul cu somon”, „no dairy, I like chicken”):
@@ -9936,7 +9947,7 @@ const RUDE_LISTA_ALIM = { ou: ['albus'], branz: ['ricott', 'parmezan'], oaie: ['
 const NEG_LISTA_ALIM = /\b(?:nu (?:prea |chiar )?(?:mananc|manca|vreau|consum|beau|suport|tolerez|imi plac?e?|ii plac?e?)|nu-?mi plac?e?|nici|fara|alergi\w*(?: la)?|intoleran\w*(?: la)?|evit|exclud\w*|excluderi|sa nu fie|urasc|i (?:do not|don'?t|can'?t|cannot|never) (?:eat|like|have|drink)|don'?t (?:eat|like)|do not (?:eat|like)|dislike|avoid|not|no|without|allergic to|allergy to|intolerant to|hate|except)\b/;
 const POZ_LISTA_ALIM = /\b(?:mananc|imi plac?e?|prefer|ador|de obicei|i (?:eat|like|love|prefer|usually eat)|love|like|usually)\b/;
 // Restricțiile întregi recunoscute în text (aceleași ca în fișă)
-const RESTRICTII_LISTA_ALIM = [['lactoza', /\b(?:lactat\w*|lactoz\w*|dairy|lactose)\b/], ['gluten', /\bgluten\b/], ['vegan', /\bvegan\w*/],
+const RESTRICTII_LISTA_ALIM = [['lactoza_intol', /\b(?:lactoz\w*|lactose)\b/], ['lactoza', /\b(?:lactat\w*|dairy)\b/], ['gluten', /\bgluten\b/], ['vegan', /\bvegan\w*/],
   ['vegetarian', /\b(?:vegetarian\w*|carne|meat)\b/], ['peste', /\b(?:fructe de mare|seafood|fish|peste)\b/]];
 // Numele englezești → cele din bibliotecă (lungi înainte de scurte, ca „sweet potato” să nu devină „potato”)
 const EN_RO_LISTA_ALIM = [['sweet potatoes', 'cartofi dulci'], ['sweet potato', 'cartofi dulci'], ['cottage cheese', 'branza cottage'], ['peanut butter', 'unt de arahide'],
@@ -10072,6 +10083,43 @@ function stergeListaGen(camp, i) {
   randeazaPlanAlim();
 }
 
+// Tip de alimentație și intoleranțe, fără aglomerare: cele frecvente la vedere, restul la „Toate”;
+//   intoleranțele alese stau sus, cu × (și cele din „Toate”, ca să se vadă mereu ce e bifat)
+function htmlDietaGen(g, pastila) {
+  const toateTipurile = planAlim.dietaToate || DIETE_PLAN.findIndex(d => d[0] === g.dieta) >= 6;
+  const dieta = DIETE_PLAN.find(d => d[0] === g.dieta);
+  const nume = id => { const r = RESTRICTII_ALIMENTARE.find(o => o.id === id); return r ? tr(r.ro, r.en) : id; };
+  const alese = g.restrictii || [];
+  // Ultima pastilă din grilă deschide / închide restul (săgeata în jos / în sus)
+  const comuta = (cheie, et) => `<button type="button" class="antr-pers-activitate plan-alim-mai-multe" onclick="planAlim.${cheie} = !planAlim.${cheie}; randeazaPlanAlim()">${et}<svg viewBox="0 0 24 24"><path d="${planAlim[cheie] ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}"/></svg></button>`;
+  const intol = id => pastila(alese.includes(id), `comutaRestrictieGen('${id}')`, nume(id));
+  return `<div class="antr-pers-activitati plan-alim-obiective">${DIETE_PLAN.slice(0, toateTipurile ? DIETE_PLAN.length : 6).map(d => pastila(g.dieta === d[0], `alegeDietaGen('${d[0]}')`, tr(d[1], d[2]))).join('')}
+      ${toateTipurile && !planAlim.dietaToate ? '' : comuta('dietaToate', planAlim.dietaToate ? tr('Mai puține', 'Fewer') : tr('Mai multe tipuri', 'More types'))}</div>
+    ${dieta && dieta[5] ? `<div class="acasa-antrenament-detalii">${tr('Planul nu înlocuiește recomandarea medicului.', 'The plan does not replace your doctor’s advice.')}</div>` : ''}
+    <div class="checkin-eticheta">${tr('Intoleranțe și restricții', 'Intolerances and restrictions')}</div>
+    ${alese.length ? `<div class="antr-pers-activitati plan-alim-alimente">${alese.map(id => pastila(true, `comutaRestrictieGen('${id}')`, escAttr(nume(id)) + ' ×')).join('')}</div>` : ''}
+    ${planAlim.intolToate
+      ? INTOLERANTE_GRUPE.map(([ro, en, ids]) => `<div class="plan-alim-grupa">${tr(ro, en)}</div><div class="antr-pers-activitati plan-alim-obiective plan-alim-intol">${ids.map(intol).join('')}</div>`).join('')
+      : `<div class="antr-pers-activitati plan-alim-obiective plan-alim-intol">${INTOLERANTE_FRECVENTE.filter(id => !alese.includes(id)).map(intol).join('')}</div>`}
+    <div class="antr-pers-activitati plan-alim-obiective">${comuta('intolToate', planAlim.intolToate ? tr('Mai puține', 'Fewer') : tr('Mai multe intoleranțe', 'More intolerances'))}</div>`;
+}
+
+// Tipul de alimentație: restricțiile lui (la verificare) și împărțirea macro, dacă o schimbă
+function alegeDietaGen(id) {
+  const g = planAlim.gen;
+  g.dieta = g.dieta === id ? '' : id;
+  const d = DIETE_PLAN.find(x => x[0] === g.dieta);
+  if (d && d[4]) g.profil.macro = d[4];
+  else if (['keto', 'mediteranean'].includes(g.profil.macro)) g.profil.macro = '';
+  randeazaPlanAlim();
+}
+
+function comutaRestrictieGen(id) {
+  const g = planAlim.gen, r = g.restrictii || [];
+  g.restrictii = r.includes(id) ? r.filter(x => x !== id) : r.concat(id);
+  randeazaPlanAlim();
+}
+
 function stergeRestrictieGen(id) {
   const g = planAlim.gen;
   g.restrictii = (g.restrictii || []).filter(x => x !== id);
@@ -10144,13 +10192,15 @@ async function genereazaPlanAlim() {
   c.tinteRepaus = g.repaus ? tinteRepausDin(c.tinte) : null;
   if (g.dinJurnal && tinteDinJurnalPlan(g.client_id, g.profil)) c.sursaTinte = 'jurnal';
   c.preferinte = { nu: g.nu.slice(), tranzit: g.tranzit, nota: g.nota || '', lista: g.lista || '', prefera: (g.prefera || []).slice(),
-    restrictii: (g.restrictii || []).slice(), mese: (g.mese || []).slice(), preferaBaza: (g.preferaBaza || []).slice(), neintelese: (g.neintelese || []).slice() };
+    restrictii: (g.restrictii || []).slice(), dieta: g.dieta || '', mese: (g.mese || []).slice(), preferaBaza: (g.preferaBaza || []).slice(), neintelese: (g.neintelese || []).slice() };
   c.mese = meseDupaStructura(g.nrMese);
   const restr = restrictiiPlan(plan.client_id, c.preferinte), folosite = new Set();
   const pool = await alimenteClientPlan(g), uzuale = await meseUzualePlan(g.mese || [], pool);
   c.mese.forEach(m => {
     const proprii = varianteCompusePlan(plan, m, g.nrVar, uzuale, pool, folosite, g.nu, restr);
     m.variante = proprii.concat(alegeVariantePlan(plan, m, g.nrVar - proprii.length, folosite, g.nu, restr, g.tranzit, g.prefera));
+    // Prea puține rețete potrivite (ex. keto la micul dejun): se completează cu mese compuse din alimentele permise
+    if (m.variante.length < g.nrVar) m.variante = m.variante.concat(varianteCompusePlan(plan, m, g.nrVar - m.variante.length, [], pool, folosite, g.nu, restr, true));
   });
   const putine = c.mese.map((m, mi) => m.variante.length < g.nrVar ? numeMasaInPlan(c.mese, mi) : '').filter(Boolean);
   planAlim.plan = plan;
@@ -10200,6 +10250,8 @@ async function alimenteClientPlan(g) {
   const sau = (a, b) => a.length ? a : b;
   return {
     proteine: ale.filter(i => rolIngrPlan(i) === 'proteine'),
+    // Doar când rețetele nu ajung (ex. keto) și clientul n-are proteine preferate
+    proteineImplicite: toate.filter(i => rolIngrPlan(i) === 'proteine' && /^(ou intreg|oua|piept de pui|piept de curcan|somon|ton|branza cottage|tofu|telemea)/.test(nume(i))),
     carbo: sau(ale.filter(garnitura), toate.filter(i => garnitura(i) && /^(orez|cartofi|quinoa|paste integrale|hrisca)/.test(nume(i)))),
     legume: sau(ale.filter(leguma), toate.filter(leguma)),
     ulei: toate.find(i => /^ulei de masline/.test(nume(i))) || null
@@ -10245,18 +10297,21 @@ async function meseUzualePlan(fraze, pool) {
 // Variantele compuse pentru o masă: întâi mesele obișnuite ale clientului, apoi (la prânz și cină) câte o proteină preferată
 //   cu o garnitură și o legumă, alese la întâmplare (la „Regenerează” ies alte combinații). Doar ce e permis clientului;
 //   folosite = titlurile puse deja
-function varianteCompusePlan(plan, m, n, uzuale, pool, folosite, nu, restr) {
+function varianteCompusePlan(plan, m, n, uzuale, pool, folosite, nu, restr, oriceMasa) {
   const tinta = tintaMasaPlan(plan, m), rez = [];
   if (!tinta) return rez;
   const adauga = v => { if (rez.length < n && !folosite.has(cheieAliasAlim(v.titlu)) && permisaPlan(v, nu, restr)) { folosite.add(cheieAliasAlim(v.titlu)); rez.push(v); } };
   const amestec = arr => arr.map(x => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(x => x[1]);
   const oricare = arr => arr[Math.floor(Math.random() * arr.length)];
   amestec(uzuale.filter(u => u.sloturi.includes(m.cod))).forEach(u => adauga(compunVariantaPlan(u.titlu, u.ing, tinta, u.sloturi[0] === 'mic_dejun' ? '' : tr(...PREPARARE_COMPUSA_PLAN))));
-  if (m.cod === 'pranz' || m.cod === 'cina') {
-    amestec(pool.proteine).forEach(p => {
-      const c = oricare(pool.carbo), l = oricare(pool.legume);
+  if (m.cod === 'pranz' || m.cod === 'cina' || oriceMasa) {
+    const permis = i => !nu.includes(cheieAliasAlim(i.nume)) && !restrictiiAliment(i, restr.lista, restr.nota).length;
+    const carbo = pool.carbo.filter(permis), legume = pool.legume.filter(permis);
+    amestec((pool.proteine.length || !oriceMasa ? pool.proteine : pool.proteineImplicite).filter(permis)).forEach(p => {
+      const c = oricare(carbo), l = oricare(legume);
       const ing = [p, c, l, pool.ulei].filter(Boolean);
-      const titlu = `${p.nume.split(',')[0]} ${tr('cu', 'with')} ${[c, l].filter(Boolean).map(i => i.nume.split(',')[0].toLowerCase()).join(tr(' și ', ' and '))}`;
+      const insotire = [c, l].filter(Boolean).map(i => i.nume.split(',')[0].toLowerCase()).join(tr(' și ', ' and '));
+      const titlu = insotire ? `${p.nume.split(',')[0]} ${tr('cu', 'with')} ${insotire}` : p.nume.split(',')[0];
       adauga(compunVariantaPlan(titlu, ing, tinta, tr(...PREPARARE_COMPUSA_PLAN)));
     });
   }
@@ -14014,6 +14069,13 @@ function terminaPornirea() {
 // Pop-up-ul apare o dată, cu versiunile nevăzute pe acest dispozitiv; toate rămân în meniu › Noutăți.
 // ==========================================
 const NOUTATI = [
+  { v: 265, data: '2026-11-27',
+    client: [],
+    antrenor: [
+      ['Plan nou: tipuri de alimentație (vegetarian, vegan, pescetarian, mediteranean, keto, post și altele) și intoleranțe după lista oficială de alergeni din UE: lapte separat de lactoză, nuci separat de arahide, halal, kosher, FODMAP.', 'New plan: diet types (vegetarian, vegan, pescatarian, Mediterranean, keto, fasting and more) and intolerances based on the official EU allergen list: milk separate from lactose, tree nuts separate from peanuts, halal, kosher, FODMAP.'],
+      ['Preferințele alimentare sunt grupate sub profil și ținte, iar Structura zilei se deschide doar la nevoie.', 'Food preferences are grouped under profile and targets, and Day structure opens only when you need it.']
+    ]
+  },
   { v: 264, data: '2026-11-27',
     client: [
       ['Planul alimentar e refăcut: sus vezi caloriile și macro-urile zilei alese, apoi mesele, care se deschid cu o atingere (ingrediente, gramaje, preparare).', 'Your meal plan has a new look: the day’s calories and macros at the top, then the meals, which open with one tap (ingredients, amounts, preparation).'],
@@ -24525,16 +24587,80 @@ const OPTIUNI_SCALA = ['1', '2', '3', '4', '5'].map(n => ({ id: n, ro: n, en: n 
 // Alergii / restricții alimentare (fișa de obiective › alimentatie): verificate în editorul planului alimentar.
 // cuv: începuturi de cuvinte (nume fără diacritice, ro + en); scoate: expresii care nu sunt problema („unt de arahide” la lactoză)
 const RESTRICTII_ALIMENTARE = [
-  { id: 'lactoza', ro: 'Lactoză', en: 'Lactose', scoate: /(unt|lapte) de (arahide|migdale|cocos|soia|ovaz|orez)|(peanut|almond|soy|oat|coconut|rice) (butter|milk)/g,
-    cuv: ['lapte', 'iaurt', 'branz', 'smantan', 'unt(?![a-z])', 'cascaval', 'telemea', 'mozzarella', 'parmezan', 'ricotta', 'kefir', 'frisca', 'milk', 'yog', 'cheese', 'butter', 'cream', 'whey'] },
-  { id: 'gluten', ro: 'Gluten', en: 'Gluten', cuv: ['paine', 'paste', 'faina', 'grau', 'orz', 'secara', 'cuscus', 'biscuit', 'bulgur', 'gris', 'covrig', 'lipie', 'bread', 'pasta', 'spaghet', 'wheat', 'flour', 'barley', 'rye', 'couscous', 'cracker', 'tortilla', 'bagel', 'toast'] },
-  { id: 'nuci', ro: 'Nuci / arahide', en: 'Nuts / peanuts', cuv: ['nuci(?![a-z])', 'nuca(?![a-z])(?! de cocos)', 'migdal', 'alun', 'arahid', 'caju', 'fistic', 'pecan', 'macadamia', 'nuts?(?![a-z])', 'almond', 'hazelnut', 'walnut', 'peanut', 'cashew', 'pistachio'] },
-  { id: 'oua', ro: 'Ouă', en: 'Eggs', cuv: ['ou[al]?(?![a-z])', 'albus', 'galbenus', 'omlet', 'eggs?(?![a-z])', 'egg white', 'omelet', 'mayo', 'maioneza'] },
-  { id: 'peste', ro: 'Pește / fructe de mare', en: 'Fish / seafood', cuv: ['peste', 'somon', 'ton(?![a-z])', 'pastrav', 'cod(?![a-z])', 'hering', 'sardin', 'macrou', 'crevet', 'midii', 'calamar', 'fish', 'salmon', 'tuna', 'trout', 'shrimp', 'prawn', 'mackerel', 'seafood'] },
-  { id: 'porc', ro: 'Carne de porc', en: 'Pork', cuv: ['porc', 'sunca', 'bacon', 'slanina', 'pork', 'ham(?![a-z])', 'prosciutto'] },
-  { id: 'vegetarian', ro: 'Vegetarian', en: 'Vegetarian', cuv: ['carne', 'pui(?![a-z])', 'porc', 'vit[ae](?![a-z])', 'vitel', 'curcan', 'sunca', 'bacon', 'carnat', 'salam', 'mici(?![a-z])', 'ficat', 'miel', 'rata(?![a-z])', 'meat', 'chicken', 'pork', 'beef', 'turkey', 'ham(?![a-z])', 'sausage', 'lamb', 'duck', 'veal', 'burger', 'chorizo', 'pastrama', 'mortadela'], plus: ['peste'] },
-  { id: 'vegan', ro: 'Vegan', en: 'Vegan', cuv: ['miere', 'honey', 'gelatin'], plus: ['vegetarian', 'peste', 'lactoza', 'oua'] }
+  { id: 'lactoza', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Lapte (alergie)', en: 'Milk (allergy)', scoate: /(unt|lapte) de (arahide|migdale|cocos|soia|ovaz|orez)|(peanut|almond|soy|oat|coconut|rice) (butter|milk)/g,
+    cuv: ['chefir', 'cottage', 'lapte batut', 'zer(?![a-z])', 'whey', 'lapte', 'iaurt', 'branz', 'smantan', 'unt(?![a-z])', 'cascaval', 'telemea', 'mozzarella', 'parmezan', 'ricotta', 'kefir', 'frisca', 'milk', 'yog', 'cheese', 'butter', 'cream', 'whey'] },
+  // Cerealele cu gluten din anexa II: grâu (și spelta, kamut), secară, orz, ovăz; derivații rafinați (sirop de glucoză, maltodextrină) nu contează
+  { id: 'gluten', ro: 'Gluten', en: 'Gluten', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', scoate: /.*(fara gluten|gluten[- ]free).*|faina de (orez|porumb|migdale|cocos|naut|hrisca|cartofi|tapioca)|(rice|corn|almond|coconut|chickpea|buckwheat|potato|tapioca) flour|sirop de glucoza|maltodextrin/g,
+    cuv: ['paine', 'paste', 'faina', 'grau', 'orz(?![a-z])', 'secara', 'ovaz', 'tarate', 'spelt', 'kamut', 'khorasan', 'cuscus', 'biscuit', 'bulgur', 'gris', 'covrig', 'lipie', 'bread', 'pasta', 'spaghet', 'tagliatel', 'wheat', 'flour', 'barley', 'rye', 'oat', 'couscous', 'semolina', 'cracker', 'tortilla', 'bagel', 'toast', 'granola', 'musli', 'muesli', 'malt'] },
+  // „nuci” vechi (din fișele de până acum) = nuci și arahide; în liste apar separat, ca în anexa II
+  { id: 'nuci', ascuns: true, ro: 'Nuci și arahide', en: 'Nuts and peanuts', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', cuv: [], plus: ['nuci_coaja', 'arahide'] },
+  // Fructele cu coajă din anexa II: migdale, alune de pădure, nuci, caju, pecan, nuci braziliene, fistic, macadamia (nu castane, semințe de pin, cocos)
+  { id: 'nuci_coaja', ro: 'Nuci, migdale, alune', en: 'Tree nuts', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', scoate: /nuca de cocos|nuci de cocos|coconut/g, cuv: ['nuci(?![a-z])', 'nuca(?![a-z])', 'migdal', 'alun(?![a-z]|e de padure)', 'alune de padure', 'caju', 'fistic', 'pecan', 'braziliene', 'macadamia', 'almond', 'hazelnut', 'walnut', 'cashew', 'pistachio', 'brazil nut', 'mix de nuci'] },
+  { id: 'oua', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Ouă', en: 'Eggs', cuv: ['ou[al]?(?![a-z])', 'albus', 'galbenus', 'omlet', 'eggs?(?![a-z])', 'egg white', 'omelet', 'mayo', 'maioneza'] },
+  { id: 'peste', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Pește, fructe de mare', en: 'Fish, seafood', cuv: ['caracatit', 'octopus', 'scoic', 'clam', 'stridi', 'oyster', 'homar', 'lobster', 'langust', 'crab', 'sepie', 'cuttlefish', 'icre', 'roe', 'ansoa', 'anchov', 'raci(?![a-z])', 'crayfish', 'midii', 'mussel', 'melc de mare', 'whelk', 'pollock', 'polac', 'halibut', 'calcan', 'sturion', 'stiuca', 'salau', 'biban', 'crap', 'chefal', 'lutjan', 'tipar', 'peste', 'somon', 'ton(?![a-z])', 'pastrav', 'cod(?![a-z])', 'hering', 'sardin', 'macrou', 'crevet', 'midii', 'calamar', 'fish', 'salmon', 'tuna', 'trout', 'shrimp', 'prawn', 'mackerel', 'seafood'] },
+  { id: 'porc', sursa: '', ro: 'Carne de porc', en: 'Pork', cuv: ['porc', 'sunca', 'bacon', 'slanina', 'pork', 'ham(?![a-z])', 'prosciutto'] },
+  { id: 'vegetarian', ro: 'Vegetarian', en: 'Vegetarian', sursa: 'Vegetarian Society: fără carne, pește și pui', cuv: ['caprioar', 'mistret', 'iepure', 'gasc', 'prepelit', 'fazan', 'bibilic', 'porumbel', 'bizon', 'cerb', 'elan', 'strut', 'emu(?![a-z])', 'vanat', 'venison', 'boar', 'rabbit', 'goose', 'quail', 'pheasant', 'bison', 'elk', 'creier', 'rinichi', 'inim(?![a-z]* de palmier)', 'burta', 'pipot', 'momit', 'limba', 'parizer', 'crenvurst', 'kielbasa', 'chiftel', 'drob', 'pate(?![a-z])', 'seu(?![a-z])', 'untura', 'slanina', 'carne', 'pui(?![a-z])', 'porc', 'vit[ae](?![a-z])', 'vitel', 'curcan', 'sunca', 'bacon', 'carnat', 'salam', 'mici(?![a-z])', 'ficat', 'miel', 'rata(?![a-z])', 'meat', 'chicken', 'pork', 'beef', 'turkey', 'ham(?![a-z])', 'sausage', 'lamb', 'duck', 'veal', 'burger', 'chorizo', 'pastrama', 'mortadela'], plus: ['peste'] },
+  { id: 'vegan', ro: 'Vegan', en: 'Vegan', sursa: 'Vegan Society: fără carne, pește, fructe de mare, lactate, ouă, miere', cuv: ['miere', 'honey', 'gelatin'], plus: ['vegetarian', 'peste', 'lactoza', 'oua'] },
+  { id: 'soia', ro: 'Soia', en: 'Soy', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', scoate: /ulei de soia|soybean oil|lecitina de soia/g, cuv: ['soia', 'soy', 'tofu', 'edamame', 'tempeh', 'miso', 'natto', 'okara'] },
+  // Fructoza (malabsorbție): partea de fructoză din foaia low FODMAP a spitalului CUH (NHS); zahărul obișnuit, strugurii, citricele, fructele de pădure rămân
+  { id: 'fructoza', ro: 'Fructoză', en: 'Fructose', sursa: 'Cambridge University Hospitals (NHS), foaia pentru pacienți „Low FODMAP diet”', cuv: ['miere', 'honey', 'agave', 'melasa', 'molasses', 'sirop de fructoza', 'sirop de porumb', 'fructose', 'corn syrup', 'mar(?![a-z])', 'mere(?![a-z])', 'apple', 'caise', 'apricot', 'mure', 'blackberr', 'cires', 'cherr', 'curmal', 'dates?(?![a-z])', 'smochin', 'fig(?![a-z])', 'mango', 'nectarin', 'piersic', 'peach', 'para(?![a-z])', 'pere(?![a-z])', 'pear', 'prune', 'plum', 'pepene verde', 'watermelon', 'goji', 'stafid', 'sultan', 'raisin', 'suc de', 'juice'] },
+  // FODMAP redus: lista „de evitat” din foaia low FODMAP a spitalului CUH (NHS): fructoza, fructanii (grâu, ceapă, usturoi), leguminoasele, polialcoolii, lactoza
+  { id: 'fodmap', ro: 'FODMAP redus', en: 'Low FODMAP', sursa: 'Cambridge University Hospitals (NHS), foaia pentru pacienți „Low FODMAP diet”', scoate: /fara gluten|gluten[- ]free|fasole verde|green bean|faina de (orez|porumb|cartofi|tapioca|ovaz)/g,
+    cuv: ['ceap', 'onion', 'usturo', 'garlic', 'praz', 'leek', 'sparanghel', 'asparagus', 'ciuperc', 'mushroom', 'anghinare', 'artichoke', 'cicoare', 'chicory', 'grau', 'wheat', 'paine', 'bread', 'paste', 'pasta', 'cuscus', 'couscous', 'bulgur', 'gris', 'semolina', 'orz(?![a-z])', 'barley', 'secara', 'rye', 'spelt', 'amarant', 'biscuit', 'prajitur', 'cake', 'lipie', 'tortilla', 'fasol', '(?<!green )bean', 'linte', 'lentil', 'naut', 'chickpea', 'humus', 'hummus', 'boabe de soia', 'soybean', 'mazare uscat', 'inulin', 'sorbitol', 'mannitol', 'xilitol', 'xylitol'], plus: ['fructoza', 'lactoza_intol'] },
+  { id: 'zahar', ro: 'Zahăr adăugat', en: 'Added sugar', cuv: ['zahar', 'sugar', 'sirop', 'syrup', 'miere', 'honey', 'ciocolat', 'chocolate', 'dulceata', 'jam(?![a-z])', 'gem(?![a-z])', 'biscuit', 'prajitur', 'cake', 'granola'] },
+  // Alergenii obligatorii din UE care lipseau (Regulamentul 1169/2011, anexa II)
+  // Intoleranța la lactoză (nu alergia la lapte): alimentele bogate în lactoză din foaia CUH (NHS); rămân brânzeturile maturate
+  //   (cheddar, parmezan, edam, emmental), feta, telemeaua, mozzarella, brie, brânza de capră, untul și produsele fără lactoză
+  { id: 'lactoza_intol', ro: 'Lactoză', en: 'Lactose', sursa: 'Cambridge University Hospitals (NHS), foaia „Low FODMAP diet”, partea despre lactoză', scoate: /.*(fara lactoza|lactose[- ]free|lactofree).*|(lapte|unt|iaurt|smantana) (de|din) (arahide|migdale|cocos|soia|ovaz|orez)|(almond|soy|oat|coconut|rice) (milk|yog)/g,
+    cuv: ['lapte(?! de migdale| de cocos| de soia| de ovaz| de orez)', 'milk', 'lapte batut', 'buttermilk', 'lapte praf', 'lapte condensat', 'iaurt', 'yog', 'smantan', 'cream(?! cheese)', 'frisca', 'chefir', 'kefir', 'inghetat', 'ice cream', 'branza topita', 'processed cheese', 'mascarpone', 'crema de branza', 'budinca', 'custard', 'ciocolata cu lapte', 'milk chocolate', 'ciocolata alba', 'white chocolate'] },
+  { id: 'arahide', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Arahide', en: 'Peanuts', cuv: ['arahid', 'peanut'] },
+  { id: 'crustacee', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Crustacee', en: 'Crustaceans', cuv: ['crevet', 'shrimp', 'prawn', 'crab', 'homar', 'lobster', 'langust', 'raci(?![a-z])', 'crayfish'] },
+  { id: 'moluste', ro: 'Moluște', en: 'Molluscs', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', cuv: ['midii', 'mussel', 'scoic', 'clam', 'scallop', 'stridi', 'oyster', 'caracatit', 'octopus', 'calamar', 'squid', 'sepie', 'cuttlefish', 'melc', 'snail', 'whelk', 'winkle', 'cockle', 'abalone'] },
+  { id: 'telina', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Țelină', en: 'Celery', cuv: ['telin', 'celery', 'celeriac'] },
+  { id: 'mustar', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Muștar', en: 'Mustard', cuv: ['mustar', 'mustard', 'frunze de mustar', 'mustard greens'] },
+  { id: 'susan', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Susan', en: 'Sesame', cuv: ['susan', 'sesame', 'tahini', 'humus', 'hummus'] },
+  { id: 'sulfiti', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Sulfiți', en: 'Sulphites', cuv: ['vin(?![a-z])', 'wine', 'fructe uscate', 'dried fruit', 'stafid', 'raisin', 'caise uscate', 'otet', 'vinegar', 'murat', 'pickled'] },
+  { id: 'lupin', sursa: 'Regulamentul UE 1169/2011, anexa II (ghidul FSA)', ro: 'Lupin', en: 'Lupin', cuv: ['lupin'] },
+  // Alte restricții
+  // OMS: carne roșie = carnea mamiferelor (vită, vițel, porc, miel, oaie, cal, capră), plus carnea procesată din ele
+  { id: 'carne_rosie', ro: 'Carne roșie', en: 'Red meat', sursa: 'Organizația Mondială a Sănătății (IARC): carnea roșie și procesată', cuv: ['vit[ae](?![a-z])', 'vitel', 'beef', 'veal', 'porc', 'pork', 'miel', 'lamb', 'oaie', 'mutton', 'carne de cal', 'horse', 'capra', 'goat', 'sunca', 'ham(?![a-z])', 'bacon', 'parizer', 'salam', 'carnat', 'crenvurst', 'caprioar', 'mistret', 'cerb', 'bizon', 'bison', 'venison', 'iepure', 'rabbit'] },
+  // Familia botanică Solanaceae: roșii, cartofi, ardei (și boia, chili), vinete, goji, tomatillo; cartofii dulci și piperul negru nu fac parte
+  { id: 'solanacee', ro: 'Solanacee', en: 'Nightshades', sursa: 'familia botanică Solanaceae', cuv: ['rosi', 'tomat', 'ardei', 'pepper', 'vinete', 'eggplant', 'aubergine', 'cartof', 'potato', 'paprika', 'boia', 'chili', 'jalapeno', 'goji', 'tomatillo'], scoate: /cartofi? dulci|sweet potato|piper negru|black pepper/g },
+  { id: 'ciuperci', ro: 'Ciuperci', en: 'Mushrooms', cuv: ['ciuperc', 'mushroom', 'shiitake', 'champignon', 'pleurot', 'zbarcioc', 'morel'] },
+  { id: 'cofeina', ro: 'Cofeină', en: 'Caffeine', cuv: ['cafea', 'coffee', 'ceai negru', 'ceai verde', 'black tea', 'green tea', 'cacao', 'cocoa', 'ciocolat', 'chocolate', 'energiz', 'cola'] },
+  { id: 'alcool', ro: 'Alcool', en: 'Alcohol', cuv: ['alcool', 'alcohol', 'vin(?![a-z])', 'wine', 'bere', 'beer', 'lichior', 'liqueur', 'vodka', 'whisky', 'rom(?![a-z])'] },
+  // Halal: fără porc (și gelatina de porc), alcool și sânge; sacrificarea rituală a cărnii nu se poate verifica aici
+  { id: 'halal', ro: 'Halal', en: 'Halal', sursa: 'Coran 2:173, 5:3, 5:90', cuv: ['gelatin', 'sange', 'blood', 'sangerete', 'black pudding'], plus: ['porc', 'alcool'] },
+  // Kosher (Levitic 11): fără porc, iepure, cal, fructe de mare și pește fără solzi (somn, țipar, rechin, sturion); amestecul carne + lactate nu se poate verifica aici
+  { id: 'kosher', ro: 'Kosher', en: 'Kosher', sursa: 'Levitic 11 / Deuteronom 14', cuv: ['gelatin', 'iepure', 'rabbit', 'carne de cal', 'horse', 'somn(?![a-z])', 'catfish', 'tipar', 'eel(?![a-z])', 'rechin', 'shark', 'sturion', 'sturgeon', 'icre negre', 'caviar'], plus: ['porc', 'crustacee', 'moluste'] },
+  // Doar pentru plan (tipul de alimentație), nu și în fișa de obiective
+  { id: 'paleo', doarPlan: true, ro: 'Paleo', en: 'Paleo', cuv: ['orez', 'rice', 'ovaz', 'oat', 'paste', 'pasta', 'paine', 'bread', 'lipie', 'tortilla', 'porumb', 'corn', 'quinoa', 'hrisc', 'mei(?![a-z])', 'bulgur', 'malai', 'zahar', 'sugar', 'arahid', 'peanut', 'rondele'], plus: ['gluten', 'lactoza', 'soia', 'fodmap_leguminoase'] },
+  // Sarcină: lista NHS (lapte și brânzeturi nepasteurizate, brânzeturile moi cu mucegai, ficatul și pateul, vânatul, peștele și fructele de mare crude, pește-spadă, rechin, marlin, alcool)
+  { id: 'sarcina', doarPlan: true, ro: 'Sarcină / alăptare', en: 'Pregnancy / breastfeeding', sursa: 'NHS: alimente de evitat în sarcină (nhs.uk)', cuv: ['nepasteuriz', 'unpasteuri', 'brie', 'camembert', 'gorgonzola', 'roquefort', 'mucegai', 'ficat', 'liver', 'pate(?![a-z])', 'caprioar', 'cerb', 'venison', 'fazan', 'pheasant', 'potarniche', 'partridge', 'gasc', 'goose', 'sushi', 'tartar', 'carpaccio', 'cru[dz]i? de peste', 'spada', 'swordfish', 'rechin', 'shark', 'marlin', 'afumat la rece', 'cold-smoked', 'salam', 'chorizo', 'prosciutto', 'lemn dulce', 'liquorice'], plus: ['alcool'] },
+  // Index glicemic scăzut: se scot alimentele cu indice glicemic mare din foaia CUH (NHS) pentru diabet
+  { id: 'glicemie', doarPlan: true, ro: 'Index glicemic scăzut', en: 'Low glycaemic index', sursa: 'Cambridge University Hospitals (NHS): carbohidrați și index glicemic (alimentele cu indice mare)', scoate: /integral|wholegrain|wholemeal|cartofi dulci|sweet potato/g, cuv: ['paine alba', 'white bread', 'bagheta', 'baguette', 'bagel', 'rondele de orez', 'rice cake', 'curmal', 'dates?(?![a-z])', 'cartofi copti', 'cartof copt', 'baked potato', 'cartofi prajiti', 'fries', 'chips', 'piure de cartofi', 'mashed potato', 'cornflakes', 'fulgi de porumb', 'gogoas', 'doughnut', 'donut', 'bautura energizanta', 'glucoza', 'glucose drink'] },
+  // DASH (NIH): limitează grăsimile saturate (carne grasă, lactate integrale, cocos, ulei de palmier), dulciurile și băuturile îndulcite, sarea
+  { id: 'dash', doarPlan: true, ro: 'DASH', en: 'DASH', sursa: 'NIH (NHLBI): planul alimentar DASH', cuv: ['bacon', 'slanina', 'untura', 'carnat', 'sausage', 'salam', 'parizer', 'crenvurst', 'sunca', 'ham(?![a-z])', 'kielbasa', 'pastrama', 'smantana', 'frisca', 'unt(?![a-z])', 'butter', 'lapte integral', 'whole milk', 'cascaval', 'nuca de cocos', 'coconut', 'ulei de palmier', 'palm oil', 'zahar', 'sugar', 'dulceata', 'jam(?![a-z])', 'ciocolat', 'chocolate', 'biscuit', 'prajitur', 'cake', 'suc de', 'juice', 'sirop', 'syrup', 'murat', 'pickle', 'sos de soia', 'soy sauce', 'chips'] },
+  { id: 'fodmap_leguminoase', doarPlan: true, ro: 'Leguminoase', en: 'Legumes', cuv: ['fasol(?!e verde)', '(?<!green )bean', 'linte', 'lentil', 'naut', 'chickpea', 'humus', 'hummus', 'mazare', 'pea(?!r|ch)', 'edamame'] },
+  // Keto: fără cereale, leguminoase, cartofi, fructe dulci și zahăr (fructele de pădure rămân, în cantități mici)
+  { id: 'keto', doarPlan: true, ro: 'Keto', en: 'Keto', cuv: ['cartof', 'potato', 'banan', 'strugur', 'grape', 'mango', 'ananas', 'pineapple', 'curmal', 'stafid', 'portocal', 'orange', 'piersic', 'peach', 'pepene', 'melon', 'kiwi', 'dovleac', 'pumpkin', 'porumb', 'corn', 'sfecla', 'beet', 'morcov', 'carrot', 'iaurt(?! grecesc)', 'lapte(?! de migdale| de cocos)', 'milk', 'chefir', 'kefir'], plus: ['paleo'] }
 ];
+// Pescetarian: ca vegetarian, dar cu pește
+RESTRICTII_ALIMENTARE.push(Object.assign({}, RESTRICTII_ALIMENTARE.find(r => r.id === 'vegetarian'), { id: 'pescetarian', doarPlan: true, ro: 'Pescetarian', en: 'Pescatarian', plus: [] }));
+// Tipul de alimentației din Plan nou: restricțiile lui și împărțirea macro (keto și mediteranean schimbă și ținta)
+//   Primele 6 se văd mereu; restul la „Toate tipurile”. Nimic ales = omnivor. Cele cu notă medicală au al șaselea câmp
+const DIETE_PLAN = [['vegetarian', 'Vegetarian', 'Vegetarian', ['vegetarian'], ''], ['vegan', 'Vegan', 'Vegan', ['vegan'], ''],
+  ['pescetarian', 'Pescetarian', 'Pescatarian', ['pescetarian'], ''], ['mediteranean', 'Mediteranean', 'Mediterranean', [], 'mediteranean'],
+  ['keto', 'Keto', 'Keto', ['keto'], 'keto'], ['post', 'Post', 'Fasting (Orthodox)', ['vegan'], ''],
+  ['post_peste', 'Post cu dezlegare la pește', 'Fasting, fish allowed', ['pescetarian', 'lactoza', 'oua'], ''], ['flexitarian', 'Flexitarian', 'Flexitarian', ['carne_rosie'], ''],
+  ['lacto_veg', 'Lacto-vegetarian', 'Lacto-vegetarian', ['vegetarian', 'oua'], ''], ['ovo_veg', 'Ovo-vegetarian', 'Ovo-vegetarian', ['vegetarian', 'lactoza'], ''],
+  ['paleo', 'Paleo', 'Paleo', ['paleo'], ''], ['glicemie', 'Index glicemic scăzut', 'Low glycaemic index', ['glicemie'], '', true],
+  ['dash', 'DASH (tensiune)', 'DASH (blood pressure)', ['dash'], '', true], ['sarcina', 'Sarcină / alăptare', 'Pregnancy / breastfeeding', ['sarcina'], '', true]];
+// Intoleranțele: 6 frecvente la vedere, toate la „Toate”, pe grupe
+const INTOLERANTE_FRECVENTE = ['gluten', 'lactoza_intol', 'nuci_coaja', 'arahide', 'oua', 'peste'];
+const INTOLERANTE_GRUPE = [['Alergeni (UE)', 'Allergens (EU)', ['gluten', 'lactoza', 'oua', 'peste', 'crustacee', 'moluste', 'nuci_coaja', 'arahide', 'soia', 'telina', 'mustar', 'susan', 'sulfiti', 'lupin']],
+  ['Intoleranțe', 'Intolerances', ['lactoza_intol', 'fructoza', 'fodmap']],
+  ['Alte restricții', 'Other restrictions', ['carne_rosie', 'porc', 'solanacee', 'ciuperci', 'zahar', 'cofeina', 'alcool', 'halal', 'kosher']]];
 
 // Restricțiile din fișa clientului care lovesc alimentul (nume scris + alimentul din bază): [{ id, ro, en }]
 // nota: textul liber („ciuperci, ardei”), fiecare element căutat după rădăcină
@@ -24588,7 +24714,7 @@ const SECTIUNI_INSCRIERE = [
     { id: 'sarcina', tip: 'alegere', optiuni: [
       { id: 'da', ro: 'Da', en: 'Yes' }, { id: 'nu', ro: 'Nu', en: 'No' }, { id: 'nuECazul', ro: 'Nu e cazul', en: 'Not applicable' }
     ], ro: 'Sarcină sau naștere în ultimele 12 luni?', en: 'Pregnancy or giving birth in the last 12 months?' },
-    { id: 'alimentatie', tip: 'multi', optiuni: RESTRICTII_ALIMENTARE, ro: 'Alergii, intoleranțe sau ce nu mănânci (opțional)', en: 'Allergies, intolerances or foods you don’t eat (optional)' },
+    { id: 'alimentatie', tip: 'multi', optiuni: RESTRICTII_ALIMENTARE.filter(r => !r.doarPlan && !r.ascuns), ro: 'Alergii, intoleranțe sau ce nu mănânci (opțional)', en: 'Allergies, intolerances or foods you don’t eat (optional)' },
     { id: 'alimentatieNota', tip: 'text', ro: 'Altceva ce nu mănânci (opțional)', en: 'Anything else you don’t eat (optional)' },
     { id: 'imiPlace', tip: 'paragraf', ro: 'Ce îți place să mănânci? (opțional, ex.: pui, somon, orez, iaurt)', en: 'What do you like to eat? (optional, e.g. chicken, salmon, rice, yogurt)' },
     { id: 'meseObisnuite', tip: 'paragraf', ro: 'Ce mănânci de obicei într-o zi? (opțional, ex.: omletă dimineața, orez cu pui la prânz)', en: 'What do you usually eat in a day? (optional, e.g. omelette in the morning, chicken with rice for lunch)' },

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bfit-cache-v264';
+const CACHE_NAME = 'bfit-cache-v265';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -46,17 +46,23 @@ self.addEventListener('activate', (event) => {
 // Notificări push: mesajul vine criptat de la Worker-ul B-Fit, cu titlul și textul deja compuse
 // Fără icon sau badge, Android pune în loc prima literă a domeniului („A” de la app.beatrixyvett.com).
 // La mesaje, iconița mare e cercul cu inițialele celui care scrie (ca un contact fără poză în WhatsApp); la rest, sigla.
+// Ca în WhatsApp: o singură notificare pe conversație (și pe tip, la rest), cu textele una sub alta. Cu câte una
+// pe fiecare mesaj, de la 4 în sus Android le strângea într-un grup cu iconiță generică (pătratul din bara telefonului).
 self.addEventListener('push', (event) => {
   let m = {};
   try { m = event.data ? event.data.json() : {}; } catch (e) {}
   event.waitUntil((async () => {
     const icon = m.tip === 'mesaj_nou' ? await avatarInitiale(m.titlu).catch(() => null) : null;
+    const tag = m.tip === 'mesaj_nou' ? 'chat-' + (m.titlu || '') : 'tip-' + (m.tip || '');
+    const anterioare = await self.registration.getNotifications({ tag });
+    const linii = ((anterioare[0] && anterioare[0].data && anterioare[0].data.linii) || []).concat(m.corp || '').slice(-6);
     await self.registration.showNotification(m.titlu || 'B-Fit', {
-      body: m.corp || '',
+      body: linii.join('\n'),
       icon: icon || './icon-192.png',
       badge: './badge-96.png',
-      tag: m.tag || undefined,
-      data: { url: m.url || './' }
+      tag,
+      renotify: true,
+      data: { url: m.url || './', linii }
     });
   })());
 });
