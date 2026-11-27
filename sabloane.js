@@ -888,4 +888,1076 @@ Tranzit: 150 g piept de curcan la grătar; salată cu brânză
 - Ulei de măsline — 5 g
 Preparare: Tofu rumenit cu uleiul măsurat, apoi legumele la wok 5 minute; hrișca fiartă separat.
 Tranzit: 1 salată cu tofu sau edamame; 1 fruct
+# MIC DEJUN
+## Shakshuka cu feta și năut || Shakshuka with feta and chickpeas
+- Ouă — 2 buc
+- Roșii — 150 g
+- Sos de roșii — 60 g
+- Ardei gras — 60 g
+- Năut fiert — 50 g
+- Telemea — 25 g
+- Pâine integrală — 30 g
+- Chimion, boia
+Preparare: Ardeiul călit în puțină apă, apoi roșiile, sosul și năutul 5 minute; ouăle sparte deasupra, cu capac, și telemeaua la final. || Soften the pepper in a splash of water, add the tomatoes, sauce and chickpeas for 5 minutes; crack in the eggs, cover, and finish with the feta.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală; roșii cherry || 2–3 boiled eggs; 1 slice wholegrain bread; cherry tomatoes
+## Burrito de mic dejun cu ou și fasole || Breakfast burrito with egg and beans
+- Tortilla integrală — 60 g
+- Ouă — 2 buc
+- Fasole roșie — 50 g
+- Ardei gras — 50 g
+- Cașcaval — 15 g
+- Salsa de roșii
+Preparare: Ouăle jumări cu ardeiul, apoi fasolea încălzită; totul în tortilla, cu cașcavalul ras. || Scramble the eggs with the pepper, warm the beans; wrap everything in the tortilla with the grated cheese.
+Tranzit: 1 wrap cu ou din supermarket; 1 fruct || 1 egg wrap from the supermarket; 1 fruit
+## Bol de iaurt grecesc cu chia și kiwi || Greek yogurt bowl with chia and kiwi
+- Iaurt grecesc 0% — 250 g
+- Kiwi — 100 g
+- Semințe de chia — 10 g
+- Granola — 25 g
+Tranzit: 1 iaurt grecesc; 1 kiwi; 1 baton proteic || 1 Greek yogurt; 1 kiwi; 1 protein bar
+## Terci de ovăz cu dovleac și scorțișoară || Pumpkin spice oatmeal
+- Fulgi de ovăz — 45 g
+- Lapte 1,5% — 200 g
+- Dovleac — 80 g
+- Proteină whey — 15 g
+- Nuci — 10 g
+- Scorțișoară
+Preparare: Ovăzul fiert în lapte 5 minute cu dovleacul copt; proteina amestecată la final, de pe foc, și nucile deasupra. || Cook the oats in the milk for 5 minutes with the roasted pumpkin; stir in the protein off the heat and top with walnuts.
+Tranzit: 1 iaurt proteic; 1 pumn de nuci; 1 fruct || 1 protein yogurt; 1 handful of walnuts; 1 fruit
+## Toast cu somon și brânză cottage || Salmon and cottage cheese toast
+- Pâine de secară — 50 g
+- Brânză cottage 2% — 100 g
+- Somon — 60 g
+- Castraveți — 60 g
+- Mărar, lămâie
+Preparare: Somonul copt sau la tigaie, fulgi peste pâinea unsă cu brânză cottage, cu felii de castravete și mărar. || Bake or pan-sear the salmon, flake it over the bread spread with cottage cheese, with cucumber slices and dill.
+Tranzit: 1 sandviș cu somon; 1 iaurt || 1 salmon sandwich; 1 yogurt
+## Ouă jumări cu avocado și roșii || Scrambled eggs with avocado and tomatoes
+- Ouă — 2 buc
+- Albuș de ou — 60 g
+- Avocado — 40 g
+- Roșii cherry — 100 g
+- Pâine integrală — 35 g
+Preparare: Ouăle și albușurile jumări la foc mic; avocado feliat și roșiile alături. || Scramble the eggs and egg whites over low heat; serve with sliced avocado and tomatoes.
+Tranzit: 2–3 ouă fierte; 1 avocado mic; roșii cherry || 2–3 boiled eggs; 1 small avocado; cherry tomatoes
+## Smoothie bowl cu fructe de pădure || Berry smoothie bowl
+- Iaurt grecesc 2% — 150 g
+- Zmeură — 80 g
+- Afine — 80 g
+- Banană — 60 g
+- Proteină whey — 15 g
+- Semințe de dovleac — 10 g
+Preparare: Fructele, iaurtul și proteina mixate gros; semințele deasupra. || Blend the fruit, yogurt and protein until thick; top with seeds.
+Tranzit: 1 shake proteic; 1 fruct || 1 protein shake; 1 fruit
+## Clătite din ovăz cu brânză de vaci || Oat and cottage cheese pancakes
+- Fulgi de ovăz — 40 g
+- Brânză de vaci — 120 g
+- Ouă — 1 buc
+- Căpșuni — 100 g
+- Miere — 5 g
+Preparare: Ovăzul, brânza și oul mixate; clătite mici în tigaie antiaderentă, cu căpșuni și miere. || Blend the oats, cottage cheese and egg; cook small pancakes in a non-stick pan; serve with strawberries and honey.
+Tranzit: 1 iaurt proteic; 1 caserolă de căpșuni || 1 protein yogurt; 1 punnet of strawberries
+## Congee de orez cu ou și ceapă verde || Rice congee with egg and spring onion
+- Orez — 50 g
+- Ouă — 2 buc
+- Ceapă verde — 20 g
+- Spanac — 50 g
+- Ghimbir, sos de soia
+Preparare: Orezul fiert în multă apă 30 de minute, până se face cremă; ouăle fierte moi, spanacul și ceapa verde deasupra. || Simmer the rice in plenty of water for 30 minutes until creamy; top with soft-boiled eggs, spinach and spring onion.
+Tranzit: 2 ouă fierte; 1 supă instant de orez || 2 boiled eggs; 1 instant rice soup
+## Mic dejun turcesc cu ou, telemea și legume || Turkish breakfast plate
+- Ouă — 2 buc
+- Telemea — 30 g
+- Roșii — 100 g
+- Castraveți — 100 g
+- Măsline
+- Pâine integrală — 40 g
+Preparare: Ouăle fierte 8 minute; legumele tăiate, telemeaua și pâinea alături. || Boil the eggs for 8 minutes; serve with sliced vegetables, the white cheese and bread.
+Tranzit: 2–3 ouă fierte; 1 bucată de telemea; legume crude || 2–3 boiled eggs; 1 piece of white cheese; raw vegetables
+## Quinoa de dimineață cu lapte și mere || Breakfast quinoa with milk and apple
+- Quinoa — 40 g
+- Lapte 1,5% — 200 g
+- Măr — 100 g
+- Migdale — 10 g
+- Scorțișoară
+Preparare: Quinoa fiartă în lapte 15 minute; mărul ras și migdalele deasupra. || Simmer the quinoa in milk for 15 minutes; top with grated apple and almonds.
+Tranzit: 1 iaurt; 1 măr; 1 pumn de migdale || 1 yogurt; 1 apple; 1 handful of almonds
+## Tofu jumări cu spanac || Tofu scramble with spinach
+- Tofu — 150 g
+- Spanac — 60 g
+- Ardei gras — 50 g
+- Ulei de măsline — 5 g
+- Pâine integrală — 35 g
+- Turmeric, sare
+Preparare: Tofu sfărâmat și rumenit cu uleiul măsurat și turmeric; ardeiul și spanacul la final. || Crumble the tofu and brown it in the measured oil with turmeric; add the pepper and spinach at the end.
+Tranzit: 1 sandviș vegan cu hummus; 1 fruct || 1 vegan hummus sandwich; 1 fruit
+# GUSTARE
+## Năut copt crocant || Crispy roasted chickpeas
+- Năut fiert — 80 g
+- Ulei de măsline — 3 g
+- Boia, usturoi praf
+Preparare: Năutul uscat cu un prosop, uns cu uleiul și condimentele, la cuptor 25 de minute la 200°C. || Pat the chickpeas dry, toss with the oil and spices, roast for 25 minutes at 200°C.
+Tranzit: 1 pachet mic de năut copt || 1 small pack of roasted chickpeas
+## Iaurt cu fructe de pădure și migdale || Yogurt with berries and almonds
+- Iaurt grecesc 0% — 170 g
+- Mure — 80 g
+- Migdale — 10 g
+Tranzit: 1 iaurt grecesc; 1 pumn de migdale || 1 Greek yogurt; 1 handful of almonds
+## Rulouri de curcan cu castravete || Turkey and cucumber roll-ups
+- Pastramă de curcan — 70 g
+- Brânză cottage 2% — 50 g
+- Castraveți — 100 g
+Preparare: Feliile de pastramă unse cu brânză cottage, rulate în jurul bețelor de castravete. || Spread the turkey slices with cottage cheese and roll them around cucumber sticks.
+Tranzit: 1 pachet de pastramă de curcan; 1 castravete || 1 pack of sliced turkey; 1 cucumber
+## Edamame cu lămâie și chili || Edamame with lime and chili
+- Edamame — 120 g
+- Lămâie, fulgi de chili
+Tranzit: 1 pachet de edamame || 1 pack of edamame
+## Măr cu brânză cottage și scorțișoară || Apple with cottage cheese and cinnamon
+- Măr — 150 g
+- Brânză cottage 2% — 120 g
+- Scorțișoară
+Tranzit: 1 iaurt proteic; 1 măr || 1 protein yogurt; 1 apple
+## Shake de cafea proteic || Protein coffee shake
+- Lapte 1,5% — 250 g
+- Proteină whey — 25 g
+- Cafea, gheață
+Tranzit: 1 shake proteic gata făcut || 1 ready-to-drink protein shake
+## Ou fiert cu ridichi și pâine de secară || Boiled egg with radishes and rye
+- Ouă — 2 buc
+- Ridichi — 80 g
+- Pâine de secară — 25 g
+Tranzit: 2 ouă fierte; 1 felie pâine de secară || 2 boiled eggs; 1 slice rye bread
+## Tzatziki cu legume crocante || Tzatziki with crunchy vegetables
+- Iaurt grecesc 2% — 120 g
+- Castraveți — 80 g
+- Morcovi — 80 g
+- Ardei gras — 60 g
+- Usturoi, mărar
+Preparare: Jumătate din castravete ras și stors, amestecat cu iaurtul, usturoiul și mărarul; restul legumelor tăiate bețe. || Grate and squeeze half the cucumber, mix with the yogurt, garlic and dill; cut the rest of the vegetables into sticks.
+Tranzit: 1 iaurt grecesc; legume crude || 1 Greek yogurt; raw vegetables
+## Mango cu iaurt și lime || Mango with yogurt and lime
+- Iaurt grecesc 0% — 150 g
+- Mango — 100 g
+- Lime
+Tranzit: 1 iaurt grecesc; 1 caserolă de mango || 1 Greek yogurt; 1 tub of mango
+## Rondele de orez cu ricotta și căpșuni || Rice cakes with ricotta and strawberries
+- Rondele de orez — 20 g
+- Ricotta — 60 g
+- Căpșuni — 80 g
+Tranzit: 2 rondele de orez; 1 iaurt || 2 rice cakes; 1 yogurt
+## Bile energizante cu curmale și ovăz || Date and oat energy balls
+- Curmale — 25 g
+- Fulgi de ovăz — 20 g
+- Unt de arahide — 10 g
+- Proteină whey — 10 g
+Preparare: Totul mixat, apoi bile mici, la frigider 30 de minute. || Blend everything, roll into small balls and chill for 30 minutes.
+Tranzit: 1 baton proteic || 1 protein bar
+## Brânză de vaci cu ardei și ceapă verde || Savoury cottage cheese with peppers
+- Brânză de vaci — 150 g
+- Ardei gras — 60 g
+- Ceapă verde — 15 g
+- Pâine de secară — 25 g
+Tranzit: 1 iaurt proteic; 1 felie pâine de secară || 1 protein yogurt; 1 slice rye bread
+# PRÂNZ
+## Bowl mexican cu pui și fasole || Mexican chicken burrito bowl
+- Piept de pui — 140 g
+- Orez brun — 50 g
+- Fasole roșie — 60 g
+- Porumb dulce — 40 g
+- Roșii — 80 g
+- Avocado — 30 g
+- Chimion, boia, lime
+Preparare: Puiul cu condimente la tigaie; orezul fiert separat; totul în bol cu fasolea, porumbul, roșiile și avocado. || Season and pan-cook the chicken; boil the rice separately; build the bowl with beans, corn, tomatoes and avocado.
+Tranzit: 1 burrito bowl din supermarket; 1 fruct || 1 supermarket burrito bowl; 1 fruit
+## Pui teriyaki cu orez și broccoli || Teriyaki chicken with rice and broccoli
+- Piept de pui — 150 g
+- Orez — 55 g
+- Broccoli — 150 g
+- Miere — 5 g
+- Sos de soia, ghimbir, usturoi
+Preparare: Puiul tăiat cuburi, la tigaie; sosul din soia, miere, ghimbir și usturoi adăugat la final, 2 minute; broccoli la abur. || Pan-cook the diced chicken; add the soy, honey, ginger and garlic sauce for the last 2 minutes; steam the broccoli.
+Tranzit: 1 caserolă cu pui și orez; legume || 1 chicken and rice box; vegetables
+## Salată grecească cu pui și quinoa || Greek chicken and quinoa salad
+- Piept de pui — 130 g
+- Quinoa — 45 g
+- Roșii — 100 g
+- Castraveți — 100 g
+- Telemea — 25 g
+- Ulei de măsline — 5 g
+- Oregano, lămâie
+Preparare: Puiul la grătar; quinoa fiartă 12 minute și răcită; legumele tăiate, telemeaua sfărâmată, uleiul și lămâia deasupra. || Grill the chicken; boil the quinoa for 12 minutes and let it cool; add chopped vegetables, crumbled feta, oil and lemon.
+Tranzit: 1 salată grecească cu pui || 1 Greek chicken salad
+## Curry ușor de pui cu năut || Light chicken and chickpea curry
+- Piept de pui — 130 g
+- Năut fiert — 60 g
+- Sos de roșii — 100 g
+- Spanac — 60 g
+- Iaurt 2% — 60 g
+- Orez — 40 g
+- Curry, ghimbir
+Preparare: Puiul rumenit, apoi sosul, năutul și condimentele 15 minute; spanacul și iaurtul la final, de pe foc; orezul fiert separat. || Brown the chicken, add the sauce, chickpeas and spices for 15 minutes; stir in spinach and yogurt off the heat; serve with boiled rice.
+Tranzit: 1 caserolă cu curry și orez || 1 curry and rice box
+## Kofta de vită cu bulgur și iaurt || Beef kofta with bulgur and yogurt
+- Carne tocată de vită slabă — 130 g
+- Bulgur — 50 g
+- Castraveți — 80 g
+- Roșii — 80 g
+- Iaurt grecesc 2% — 60 g
+- Chimion, pătrunjel
+Preparare: Carnea cu condimente formată în rulouri, la cuptor 15 minute; bulgurul opărit 10 minute; iaurtul cu usturoi ca sos. || Shape the spiced mince into koftas and bake for 15 minutes; soak the bulgur for 10 minutes; serve with garlic yogurt.
+Tranzit: 1 wrap cu carne la grătar; salată || 1 grilled meat wrap; salad
+## Stir-fry de vită cu legume și tăiței de orez || Beef stir-fry with vegetables
+- Mușchi de vită — 130 g
+- Orez — 50 g
+- Ardei gras — 80 g
+- Broccoli — 100 g
+- Ceapă verde — 20 g
+- Ulei de măsline — 5 g
+- Sos de soia, ghimbir
+Preparare: Vita tăiată fâșii, la wok 2 minute, apoi legumele 4 minute; sosul de soia la final; orezul fiert separat. || Stir-fry the sliced beef for 2 minutes, then the vegetables for 4; finish with soy sauce; boil the rice separately.
+Tranzit: 1 caserolă asiatică cu vită || 1 Asian beef box
+## Paste cu pui, spanac și ricotta || Chicken pasta with spinach and ricotta
+- Paste integrale — 60 g
+- Piept de pui — 120 g
+- Spanac — 80 g
+- Ricotta — 40 g
+- Parmezan — 10 g
+Preparare: Puiul la tigaie, spanacul adăugat să scadă; pastele fierte amestecate cu ricotta și puțină apă de la paste; parmezan deasupra. || Pan-cook the chicken, wilt in the spinach; toss the pasta with ricotta and a little pasta water; top with parmesan.
+Tranzit: 1 salată de paste cu pui || 1 chicken pasta salad
+## Bowl cu somon și edamame || Salmon and edamame bowl
+- Somon — 120 g
+- Orez — 50 g
+- Edamame — 60 g
+- Castraveți — 80 g
+- Morcovi — 50 g
+- Sos de soia, susan
+Preparare: Somonul la cuptor 12 minute; orezul fiert; legumele crude feliate; totul în bol cu sos de soia. || Bake the salmon for 12 minutes; boil the rice; slice the raw vegetables; assemble with soy sauce.
+Tranzit: 1 poke bowl din supermarket || 1 supermarket poke bowl
+## Supă de linte roșie cu pâine || Red lentil soup with bread
+- Linte — 70 g
+- Morcovi — 80 g
+- Ceapă — 50 g
+- Sos de roșii — 60 g
+- Iaurt grecesc 2% — 50 g
+- Pâine integrală — 30 g
+- Chimion
+Preparare: Ceapa și morcovul înăbușite, apoi lintea, sosul și apa, 20 de minute; pasată și servită cu iaurt. || Soften the onion and carrot, add the lentils, sauce and water for 20 minutes; blend and serve with yogurt.
+Tranzit: 1 supă de linte la borcan; 1 iaurt || 1 jar of lentil soup; 1 yogurt
+## Ardei umpluți cu curcan și orez || Turkey and rice stuffed peppers
+- Ardei gras — 200 g
+- Carne tocată de curcan — 130 g
+- Orez — 35 g
+- Sos de roșii — 100 g
+- Smântână 12% — 20 g
+- Mărar
+Preparare: Carnea amestecată cu orezul, mărarul și condimentele; ardeii umpluți la cuptor în sos de roșii 45 de minute; smântâna la servire. || Mix the mince with rice, dill and seasoning; stuff the peppers and bake in tomato sauce for 45 minutes; serve with sour cream.
+Tranzit: 1 caserolă cu ardei umpluți || 1 box of stuffed peppers
+## Papricaș ușor de pui cu mămăligă || Light chicken paprikash with polenta
+- Pulpă de pui — 140 g
+- Ceapă — 60 g
+- Ardei gras — 60 g
+- Sos de roșii — 60 g
+- Smântână 12% — 25 g
+- Mălai — 45 g
+- Boia
+Preparare: Ceapa și ardeiul înăbușite, puiul și boiaua, apoi sosul, 30 de minute; smântâna la final; mămăliga separat. || Soften the onion and pepper, add the chicken and paprika, then the sauce, 30 minutes; stir in sour cream; cook the polenta separately.
+Tranzit: 1 caserolă cu pui și garnitură || 1 chicken and side box
+## Tocăniță de legume cu ou și pâine || Vegetable stew with egg and bread
+- Ouă — 2 buc
+- Vinete — 100 g
+- Dovlecei — 100 g
+- Ardei gras — 80 g
+- Sos de roșii — 80 g
+- Pâine integrală — 40 g
+Preparare: Legumele cuburi, înăbușite cu sosul 20 de minute; ouăle fierte sau ochiuri deasupra. || Dice the vegetables and stew them in the sauce for 20 minutes; top with boiled or fried eggs.
+Tranzit: 2 ouă fierte; 1 salată de legume || 2 boiled eggs; 1 vegetable salad
+## Wrap cu falafel copt și hummus || Baked falafel wrap with hummus
+- Năut fiert — 100 g
+- Lipie integrală — 50 g
+- Humus — 30 g
+- Salată verde — 40 g
+- Roșii — 60 g
+- Pătrunjel, chimion
+Preparare: Năutul pisat cu pătrunjel și chimion, format în bile, la cuptor 20 de minute; în lipie cu hummus și legume. || Mash the chickpeas with parsley and cumin, shape into balls and bake for 20 minutes; wrap with hummus and vegetables.
+Tranzit: 1 wrap cu falafel; 1 iaurt || 1 falafel wrap; 1 yogurt
+# CINĂ
+## Somon cu sparanghel și cartofi noi || Salmon with asparagus and new potatoes
+- Somon — 130 g
+- Sparanghel — 120 g
+- Cartofi — 150 g
+- Lămâie, mărar
+Preparare: Cartofii fierți 15 minute; somonul și sparanghelul la cuptor 12 minute, cu lămâie. || Boil the potatoes for 15 minutes; bake the salmon and asparagus for 12 minutes with lemon.
+Tranzit: 1 conservă de somon; 1 cartof copt; salată || 1 tin of salmon; 1 baked potato; salad
+## Cod cu linte și roșii || Cod with lentils and tomatoes
+- Cod — 160 g
+- Linte — 45 g
+- Roșii cherry — 100 g
+- Rucola — 30 g
+- Ulei de măsline — 5 g
+Preparare: Lintea fiartă 20 de minute; codul la tigaie 3–4 minute pe parte; roșiile și rucola alături, cu uleiul. || Boil the lentils for 20 minutes; pan-cook the cod 3–4 minutes per side; serve with tomatoes, rocket and the oil.
+Tranzit: 1 conservă de ton; 1 salată cu linte || 1 tin of tuna; 1 lentil salad
+## Pui la cuptor cu ratatouille || Roast chicken with ratatouille
+- Piept de pui — 140 g
+- Vinete — 100 g
+- Dovlecei — 100 g
+- Ardei gras — 80 g
+- Roșii — 100 g
+- Ulei de măsline — 5 g
+- Cimbru, usturoi
+Preparare: Legumele cuburi, la cuptor cu uleiul și cimbrul 30 de minute; puiul alături în ultimele 20. || Roast the diced vegetables with the oil and thyme for 30 minutes; add the chicken for the last 20.
+Tranzit: 150 g piept de pui la grătar; legume la grătar || 150 g grilled chicken breast; grilled vegetables
+## Creveți cu usturoi și dovlecei spiralați || Garlic shrimp with courgette noodles
+- Creveți — 160 g
+- Dovlecei — 200 g
+- Roșii cherry — 80 g
+- Ulei de măsline — 5 g
+- Parmezan — 10 g
+- Usturoi, chili
+Preparare: Creveții la tigaie cu usturoiul și uleiul 3 minute; dovleceii spiralați 2 minute; parmezan deasupra. || Sauté the shrimp with garlic and oil for 3 minutes; add the spiralised courgette for 2; top with parmesan.
+Tranzit: 1 salată cu creveți || 1 shrimp salad
+## Omletă la cuptor cu legume și feta || Baked vegetable frittata with feta
+- Ouă — 2 buc
+- Albuș de ou — 100 g
+- Ardei gras — 60 g
+- Spanac — 50 g
+- Telemea — 25 g
+- Pâine de secară — 30 g
+Preparare: Ouăle bătute cu legumele și telemeaua, la cuptor 20 de minute în formă mică. || Whisk the eggs with the vegetables and feta and bake in a small dish for 20 minutes.
+Tranzit: 2–3 ouă fierte; 1 bucată de telemea; legume crude || 2–3 boiled eggs; 1 piece of feta; raw vegetables
+## Curcan cu piure de conopidă || Turkey with cauliflower mash
+- Piept de curcan — 150 g
+- Conopidă — 200 g
+- Lapte 1,5% — 50 g
+- Fasole verde — 100 g
+- Ulei de măsline — 5 g
+Preparare: Conopida fiartă și pasată cu laptele; curcanul la tigaie cu uleiul; fasolea verde la abur. || Boil and mash the cauliflower with the milk; pan-cook the turkey in the oil; steam the green beans.
+Tranzit: 150 g piept de curcan la grătar; legume || 150 g grilled turkey breast; vegetables
+## Tofu glazurat cu legume și quinoa || Glazed tofu with vegetables and quinoa
+- Tofu — 150 g
+- Quinoa — 40 g
+- Broccoli — 100 g
+- Morcovi — 60 g
+- Miere — 5 g
+- Sos de soia, ghimbir
+Preparare: Tofu rumenit, glazurat cu soia, miere și ghimbir; legumele la abur; quinoa fiartă 12 minute. || Brown the tofu and glaze with soy, honey and ginger; steam the vegetables; boil the quinoa for 12 minutes.
+Tranzit: 1 salată cu tofu; 1 fruct || 1 tofu salad; 1 fruit
+## Vită cu salată thai de varză || Beef with Thai cabbage salad
+- Mușchi de vită — 130 g
+- Varză roșie — 100 g
+- Morcovi — 60 g
+- Castraveți — 60 g
+- Unt de arahide — 10 g
+- Lime, sos de soia, coriandru
+Preparare: Vita la grătar, feliată subțire; legumele rase, cu sos din unt de arahide, lime și soia. || Grill and thinly slice the beef; shred the vegetables and dress with peanut butter, lime and soy.
+Tranzit: 150 g vită la grătar; 1 salată de varză || 150 g grilled beef; 1 cabbage salad
+## Păstrăv la cuptor cu legume mediteraneene || Baked trout with Mediterranean vegetables
+- Păstrăv — 160 g
+- Dovlecei — 100 g
+- Roșii cherry — 100 g
+- Ardei gras — 60 g
+- Ulei de măsline — 5 g
+- Lămâie, oregano
+Preparare: Peștele și legumele în aceeași tavă, cu uleiul și lămâia, 20 de minute la 200°C. || Bake the fish and vegetables in one tray with the oil and lemon for 20 minutes at 200°C.
+Tranzit: 1 conservă de pește; salată || 1 tin of fish; salad
+## Supă cremă de dovleac cu pui || Pumpkin soup with chicken
+- Dovleac — 250 g
+- Piept de pui — 120 g
+- Ceapă — 40 g
+- Smântână 12% — 20 g
+- Semințe de dovleac — 10 g
+Preparare: Dovleacul și ceapa fierte 20 de minute și pasate; puiul la tigaie, cuburi deasupra, cu smântâna și semințele. || Boil the pumpkin and onion for 20 minutes and blend; top with pan-cooked diced chicken, sour cream and seeds.
+Tranzit: 1 supă cremă la borcan; 150 g pui la grătar || 1 jar of soup; 150 g grilled chicken
+## Salată niçoise cu ton || Tuna niçoise salad
+- Ton în apă — 120 g
+- Ouă — 1 buc
+- Cartofi — 100 g
+- Fasole verde — 80 g
+- Salată verde — 50 g
+- Ulei de măsline — 5 g
+Preparare: Cartofii și fasolea verde fierte, oul fiert 8 minute; totul pe salată, cu tonul și uleiul. || Boil the potatoes, green beans and egg (8 minutes); arrange on lettuce with the tuna and oil.
+Tranzit: 1 salată cu ton; 1 ou fiert || 1 tuna salad; 1 boiled egg
+## Chili vegetarian cu fasole și porumb || Vegetarian bean and corn chili
+- Fasole roșie — 100 g
+- Porumb dulce — 50 g
+- Ardei gras — 80 g
+- Sos de roșii — 120 g
+- Iaurt grecesc 2% — 60 g
+- Chimion, boia, chili
+Preparare: Ardeiul înăbușit, apoi fasolea, porumbul, sosul și condimentele 20 de minute; iaurtul deasupra la servire. || Soften the pepper, add the beans, corn, sauce and spices for 20 minutes; serve with yogurt on top.
+Tranzit: 1 conservă de fasole cu legume; 1 iaurt || 1 tin of beans with vegetables; 1 yogurt
+## Pulpă de pui cu varză de Bruxelles și cartofi dulci || Chicken thigh with sprouts and sweet potato
+- Pulpă de pui — 140 g
+- Varză de Bruxelles — 120 g
+- Cartofi dulci — 120 g
+- Ulei de măsline — 3 g
+- Rozmarin
+Preparare: Totul în aceeași tavă, la cuptor 30 de minute la 200°C. || Roast everything in one tray for 30 minutes at 200°C.
+Tranzit: 150 g pui la grătar; 1 cartof dulce copt || 150 g grilled chicken; 1 baked sweet potato
+# MIC DEJUN
+## Frittata italiană cu dovlecel și parmezan || Italian courgette and parmesan frittata
+- Ouă — 2 buc
+- Albuș de ou — 80 g
+- Dovlecei — 100 g
+- Parmezan — 10 g
+- Pâine integrală — 30 g
+Preparare: Dovlecelul ras, călit 3 minute; ouăle bătute cu parmezanul turnate peste, cu capac, la foc mic. || Grate and sauté the courgette for 3 minutes; pour over the eggs whisked with parmesan, cover and cook on low.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală || 2–3 boiled eggs; 1 slice wholegrain bread
+## Skyr nordic cu ovăz și afine || Nordic yogurt bowl with oats and blueberries
+- Iaurt grecesc 0% — 250 g
+- Fulgi de ovăz — 30 g
+- Afine — 100 g
+- Semințe de in — 10 g
+Tranzit: 1 iaurt grecesc; 1 caserolă de afine || 1 Greek yogurt; 1 punnet of blueberries
+## Huevos rancheros ușori || Light huevos rancheros
+- Ouă — 2 buc
+- Tortilla integrală — 40 g
+- Fasole roșie — 50 g
+- Sos de roșii — 60 g
+- Avocado — 30 g
+- Chimion, chili
+Preparare: Fasolea încălzită în sos; ouăle ochiuri în tigaie antiaderentă; totul pe tortilla, cu avocado. || Warm the beans in the sauce; fry the eggs in a non-stick pan; serve on the tortilla with avocado.
+Tranzit: 1 wrap cu ou; 1 fruct || 1 egg wrap; 1 fruit
+## Pâine de secară cu ou și spanac || Rye toast with egg and spinach
+- Pâine de secară — 50 g
+- Ouă — 2 buc
+- Spanac — 60 g
+- Brânză cottage 2% — 50 g
+Preparare: Spanacul scăzut în tigaie; ouăle poșate sau ochiuri; pâinea unsă cu brânză cottage, cu spanacul și ouăle deasupra. || Wilt the spinach; poach or fry the eggs; spread the toast with cottage cheese and top with spinach and eggs.
+Tranzit: 2 ouă fierte; 1 sandviș cu brânză || 2 boiled eggs; 1 cheese sandwich
+## Bircher muesli cu măr și iaurt || Bircher muesli with apple and yogurt
+- Fulgi de ovăz — 40 g
+- Iaurt 2% — 150 g
+- Lapte 1,5% — 80 g
+- Măr — 100 g
+- Alune de pădure — 10 g
+Preparare: Ovăzul înmuiat peste noapte în lapte și iaurt; mărul ras și alunele dimineața. || Soak the oats overnight in milk and yogurt; add grated apple and hazelnuts in the morning.
+Tranzit: 1 iaurt; 1 măr; 1 pumn de alune || 1 yogurt; 1 apple; 1 handful of hazelnuts
+## Bol japonez cu orez, ou și edamame || Japanese rice bowl with egg and edamame
+- Orez — 45 g
+- Ouă — 2 buc
+- Edamame — 50 g
+- Castraveți — 60 g
+- Sos de soia, susan
+Preparare: Orezul fiert; ouăle fierte moi 6 minute; edamame și castravete alături, cu sos de soia. || Boil the rice; soft-boil the eggs for 6 minutes; serve with edamame, cucumber and soy sauce.
+Tranzit: 2 ouă fierte; 1 caserolă cu orez || 2 boiled eggs; 1 rice box
+## Toast cu unt de arahide și banană || Peanut butter and banana toast
+- Pâine integrală — 50 g
+- Unt de arahide — 15 g
+- Banană — 80 g
+- Iaurt grecesc 0% — 150 g
+Tranzit: 1 sandviș cu unt de arahide; 1 iaurt || 1 peanut butter sandwich; 1 yogurt
+## Mămăligă cu brânză și ou || Polenta with cheese and egg
+- Mălai — 40 g
+- Brânză de vaci — 100 g
+- Ouă — 1 buc
+- Smântână 12% — 20 g
+Preparare: Mămăliga fiartă 10 minute; brânza și smântâna deasupra, oul ochi alături. || Cook the polenta for 10 minutes; top with cottage cheese and sour cream, with a fried egg on the side.
+Tranzit: 1 iaurt; 1 felie pâine cu brânză || 1 yogurt; 1 slice of bread with cheese
+## Chia pudding cu mango și cocos || Mango chia pudding
+- Semințe de chia — 20 g
+- Băutură vegetală de migdale — 200 g
+- Mango — 100 g
+- Proteină whey — 15 g
+Preparare: Chia și proteina amestecate în băutura de migdale, la frigider peste noapte; mango deasupra. || Stir the chia and protein into the almond drink and chill overnight; top with mango.
+Tranzit: 1 shake proteic; 1 fruct || 1 protein shake; 1 fruit
+## Wrap cu ricotta, spanac și ou || Ricotta, spinach and egg wrap
+- Lipie integrală — 50 g
+- Ricotta — 60 g
+- Ouă — 1 buc
+- Spanac — 50 g
+- Roșii — 60 g
+Preparare: Oul jumări cu spanacul; lipia unsă cu ricotta, umplută și rulată. || Scramble the egg with spinach; spread the wrap with ricotta, fill and roll.
+Tranzit: 1 wrap cu ou; 1 iaurt || 1 egg wrap; 1 yogurt
+## Brânză de vaci cu hrișcă și fructe || Cottage cheese with buckwheat and fruit
+- Brânză de vaci — 150 g
+- Hrișcă — 30 g
+- Piersici — 100 g
+- Miere — 5 g
+Preparare: Hrișca fiartă 15 minute și răcită; brânza, fructele și mierea deasupra. || Boil the buckwheat for 15 minutes and cool; top with cottage cheese, fruit and honey.
+Tranzit: 1 iaurt proteic; 1 fruct || 1 protein yogurt; 1 fruit
+## Sandviș cu somon și ou || Salmon and egg sandwich
+- Pâine integrală — 50 g
+- Somon — 50 g
+- Ouă — 1 buc
+- Salată verde — 30 g
+- Castraveți — 50 g
+Preparare: Somonul copt, oul fiert; totul pe pâine cu salată și castravete. || Bake the salmon and boil the egg; layer everything on bread with lettuce and cucumber.
+Tranzit: 1 sandviș cu somon || 1 salmon sandwich
+# GUSTARE
+## Hummus de sfeclă cu morcovi || Beetroot hummus with carrots
+- Humus — 50 g
+- Sfeclă roșie — 50 g
+- Morcovi — 100 g
+Preparare: Sfecla coaptă mixată cu hummusul; morcovii tăiați bețe. || Blend the roasted beetroot with the hummus; cut the carrots into sticks.
+Tranzit: 1 caserolă de hummus; morcovi || 1 tub of hummus; carrots
+## Pepene galben cu pastramă de curcan || Melon with turkey ham
+- Pepene galben — 200 g
+- Pastramă de curcan — 50 g
+Tranzit: 1 caserolă de pepene; 1 pachet mic de pastramă || 1 tub of melon; 1 small pack of turkey ham
+## Iaurt cu piersici și granola || Yogurt with peaches and granola
+- Iaurt grecesc 2% — 150 g
+- Piersici — 100 g
+- Granola — 20 g
+Tranzit: 1 iaurt grecesc; 1 fruct || 1 Greek yogurt; 1 fruit
+## Lapte bătut cu fulgi de ovăz și mure || Buttermilk with oats and blackberries
+- Lapte bătut — 250 g
+- Fulgi de ovăz — 20 g
+- Mure — 70 g
+Tranzit: 1 lapte bătut; 1 fruct || 1 buttermilk; 1 fruit
+## Ou fiert cu avocado || Boiled egg with avocado
+- Ouă — 2 buc
+- Avocado — 40 g
+- Sare, piper
+Tranzit: 2 ouă fierte; 1 avocado mic || 2 boiled eggs; 1 small avocado
+## Ricotta cu pară și miere || Ricotta with pear and honey
+- Ricotta — 80 g
+- Pară — 120 g
+- Miere — 5 g
+- Nuci — 5 g
+Tranzit: 1 iaurt proteic; 1 pară || 1 protein yogurt; 1 pear
+## Smoothie verde cu spanac și banană || Green spinach and banana smoothie
+- Lapte 1,5% — 200 g
+- Spanac — 40 g
+- Banană — 80 g
+- Proteină whey — 15 g
+Preparare: Totul mixat cu gheață. || Blend everything with ice.
+Tranzit: 1 shake proteic; 1 banană || 1 protein shake; 1 banana
+## Bețe de legume cu iaurt cu ierburi || Vegetable sticks with herb yogurt dip
+- Iaurt grecesc 2% — 120 g
+- Ardei gras — 80 g
+- Ridichi — 60 g
+- Castraveți — 80 g
+- Mărar, usturoi
+Tranzit: 1 iaurt grecesc; legume crude || 1 Greek yogurt; raw vegetables
+## Rondele de orez cu ton || Rice cakes with tuna
+- Rondele de orez — 20 g
+- Ton în apă — 70 g
+- Iaurt grecesc 0% — 30 g
+- Ceapă verde — 10 g
+Preparare: Tonul amestecat cu iaurtul și ceapa verde, pe rondele. || Mix the tuna with yogurt and spring onion and spread on the rice cakes.
+Tranzit: 1 conservă mică de ton; 2 rondele de orez || 1 small tin of tuna; 2 rice cakes
+## Chefir cu zmeură || Kefir with raspberries
+- Chefir — 250 g
+- Zmeură — 80 g
+Tranzit: 1 chefir; 1 fruct || 1 kefir; 1 fruit
+## Mozzarella cu pepene și mentă || Mozzarella with melon and mint
+- Mozzarella — 50 g
+- Pepene galben — 150 g
+- Mentă
+Tranzit: 1 mozzarella mică; 1 caserolă de pepene || 1 small mozzarella; 1 tub of melon
+## Fistic cu portocală || Pistachios with an orange
+- Fistic — 15 g
+- Portocală — 150 g
+Tranzit: 1 pumn de fistic; 1 portocală || 1 handful of pistachios; 1 orange
+# PRÂNZ
+## Risotto cu orez brun, pui și ciuperci || Brown rice risotto with chicken and mushrooms
+- Orez brun — 50 g
+- Piept de pui — 130 g
+- Ciuperci — 100 g
+- Ceapă — 40 g
+- Parmezan — 10 g
+Preparare: Ceapa și ciupercile călite, apoi orezul și apa adăugată treptat, 30 de minute; puiul la tigaie, adăugat la final cu parmezanul. || Soften the onion and mushrooms, add the rice and water gradually for 30 minutes; stir in the pan-cooked chicken and parmesan at the end.
+Tranzit: 1 caserolă cu pui și orez || 1 chicken and rice box
+## Bibimbap cu vită și legume || Beef bibimbap
+- Carne tocată de vită slabă — 120 g
+- Orez — 50 g
+- Spanac — 60 g
+- Morcovi — 60 g
+- Ouă — 1 buc
+- Sos de soia, chili
+Preparare: Carnea rumenită cu soia; legumele scurt la tigaie; totul peste orez, cu oul ochi deasupra. || Brown the mince with soy; quickly cook the vegetables; serve over rice with a fried egg on top.
+Tranzit: 1 caserolă asiatică cu vită || 1 Asian beef box
+## Paella ușoară cu pui și creveți || Light chicken and shrimp paella
+- Piept de pui — 90 g
+- Creveți — 70 g
+- Orez — 50 g
+- Ardei gras — 60 g
+- Mazăre verde — 40 g
+- Sos de roșii — 50 g
+- Boia, turmeric
+Preparare: Puiul rumenit, apoi ardeiul, orezul, sosul, condimentele și apa, 18 minute; creveții și mazărea în ultimele 5. || Brown the chicken, add the pepper, rice, sauce, spices and water for 18 minutes; add the shrimp and peas for the last 5.
+Tranzit: 1 caserolă cu orez și pui || 1 chicken and rice box
+## Pui tandoori cu iaurt și salată || Tandoori chicken with yogurt and salad
+- Piept de pui — 150 g
+- Iaurt 2% — 60 g
+- Cartofi — 150 g
+- Castraveți — 80 g
+- Roșii — 80 g
+- Garam masala, usturoi
+Preparare: Puiul marinat în iaurt și condimente, la cuptor 25 de minute; cartofii copți alături; salata de castraveți și roșii. || Marinate the chicken in yogurt and spices and bake for 25 minutes; roast the potatoes alongside; serve with cucumber and tomato salad.
+Tranzit: 150 g piept de pui la grătar; 1 cartof copt || 150 g grilled chicken breast; 1 baked potato
+## Salată caesar ușoară cu pui || Light chicken caesar salad
+- Piept de pui — 140 g
+- Salată verde — 80 g
+- Parmezan — 10 g
+- Iaurt grecesc 2% — 40 g
+- Pâine integrală — 30 g
+- Lămâie, usturoi, muștar
+Preparare: Puiul la grătar; pâinea prăjită cuburi; sosul din iaurt, lămâie, usturoi și muștar. || Grill the chicken; toast the bread into croutons; make the dressing from yogurt, lemon, garlic and mustard.
+Tranzit: 1 salată caesar cu pui || 1 chicken caesar salad
+## Musaca ușoară cu vinete și curcan || Light turkey and aubergine moussaka
+- Carne tocată de curcan — 130 g
+- Vinete — 150 g
+- Cartofi — 100 g
+- Sos de roșii — 80 g
+- Iaurt grecesc 2% — 50 g
+- Ouă — 1 buc
+Preparare: Vinetele și cartofii feliați, copți; carnea înăbușită în sos; straturi în tavă, cu iaurtul bătut cu oul deasupra, 25 de minute la cuptor. || Bake the sliced aubergine and potatoes; simmer the mince in the sauce; layer in a dish, top with yogurt whisked with the egg and bake for 25 minutes.
+Tranzit: 1 caserolă cu carne și legume || 1 meat and vegetable box
+## Somon cu hrișcă și castraveți murați || Salmon with buckwheat and pickles
+- Somon — 120 g
+- Hrișcă — 50 g
+- Castraveți — 80 g
+- Mărar
+Preparare: Hrișca fiartă 15 minute; somonul la cuptor 12 minute; castravetele și mărarul alături. || Boil the buckwheat for 15 minutes; bake the salmon for 12; serve with cucumber and dill.
+Tranzit: 1 conservă de somon; 1 salată || 1 tin of salmon; 1 salad
+## Ciorbă de perișoare de curcan || Turkey meatball sour soup
+- Carne tocată de curcan — 130 g
+- Orez — 25 g
+- Morcovi — 60 g
+- Ceapă — 40 g
+- Ardei gras — 50 g
+- Sos de roșii — 50 g
+- Leuștean, borș
+Preparare: Perișoarele din carne și orez, fierte cu legumele 25 de minute; borșul și leușteanul la final. || Shape meatballs from the mince and rice and simmer with the vegetables for 25 minutes; add the sour borscht and lovage at the end.
+Tranzit: 1 supă la borcan; 150 g pui la grătar || 1 jar of soup; 150 g grilled chicken
+## Fasole bătută cu salată de varză și pui || Romanian bean dip with cabbage salad and chicken
+- Fasole albă fiartă — 120 g
+- Piept de pui — 100 g
+- Varză — 100 g
+- Ceapă — 30 g
+- Ulei de măsline — 5 g
+- Usturoi, boia
+Preparare: Fasolea pasată cu usturoiul; ceapa călită cu boia deasupra; puiul la grătar; varza tocată cu oțet. || Mash the beans with garlic; top with onion softened with paprika; grill the chicken; serve with shredded cabbage dressed with vinegar.
+Tranzit: 1 salată de fasole; 150 g pui la grătar || 1 bean salad; 150 g grilled chicken
+## Shawarma de pui la farfurie || Chicken shawarma plate
+- Piept de pui — 140 g
+- Bulgur — 45 g
+- Roșii — 80 g
+- Varză roșie — 80 g
+- Iaurt grecesc 2% — 50 g
+- Chimion, boia, usturoi
+Preparare: Puiul marinat în condimente, la tigaie fâșii; bulgurul opărit; legumele tăiate; iaurtul cu usturoi ca sos. || Marinate the chicken in the spices and pan-cook in strips; soak the bulgur; chop the vegetables; serve with garlic yogurt.
+Tranzit: 1 shaorma la farfurie fără cartofi prăjiți || 1 shawarma plate without fries
+## Gnocchi de cartofi cu sos de roșii și mozzarella || Potato gnocchi with tomato and mozzarella
+- Cartofi — 200 g
+- Făină de ovăz — 30 g
+- Sos de roșii — 100 g
+- Mozzarella — 40 g
+- Piept de curcan — 100 g
+- Busuioc
+Preparare: Cartofii fierți și pasați cu făina, rulați și tăiați, fierți până ies la suprafață; curcanul la tigaie; totul în sos, cu mozzarella. || Boil and mash the potatoes with the flour, roll and cut, boil until they float; pan-cook the turkey; toss everything in the sauce with mozzarella.
+Tranzit: 1 caserolă cu paste și pui || 1 chicken pasta box
+## Salată de quinoa cu năut și legume coapte || Quinoa salad with chickpeas and roasted vegetables
+- Quinoa — 45 g
+- Năut fiert — 80 g
+- Dovlecei — 100 g
+- Ardei gras — 80 g
+- Telemea — 25 g
+- Ulei de măsline — 5 g
+Preparare: Legumele la cuptor 20 de minute; quinoa fiartă 12 minute; totul amestecat cu năutul și telemeaua. || Roast the vegetables for 20 minutes; boil the quinoa for 12; toss with chickpeas and feta.
+Tranzit: 1 salată cu quinoa și năut || 1 quinoa and chickpea salad
+## Burger de vită fără chiflă cu cartofi dulci || Bunless beef burger with sweet potato
+- Carne tocată de vită slabă — 140 g
+- Cartofi dulci — 150 g
+- Salată verde — 40 g
+- Roșii — 60 g
+- Cașcaval — 15 g
+Preparare: Burgerul la tigaie 4 minute pe parte, cu cașcavalul deasupra; cartofii dulci la cuptor 25 de minute. || Pan-cook the burger 4 minutes per side with the cheese on top; roast the sweet potato for 25 minutes.
+Tranzit: 150 g vită la grătar; 1 cartof dulce copt || 150 g grilled beef; 1 baked sweet potato
+# CINĂ
+## Tocăniță de vită cu legume || Beef and vegetable stew
+- Pulpă de vită — 130 g
+- Morcovi — 80 g
+- Ceapă — 50 g
+- Cartofi — 100 g
+- Sos de roșii — 60 g
+- Cimbru, foi de dafin
+Preparare: Carnea cuburi rumenită, apoi legumele și sosul, la foc mic 60 de minute. || Brown the diced beef, add the vegetables and sauce and simmer for 60 minutes.
+Tranzit: 150 g vită la grătar; legume || 150 g grilled beef; vegetables
+## Pește alb în stil thai cu legume || Thai-style white fish with vegetables
+- Pește alb — 160 g
+- Ardei gras — 80 g
+- Broccoli — 100 g
+- Orez — 35 g
+- Lime, ghimbir, chili, sos de soia
+Preparare: Peștele și legumele în folie, cu ghimbir, lime și soia, 15 minute la cuptor; orezul fiert separat. || Bake the fish and vegetables in foil with ginger, lime and soy for 15 minutes; boil the rice separately.
+Tranzit: 1 conservă de ton; 1 salată || 1 tin of tuna; 1 salad
+## Pui cu sos de muștar și fasole verde || Mustard chicken with green beans
+- Piept de pui — 150 g
+- Fasole verde — 150 g
+- Smântână 12% — 30 g
+- Cartofi — 100 g
+- Muștar
+Preparare: Puiul la tigaie, apoi smântâna cu muștar 2 minute; fasolea verde și cartofii fierți alături. || Pan-cook the chicken, then add the sour cream with mustard for 2 minutes; serve with boiled green beans and potatoes.
+Tranzit: 150 g piept de pui la grătar; legume || 150 g grilled chicken breast; vegetables
+## Salată de linte cu somon || Lentil salad with salmon
+- Linte — 45 g
+- Somon — 110 g
+- Rucola — 40 g
+- Roșii — 80 g
+- Ulei de măsline — 3 g
+- Lămâie
+Preparare: Lintea fiartă 20 de minute și răcită; somonul la cuptor, fulgi peste salată; uleiul și lămâia. || Boil the lentils for 20 minutes and cool; bake the salmon and flake it over the salad; dress with oil and lemon.
+Tranzit: 1 conservă de somon; 1 salată cu linte || 1 tin of salmon; 1 lentil salad
+## Omletă spaniolă cu cartofi || Spanish potato omelette
+- Ouă — 2 buc
+- Albuș de ou — 100 g
+- Cartofi — 120 g
+- Ceapă — 40 g
+- Ulei de măsline — 5 g
+Preparare: Cartofii și ceapa feliați subțire, înăbușiți cu uleiul 10 minute; ouăle turnate peste, la foc mic, cu capac. || Slice the potatoes and onion thinly and soften in the oil for 10 minutes; pour over the eggs and cook covered on low heat.
+Tranzit: 2–3 ouă fierte; 1 cartof copt || 2–3 boiled eggs; 1 baked potato
+## Curcan cu legume la wok și hrișcă || Turkey stir-fry with buckwheat
+- Piept de curcan — 140 g
+- Hrișcă — 40 g
+- Ardei gras — 80 g
+- Varză — 100 g
+- Ulei de măsline — 5 g
+- Sos de soia, ghimbir
+Preparare: Curcanul fâșii, la wok 4 minute, apoi legumele 4 minute; hrișca fiartă separat. || Stir-fry the turkey strips for 4 minutes, then the vegetables for 4; boil the buckwheat separately.
+Tranzit: 150 g curcan la grătar; legume || 150 g grilled turkey; vegetables
+## Dovlecei umpluți cu curcan || Turkey-stuffed courgettes
+- Dovlecei — 250 g
+- Carne tocată de curcan — 130 g
+- Sos de roșii — 80 g
+- Mozzarella — 25 g
+- Ceapă — 30 g
+Preparare: Dovleceii scobiți; carnea călită cu ceapa și sosul, pusă în ei; mozzarella deasupra, 25 de minute la cuptor. || Hollow out the courgettes; cook the mince with onion and sauce and fill them; top with mozzarella and bake for 25 minutes.
+Tranzit: 150 g curcan la grătar; legume la grătar || 150 g grilled turkey; grilled vegetables
+## Bowl cu tofu, cartofi dulci și spanac || Tofu, sweet potato and spinach bowl
+- Tofu — 140 g
+- Cartofi dulci — 120 g
+- Spanac — 60 g
+- Humus — 25 g
+- Semințe de dovleac — 5 g
+Preparare: Tofu și cartofii dulci cuburi, la cuptor 25 de minute; spanacul crud; hummusul ca sos. || Roast the diced tofu and sweet potato for 25 minutes; serve on raw spinach with hummus as a dressing.
+Tranzit: 1 salată cu tofu; 1 fruct || 1 tofu salad; 1 fruit
+## Mușchiuleț de porc cu mere și varză roșie || Pork tenderloin with apple and red cabbage
+- Mușchiuleț de porc — 140 g
+- Varză roșie — 150 g
+- Măr — 80 g
+- Ulei de măsline — 3 g
+- Cimbru
+Preparare: Varza și mărul înăbușite 20 de minute; mușchiulețul la cuptor 20 de minute, feliat. || Braise the red cabbage and apple for 20 minutes; roast the pork for 20 minutes and slice.
+Tranzit: 150 g carne la grătar; 1 salată de varză || 150 g grilled meat; 1 cabbage salad
+## Creveți cu quinoa și avocado || Shrimp with quinoa and avocado
+- Creveți — 150 g
+- Quinoa — 40 g
+- Avocado — 40 g
+- Porumb dulce — 40 g
+- Lime, coriandru
+Preparare: Creveții la tigaie 3 minute; quinoa fiartă; totul în bol cu avocado, porumb și lime. || Pan-cook the shrimp for 3 minutes; boil the quinoa; assemble with avocado, corn and lime.
+Tranzit: 1 salată cu creveți || 1 shrimp salad
+## Supă minestrone cu fasole și parmezan || Minestrone with beans and parmesan
+- Fasole albă fiartă — 80 g
+- Paste integrale — 25 g
+- Morcovi — 60 g
+- Dovlecei — 80 g
+- Sos de roșii — 80 g
+- Parmezan — 10 g
+- Pastramă de curcan — 50 g
+Preparare: Legumele fierte cu sosul 15 minute, apoi pastele și fasolea 8 minute; parmezan deasupra, pastrama alături. || Simmer the vegetables in the sauce for 15 minutes, add the pasta and beans for 8; top with parmesan and serve with the turkey ham.
+Tranzit: 1 supă de legume la borcan; 1 sandviș cu curcan || 1 jar of vegetable soup; 1 turkey sandwich
+## Macrou la grătar cu salată de sfeclă || Grilled mackerel with beetroot salad
+- Macrou, crud — 120 g
+- Sfeclă roșie — 120 g
+- Rucola — 40 g
+- Pâine de secară — 30 g
+- Hrean
+Preparare: Macroul la grătar 4 minute pe parte; sfecla coaptă feliată pe rucola, cu hrean. || Grill the mackerel 4 minutes per side; serve with sliced roasted beetroot on rocket, with horseradish.
+Tranzit: 1 conservă de macrou; 1 salată || 1 tin of mackerel; 1 salad
+## Ouă la cuptor în sos de roșii cu spanac || Baked eggs in tomato sauce with spinach
+- Ouă — 3 buc
+- Sos de roșii — 120 g
+- Spanac — 80 g
+- Telemea — 20 g
+- Pâine integrală — 30 g
+Preparare: Sosul și spanacul în formă mică, ouăle sparte deasupra, 12 minute la cuptor; telemeaua la final. || Spread the sauce and spinach in a small dish, crack in the eggs and bake for 12 minutes; finish with feta.
+Tranzit: 2–3 ouă fierte; 1 felie pâine integrală || 2–3 boiled eggs; 1 slice wholegrain bread
+# MIC DEJUN
+## Ouă de prepeliță cu avocado și pâine de secară || Quail eggs with avocado on rye
+- Ou de prepeliță, crud — 90 g
+- Avocado — 40 g
+- Pâine de secară — 50 g
+- Roșii — 80 g
+Preparare: Ouăle de prepeliță fierte 3 minute; pâinea prăjită cu avocado zdrobit, ouăle tăiate în jumătăți deasupra. || Boil the quail eggs for 3 minutes; top toasted rye with mashed avocado and halved eggs.
+Tranzit: 2–3 ouă fierte; 1 felie pâine de secară || 2–3 boiled eggs; 1 slice rye bread
+## Terci de hrișcă cu chefir și mere || Buckwheat porridge with kefir and apple
+- Hrișcă — 40 g
+- Chefir — 200 g
+- Măr — 100 g
+- Nuci — 10 g
+Preparare: Hrișca fiartă 15 minute și răcită, amestecată cu chefirul; mărul ras și nucile deasupra. || Boil the buckwheat for 15 minutes, cool and mix with kefir; top with grated apple and walnuts.
+Tranzit: 1 chefir; 1 măr; 1 pumn de nuci || 1 kefir; 1 apple; 1 handful of walnuts
+## Omletă cu somon afumat și ceapă verde || Smoked salmon omelette with spring onion
+- Ouă — 2 buc
+- Albuș de ou — 60 g
+- Somon afumat — 40 g
+- Ceapă verde — 15 g
+- Pâine integrală — 30 g
+Preparare: Ouăle bătute, turnate în tigaie antiaderentă; somonul și ceapa verde pe jumătate, apoi pliată. || Pour the whisked eggs into a non-stick pan; add salmon and spring onion on one half and fold.
+Tranzit: 1 sandviș cu somon; 1 ou fiert || 1 salmon sandwich; 1 boiled egg
+## Iaurt cu pere coapte și nuci pecan || Yogurt with baked pear and pecans
+- Iaurt grecesc 2% — 200 g
+- Pară — 120 g
+- Nuci pecan prăjite — 10 g
+- Scorțișoară
+Preparare: Para tăiată cuburi, la cuptor 15 minute cu scorțișoară; peste iaurt, cu nucile pecan. || Bake the diced pear with cinnamon for 15 minutes; spoon over yogurt with the pecans.
+Tranzit: 1 iaurt grecesc; 1 pară || 1 Greek yogurt; 1 pear
+## Pâine cu humus, ou și spanac || Hummus toast with egg and spinach
+- Pâine integrală — 50 g
+- Humus — 30 g
+- Ouă — 2 buc
+- Spanac — 40 g
+Tranzit: 2 ouă fierte; 1 sandviș cu humus || 2 boiled eggs; 1 hummus sandwich
+## Clătite cu brânză cottage și afine || Cottage cheese pancakes with blueberries
+- Brânză cottage 2% — 120 g
+- Ouă — 1 buc
+- Făină de ovăz — 30 g
+- Afine — 80 g
+Preparare: Brânza, oul și făina amestecate; clătite mici în tigaie antiaderentă, cu afinele alături. || Mix the cottage cheese, egg and oat flour; cook small pancakes in a non-stick pan; serve with blueberries.
+Tranzit: 1 iaurt proteic; 1 caserolă de afine || 1 protein yogurt; 1 punnet of blueberries
+## Bol cu quinoa, lapte și fructe de pădure || Quinoa breakfast bowl with berries
+- Quinoa — 35 g
+- Lapte 1,5% — 150 g
+- Zmeură — 70 g
+- Semințe de chia — 10 g
+- Miere — 5 g
+Preparare: Quinoa fiartă în lapte 15 minute; zmeura, chia și mierea deasupra. || Simmer the quinoa in milk for 15 minutes; top with raspberries, chia and honey.
+Tranzit: 1 iaurt; 1 caserolă de zmeură || 1 yogurt; 1 punnet of raspberries
+## Shake proteic cu ovăz și unt de arahide || Oat and peanut butter protein shake
+- Lapte 1,5% — 250 g
+- Proteină whey — 25 g
+- Fulgi de ovăz — 30 g
+- Unt de arahide — 10 g
+- Banană — 60 g
+Preparare: Totul mixat cu gheață. || Blend everything with ice.
+Tranzit: 1 shake proteic; 1 banană || 1 protein shake; 1 banana
+# GUSTARE
+## Caju și mandarine || Cashews and mandarins
+- Caju — 15 g
+- Portocală — 150 g
+Tranzit: 1 pumn de caju; 2 mandarine || 1 handful of cashews; 2 mandarins
+## Iaurt grecesc cu miere și fistic || Greek yogurt with honey and pistachios
+- Iaurt grecesc 0% — 170 g
+- Miere — 7 g
+- Fistic — 10 g
+Tranzit: 1 iaurt grecesc; 1 pumn mic de fistic || 1 Greek yogurt; 1 small handful of pistachios
+## Ardei cu humus || Peppers with hummus
+- Ardei gras — 150 g
+- Humus — 50 g
+Tranzit: 1 caserolă de humus; 1 ardei || 1 tub of hummus; 1 pepper
+## Ou fiert cu castraveți murați și pâine || Boiled egg with pickles and bread
+- Ouă — 2 buc
+- Castraveți — 80 g
+- Pâine de secară — 25 g
+Tranzit: 2 ouă fierte; 1 felie pâine || 2 boiled eggs; 1 slice of bread
+## Brânză cottage cu ananas || Cottage cheese with pineapple
+- Brânză cottage 2% — 150 g
+- Ananas — 100 g
+Tranzit: 1 brânză cottage; 1 caserolă de ananas || 1 cottage cheese; 1 tub of pineapple
+## Smoothie cu chefir și mure || Kefir and blackberry smoothie
+- Chefir — 250 g
+- Mure — 80 g
+- Fulgi de ovăz — 15 g
+Preparare: Totul mixat. || Blend everything.
+Tranzit: 1 chefir; 1 fruct || 1 kefir; 1 fruit
+## Rondele de orez cu brânză cottage și roșii || Rice cakes with cottage cheese and tomato
+- Rondele de orez — 20 g
+- Brânză cottage 2% — 100 g
+- Roșii — 80 g
+Tranzit: 2 rondele de orez; 1 brânză cottage || 2 rice cakes; 1 cottage cheese
+## Struguri cu telemea || Grapes with feta
+- Struguri — 120 g
+- Telemea — 30 g
+Tranzit: 1 ciorchine mic de struguri; 1 bucată de telemea || 1 small bunch of grapes; 1 piece of feta
+# PRÂNZ
+## Paste cu midii în sos de roșii || Mussels pasta in tomato sauce
+- Paste integrale — 60 g
+- Midii, crude — 180 g
+- Sos de roșii — 100 g
+- Ulei de măsline — 5 g
+- Usturoi, pătrunjel, chili
+Preparare: Midiile curățate, gătite cu capac în sosul cu usturoi 5–6 minute, până se deschid; pastele fierte amestecate în sos. || Cook the cleaned mussels covered in the garlic tomato sauce for 5–6 minutes until open; toss with the boiled pasta.
+Tranzit: 1 salată de paste cu fructe de mare || 1 seafood pasta salad
+## Caracatiță cu cartofi și salată || Octopus with potatoes and salad
+- Caracatiță, crudă — 200 g
+- Cartofi — 150 g
+- Rucola — 40 g
+- Ulei de măsline — 5 g
+- Lămâie, boia
+Preparare: Caracatița fiartă 45 de minute, apoi rumenită pe grătar; cartofii fierți, totul cu lămâie, ulei și boia. || Simmer the octopus for 45 minutes, then char it on the grill; serve with boiled potatoes, lemon, oil and paprika.
+Tranzit: 1 salată cu fructe de mare; 1 cartof copt || 1 seafood salad; 1 baked potato
+## Rață cu varză roșie și cartofi || Duck with red cabbage and potatoes
+- Rață fără piele, la cuptor — 120 g
+- Varză roșie — 150 g
+- Cartofi — 120 g
+- Măr — 50 g
+Preparare: Pieptul de rață fără piele la tigaie 5 minute pe parte; varza înăbușită cu mărul 20 de minute; cartofii fierți. || Pan-cook the skinless duck breast 5 minutes per side; braise the cabbage with apple for 20 minutes; boil the potatoes.
+Tranzit: 150 g carne la grătar; 1 salată de varză || 150 g grilled meat; 1 cabbage salad
+## Pui cu fasole lima și roșii || Chicken with lima beans and tomatoes
+- Piept de pui — 130 g
+- Fasole lima, fiartă — 100 g
+- Roșii — 100 g
+- Ceapă — 30 g
+- Ulei de măsline — 5 g
+Preparare: Puiul rumenit, apoi ceapa, roșiile și fasolea, 15 minute la foc mic. || Brown the chicken, add the onion, tomatoes and beans and simmer for 15 minutes.
+Tranzit: 150 g pui la grătar; 1 salată de fasole || 150 g grilled chicken; 1 bean salad
+## Tocăniță de căprioară cu mămăligă || Venison stew with polenta
+- Căprioară, la cuptor — 130 g
+- Ceapă — 50 g
+- Morcovi — 60 g
+- Sos de roșii — 60 g
+- Mălai — 45 g
+- Cimbru, ienibahar
+Preparare: Carnea cuburi rumenită, apoi legumele și sosul, la foc mic 60 de minute; mămăliga separat. || Brown the diced venison, add the vegetables and sauce and simmer for 60 minutes; cook the polenta separately.
+Tranzit: 150 g carne la grătar; 1 garnitură || 150 g grilled meat; 1 side dish
+## Somon cu linte și spanac || Salmon with lentils and spinach
+- Somon — 120 g
+- Linte — 45 g
+- Spanac — 80 g
+- Lămâie, usturoi
+Preparare: Lintea fiartă 20 de minute; spanacul scăzut cu usturoi; somonul la cuptor 12 minute. || Boil the lentils for 20 minutes; wilt the spinach with garlic; bake the salmon for 12 minutes.
+Tranzit: 1 conservă de somon; 1 salată cu linte || 1 tin of salmon; 1 lentil salad
+## Burger de curcan cu salată de varză || Turkey burger with coleslaw
+- Carne tocată de curcan — 140 g
+- Pâine integrală — 50 g
+- Varză — 80 g
+- Morcovi — 40 g
+- Iaurt grecesc 2% — 40 g
+Preparare: Burgerul la tigaie 5 minute pe parte; varza și morcovul rase, cu iaurt ca sos; totul în pâine. || Pan-cook the burger 5 minutes per side; dress the shredded cabbage and carrot with yogurt; assemble in the bread.
+Tranzit: 1 burger de curcan; 1 salată || 1 turkey burger; 1 salad
+## Salată de paste cu ton și fasole verde || Tuna pasta salad with green beans
+- Paste integrale — 55 g
+- Ton în apă — 120 g
+- Fasole verde — 100 g
+- Roșii — 80 g
+- Ulei de măsline — 5 g
+Tranzit: 1 salată de paste cu ton || 1 tuna pasta salad
+## Ciorbă de pui cu legume || Romanian chicken vegetable sour soup
+- Piept de pui — 130 g
+- Morcovi — 60 g
+- Ardei gras — 50 g
+- Cartofi — 80 g
+- Ceapă — 30 g
+- Smântână 12% — 20 g
+- Leuștean, borș
+Preparare: Puiul și legumele fierte 30 de minute; borșul și leușteanul la final, smântâna la servire. || Simmer the chicken and vegetables for 30 minutes; add the sour borscht and lovage at the end; serve with sour cream.
+Tranzit: 1 supă la borcan; 150 g pui la grătar || 1 jar of soup; 150 g grilled chicken
+## Pește alb cu cușcuș și legume coapte || White fish with couscous and roasted vegetables
+- Pește alb — 160 g
+- Cușcuș — 50 g
+- Dovlecei — 100 g
+- Roșii — 80 g
+- Ulei de măsline — 5 g
+Preparare: Legumele la cuptor 20 de minute; peștele alături în ultimele 12; cușcușul opărit. || Roast the vegetables for 20 minutes, adding the fish for the last 12; soak the couscous.
+Tranzit: 1 conservă de ton; 1 salată cu cușcuș || 1 tin of tuna; 1 couscous salad
+## Vită cu orez și fasole neagră || Beef with rice and black beans
+- Mușchi de vită — 120 g
+- Orez — 40 g
+- Fasole neagră, fiartă — 70 g
+- Ardei gras — 60 g
+- Chimion, lime
+Preparare: Vita fâșii la tigaie 3 minute; ardeiul alături; orezul fiert, fasolea încălzită cu chimion. || Pan-cook the beef strips for 3 minutes with the pepper; boil the rice; warm the beans with cumin.
+Tranzit: 1 burrito bowl cu vită || 1 beef burrito bowl
+# CINĂ
+## Prepeliță la cuptor cu legume || Roast quail with vegetables
+- Prepeliță, gătită — 150 g
+- Dovleac — 150 g
+- Varză de Bruxelles — 100 g
+- Ulei de măsline — 5 g
+- Rozmarin
+Preparare: Prepelițele și legumele în aceeași tavă, 25 de minute la 200°C. || Roast the quail and vegetables in one tray for 25 minutes at 200°C.
+Tranzit: 150 g pui la grătar; legume || 150 g grilled chicken; vegetables
+## Calamar la grătar cu salată || Grilled squid with salad
+- Calamar — 180 g
+- Salată verde — 60 g
+- Roșii — 100 g
+- Castraveți — 80 g
+- Ulei de măsline — 5 g
+- Lămâie, usturoi
+Preparare: Calamarul curățat, la grătar 2 minute pe parte; salata cu ulei și lămâie. || Grill the cleaned squid 2 minutes per side; dress the salad with oil and lemon.
+Tranzit: 1 salată cu fructe de mare || 1 seafood salad
+## Ficat de pui cu ceapă și piure || Chicken livers with onion and mash
+- Ficat de pui — 130 g
+- Ceapă — 60 g
+- Cartofi — 150 g
+- Lapte 1,5% — 40 g
+- Ulei de măsline — 5 g
+Preparare: Ceapa călită, ficățeii adăugați 5–6 minute; cartofii fierți pasați cu laptele. || Soften the onion, add the livers for 5–6 minutes; mash the boiled potatoes with the milk.
+Tranzit: 150 g carne la grătar; 1 cartof copt || 150 g grilled meat; 1 baked potato
+## Salată de fasole neagră cu ou || Black bean salad with egg
+- Fasole neagră, fiartă — 100 g
+- Ouă — 2 buc
+- Porumb dulce — 40 g
+- Roșii — 80 g
+- Ceapă verde — 15 g
+- Lime, coriandru
+Tranzit: 2 ouă fierte; 1 salată de fasole || 2 boiled eggs; 1 bean salad
+## Cod cu piure de mazăre || Cod with pea purée
+- Cod — 160 g
+- Mazăre verde — 120 g
+- Iaurt grecesc 2% — 30 g
+- Mentă, lămâie
+Preparare: Mazărea fiartă 5 minute și pasată cu iaurtul și menta; codul la tigaie 3–4 minute pe parte. || Boil the peas for 5 minutes and blend with yogurt and mint; pan-cook the cod 3–4 minutes per side.
+Tranzit: 1 conservă de ton; 1 salată || 1 tin of tuna; 1 salad
+## Pui cu sos de iaurt și castraveți || Chicken with tzatziki and cucumber salad
+- Piept de pui — 150 g
+- Iaurt grecesc 2% — 80 g
+- Castraveți — 120 g
+- Pâine integrală — 30 g
+- Usturoi, mărar
+Preparare: Puiul la grătar; jumătate din castravete ras în iaurt cu usturoi și mărar; restul felii. || Grill the chicken; grate half the cucumber into yogurt with garlic and dill; slice the rest.
+Tranzit: 150 g pui la grătar; 1 iaurt grecesc || 150 g grilled chicken; 1 Greek yogurt
+## Omletă cu ciuperci shiitake și spanac || Shiitake and spinach omelette
+- Ouă — 2 buc
+- Albuș de ou — 80 g
+- Ciuperci shiitake — 80 g
+- Spanac — 50 g
+- Ulei de măsline — 3 g
+Preparare: Ciupercile rumenite cu uleiul, spanacul scăzut, apoi ouăle peste, cu capac. || Brown the mushrooms in the oil, wilt the spinach, then pour over the eggs and cover.
+Tranzit: 2–3 ouă fierte; legume crude || 2–3 boiled eggs; raw vegetables
+## Mistreț înăbușit cu varză || Wild boar braised with cabbage
+- Mistreț, la cuptor — 120 g
+- Varză — 200 g
+- Ceapă — 40 g
+- Sos de roșii — 50 g
+- Cimbru, piper
+Preparare: Varza tocată înăbușită cu ceapa și sosul 30 de minute; carnea feliată adăugată în ultimele 10. || Braise the shredded cabbage with onion and sauce for 30 minutes; add the sliced meat for the last 10.
+Tranzit: 150 g carne la grătar; 1 salată de varză || 150 g grilled meat; 1 cabbage salad
+## Curcan cu cartofi dulci și fasole verde || Turkey with sweet potato and green beans
+- Piept de curcan — 140 g
+- Cartofi dulci — 130 g
+- Fasole verde — 120 g
+- Ulei de măsline — 5 g
+- Boia afumată
+Preparare: Cartofii dulci la cuptor 25 de minute; curcanul la tigaie; fasolea verde la abur. || Roast the sweet potato for 25 minutes; pan-cook the turkey; steam the green beans.
+Tranzit: 150 g curcan la grătar; 1 cartof dulce copt || 150 g grilled turkey; 1 baked sweet potato
+## Supă de pește cu legume || Fish and vegetable soup
+- Pește alb — 160 g
+- Cartofi — 80 g
+- Morcovi — 60 g
+- Țelină — 40 g
+- Roșii — 80 g
+- Leuștean
+Preparare: Legumele fierte 20 de minute; peștele cuburi adăugat în ultimele 8; leușteanul la final. || Simmer the vegetables for 20 minutes; add the diced fish for the last 8; finish with lovage.
+Tranzit: 1 supă de pește la borcan || 1 jar of fish soup
+## Tofu cu broccoli și caju || Tofu with broccoli and cashews
+- Tofu — 150 g
+- Broccoli — 150 g
+- Caju — 10 g
+- Orez brun — 35 g
+- Sos de soia, ghimbir
+Preparare: Tofu rumenit; broccoli la wok 4 minute; caju și sosul la final; orezul fiert separat. || Brown the tofu; stir-fry the broccoli for 4 minutes; add the cashews and sauce at the end; boil the rice separately.
+Tranzit: 1 salată cu tofu; 1 fruct || 1 tofu salad; 1 fruit
+## Somon cu sos de muștar și broccoli || Mustard salmon with broccoli
+- Somon — 130 g
+- Broccoli — 150 g
+- Iaurt grecesc 2% — 30 g
+- Cartofi — 100 g
+- Muștar, mărar
+Preparare: Somonul uns cu iaurt și muștar, la cuptor 12 minute; broccoli la abur; cartofii fierți. || Brush the salmon with yogurt and mustard and bake for 12 minutes; steam the broccoli; boil the potatoes.
+Tranzit: 1 conservă de somon; 1 cartof copt || 1 tin of salmon; 1 baked potato
 `;

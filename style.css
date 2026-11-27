@@ -13741,6 +13741,23 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-lipeste { margin-top: 10px; }
 /* Săptămâna planului la client: 7 pastile pe un rând, litera zilei deasupra datei; azi în culoarea accentului */
 .plan-alim-zile { flex-wrap: nowrap; gap: 4px; }
+/* Activitatea din profil: stilul de viață cu exemplele dedesubt; fiecare activitate e un card cu „De câte ori” și „Cât durează”, cu − / + mici */
+.plan-alim-stil .antr-pers-activitate { flex: 1 1 40%; min-width: 0; white-space: normal; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px; line-height: 1.2; }
+.plan-alim-stil .antr-pers-activitate small { font-size: 0.66rem; font-weight: 500; color: var(--m-muted); }
+.plan-alim-activitate .checkin-eticheta small { font-weight: 500; color: var(--m-muted); }
+.plan-alim-alte { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.plan-alim-alta { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--m-border); border-radius: 16px; background: var(--m-btn); box-shadow: var(--m-float-sm); }
+.plan-alim-alta-cap { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.9rem; color: var(--m-text); }
+.plan-alim-alta-rand { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.8rem; color: var(--m-muted); white-space: nowrap; }
+.plan-alim-pas { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.plan-alim-pas b { min-width: 64px; text-align: center; font-size: 0.85rem; color: var(--m-text); white-space: nowrap; }
+.plan-alim-pas .apa-btn { width: 28px; height: 28px; font-size: 1rem; line-height: 1; padding: 0; }
+.plan-alim-alta .plan-alim-cauta-x { position: static; display: flex; transform: none; flex-shrink: 0; }
+.plan-alim-activ-nou { flex-basis: 100%; }
+/* Pastilele de activități: grilă de 3 coloane egale, ca niciuna să nu pară mai importantă */
+.plan-alim-activitate .plan-alim-alimente { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.plan-alim-activitate .plan-alim-alimente .antr-pers-activitate { min-width: 0; padding: 6px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-alim-activitate .plan-alim-activ-nou { grid-column: 1 / -1; white-space: normal; }
 .plan-alim-zile .antr-pers-activitate { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0; font-size: 0.9rem; }
 .plan-alim-zile .antr-pers-activitate small { font-size: 0.66rem; font-weight: 600; color: var(--m-muted); }
 .plan-alim-zile .antr-pers-activitate.azi:not(.activ) { color: var(--m-accent-text); }
@@ -13750,7 +13767,11 @@ html[data-theme="dark"] #captchaCutie.in-formular .captcha-widget {
 .plan-alim-cauta-x { position: absolute; top: 50%; right: 5px; transform: translateY(-50%); display: none; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--m-border); border-radius: 50%; background: var(--m-btn); box-shadow: var(--m-float-sm); color: var(--m-muted); cursor: pointer; }
 .plan-alim-cauta-x svg { width: 12px; height: 12px; }
 .plan-alim-cauta:not(:placeholder-shown) + .plan-alim-cauta-x { display: flex; }
-.plan-alim-lipeste-btn { margin-top: 10px; padding: 0; color: var(--m-accent-text); font-size: 0.8rem; }
+.plan-alim-lipeste-act { display: flex; gap: 8px; margin-top: 10px; }
+/* Ce n-a recunoscut din lista lipită: cuvântul, apoi ce poate însemna */
+.plan-alim-necunoscut { margin-top: 8px; font-size: 0.85rem; color: var(--m-text); }
+.plan-alim-necunoscut .plan-alim-alimente { margin-top: 4px; }
+.plan-alim-lipeste-act .btn { flex: 1; }
 .plan-alim-masa-setari { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; }
 .plan-alim-verificare .profil-rand-eticheta { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 700; line-height: 1.3; }
 .plan-alim-verificare small { font-size: 0.78rem; font-weight: 500; color: var(--m-muted); overflow-wrap: anywhere; }
